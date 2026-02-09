@@ -3,6 +3,7 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
+#include <cmath>
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -82,8 +83,35 @@ BOOST_AUTO_TEST_CASE(SmallTest) {
                                 result.end());
 }
 
-BOOST_AUTO_TEST_CASE(RandomTest) {
+BOOST_AUTO_TEST_CASE(RandomTestSequential) {
   constexpr size_t N_MI = 20;
+  constexpr size_t N_DIM = 4;
+
+  // Random generator
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<> dis(0.0, 100.0);
+
+  // Generating a random MIVec
+  sgpp::combigrid::MIVec<size_t> miVec(N_DIM, N_MI);
+
+  for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
+    for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
+      miVec(miIdx, dimIdx) = static_cast<size_t>(dis(gen));
+    }
+  }
+
+  // Generating the pareto maxima
+  const std::vector<size_t> expectedResult = naivParetoMaximum(miVec);
+
+  const std::vector<size_t> result = miVec.paretoMaximum();
+
+  BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), result.begin(),
+                                result.end());
+}
+
+BOOST_AUTO_TEST_CASE(RandomTestConcurrent) {
+  constexpr size_t N_MI = sgpp::combigrid::ParetoMaxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
   constexpr size_t N_DIM = 2;
 
   // Random generator

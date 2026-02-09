@@ -10,6 +10,9 @@ template <typename T>
 std::vector<size_t> computeParetoMaximaSerial(const combigrid::MIVec<T>& miVec, size_t startIdx,
                                               size_t endIdx);
 
+template <typename T>
+std::vector<size_t> computeParetoMaximaParallel(const combigrid::MIVec<T>& miVec);
+
 }  // namespace combigrid
 }  // namespace sgpp
 
