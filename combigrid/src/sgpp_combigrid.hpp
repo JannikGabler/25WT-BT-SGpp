@@ -5,30 +5,4 @@
 
 #pragma once
 
-#include <sgpp/combigrid/LevelIndexTypes.hpp>
-
-#include <sgpp/combigrid/adaptive/AdaptiveCombinationGridGenerator.hpp>
-#include <sgpp/combigrid/adaptive/AveragingPriorityEstimator.hpp>
-#include <sgpp/combigrid/adaptive/PriorityEstimator.hpp>
-#include <sgpp/combigrid/adaptive/RelevanceCalculator.hpp>
-#include <sgpp/combigrid/adaptive/WeightedRelevanceCalculator.hpp>
-
-#include <sgpp/combigrid/basis/HeterogeneousBasis.hpp>
-
-#include <sgpp/combigrid/grid/CombinationGrid.hpp>
-#include <sgpp/combigrid/grid/FullGrid.hpp>
-
-#include <sgpp/combigrid/operation/OperationEvalCombinationGrid.hpp>
-#include <sgpp/combigrid/operation/OperationEvalFullGrid.hpp>
-#include <sgpp/combigrid/operation/OperationPole.hpp>
-#include <sgpp/combigrid/operation/OperationPoleDehierarchisationLinear.hpp>
-#include <sgpp/combigrid/operation/OperationPoleHierarchisationGeneral.hpp>
-#include <sgpp/combigrid/operation/OperationPoleHierarchisationLinear.hpp>
-#include <sgpp/combigrid/operation/OperationPoleNodalisationBspline.hpp>
-#include <sgpp/combigrid/operation/OperationPoleNodalisationLinear.hpp>
-#include <sgpp/combigrid/operation/OperationUPCombinationGrid.hpp>
-#include <sgpp/combigrid/operation/OperationUPFullGrid.hpp>
-
-#include <sgpp/combigrid/tools/IndexVectorIterator.hpp>
-#include <sgpp/combigrid/tools/IndexVectorRange.hpp>
-#include <sgpp/combigrid/tools/LevelVectorTools.hpp>
+// #include <sgpp/combigrid/LevelIndexTypes.hpp>
