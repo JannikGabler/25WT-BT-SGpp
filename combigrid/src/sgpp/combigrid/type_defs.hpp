@@ -4,6 +4,8 @@
 namespace sgpp {
 namespace combigrid {
 
+using MIType = unsigned int;
+
 using GPGenFunc = sgpp::base::DataVector (*)(unsigned int);
 using Lvl2GPCntFunc = std::vector<unsigned int> (*)(unsigned int);
 

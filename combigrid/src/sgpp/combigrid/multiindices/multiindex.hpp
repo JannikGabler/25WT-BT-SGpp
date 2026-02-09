@@ -8,10 +8,9 @@
 namespace sgpp {
 namespace combigrid {
 
-template <typename T>
-class MI : public std::vector<T> {
+class MI : public std::vector<MIType> {
  public:
-  using std::vector<T>::vector;  // Inherit constructors of std::vector
+  using std::vector<MIType>::vector;  // Inherit constructors of std::vector
 
   size_t toLinearIndex() const;
 
@@ -30,5 +29,3 @@ class MI : public std::vector<T> {
 }  // namespace sgpp
 
 #endif
-
-#include <sgpp/combigrid/multiindices/multiindex.tpp>

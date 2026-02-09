@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <random>
+#include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/multiindices/paretoMaxima.hpp>
 #include <sgpp/globaldef.hpp>
@@ -21,7 +22,7 @@ BOOST_AUTO_TEST_SUITE(OP_paretoMaximum)
 
 namespace {
 
-std::vector<size_t> naivParetoMaximum(const sgpp::combigrid::MIVec<size_t> input) {
+std::vector<size_t> naivParetoMaximum(const sgpp::combigrid::MIVec input) {
   std::vector<size_t> skyline;
 
   for (size_t miIdx1 = 0; miIdx1 < input.nMI(); miIdx1++) {
@@ -55,7 +56,7 @@ BOOST_AUTO_TEST_CASE(SmallSequential) {
   constexpr size_t N_MI = 8;
   constexpr size_t N_DIM = 2;
 
-  sgpp::combigrid::MIVec<size_t> miVec(N_DIM, N_MI);
+  sgpp::combigrid::MIVec miVec(N_DIM, N_MI);
 
   miVec(0, 0) = 1;
   miVec(0, 1) = 6;
@@ -94,7 +95,7 @@ BOOST_AUTO_TEST_CASE(DuplicateSequential) {
   constexpr size_t N_MI = 8;
   constexpr size_t N_DIM = 2;
 
-  sgpp::combigrid::MIVec<size_t> miVec(N_DIM, N_MI);
+  sgpp::combigrid::MIVec miVec(N_DIM, N_MI);
 
   miVec(0, 0) = 1;
   miVec(0, 1) = 6;
@@ -139,7 +140,7 @@ BOOST_AUTO_TEST_CASE(RandomSequential) {
   std::uniform_real_distribution<> dis(0.0, 100.0);
 
   // Generating a random MIVec
-  sgpp::combigrid::MIVec<size_t> miVec(N_DIM, N_MI);
+  sgpp::combigrid::MIVec miVec(N_DIM, N_MI);
 
   for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
     for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
@@ -158,6 +159,7 @@ BOOST_AUTO_TEST_CASE(RandomSequential) {
 
 BOOST_AUTO_TEST_CASE(RandomTestConcurrent) {
   constexpr size_t N_MI = sgpp::combigrid::ParetoMaxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
+
   constexpr size_t N_DIM = 2;
 
   // Random generator
@@ -166,7 +168,7 @@ BOOST_AUTO_TEST_CASE(RandomTestConcurrent) {
   std::uniform_real_distribution<> dis(0.0, 1000.0);
 
   // Generating a random MIVec
-  sgpp::combigrid::MIVec<size_t> miVec(N_DIM, N_MI);
+  sgpp::combigrid::MIVec miVec(N_DIM, N_MI);
 
   for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
     for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
