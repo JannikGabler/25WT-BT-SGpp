@@ -4,6 +4,7 @@
 // sgpp.sparsegrids.org
 
 #include <cmath>
+#include "sgpp/combigrid/multiindices/multiindex.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -144,7 +145,7 @@ BOOST_AUTO_TEST_CASE(RandomSequential) {
 
   for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
     for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
-      miVec(miIdx, dimIdx) = static_cast<size_t>(dis(gen));
+      miVec(miIdx, dimIdx) = static_cast<sgpp::combigrid::MIType>(dis(gen));
     }
   }
 

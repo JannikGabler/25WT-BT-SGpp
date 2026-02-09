@@ -6,8 +6,8 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-inline std::vector<size_t> partitionRange(const size_t length, const size_t minPartitionLength,
-                                          const size_t maxPartitionCnt) {
+std::vector<size_t> partitionRange(const size_t length, const size_t minPartitionLength,
+                                   const size_t maxPartitionCnt) {
   if (length < minPartitionLength) {
     return {0, length};
   }

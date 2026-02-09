@@ -11,12 +11,12 @@ namespace combigrid {
 
 class MISetSGGenInstr : public SGGenInstr {
  public:
-  MISetSGGenInstr(const MIVec<unsigned int>& miSet);
+  MISetSGGenInstr(const MIVec& miSet);
 
-  MIVec<unsigned int> genParetoMaximum() override;
+  MIVec genParetoMaximum() override;
 
  private:
-  const MIVec<unsigned int>& miSet;
+  const MIVec& miSet;
 };
 
 }  // namespace combigrid

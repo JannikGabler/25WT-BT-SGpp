@@ -5,10 +5,17 @@
 #include <sgpp/globaldef.hpp>
 #include "sgpp/base/exception/not_implemented_exception.hpp"
 
-sgpp::combigrid::MISetSGGenInstr::MISetSGGenInstr(const MIVec<unsigned int>& miSet)
-    : SGGenInstr(miSet.nDim()), miSet(miSet) {}
+namespace sgpp {
 
-sgpp::combigrid::MIVec<unsigned int> sgpp::combigrid::MISetSGGenInstr::genParetoMaximum() {
+namespace combigrid {
+
+MISetSGGenInstr::MISetSGGenInstr(const MIVec& miSet) : SGGenInstr(miSet.nDim()), miSet(miSet) {}
+
+MIVec MISetSGGenInstr::genParetoMaximum() {
   // TODO: Compute pareto Maximum of this->miSet
   throw sgpp::base::not_implemented_exception("Operation is not implemented yet!");
 }
+
+}  // namespace combigrid
+
+}  // namespace sgpp

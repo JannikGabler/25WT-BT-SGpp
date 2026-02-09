@@ -28,7 +28,7 @@ class SGGenInstr {
 
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs, size_t dim);
 
-  virtual MIVec<unsigned int> genParetoMaximum() = 0;
+  virtual MIVec genParetoMaximum() = 0;
 
   void resize(size_t newDimCnt);
 

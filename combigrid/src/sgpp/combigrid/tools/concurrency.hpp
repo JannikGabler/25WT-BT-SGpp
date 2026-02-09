@@ -1,3 +1,6 @@
+#ifndef COMBIGRID_TOOLS_CONCURRENCY_HPP
+#define COMBIGRID_TOOLS_CONCURRENCY_HPP
+
 #include <cstddef>
 #include <vector>
 
@@ -11,3 +14,5 @@ std::vector<size_t> partitionRange(const size_t length, const size_t minPartitio
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
+
+#endif

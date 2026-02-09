@@ -8,7 +8,7 @@ size_t SparseGrid::nDim() const { return this->numDim; }
 
 const TensorGrid& SparseGrid::getTensorGrid(size_t idx) const { return this->tensorGrids[idx]; }
 
-const TensorGrid& SparseGrid::getTensorGrid(const MI<unsigned int>& mi) const {
+const TensorGrid& SparseGrid::getTensorGrid(const MI& mi) const {
   // TODO
   throw base::not_implemented_exception("Operation is not implemented yet!");
 }

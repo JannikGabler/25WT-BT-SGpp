@@ -18,7 +18,7 @@ class SparseGrid {
 
   const TensorGrid& getTensorGrid(size_t idx) const;
 
-  const TensorGrid& getTensorGrid(const MI<unsigned int>& mi) const;
+  const TensorGrid& getTensorGrid(const MI& mi) const;
 
   const std::vector<TensorGrid>& getTensorGrids() const;
 
