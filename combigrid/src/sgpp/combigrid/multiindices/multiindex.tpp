@@ -1,6 +1,11 @@
 #include <cstddef>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 
+namespace sgpp {
+namespace combigrid {}  // namespace combigrid
+
+}  // namespace sgpp
+
 template <typename T>
 size_t sgpp::combigrid::MI<T>::toLinearIndex() const {
   const size_t nDim = this->size();

@@ -44,7 +44,7 @@ template <typename T>
 inline MI<T> MIVec<T>::operator[](const size_t miIdx) const {
   assert(miIdx < nMI_);
 
-  MI<T> mi;
+  MI<T> mi(nDim_);
 
   for (size_t dim = 0; dim < nDim_; dim++) {
     mi[dim] = data[miIdx * nDim_ + dim];
@@ -69,7 +69,7 @@ bool MIVec<T>::isDownwardsClosed() const {
 
 template <typename T>
 std::vector<size_t> MIVec<T>::paretoMaximum(const bool assumeDownwardsClosed) const {
-  return computeParetoMaximaSerial(*this, 0, nMI_ - 1);
+  return computeParetoMaxima(*this);
 }
 
 }  // namespace combigrid

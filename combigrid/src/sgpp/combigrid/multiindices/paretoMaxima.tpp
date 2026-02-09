@@ -8,6 +8,30 @@ namespace sgpp {
 namespace combigrid {
 
 template <typename T>
+inline bool miDominatesMI(const combigrid::MIVec<T>& miVec, size_t miIdx1, size_t miIdx2) {
+  const size_t nDim = miVec.nDim();
+
+  for (size_t dim = 0; dim < nDim; dim++) {
+    if (miVec(miIdx1, dim) < miVec(miIdx2, dim)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template <typename T>
+std::vector<size_t> computeParetoMaxima(const MIVec<T>& miVec) {
+  const size_t length = miVec.nMI() * miVec.nDim();
+
+  if (length < ParetoMaxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
+    return computeParetoMaximaSerial(miVec, 0, miVec.nMI() - 1);
+  } else {
+    return computeParetoMaximaParallel(miVec);
+  }
+}
+
+template <typename T>
 inline void updateParetoMaxima(const MIVec<T> miVec, std::vector<size_t>& paretoMaxima,
                                const size_t candidateIdx) {
   bool dominated = false;
@@ -28,19 +52,6 @@ inline void updateParetoMaxima(const MIVec<T> miVec, std::vector<size_t>& pareto
 }
 
 template <typename T>
-inline bool miDominatesMI(const combigrid::MIVec<T>& miVec, size_t miIdx1, size_t miIdx2) {
-  const size_t nDim = miVec.nDim();
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    if (miVec(miIdx1, dim) < miVec(miIdx2, dim)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-template <typename T>
 std::vector<size_t> computeParetoMaximaSerial(const combigrid::MIVec<T>& miVec,
                                               const size_t startIdx, const size_t endIdx) {
   std::vector<size_t> paretoMaxima;
@@ -55,11 +66,6 @@ std::vector<size_t> computeParetoMaximaSerial(const combigrid::MIVec<T>& miVec,
 template <typename T>
 std::vector<size_t> computeParetoMaximaParallel(const MIVec<T>& miVec) {
   const size_t length = miVec.nMI() * miVec.nDim();
-
-  if (length < ParetoMaxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
-    return computeParetoMaximaSerial(miVec, 0, miVec.nMI() - 1);
-  }
-
   const std::vector<size_t> partitioning =
       tools::partitionRange(length, ParetoMaxima::MIN_MIVEC_BATCH_LENGTH_PER_THREAD);
   std::vector<std::vector<size_t>> localParetoMaxima(partitioning.size() - 1);
@@ -69,7 +75,7 @@ std::vector<size_t> computeParetoMaximaParallel(const MIVec<T>& miVec) {
     const int threadId = omp_get_num_threads();
 
     localParetoMaxima[threadId] =
-        computeParetoMaximaSerial(miVec, partitioning[threadId], partitioning[threadId + 1]);
+        computeParetoMaximaSerial(miVec, partitioning[threadId], partitioning[threadId + 1] - 1);
   }
 
   return mergeParetoMaxima(miVec, localParetoMaxima);

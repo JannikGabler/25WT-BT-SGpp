@@ -6,6 +6,13 @@ namespace combigrid {
 template <typename T>
 bool miDominatesMI(const combigrid::MIVec<T>& miVec, size_t miIdx1, size_t miIdx2);
 
+// template <typename T>
+// std::vector<size_t> computeParetoMaxima(const MIVec<T>& miVec);
+
+// template <typename T>
+// std::vector<size_t> mergeParetoMaxima(const MIVec<T> miVec,
+//                                       std::vector<std::vector<size_t>> localParetoMaxima);
+
 template <typename T>
 std::vector<size_t> computeParetoMaximaSerial(const combigrid::MIVec<T>& miVec, size_t startIdx,
                                               size_t endIdx);

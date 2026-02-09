@@ -28,9 +28,16 @@ std::vector<size_t> naivParetoMaximum(const sgpp::combigrid::MIVec<size_t> input
     bool dominated = false;
 
     for (size_t miIdx2 = 0; miIdx2 < input.nMI(); miIdx2++) {
-      if (miIdx1 != miIdx2 && sgpp::combigrid::miDominatesMI(input, miIdx2, miIdx1)) {
-        dominated = true;
-        break;
+      if (miIdx1 != miIdx2) {
+        if (input[miIdx1] == input[miIdx2]) {
+          if (miIdx2 < miIdx1) {
+            dominated = true;
+            break;
+          }
+        } else if (sgpp::combigrid::miDominatesMI(input, miIdx2, miIdx1)) {
+          dominated = true;
+          break;
+        }
       }
     }
 
@@ -44,7 +51,7 @@ std::vector<size_t> naivParetoMaximum(const sgpp::combigrid::MIVec<size_t> input
 
 }  // namespace
 
-BOOST_AUTO_TEST_CASE(SmallTest) {
+BOOST_AUTO_TEST_CASE(SmallSequential) {
   constexpr size_t N_MI = 8;
   constexpr size_t N_DIM = 2;
 
@@ -83,7 +90,46 @@ BOOST_AUTO_TEST_CASE(SmallTest) {
                                 result.end());
 }
 
-BOOST_AUTO_TEST_CASE(RandomTestSequential) {
+BOOST_AUTO_TEST_CASE(DuplicateSequential) {
+  constexpr size_t N_MI = 8;
+  constexpr size_t N_DIM = 2;
+
+  sgpp::combigrid::MIVec<size_t> miVec(N_DIM, N_MI);
+
+  miVec(0, 0) = 1;
+  miVec(0, 1) = 6;
+
+  miVec(1, 0) = 2;
+  miVec(1, 1) = 5;
+
+  miVec(2, 0) = 4;
+  miVec(2, 1) = 4;
+
+  miVec(3, 0) = 4;
+  miVec(3, 1) = 5;
+
+  miVec(4, 0) = 4;
+  miVec(4, 1) = 4;
+
+  miVec(5, 0) = 5;
+  miVec(5, 1) = 3;
+
+  miVec(6, 0) = 5;
+  miVec(6, 1) = 2;
+
+  miVec(7, 0) = 6;
+  miVec(7, 1) = 1;
+
+  // Generating the pareto maxima
+  const std::vector<size_t> expectedResult = naivParetoMaximum(miVec);
+
+  const std::vector<size_t> result = miVec.paretoMaximum();
+
+  BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), result.begin(),
+                                result.end());
+}
+
+BOOST_AUTO_TEST_CASE(RandomSequential) {
   constexpr size_t N_MI = 20;
   constexpr size_t N_DIM = 4;
 
@@ -117,7 +163,7 @@ BOOST_AUTO_TEST_CASE(RandomTestConcurrent) {
   // Random generator
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_real_distribution<> dis(0.0, 100.0);
+  std::uniform_real_distribution<> dis(0.0, 1000.0);
 
   // Generating a random MIVec
   sgpp::combigrid::MIVec<size_t> miVec(N_DIM, N_MI);

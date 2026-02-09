@@ -11,6 +11,8 @@ namespace combigrid {
 template <typename T>
 class MI : public std::vector<T> {
  public:
+  using std::vector<T>::vector;  // Inherit constructors of std::vector
+
   size_t toLinearIndex() const;
 
   size_t productofElems() const;
@@ -28,3 +30,5 @@ class MI : public std::vector<T> {
 }  // namespace sgpp
 
 #endif
+
+#include <sgpp/combigrid/multiindices/multiindex.tpp>

@@ -9,7 +9,7 @@ namespace tools {
 inline std::vector<size_t> partitionRange(const size_t length, const size_t minPartitionLength,
                                           const size_t maxPartitionCnt) {
   if (length < minPartitionLength) {
-    return {0, length - 1};
+    return {0, length};
   }
 
   const size_t nPartitions = std::min(maxPartitionCnt, length / minPartitionLength);
@@ -17,7 +17,7 @@ inline std::vector<size_t> partitionRange(const size_t length, const size_t minP
 
   std::vector<size_t> partitioning(nPartitions + 1);
   partitioning[0] = 0;
-  partitioning[nPartitions] = length - 1;
+  partitioning[nPartitions] = length;
 
   for (size_t i = 1; i < nPartitions; i++) {
     partitioning[i] = i * chunkSize;
