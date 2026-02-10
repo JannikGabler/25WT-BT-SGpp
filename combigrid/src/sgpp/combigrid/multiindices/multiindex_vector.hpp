@@ -11,6 +11,11 @@ namespace combigrid {
 
 class MIVec {
  public:
+  struct MILookupView {
+    const MIType* data;
+    const size_t n;
+  };
+
   MIVec(size_t nDim, size_t nMI);
   MIVec(const std::vector<MI>& mi);
 
@@ -22,11 +27,13 @@ class MIVec {
 
   MI operator[](size_t miIdx) const;
 
+  MILookupView getLookupView(size_t miIdx) const;
+
   void setMI(size_t idx, MI mi);
 
   bool isDownwardsClosed() const;
 
-  std::vector<size_t> paretoMaximum(bool assumeDownwardsClosed = false) const;
+  std::vector<size_t> paretoMaximum(bool assumeDownwardsClosed = true) const;
 
  private:
   const size_t nDim_;

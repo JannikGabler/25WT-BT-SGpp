@@ -6,12 +6,12 @@
 namespace sgpp {
 namespace combigrid {
 
-bool miDominatesMI(const combigrid::MIVec& miVec, size_t miIdx1, size_t miIdx2);
+bool miDominatesMI(const MIVec& miVec, size_t miIdx1, size_t miIdx2);
 
-std::vector<size_t> computeParetoMaxima(const MIVec& miVec);
+std::vector<size_t> computeParetoMaxima(const MIVec& miVec, bool isDownwardsClosed = false);
 
-std::vector<size_t> mergeParetoMaxima(const MIVec miVec,
-                                      std::vector<std::vector<size_t>> localParetoMaxima);
+// std::vector<size_t> mergeParetoMaxima(const MIVec& miVec,
+//                                       std::vector<std::vector<size_t>>& localParetoMaxima);
 
 // std::vector<size_t> computeParetoMaximaSerial(const combigrid::MIVec& miVec, size_t startIdx,
 //                                               size_t endIdx);

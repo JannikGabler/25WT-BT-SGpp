@@ -18,11 +18,13 @@ class MI : public std::vector<MIType> {
 
   size_t nDim() const;
 
-  bool operator<(MI& other) const;
-  bool operator>(MI& other) const;
+  bool operator==(const MI& other) const;
 
-  bool operator<=(MI& other) const;
-  bool operator>=(MI& other) const;
+  bool operator<(const MI& other) const;
+  bool operator>(const MI& other) const;
+
+  bool operator<=(const MI& other) const;
+  bool operator>=(const MI& other) const;
 };
 
 }  // namespace combigrid
