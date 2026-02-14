@@ -115,8 +115,12 @@ datadriven/tests/uq/analysis/genz/results/
 # ignoring custom.py file
 custom.py
 
-#ignoring vs code
+#ignoring IDE directories
 .vscode/
+.idea/
+
+# ignore .cache
+.cache/
 
 GPATH
 GRTAGS

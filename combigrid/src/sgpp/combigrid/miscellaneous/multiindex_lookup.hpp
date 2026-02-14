@@ -1,7 +1,6 @@
 #ifndef COMBIGRID_MISC_MULTIINDEX_LOOKUP_HPP
 #define COMBIGRID_MISC_MULTIINDEX_LOOKUP_HPP
 
-#include <sgpp/combigrid/miscellaneous/multiindex_lookup_view.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_lookup_view_equal.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_lookup_view_hash.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>

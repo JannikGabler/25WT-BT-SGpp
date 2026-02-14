@@ -86,10 +86,14 @@ BOOST_AUTO_TEST_CASE(SmallSequential) {
   // Generating the pareto maxima
   const std::vector<size_t> expectedResult = naivParetoMaximum(miVec);
 
-  const std::vector<size_t> result = miVec.paretoMaximum();
+  const std::vector<size_t> resultNonDWC = miVec.paretoMaximum(false);
+  BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), resultNonDWC.begin(),
+                                resultNonDWC.end());
 
-  BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), result.begin(),
-                                result.end());
+  const std::vector<size_t> resultDWC = miVec.paretoMaximum(true);
+
+  BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), resultDWC.begin(),
+                                resultDWC.end());
 }
 
 BOOST_AUTO_TEST_CASE(DuplicateSequential) {
