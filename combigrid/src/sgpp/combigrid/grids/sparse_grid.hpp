@@ -3,6 +3,7 @@
 
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
 #include <vector>
@@ -12,7 +13,7 @@ namespace combigrid {
 
 class SparseGrid {
  public:
-  SparseGrid();
+  SparseGrid(const SGGenInstr& genInstruction);
 
   size_t nDim() const;
 
@@ -23,7 +24,7 @@ class SparseGrid {
   const std::vector<TensorGrid>& getTensorGrids() const;
 
  private:
-  const size_t numDim;
+  const size_t nDim_;
   std::vector<TensorGrid> tensorGrids;
 };
 

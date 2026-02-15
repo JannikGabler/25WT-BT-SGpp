@@ -4,7 +4,7 @@
 namespace sgpp {
 namespace combigrid {
 
-size_t SparseGrid::nDim() const { return this->numDim; }
+size_t SparseGrid::nDim() const { return nDim_; }
 
 const TensorGrid& SparseGrid::getTensorGrid(size_t idx) const { return this->tensorGrids[idx]; }
 

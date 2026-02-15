@@ -11,24 +11,20 @@ namespace combigrid {
 
 class MIVec {
  public:
-  // struct MIVecLookupView {
-  //   const MIType* data;
-  // };
-
   MIVec(size_t nDim, size_t nMI);
   MIVec(const std::vector<MI>& mi);
 
   size_t nDim() const;
   size_t nMI() const;
 
+  const MIType* data() const;
+
   MIType operator()(size_t miIdx, size_t dim) const;
   MIType& operator()(size_t miIdx, size_t dim);
 
   MI operator[](size_t miIdx) const;
 
-  const MIType* data() const;
-
-  void setMI(size_t idx, MI mi);
+  void setMI(size_t idx, const MI& mi);
 
   bool isDownwardsClosed() const;
 
