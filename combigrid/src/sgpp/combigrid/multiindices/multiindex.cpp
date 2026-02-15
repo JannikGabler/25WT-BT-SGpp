@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
@@ -94,6 +95,26 @@ bool MI::operator>=(const MI& other) const {
   }
 
   return true;
+}
+
+MI MI::operator+(const MI& other) const {
+  if (nDim() >= other.nDim()) {
+    MI mi(*this);
+
+    for (size_t dim = 0; dim < other.nDim(); dim++) {
+      mi[dim] += other[dim];
+    }
+
+    return mi;
+  } else {
+    MI mi(other);
+
+    for (size_t dim = 0; dim < nDim(); dim++) {
+      mi[dim] += (*this)[dim];
+    }
+
+    return mi;
+  }
 }
 
 }  // namespace combigrid

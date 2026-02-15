@@ -25,6 +25,8 @@ class MI : public std::vector<MIType> {
 
   bool operator<=(const MI& other) const;
   bool operator>=(const MI& other) const;
+
+  MI operator+(const MI& other) const;
 };
 
 }  // namespace combigrid
