@@ -14,7 +14,7 @@
 #include <random>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/multiindices/paretoMaxima.hpp>
+#include <sgpp/combigrid/tools/paretoMaxima.hpp>
 #include <sgpp/globaldef.hpp>
 #include <sgpp_base.hpp>
 #include <vector>
@@ -91,7 +91,6 @@ BOOST_AUTO_TEST_CASE(SmallSequential) {
                                 resultNonDWC.end());
 
   const std::vector<size_t> resultDWC = miVec.paretoMaximum(true);
-
   BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), resultDWC.begin(),
                                 resultDWC.end());
 }

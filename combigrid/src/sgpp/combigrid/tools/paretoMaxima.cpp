@@ -1,14 +1,12 @@
 #include <omp.h>
-#include <functional>
 #include <sgpp/combigrid/constants.hpp>
+#include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_hash.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/multiindices/paretoMaxima.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
-#include <unordered_set>
+#include <sgpp/combigrid/tools/paretoMaxima.hpp>
 #include <vector>
-#include "sgpp/combigrid/miscellaneous/multiindex_lookup.hpp"
-#include "sgpp/combigrid/multiindices/multiindex.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -25,7 +23,7 @@ bool miDominatesMI(const combigrid::MIVec& miVec, const size_t miIdx1, const siz
   return true;
 }
 
-void updateParetoMaximaDWC(const MIVec& miVec, const misc::MILookup& lookup,
+void updateParetoMaximaDWC(const MIVec& miVec, const misc::MIVecLookup& lookup,
                            std::vector<size_t>& paretoMaxima, const size_t candidateIdx) {
   MI candidate = miVec[candidateIdx];
 
@@ -94,7 +92,7 @@ std::vector<size_t> zipParetoMax(std::vector<std::vector<size_t>>& localParetoMa
 std::vector<size_t> computeParetoMaxSerialDWC(const combigrid::MIVec& miVec) {
   std::vector<size_t> paretoMaxima;
 
-  const misc::MILookup lookup(miVec);
+  const misc::MIVecLookup lookup(miVec);
 
   for (size_t candidateIdx = 0; candidateIdx < miVec.nMI(); candidateIdx++) {
     updateParetoMaximaDWC(miVec, lookup, paretoMaxima, candidateIdx);
@@ -116,7 +114,7 @@ std::vector<size_t> computeParetoMaxSerialNotDWC(const combigrid::MIVec& miVec,
 
 std::vector<size_t> computeParetoMaxParallelDWC(const MIVec& miVec) {
   const size_t nThreads = omp_get_max_threads();
-  const misc::MILookup lookup(miVec);
+  const misc::MIVecLookup lookup(miVec);
 
   std::vector<std::vector<size_t>> localParetoMaxima(nThreads);
 

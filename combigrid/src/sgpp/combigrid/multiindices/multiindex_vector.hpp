@@ -11,10 +11,9 @@ namespace combigrid {
 
 class MIVec {
  public:
-  struct MILookupView {
-    const MIType* data;
-    const size_t n;
-  };
+  // struct MIVecLookupView {
+  //   const MIType* data;
+  // };
 
   MIVec(size_t nDim, size_t nMI);
   MIVec(const std::vector<MI>& mi);
@@ -27,7 +26,7 @@ class MIVec {
 
   MI operator[](size_t miIdx) const;
 
-  MILookupView getLookupView(size_t miIdx) const;
+  const MIType* data() const;
 
   void setMI(size_t idx, MI mi);
 
@@ -39,7 +38,7 @@ class MIVec {
   const size_t nDim_;
   size_t nMI_;
 
-  std::vector<MIType> data;  // AoS: [idx][dim]
+  std::vector<MIType> data_;  // AoS: [idx][dim]
 };
 
 }  // namespace combigrid
