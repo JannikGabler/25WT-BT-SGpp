@@ -11,11 +11,7 @@ template <typename T>
 class DiscRectBBIterator {
  public:
   DiscRectBBIterator(const DiscRectBB<T>& rectDiscBB, const bool finished = false)
-      : rectDiscBB(rectDiscBB), curPos(rectDiscBB.lowerBound), finished(finished) {
-    if (finished) {
-      curPos.clear();
-    }
-  }
+      : rectDiscBB(rectDiscBB), curPos(finished ? 0 : rectDiscBB.lowerBound), finished(finished) {}
 
   const T& operator*() const { return curPos; }
   const T* operator->() const { return &curPos; }

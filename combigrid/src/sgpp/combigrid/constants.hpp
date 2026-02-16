@@ -5,6 +5,12 @@
 namespace sgpp {
 namespace combigrid {
 
+namespace mi_vec {
+
+constexpr size_t MIN_MIVEC_LENGTH_FOR_CONCURRENCY = 10000;
+
+}
+
 namespace pareto_maxima {
 
 constexpr size_t MIN_MIVEC_LENGTH_FOR_CONCURRENCY = 10000;

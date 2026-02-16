@@ -1,6 +1,7 @@
 #ifndef COMBIGRID_MULTIINDEX_VECTOR_HPP
 #define COMBIGRID_MULTIINDEX_VECTOR_HPP
 
+#include <memory>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
@@ -30,13 +31,18 @@ class MIVec {
 
   MIVec downwardsClosure() const;
 
-  std::vector<size_t> paretoMaxima(bool isDownwardsClosed = false) const;
+  const std::shared_ptr<MI> componentWiseMax() const;
+
+  const std::shared_ptr<std::vector<size_t>> paretoMaxima(bool isDownwardsClosed = false) const;
 
  private:
   const size_t nDim_;
   size_t nMI_;
 
   std::vector<MIType> data_;  // AoS: [idx][dim]
+
+  std::shared_ptr<MI> componentWiseMax_;
+  std::shared_ptr<std::vector<size_t>> paretoMaxima_;
 };
 
 }  // namespace combigrid
