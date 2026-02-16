@@ -8,6 +8,7 @@
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
+#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -103,6 +104,8 @@ MI MIVec::operator[](const size_t miIdx) const {
 }
 
 void MIVec::setMI(const size_t idx, const MI& mi) {
+  clearCachedValues();
+
   for (size_t dim = 0; dim < nDim_; dim++) {
     data_[idx * nDim_ + dim] = mi[dim];
   }
@@ -113,15 +116,18 @@ bool MIVec::isDownwardsClosed() const {
   throw base::not_implemented_exception("This operation is not implemented yet!");
 }
 
-MIVec MIVec::downwardsClosure() const {}
+MIVec MIVec::downwardsClosure() const {
+  // TODO
+  throw base::not_implemented_exception("This operation is not implemented yet!");
+}
 
 const std::shared_ptr<MI> MIVec::componentWiseMax() const {
   if (componentWiseMax_ == nullptr) {
-    if (nMI_ * nDim_ < mi_vec::MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
-      *componentWiseMax_ = computeComponentWiseMaxSerial(*this);
-    } else {
-      *componentWiseMax_ = computeComponentWiseMaxParallel(*this);
-    }
+    const MI result = nMI_ * nDim_ < mi_vec::MIN_MIVEC_LENGTH_FOR_CONCURRENCY
+                          ? computeComponentWiseMaxSerial(*this)
+                          : computeComponentWiseMaxParallel(*this);
+
+    componentWiseMax_ = std::make_shared<MI>(std::move(result));
   }
 
   return componentWiseMax_;
@@ -129,10 +135,16 @@ const std::shared_ptr<MI> MIVec::componentWiseMax() const {
 
 const std::shared_ptr<std::vector<size_t>> MIVec::paretoMaxima(const bool isDownwardsClosed) const {
   if (paretoMaxima_ == nullptr) {
-    *paretoMaxima_ = tools::computeParetoMaxima(*this, isDownwardsClosed);
+    const std::vector<size_t> result = tools::computeParetoMaxima(*this, isDownwardsClosed);
+    paretoMaxima_ = std::make_shared<std::vector<size_t>>(std::move(result));
   }
 
   return paretoMaxima_;
+}
+
+void MIVec::clearCachedValues() const {
+  componentWiseMax_.reset();
+  paretoMaxima_.reset();
 }
 
 }  // namespace combigrid

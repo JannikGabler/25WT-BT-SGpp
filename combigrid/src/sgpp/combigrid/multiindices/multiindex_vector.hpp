@@ -41,8 +41,10 @@ class MIVec {
 
   std::vector<MIType> data_;  // AoS: [idx][dim]
 
-  std::shared_ptr<MI> componentWiseMax_;
-  std::shared_ptr<std::vector<size_t>> paretoMaxima_;
+  mutable std::shared_ptr<MI> componentWiseMax_;
+  mutable std::shared_ptr<std::vector<size_t>> paretoMaxima_;
+
+  void clearCachedValues() const;
 };
 
 }  // namespace combigrid

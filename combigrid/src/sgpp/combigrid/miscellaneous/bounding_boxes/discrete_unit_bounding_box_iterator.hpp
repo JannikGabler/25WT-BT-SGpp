@@ -1,11 +1,15 @@
 #ifndef COMBIGRID_MISC_DISCRETE_UNIT_BOUNDING_BOX_ITERATOR_HPP
 #define COMBIGRID_MISC_DISCRETE_UNIT_BOUNDING_BOX_ITERATOR_HPP
 
-#include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_unit_bounding_box.hpp>
+#include <cstddef>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
 namespace misc {
+
+template <typename T>
+struct DiscUnitBB;  // Forward declaration to avoid circular includes
 
 template <typename T>
 class DiscUnitBBIterator {
@@ -17,7 +21,7 @@ class DiscUnitBBIterator {
   const T* operator->() const { return &curPos; }
 
   DiscUnitBBIterator& operator++() {
-    for (std::size_t dim = 0; dim < curPos.size(); dim++) {
+    for (size_t dim = 0; dim < curPos.size(); dim++) {
       if (curPos[dim]++ == 0) {
         return *this;
       }

@@ -96,7 +96,7 @@ sgpp::combigrid::MIVec make_random_downwards_closed_mivec(const size_t nDim,
 
 }  // namespace
 
-BOOST_AUTO_TEST_SUITE(OP_computeCTCoeffs)
+BOOST_AUTO_TEST_SUITE(op_computeCTCoeffs)
 
 // Test: viele Dimensionen 1..64 mit einem kleinen, downwards-closed MIVec
 BOOST_AUTO_TEST_CASE(Dimensions1to64_SimpleCases) {

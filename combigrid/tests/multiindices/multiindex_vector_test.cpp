@@ -33,11 +33,10 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_Basic2D) {
   // (1,2)
   // (3,1)
   // (2,5)
-  std::vector<MI> mis = {MI{1, 2}, MI{3, 1}, MI{2, 5}};
+  const std::vector<MI> mis = {MI{1, 2}, MI{3, 1}, MI{2, 5}};
+  const MIVec vec(mis);
 
-  MIVec vec(mis);
-
-  auto result = vec.componentWiseMax();
+  const auto result = vec.componentWiseMax();
 
   BOOST_REQUIRE(result);                  // shared_ptr darf nicht null sein
   BOOST_CHECK_EQUAL(result->nDim(), 2u);  // Dimension korrekt
