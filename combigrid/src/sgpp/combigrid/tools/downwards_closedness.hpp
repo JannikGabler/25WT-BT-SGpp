@@ -8,7 +8,7 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-MIVec genDownwardsClosure(const MIVec& miVec);
+MIVec genMIVecDownwardsClosure(const MIVec& miVec);
 
 }  // namespace tools
 }  // namespace combigrid

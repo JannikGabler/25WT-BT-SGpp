@@ -35,6 +35,18 @@ bool iterateHyperbox(std::vector<T>& curPos, const std::vector<T>& upperBounds) 
   return false;
 }
 
+template <typename T>
+bool iterateUnitHyperbox(std::vector<T>& curPos) {
+  for (size_t dim = 0; dim < curPos.size(); dim++) {
+    if (++curPos[dim] == 1) {
+      return true;
+    }
+    curPos[dim] = 0;
+  }
+
+  return false;
+}
+
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
