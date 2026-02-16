@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(RandomSequential) {
 }
 
 BOOST_AUTO_TEST_CASE(RandomTestConcurrent) {
-  constexpr size_t N_MI = sgpp::combigrid::ParetoMaxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
+  constexpr size_t N_MI = sgpp::combigrid::pareto_maxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
 
   constexpr size_t N_DIM = 2;
 

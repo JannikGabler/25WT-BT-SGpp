@@ -3,6 +3,7 @@
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -57,7 +58,11 @@ bool MIVec::isDownwardsClosed() const {
   throw base::not_implemented_exception("This operation is not implemented yet!");
 }
 
-std::vector<size_t> MIVec::paretoMaximum(const bool isDownwardsClosed) const {
+MIVec MIVec::downwardsClosure() const {
+  const std::vector<size_t> paretoMaxima = this->paretoMaxima();
+}
+
+std::vector<size_t> MIVec::paretoMaxima(const bool isDownwardsClosed) const {
   return computeParetoMaxima(*this, isDownwardsClosed);
 }
 

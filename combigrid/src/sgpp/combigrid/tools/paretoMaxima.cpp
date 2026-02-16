@@ -134,7 +134,7 @@ std::vector<size_t> computeParetoMaxParallelDWC(const MIVec& miVec) {
 std::vector<size_t> computeParetoMaxParallelNonDWC(const MIVec& miVec) {
   // const size_t length = miVec.nMI() * miVec.nDim();
   const size_t minBatchSize =
-      (ParetoMaxima::MIN_MIVEC_BATCH_LENGTH_PER_THREAD + miVec.nDim() - 1) / miVec.nDim();
+      (pareto_maxima::MIN_MIVEC_BATCH_LENGTH_PER_THREAD + miVec.nDim() - 1) / miVec.nDim();
 
   const std::vector<size_t> partitioning = tools::partitionRange(miVec.nMI(), minBatchSize);
   std::vector<std::vector<size_t>> localParetoMaxima(partitioning.size() - 1);
@@ -154,13 +154,13 @@ std::vector<size_t> computeParetoMaxima(const MIVec& miVec, const bool isDownwar
   const size_t length = miVec.nMI() * miVec.nDim();
 
   if (isDownwardsClosed) {
-    if (length < ParetoMaxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
+    if (length < pareto_maxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
       return computeParetoMaxSerialDWC(miVec);
     } else {
       return computeParetoMaxParallelDWC(miVec);
     }
   } else {
-    if (length < ParetoMaxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
+    if (length < pareto_maxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
       return computeParetoMaxSerialNotDWC(miVec, 0, miVec.nMI() - 1);
     } else {
       return computeParetoMaxParallelNonDWC(miVec);

@@ -28,7 +28,9 @@ class MIVec {
 
   bool isDownwardsClosed() const;
 
-  std::vector<size_t> paretoMaximum(bool isDownwardsClosed = false) const;
+  MIVec downwardsClosure() const;
+
+  std::vector<size_t> paretoMaxima(bool isDownwardsClosed = false) const;
 
  private:
   const size_t nDim_;

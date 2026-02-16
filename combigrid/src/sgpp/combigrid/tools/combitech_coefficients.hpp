@@ -11,9 +11,11 @@ namespace combigrid {
 
 namespace tools {
 
-std::vector<int> computeCombitechCoeffs(const MIVec& miVec);
+std::vector<int> computeCTCoeffs(const MIVec& miVec);
 
-}
+std::vector<int> computeCTCoeffsNaive(const MIVec& miVec);
+
+}  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
 
