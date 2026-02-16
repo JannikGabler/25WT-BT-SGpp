@@ -5,23 +5,13 @@
 #include <sgpp/combigrid/multiindices/multiindex_hash.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
+#include <sgpp/combigrid/tools/multiindex_domination.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
 #include <vector>
 
 namespace sgpp {
 namespace combigrid {
-
-bool miDominatesMI(const combigrid::MIVec& miVec, const size_t miIdx1, const size_t miIdx2) {
-  const size_t nDim = miVec.nDim();
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    if (miVec(miIdx1, dim) < miVec(miIdx2, dim)) {
-      return false;
-    }
-  }
-
-  return true;
-}
+namespace tools {
 
 void updateParetoMaximaDWC(const MIVec& miVec, const misc::MIVecLookup& lookup,
                            std::vector<size_t>& paretoMaxima, const size_t candidateIdx) {
@@ -168,5 +158,6 @@ std::vector<size_t> computeParetoMaxima(const MIVec& miVec, const bool isDownwar
   }
 }
 
+}  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp

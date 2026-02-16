@@ -1,10 +1,10 @@
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/downwards_closedness.hpp>
-#include <sgpp/combigrid/tools/iterators/hyperbox_iterator.hpp>
-#include <sgpp/combigrid/tools/iterators/iterations.hpp>
+#include <sgpp/combigrid/tools/iterators.hpp>
 #include <sgpp/combigrid/tools/multiindex_bounding_boxes.hpp>
 #include <vector>
+#include "sgpp/combigrid/tools/multiindex_domination.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -15,10 +15,15 @@ MIVec genDownwardsClosure(const MIVec& miVec) {
   const std::vector<MIType> boundingBox = genRectMIBoundingBox(miVec, paretoMaxima);
 
   std::vector<MI> closure(boundingBox.size());
-  std::vector<MIType> curPos(miVec.nDim());
+  MI curMI(miVec.nDim());
 
   do {
-  } while (iterateHyperbox(curPos, boundingBox));
+    if (miVecDominatesMI(miVec, paretoMaxima, curMI)) {
+      closure.push_back(curMI);
+    }
+  } while (iterateHyperbox(curMI, boundingBox));
+
+  return MIVec(closure);
 }
 
 }  // namespace tools
