@@ -1,10 +1,128 @@
 #include <cassert>
 #include <cstddef>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
+#include <stdexcept>
 #include <vector>
 
 namespace sgpp {
 namespace combigrid {
+
+using value_type = MIType;
+using allocator_type = std::allocator<MIType>;
+using size_type = std::size_t;
+using difference_type = std::ptrdiff_t;
+using reference = value_type&;
+using const_reference = const value_type&;
+using pointer = value_type*;
+using const_pointer = const value_type*;
+using iterator = std::vector<MIType>::iterator;
+using const_iterator = std::vector<MIType>::const_iterator;
+using reverse_iterator = std::vector<MIType>::reverse_iterator;
+using const_reverse_iterator = std::vector<MIType>::const_reverse_iterator;
+
+namespace {
+
+void check_same_size(const MI& a, const MI& b) {
+  if (a.size() != b.size()) {
+    throw std::logic_error("Sizes of MI do not match!");
+  }
+}
+void check_same_size(const MI& a, const std::vector<MIType>& b) {
+  if (a.size() != b.size()) {
+    throw std::logic_error("Sizes of MI do not match!");
+  }
+}
+void check_same_size(const std::vector<MIType>& a, const MI& b) {
+  if (a.size() != b.size()) {
+    throw std::logic_error("Sizes of MI do not match!");
+  }
+}
+void check_same_size(const std::vector<MIType>& a, const std::vector<MIType>& b) {
+  if (a.size() != b.size()) {
+    throw std::logic_error("Sizes of MI do not match!");
+  }
+}
+
+bool cmpVecForEqual(const std::vector<value_type>& a, const std::vector<value_type>& b) {
+  check_same_size(a, b);
+
+  for (size_t dim = 0; dim < a.size(); dim++) {
+    if (a[dim] != b[dim]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+bool cmpVecForUnequal(const std::vector<value_type>& a, const std::vector<value_type>& b) {
+  check_same_size(a, b);
+
+  for (size_t dim = 0; dim < a.size(); dim++) {
+    if (a[dim] != b[dim]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+bool cmpVecForLess(const std::vector<value_type>& a, const std::vector<value_type>& b) {
+  check_same_size(a, b);
+
+  for (size_t dim = 0; dim < a.size(); dim++) {
+    if (a[dim] >= b[dim]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+bool cmpVecForLessEqual(const std::vector<value_type>& a, const std::vector<value_type>& b) {
+  check_same_size(a, b);
+
+  for (size_t dim = 0; dim < a.size(); dim++) {
+    if (a[dim] > b[dim]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+bool cmpVecGreater(const std::vector<value_type>& a, const std::vector<value_type>& b) {
+  check_same_size(a, b);
+
+  for (size_t dim = 0; dim < a.size(); dim++) {
+    if (a[dim] <= b[dim]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+bool cmpVecGreaterEqual(const std::vector<value_type>& a, const std::vector<value_type>& b) {
+  check_same_size(a, b);
+
+  for (size_t dim = 0; dim < a.size(); dim++) {
+    if (a[dim] < b[dim]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+}  // namespace
+
+MI::MI(size_type count) : data_(count) {}
+
+MI::MI(size_type count, value_type value) : data_(count, value) {}
+
+MI::MI(std::initializer_list<value_type> init) : data_(init) {}
+
+MI::MI(std::vector<value_type>& data) : data_(data) {}
+
+template <class InputIt>
+MI::MI(InputIt first, InputIt last) : data_(first, last) {}
 
 size_t MI::toLinearIndex() const {
   const size_t nDim = this->size();
@@ -33,148 +151,119 @@ size_t MI::productofElems() const {
   }
 }
 
-size_t MI::nDim() const { return this->size(); }
+void MI::clear() noexcept { data_.clear(); }
 
-bool MI::operator==(const MI& other) const {
-  if (this->size() != other.size()) {
-    return false;
-  }
+void MI::push_back(value_type value) { data_.push_back(value); }
 
-  for (size_t dim = 0; dim < this->size(); dim++) {
-    if ((*(this))[dim] != other[dim]) {
-      return false;
-    }
-  }
+void MI::pop_back() { data_.pop_back(); }
 
-  return true;
+iterator MI::insert(const_iterator pos, value_type value) { return data_.insert(pos, value); }
+
+iterator MI::erase(const_iterator pos) { return data_.erase(pos); }
+
+iterator MI::erase(const_iterator first, const_iterator last) { return data_.erase(first, last); }
+
+void MI::resize(size_type count) { data_.resize(count); }
+
+void MI::resize(size_type count, value_type value) { data_.resize(count, value); }
+
+void MI::swap(MI& other) noexcept { data_.swap(other.data_); }
+
+bool operator==(const MI& a, const MI& b) { return cmpVecForEqual(a.data_, b.data_); }
+bool operator==(const MI& a, const std::vector<MIType>& b) { return cmpVecForEqual(a.data_, b); }
+bool operator==(const std::vector<MIType>& a, const MI& b) { return cmpVecForEqual(a, b.data_); }
+
+bool operator!=(const MI& a, const MI& b) { return cmpVecForUnequal(a.data_, b.data_); }
+bool operator!=(const MI& a, const std::vector<MIType>& b) { return cmpVecForUnequal(a.data_, b); }
+bool operator!=(const std::vector<MIType>& a, const MI& b) { return cmpVecForUnequal(a, b.data_); }
+
+bool operator<(const MI& a, const MI& b) { return cmpVecForLess(a.data_, b.data_); }
+bool operator<(const MI& a, const std::vector<MIType>& b) { return cmpVecForLess(a.data_, b); }
+bool operator<(const std::vector<MIType>& a, const MI& b) { return cmpVecForLess(a, b.data_); }
+
+bool operator<=(const MI& a, const MI& b) { return cmpVecForLessEqual(a.data_, b.data_); }
+bool operator<=(const MI& a, const std::vector<MIType>& b) {
+  return cmpVecForLessEqual(a.data_, b);
+}
+bool operator<=(const std::vector<MIType>& a, const MI& b) {
+  return cmpVecForLessEqual(a, b.data_);
 }
 
-bool MI::operator<(const MI& other) const {
-  assert(this->size() == other.size());
+bool operator>(const MI& a, const MI& b) { return cmpVecGreater(a.data_, b.data_); }
+bool operator>(const MI& a, const std::vector<MIType>& b) { return cmpVecGreater(a.data_, b); }
+bool operator>(const std::vector<MIType>& a, const MI& b) { return cmpVecGreater(a, b.data_); }
 
-  for (size_t dim = 0; dim < this->size(); dim++) {
-    if ((*(this))[dim] >= other[dim]) {
-      return false;
-    }
-  }
-
-  return true;
+bool operator>=(const MI& a, const MI& b) { return cmpVecGreaterEqual(a.data_, b.data_); }
+bool operator>=(const MI& a, const std::vector<MIType>& b) {
+  return cmpVecGreaterEqual(a.data_, b);
+}
+bool operator>=(const std::vector<MIType>& a, const MI& b) {
+  return cmpVecGreaterEqual(a, b.data_);
 }
 
-bool MI::operator>(const MI& other) const {
-  assert(this->size() == other.size());
-
-  for (size_t dim = 0; dim < this->size(); dim++) {
-    if ((*(this))[dim] <= other[dim]) {
-      return false;
-    }
+MI& MI::operator+=(const MI& other) {
+  check_same_size(*this, other);
+  for (size_type i = 0; i < size(); ++i) {
+    data_[i] += other.data_[i];
   }
-
-  return true;
+  return *this;
 }
 
-bool MI::operator<=(const MI& other) const {
-  assert(this->size() == other.size());
-
-  for (size_t dim = 0; dim < this->size(); dim++) {
-    if ((*(this))[dim] > other[dim]) {
-      return false;
-    }
+MI& MI::operator+=(const std::vector<MIType>& other) {
+  check_same_size(*this, other);
+  for (size_type i = 0; i < size(); ++i) {
+    data_[i] += other[i];
   }
-
-  return true;
+  return *this;
 }
 
-bool MI::operator>=(const MI& other) const {
-  assert(this->size() == other.size());
-
-  for (size_t dim = 0; dim < this->size(); dim++) {
-    if ((*(this))[dim] < other[dim]) {
-      return false;
-    }
+MI& MI::operator-=(const MI& other) {
+  check_same_size(*this, other);
+  for (size_type i = 0; i < size(); ++i) {
+    data_[i] -= other.data_[i];
   }
-
-  return true;
+  return *this;
 }
 
-MI MI::operator+(const MI& other) const {
-  if (nDim() >= other.nDim()) {
-    MI mi(*this);
-
-    for (size_t dim = 0; dim < other.nDim(); dim++) {
-      mi[dim] += other[dim];
-    }
-
-    return mi;
-  } else {
-    MI mi(other);
-
-    for (size_t dim = 0; dim < nDim(); dim++) {
-      mi[dim] += (*this)[dim];
-    }
-
-    return mi;
+MI& MI::operator-=(const std::vector<MIType>& other) {
+  check_same_size(*this, other);
+  for (size_type i = 0; i < size(); ++i) {
+    data_[i] -= other[i];
   }
+  return *this;
 }
 
-MI MI::operator+(const std::vector<MIType>& other) const {
-  if (nDim() >= other.size()) {
-    MI mi(*this);
-
-    for (size_t dim = 0; dim < other.size(); dim++) {
-      mi[dim] += other[dim];
-    }
-
-    return mi;
-  } else {
-    MI mi(other);
-
-    for (size_t dim = 0; dim < nDim(); dim++) {
-      mi[dim] += (*this)[dim];
-    }
-
-    return mi;
-  }
+MI operator+(MI lhs, const MI& rhs) {
+  lhs += rhs;
+  return lhs;
 }
 
-MI MI::operator-(const MI& other) const {
-  if (nDim() >= other.nDim()) {
-    MI mi(*this);
-
-    for (size_t dim = 0; dim < other.nDim(); dim++) {
-      mi[dim] -= other[dim];
-    }
-
-    return mi;
-  } else {
-    MI mi(other.size());
-
-    for (size_t dim = 0; dim < nDim(); dim++) {
-      mi[dim] = (*this)[dim] - other[dim];
-    }
-
-    return mi;
-  }
+MI operator+(MI lhs, const std::vector<MIType>& rhs) {
+  lhs += rhs;
+  return lhs;
 }
 
-MI MI::operator-(const std::vector<MIType>& other) const {
-  if (nDim() >= other.size()) {
-    MI mi(*this);
+MI operator+(const std::vector<MIType>& lhs, MI rhs) {
+  rhs += lhs;
+  return rhs;
+}
 
-    for (size_t dim = 0; dim < other.size(); dim++) {
-      mi[dim] -= other[dim];
-    }
+MI operator-(MI lhs, const MI& rhs) {
+  lhs -= rhs;
+  return lhs;
+}
 
-    return mi;
-  } else {
-    MI mi(other.size());
+MI operator-(MI lhs, const std::vector<MIType>& rhs) {
+  lhs -= rhs;
+  return lhs;
+}
 
-    for (size_t dim = 0; dim < nDim(); dim++) {
-      mi[dim] = (*this)[dim] - other[dim];
-    }
+MI operator-(std::vector<MIType> lhs, const MI& rhs) {
+  check_same_size(lhs, rhs);
 
-    return mi;
-  }
+  MI result(lhs);
+  result -= rhs;
+  return result;
 }
 
 }  // namespace combigrid

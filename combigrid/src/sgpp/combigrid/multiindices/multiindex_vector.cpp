@@ -83,6 +83,9 @@ const std::shared_ptr<MI> MIVec::componentWiseMax() const {
 }
 
 const std::shared_ptr<std::vector<size_t>> MIVec::paretoMaxima(const bool isDownwardsClosed) const {
+  const std::vector<int> a{5, 6};
+  const std::vector<int> b{5};
+
   if (paretoMaxima_ == nullptr) {
     const std::vector<size_t> result = tools::computeParetoMaxima(*this, isDownwardsClosed);
     paretoMaxima_ = std::make_shared<std::vector<size_t>>(std::move(result));

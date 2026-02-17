@@ -3,6 +3,8 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 #include <vector>
+#include "sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp"
+#include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -165,7 +167,7 @@ BOOST_AUTO_TEST_CASE(single_nonzero_mi_not_downwards_closed) {
 // 4) Fully closed small 2D set: all combinations up to (1,1) -> should be closed
 BOOST_AUTO_TEST_CASE(complete_rectangle_is_downwards_closed) {
   // All of: (0,0), (1,0), (0,1), (1,1)
-  MIVec mv = mivecFromList(2, {{0, 0}, {1, 0}, {0, 1}, {1, 1}});
+  const MIVec mv = mivecFromList(2, {{0, 0}, {1, 0}, {0, 1}, {1, 1}});
 
   // Try elements in random order to ensure order doesn't matter
   MIVec shuffled = mv;  // assuming copy ctor exists

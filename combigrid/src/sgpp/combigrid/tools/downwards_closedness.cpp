@@ -5,6 +5,7 @@
 #include <sgpp/combigrid/tools/downwards_closedness.hpp>
 #include <sgpp/combigrid/tools/multiindex_domination.hpp>
 #include <vector>
+#include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -26,7 +27,9 @@ bool isMIVecDownwardsClosed(const MIVec& miVec) {
     const MI mi = miVec[miIdx];
 
     for (const std::vector<MIType>& offset : offsets) {
-      if (offset <= mi && !lookup->contains(mi)) {
+      const bool rel = offset <= mi;
+
+      if (offset <= mi && !lookup->contains(mi - offset)) {
         closed = false;
         // #pragma omp cancel for
       }
