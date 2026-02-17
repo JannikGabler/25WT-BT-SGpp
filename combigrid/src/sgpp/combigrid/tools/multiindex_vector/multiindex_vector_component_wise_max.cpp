@@ -18,6 +18,9 @@ MI computeComponentWiseMax(const MIVec& miVec) {
   }
 }
 
+/*
+TODO: Optimize (used pareto Maxima if cached by the miVec)
+ */
 MI computeComponentWiseMaxSerial(const MIVec& miVec) {
   MI max(miVec.nDim());
 
@@ -30,6 +33,9 @@ MI computeComponentWiseMaxSerial(const MIVec& miVec) {
   return max;
 }
 
+/*
+TODO: Optimize (used pareto Maxima if cached by the miVec)
+ */
 MI computeComponentWiseMaxParallel(const MIVec& miVec) {
   const std::vector<size_t> partitioning =
       tools::partitionRange(miVec.nMI(), 1, omp_get_max_threads());

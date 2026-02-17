@@ -1,6 +1,5 @@
 #include <omp.h>
 #include <cassert>
-#include <memory>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
@@ -10,20 +9,42 @@
 #include <sgpp/combigrid/tools/downwards_closedness.hpp>
 #include <sgpp/combigrid/tools/multiindex_vector/multiindex_vector_component_wise_max.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
-#include <utility>
 #include <vector>
+#include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
 
 namespace sgpp {
 namespace combigrid {
 
-namespace {}  // namespace
-
-MIVec::MIVec(const size_t nDim, const size_t nMI) : nDim_(nDim), nMI_(nMI), data_(nMI * nDim) {}
+MIVec::MIVec(const size_t nDim, const size_t nMI)
+    : nDim_(nDim), nMI_(nMI), data_(nMI * nDim), cacheCleared(true) {}
 
 MIVec::MIVec(const std::vector<MI>& mi)
-    : nDim_(mi.size() == 0 ? 0 : mi[0].nDim()), nMI_(mi.size()), data_(nMI_ * nDim_) {
+    : nDim_(mi.size() == 0 ? 0 : mi[0].nDim()),
+      nMI_(mi.size()),
+      data_(nMI_ * nDim_),
+      cacheCleared(true) {
   for (size_t i = 0; i < mi.size(); i++) {
     setMI(i, mi[i]);
+  }
+}
+
+MIVec::MIVec(const std::vector<std::vector<MIType>>& mi)
+    : nDim_(mi.size() == 0 ? 0 : mi[0].size()),
+      nMI_(mi.size()),
+      data_(nMI_ * nDim_),
+      cacheCleared(true) {
+  for (size_t i = 0; i < mi.size(); i++) {
+    setMI(i, mi[i]);
+  }
+}
+MIVec::MIVec(const std::initializer_list<MI> initList)
+    : nDim_(initList.size() == 0 ? 0 : initList.begin()->nDim()),
+      nMI_(initList.size()),
+      data_(nMI_ * nDim_),
+      cacheCleared(true) {
+  size_t idx = 0;
+  for (const MI& mi : initList) {
+    setMI(idx++, mi);
   }
 }
 
@@ -39,10 +60,10 @@ MIType MIVec::operator()(const size_t miIdx, const size_t dim) const {
   return data_[miIdx * nDim_ + dim];
 }
 
-MIType& MIVec::operator()(const size_t miIdx, const size_t dim) {
+MIVecElemProxy MIVec::operator()(const size_t miIdx, const size_t dim) {
   assert(miIdx < nMI_ && dim < nDim_);
 
-  return data_[miIdx * nDim_ + dim];
+  return MIVecElemProxy(*this, data_[miIdx * nDim_ + dim]);
 }
 
 MI MIVec::operator[](const size_t miIdx) const {
@@ -64,19 +85,23 @@ void MIVec::setMI(const size_t idx, const MI& mi) {
     data_[idx * nDim_ + dim] = mi[dim];
   }
 }
+void MIVec::setMI(const size_t idx, const std::vector<MIType>& mi) {
+  clearCachedValues();
+
+  for (size_t dim = 0; dim < nDim_; dim++) {
+    data_[idx * nDim_ + dim] = mi[dim];
+  }
+}
 
 bool MIVec::isDownwardsClosed() const { return tools::isMIVecDownwardsClosed(*this); }
 
-MIVec MIVec::downwardsClosure() const {
-  // TODO
-  throw base::not_implemented_exception("This operation is not implemented yet!");
-}
+MIVec MIVec::downwardsClosure() const { return tools::genMIVecDownwardsClosure(*this); }
 
 const std::shared_ptr<MI> MIVec::componentWiseMax() const {
   if (componentWiseMax_ == nullptr) {
     const MI result = tools::computeComponentWiseMax(*this);
-
     componentWiseMax_ = std::make_shared<MI>(std::move(result));
+    cacheCleared = false;
   }
 
   return componentWiseMax_;
@@ -89,6 +114,7 @@ const std::shared_ptr<std::vector<size_t>> MIVec::paretoMaxima(const bool isDown
   if (paretoMaxima_ == nullptr) {
     const std::vector<size_t> result = tools::computeParetoMaxima(*this, isDownwardsClosed);
     paretoMaxima_ = std::make_shared<std::vector<size_t>>(std::move(result));
+    cacheCleared = false;
   }
 
   return paretoMaxima_;
@@ -98,14 +124,19 @@ const std::shared_ptr<misc::MIVecLookup> MIVec::lookup() const {
   if (lookup_ == nullptr) {
     const misc::MIVecLookup result(*this);
     lookup_ = std::make_shared<misc::MIVecLookup>(result);
+    cacheCleared = false;
   }
 
   return lookup_;
 }
 
 void MIVec::clearCachedValues() const {
-  componentWiseMax_.reset();
-  paretoMaxima_.reset();
+  if (!cacheCleared) {
+    componentWiseMax_.reset();
+    paretoMaxima_.reset();
+    lookup_.reset();
+    cacheCleared = true;
+  }
 }
 
 }  // namespace combigrid

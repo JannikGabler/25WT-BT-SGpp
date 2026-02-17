@@ -1,6 +1,7 @@
 #ifndef COMBIGRID_MISC_DISCRETE_RECT_BOUNDING_BOX_HPP
 #define COMBIGRID_MISC_DISCRETE_RECT_BOUNDING_BOX_HPP
 
+#include <algorithm>
 #include <cassert>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box_iterator.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -22,9 +23,24 @@ struct DiscRectBB {
     assert(lowerBound.size() == upperBond.size());
   }
 
-  DiscRectBBIterator<T> begin() const { return DiscRectBBIterator<T>(this); }
+  size_t size() const {
+    if (lowerBound.size() == 0) {
+      return 0;
+    }
 
-  DiscRectBBIterator<T> end() const { return DiscRectBBIterator<T>(this, true); }
+    size_t size = 1;
+    for (size_t dim = 0; dim < lowerBound.size(); dim++) {
+      if (lowerBound[dim] > upperBound[dim]) {
+        return 0;
+      }
+      size *= upperBound[dim] - lowerBound[dim] + 1;
+    }
+    return size;
+  }
+
+  DiscRectBBIterator<T> begin() const { return DiscRectBBIterator<T>(*this); }
+
+  DiscRectBBIterator<T> end() const { return DiscRectBBIterator<T>(*this, true); }
 };
 
 }  // namespace misc

@@ -2,9 +2,6 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
-#include <vector>
-#include "sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp"
-#include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -13,7 +10,11 @@
 
 #include <random>
 #include <set>
+#include <sgpp/combigrid/constants.hpp>
+// #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
+// #include <sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <vector>
 
 using namespace sgpp::combigrid;
 
@@ -27,7 +28,7 @@ namespace {
 // }
 
 // Helper: create MIVec from a list of MI initializer lists
-static MIVec mivecFromList(size_t nDim, std::initializer_list<std::initializer_list<MIType>> list) {
+MIVec mivecFromList(size_t nDim, std::initializer_list<std::initializer_list<MIType>> list) {
   std::vector<MI> vec;
   for (const auto& l : list) {
     MI m{l};
@@ -45,7 +46,7 @@ static MIVec mivecFromList(size_t nDim, std::initializer_list<std::initializer_l
 }
 
 // Check existence of an MI in an MIVec via linear scan (uses MI::operator==)
-static bool containsMI(const MIVec& mv, const MI& needle) {
+bool containsMI(const MIVec& mv, const MI& needle) {
   for (size_t i = 0; i < mv.nMI(); ++i) {
     if (mv[i] == needle) return true;
   }
@@ -54,7 +55,7 @@ static bool containsMI(const MIVec& mv, const MI& needle) {
 
 // Compute expected "downwards closed" property by brute force:
 // For every multi-index m in mv, all componentwise smaller-or-equal indices must be present.
-static bool expectedIsDownwardsClosed(const MIVec& mv) {
+bool expectedIsDownwardsClosed(const MIVec& mv) {
   const size_t nMI = mv.nMI();
   if (nMI == 0) return true;  // vacuously true
 
@@ -89,7 +90,7 @@ static bool expectedIsDownwardsClosed(const MIVec& mv) {
 }
 
 // Utility: compare two MIs for ordering when inserting into set<string> for uniqueness
-static std::string miToString(const MI& m) {
+std::string miToString(const MI& m) {
   std::ostringstream os;
   os << "(";
   for (size_t i = 0; i < m.nDim(); ++i) {
@@ -101,7 +102,7 @@ static std::string miToString(const MI& m) {
 }
 
 // Compute closure size (all sub-multi-indices of each mi, unique)
-static std::set<std::string> computeDownwardsClosureSet(const MIVec& mv) {
+std::set<std::string> computeDownwardsClosureSet(const MIVec& mv) {
   std::set<std::string> s;
   if (mv.nMI() == 0) return s;
   const size_t ndim = mv[0].nDim();
@@ -280,6 +281,69 @@ BOOST_AUTO_TEST_CASE(order_independence_for_closed_sets) {
   BOOST_CHECK(mv_shuffled.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(mv));
   BOOST_CHECK(expectedIsDownwardsClosed(mv_shuffled));
+}
+
+// 12) Multi-threaded randomized MIVec: generate at least DWC_MIN_MI_FOR_CONCURRENCY MIs randomly.
+//     The used random seed is printed so a failing case can be reproduced.
+BOOST_AUTO_TEST_CASE(multi_threaded_random_mivec_with_seed) {
+  // Dimension for generated multi-indices
+  constexpr size_t ndim = 3;
+
+  // Get required number of multi-indices to trigger concurrency
+  const size_t minMIForConcurrency = constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY;
+
+  // Produce a (pseudo-)random seed and report it so failures are reproducible
+  std::random_device rd;
+  const uint64_t seed = (static_cast<uint64_t>(rd()) << 32) ^ static_cast<uint64_t>(rd());
+  // BOOST_TEST_MESSAGE("multi_threaded_random_mivec_with_seed: seed = " << seed);
+
+  std::mt19937_64 rng(seed);
+
+  // Keep component values small to keep brute-force expected-check tractable
+  std::uniform_int_distribution<MIType> compDist(0, 3);
+
+  // Generate exactly minMIForConcurrency random multi-indices
+  std::vector<MI> mis;
+  mis.reserve(minMIForConcurrency);
+  for (size_t i = 0; i < minMIForConcurrency; ++i) {
+    MI m;
+    m.resize(ndim);
+    for (size_t d = 0; d < ndim; ++d) {
+      m[d] = compDist(rng);
+    }
+    mis.push_back(m);
+  }
+
+  const MIVec mv(mis);
+
+  // BOOST_TEST_MESSAGE("Generated MIVec: nDim=" << mv.nDim() << " nMI=" << mv.nMI());
+
+  // Brute-force expected result (may be expensive but kept feasible by small component range)
+  const bool expected = expectedIsDownwardsClosed(mv);
+
+  // Actual result (should execute multi-threaded path when nMI >= constant)
+  const bool actual = mv.isDownwardsClosed();
+
+  BOOST_CHECK_MESSAGE(actual == expected, "Mismatch in isDownwardsClosed() (seed="
+                                              << seed << "). expected=" << expected
+                                              << " actual=" << actual << " nMI=" << mv.nMI());
+
+  // Additional consistency checks for downwardsClosure (only run if not too big)
+  // (we still print seed above so it's reproducible if this becomes expensive)
+  const MIVec closed = mv.downwardsClosure();
+  BOOST_CHECK_MESSAGE(closed.isDownwardsClosed(),
+                      "downwardsClosure() result is not downwards-closed (seed=" << seed << ")");
+
+  // Original elements must be contained in the closure
+  for (size_t i = 0; i < mv.nMI(); ++i) {
+    BOOST_CHECK_MESSAGE(
+        containsMI(closed, mv[i]),
+        "downwardsClosure() must contain original MI (seed=" << seed << "): " << miToString(mv[i]));
+  }
+
+  // Closure size at least as large as original
+  BOOST_CHECK_MESSAGE(closed.nMI() >= mv.nMI(),
+                      "Closure size smaller than original (seed=" << seed << ")");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
