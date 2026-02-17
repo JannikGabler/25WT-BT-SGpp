@@ -4,6 +4,7 @@
 #include <memory>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/constants.hpp>
+#include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
@@ -19,7 +20,7 @@ namespace {
 MI mergeComponentWiseMax(const size_t nDim, const std::vector<MI>& localMax) {
   MI globalMax(nDim);
 
-  for (const MI localMI : localMax) {
+  for (const MI& localMI : localMax) {
     for (size_t dim = 0; dim < nDim; dim++) {
       globalMax[dim] = std::max(globalMax[dim], localMI[dim]);
     }
@@ -140,6 +141,15 @@ const std::shared_ptr<std::vector<size_t>> MIVec::paretoMaxima(const bool isDown
   }
 
   return paretoMaxima_;
+}
+
+const std::shared_ptr<misc::MIVecLookup> MIVec::lookup() const {
+  if (lookup_ == nullptr) {
+    const misc::MIVecLookup result(*this);
+    lookup_ = std::make_shared<misc::MIVecLookup>(result);
+  }
+
+  return lookup_;
 }
 
 void MIVec::clearCachedValues() const {

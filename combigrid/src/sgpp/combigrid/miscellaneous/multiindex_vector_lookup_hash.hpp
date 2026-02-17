@@ -1,10 +1,7 @@
 #ifndef COMBIGRID_MISC_MULTIINDEX_VECTOR_LOOKUP_HASH_HPP
 #define COMBIGRID_MISC_MULTIINDEX_VECTOR_LOOKUP_HASH_HPP
 
-#include <sgpp/combigrid/multiindices/multiindex.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <sgpp/globaldef.hpp>
 
 namespace sgpp {
 

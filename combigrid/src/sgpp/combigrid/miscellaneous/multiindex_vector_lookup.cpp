@@ -1,10 +1,10 @@
+#include <sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
+#include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup_hash.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
-#include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
-#include "sgpp/combigrid/miscellaneous/multiindex_vector_lookup_hash.hpp"
 
 namespace sgpp {
 

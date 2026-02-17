@@ -2,6 +2,7 @@
 #define COMBIGRID_MULTIINDEX_VECTOR_HPP
 
 #include <memory>
+#include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
@@ -35,6 +36,8 @@ class MIVec {
 
   const std::shared_ptr<std::vector<size_t>> paretoMaxima(bool isDownwardsClosed = false) const;
 
+  const std::shared_ptr<misc::MIVecLookup> lookup() const;
+
  private:
   const size_t nDim_;
   size_t nMI_;
@@ -43,6 +46,7 @@ class MIVec {
 
   mutable std::shared_ptr<MI> componentWiseMax_;
   mutable std::shared_ptr<std::vector<size_t>> paretoMaxima_;
+  mutable std::shared_ptr<misc::MIVecLookup> lookup_;
 
   void clearCachedValues() const;
 };

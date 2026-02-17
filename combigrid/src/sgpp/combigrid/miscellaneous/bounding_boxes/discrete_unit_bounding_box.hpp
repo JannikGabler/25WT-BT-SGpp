@@ -4,7 +4,6 @@
 #include <cassert>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_unit_bounding_box_iterator.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <sgpp/globaldef.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -12,12 +11,14 @@ namespace misc {
 
 template <typename T>
 struct DiscUnitBB {
+  DiscUnitBB(const size_t nDim) : nDim(nDim) {}
+
  public:
   const size_t nDim;
 
-  DiscUnitBBIterator<T> begin() const { return DiscUnitBBIterator<T>(this); }
+  DiscUnitBBIterator<T> begin() const { return DiscUnitBBIterator<T>(*this); }
 
-  DiscUnitBBIterator<T> end() const { return DiscUnitBBIterator<T>(this, true); }
+  DiscUnitBBIterator<T> end() const { return DiscUnitBBIterator<T>(*this, true); }
 };
 
 }  // namespace misc

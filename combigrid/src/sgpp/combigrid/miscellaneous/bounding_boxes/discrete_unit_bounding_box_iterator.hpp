@@ -17,8 +17,8 @@ class DiscUnitBBIterator {
   DiscUnitBBIterator(const DiscUnitBB<T>& discUnitBB, const bool finished = false)
       : discUnitBB(discUnitBB), finished(finished), curPos(finished ? 0 : discUnitBB.nDim, 0) {}
 
-  const T& operator*() const { return curPos; }
-  const T* operator->() const { return &curPos; }
+  const std::vector<T>& operator*() const { return curPos; }
+  const std::vector<T>* operator->() const { return &curPos; }
 
   DiscUnitBBIterator& operator++() {
     for (size_t dim = 0; dim < curPos.size(); dim++) {

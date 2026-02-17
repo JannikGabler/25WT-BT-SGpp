@@ -4,14 +4,14 @@
 #include <sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup_hash.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <sgpp/globaldef.hpp>
 #include <unordered_map>
 
 namespace sgpp {
 
 namespace combigrid {
+
+class MIVec;  // Forward declaration to avoid circular includes
 
 namespace misc {
 
