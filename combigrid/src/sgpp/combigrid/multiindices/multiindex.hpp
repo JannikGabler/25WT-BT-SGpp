@@ -12,6 +12,8 @@ class MI : public std::vector<MIType> {
  public:
   using std::vector<MIType>::vector;  // Inherit constructors of std::vector
 
+  MI(const std::vector<MIType>& vec);
+
   size_t toLinearIndex() const;
 
   size_t productofElems() const;
@@ -27,6 +29,10 @@ class MI : public std::vector<MIType> {
   bool operator>=(const MI& other) const;
 
   MI operator+(const MI& other) const;
+  MI operator+(const std::vector<MIType>& other) const;
+
+  MI operator-(const MI& other) const;
+  MI operator-(const std::vector<MIType>& other) const;
 };
 
 }  // namespace combigrid

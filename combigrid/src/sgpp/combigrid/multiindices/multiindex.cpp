@@ -1,7 +1,7 @@
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -111,6 +111,66 @@ MI MI::operator+(const MI& other) const {
 
     for (size_t dim = 0; dim < nDim(); dim++) {
       mi[dim] += (*this)[dim];
+    }
+
+    return mi;
+  }
+}
+
+MI MI::operator+(const std::vector<MIType>& other) const {
+  if (nDim() >= other.size()) {
+    MI mi(*this);
+
+    for (size_t dim = 0; dim < other.size(); dim++) {
+      mi[dim] += other[dim];
+    }
+
+    return mi;
+  } else {
+    MI mi(other);
+
+    for (size_t dim = 0; dim < nDim(); dim++) {
+      mi[dim] += (*this)[dim];
+    }
+
+    return mi;
+  }
+}
+
+MI MI::operator-(const MI& other) const {
+  if (nDim() >= other.nDim()) {
+    MI mi(*this);
+
+    for (size_t dim = 0; dim < other.nDim(); dim++) {
+      mi[dim] -= other[dim];
+    }
+
+    return mi;
+  } else {
+    MI mi(other.size());
+
+    for (size_t dim = 0; dim < nDim(); dim++) {
+      mi[dim] = (*this)[dim] - other[dim];
+    }
+
+    return mi;
+  }
+}
+
+MI MI::operator-(const std::vector<MIType>& other) const {
+  if (nDim() >= other.size()) {
+    MI mi(*this);
+
+    for (size_t dim = 0; dim < other.size(); dim++) {
+      mi[dim] -= other[dim];
+    }
+
+    return mi;
+  } else {
+    MI mi(other.size());
+
+    for (size_t dim = 0; dim < nDim(); dim++) {
+      mi[dim] = (*this)[dim] - other[dim];
     }
 
     return mi;

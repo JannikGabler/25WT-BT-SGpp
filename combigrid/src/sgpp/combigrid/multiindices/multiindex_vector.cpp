@@ -7,6 +7,7 @@
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
+#include <sgpp/combigrid/tools/downwards_closedness.hpp>
 #include <sgpp/combigrid/tools/multiindex_vector/multiindex_vector_component_wise_max.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
 #include <utility>
@@ -64,10 +65,7 @@ void MIVec::setMI(const size_t idx, const MI& mi) {
   }
 }
 
-bool MIVec::isDownwardsClosed() const {
-  // TODO
-  throw base::not_implemented_exception("This operation is not implemented yet!");
-}
+bool MIVec::isDownwardsClosed() const { return tools::isMIVecDownwardsClosed(*this); }
 
 MIVec MIVec::downwardsClosure() const {
   // TODO

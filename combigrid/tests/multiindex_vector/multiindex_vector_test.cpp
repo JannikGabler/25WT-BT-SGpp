@@ -2,24 +2,19 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
-
-#include <boost/test/unit_test_suite.hpp>
-#include <cmath>
-#include <memory>
-#include "sgpp/combigrid/multiindices/multiindex.hpp"
-#include "sgpp/combigrid/tools/multiindex_domination.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
 #include <boost/test/unit_test.hpp>
+#include <boost/test/unit_test_suite.hpp>
 
 #include <cstddef>
 #include <random>
 #include <sgpp/combigrid/constants.hpp>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/tools/multiindex_domination.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
-#include <sgpp/globaldef.hpp>
-#include <sgpp_base.hpp>
 #include <vector>
 
 using namespace sgpp::combigrid;
