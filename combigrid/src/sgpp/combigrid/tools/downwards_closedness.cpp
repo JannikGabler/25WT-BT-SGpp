@@ -1,9 +1,8 @@
-#include <memory>
+#include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_unit_bounding_box.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/downwards_closedness.hpp>
-#include <sgpp/combigrid/tools/iterators.hpp>
 #include <sgpp/combigrid/tools/multiindex_domination.hpp>
 #include <vector>
 
@@ -21,7 +20,8 @@ bool isMIVecDownwardsClosed(const MIVec& miVec) {
 
   bool closed = true;
 
-#pragma omp parallel for schedule(static) if (miVec.nMI() >= 5)  // TODO
+#pragma omp parallel for schedule(static) if (miVec.nMI() >= \
+                                                  constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
     const MI mi = miVec[miIdx];
 

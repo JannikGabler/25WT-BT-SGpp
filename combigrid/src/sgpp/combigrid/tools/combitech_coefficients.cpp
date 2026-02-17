@@ -85,7 +85,8 @@ std::vector<int> computeCTCoeffs(const MIVec& miVec) {
   std::vector<int> nextCoeff(nMI, 0);
 
   for (size_t dim = 0; dim < miVec.nDim(); dim++) {
-#pragma omp parallel for schedule(static) if (nMI >= ct_coefficients::MIN_MIS_FOR_CONCURRENCY)
+#pragma omp parallel for schedule( \
+        static) if (nMI >= constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY)
     for (size_t miIdx = 0; miIdx < nMI; miIdx++) {
       MI successor = miVec[miIdx];
       successor[dim]++;

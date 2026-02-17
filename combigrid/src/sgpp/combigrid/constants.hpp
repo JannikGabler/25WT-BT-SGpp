@@ -5,25 +5,29 @@
 namespace sgpp {
 namespace combigrid {
 
+namespace constants {
+
 namespace mi_vec {
 
-constexpr size_t MIN_MIVEC_LENGTH_FOR_CONCURRENCY = 10000;
+// Component wise max
+constexpr size_t CWM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY = 10000;
 
-}
+// Pareto maxima
+constexpr size_t PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY = 10000;
+constexpr size_t PM_MIN_MIVEC_BATCH_LENGTH_PER_THREAD = 5000;
 
-namespace pareto_maxima {
+// Downwards closedness
+constexpr size_t DWC_MIN_MI_FOR_CONCURRENCY = 10000;
 
-constexpr size_t MIN_MIVEC_LENGTH_FOR_CONCURRENCY = 10000;
-
-constexpr size_t MIN_MIVEC_BATCH_LENGTH_PER_THREAD = 5000;
-
-}  // namespace pareto_maxima
+}  // namespace mi_vec
 
 namespace ct_coefficients {
 
 constexpr size_t MIN_MIS_FOR_CONCURRENCY = 10000;
 
 }
+
+}  // namespace constants
 
 }  // namespace combigrid
 }  // namespace sgpp

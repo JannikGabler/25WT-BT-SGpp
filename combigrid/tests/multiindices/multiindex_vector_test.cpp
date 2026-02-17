@@ -22,13 +22,11 @@
 #include <sgpp_base.hpp>
 #include <vector>
 
-using MIType = sgpp::combigrid::MIType;
-using MI = sgpp::combigrid::MI;
-using MIVec = sgpp::combigrid::MIVec;
+using namespace sgpp::combigrid;
 
 BOOST_AUTO_TEST_SUITE(op_componentWiseMax)
 
-BOOST_AUTO_TEST_CASE(ComponentWiseMax_Basic2D) {
+BOOST_AUTO_TEST_CASE(Basic2D) {
   // Multiindizes:
   // (1,2)
   // (3,1)
@@ -45,7 +43,7 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_Basic2D) {
   BOOST_CHECK_EQUAL((*result)[1], 5u);  // max(2,1,5)
 }
 
-BOOST_AUTO_TEST_CASE(ComponentWiseMax_Basic3D) {
+BOOST_AUTO_TEST_CASE(Basic3D) {
   std::vector<MI> mis = {MI{0, 7, 1}, MI{5, 2, 9}, MI{3, 4, 6}};
 
   MIVec vec(mis);
@@ -71,7 +69,7 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_SingleMI) {
   BOOST_CHECK_EQUAL((*result)[2], 15u);
 }
 
-BOOST_AUTO_TEST_CASE(ComponentWiseMax_AllEqual) {
+BOOST_AUTO_TEST_CASE(AllEqual) {
   std::vector<MI> mis = {MI{2, 2}, MI{2, 2}, MI{2, 2}};
 
   MIVec vec(mis);
@@ -82,7 +80,7 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_AllEqual) {
   BOOST_CHECK_EQUAL((*result)[1], 2u);
 }
 
-BOOST_AUTO_TEST_CASE(ComponentWiseMax_DistributedMaxima) {
+BOOST_AUTO_TEST_CASE(DistributedMaxima) {
   std::vector<MI> mis = {MI{10, 1, 1}, MI{1, 10, 1}, MI{1, 1, 10}};
 
   MIVec vec(mis);
@@ -94,7 +92,7 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_DistributedMaxima) {
   BOOST_CHECK_EQUAL((*result)[2], 10u);
 }
 
-BOOST_AUTO_TEST_CASE(ComponentWiseMax_OrderIndependence) {
+BOOST_AUTO_TEST_CASE(OrderIndependence) {
   std::vector<MI> mis1 = {MI{1, 3}, MI{4, 2}};
 
   std::vector<MI> mis2 = {MI{4, 2}, MI{1, 3}};
@@ -112,7 +110,7 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_OrderIndependence) {
   BOOST_CHECK_EQUAL((*r1)[1], (*r2)[1]);
 }
 
-BOOST_AUTO_TEST_CASE(ComponentWiseMax_RepeatedCallsConsistent) {
+BOOST_AUTO_TEST_CASE(RepeatedCallsConsistent) {
   std::vector<MI> mis = {MI{2, 5}, MI{7, 1}};
 
   MIVec vec(mis);
@@ -127,7 +125,7 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_RepeatedCallsConsistent) {
   BOOST_CHECK_EQUAL((*r1)[1], (*r2)[1]);
 }
 
-BOOST_AUTO_TEST_CASE(ComponentWiseMax_LargeValues) {
+BOOST_AUTO_TEST_CASE(LargeValues) {
   std::vector<MI> mis = {MI{1000000, 1}, MI{2, 999999}};
 
   MIVec vec(mis);
@@ -138,9 +136,9 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_LargeValues) {
   BOOST_CHECK_EQUAL((*result)[1], 999999u);
 }
 
-BOOST_AUTO_TEST_CASE(ComponentWiseMax_ConcurrencyRandom) {
+BOOST_AUTO_TEST_CASE(ConcurrencyRandom) {
   const size_t nDim = 5;
-  const size_t nMI = sgpp::combigrid::mi_vec::MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
+  const size_t nMI = constants::mi_vec::CWM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
 
   // Zufälliger Seed generieren
   std::random_device rd;
@@ -187,7 +185,7 @@ BOOST_AUTO_TEST_SUITE(op_paretoMaximum)
 
 namespace {
 
-std::vector<size_t> naivParetoMaximum(const sgpp::combigrid::MIVec input) {
+std::vector<size_t> naivParetoMaximum(const MIVec input) {
   std::vector<size_t> skyline;
 
   for (size_t miIdx1 = 0; miIdx1 < input.nMI(); miIdx1++) {
@@ -200,7 +198,7 @@ std::vector<size_t> naivParetoMaximum(const sgpp::combigrid::MIVec input) {
             dominated = true;
             break;
           }
-        } else if (sgpp::combigrid::tools::miDominatesMI(input, miIdx2, miIdx1)) {
+        } else if (tools::miDominatesMI(input, miIdx2, miIdx1)) {
           dominated = true;
           break;
         }
@@ -221,7 +219,7 @@ BOOST_AUTO_TEST_CASE(SmallSequential) {
   constexpr size_t N_MI = 8;
   constexpr size_t N_DIM = 2;
 
-  sgpp::combigrid::MIVec miVec(N_DIM, N_MI);
+  MIVec miVec(N_DIM, N_MI);
 
   miVec(0, 0) = 1;
   miVec(0, 1) = 6;
@@ -263,7 +261,7 @@ BOOST_AUTO_TEST_CASE(DuplicateSequential) {
   constexpr size_t N_MI = 8;
   constexpr size_t N_DIM = 2;
 
-  sgpp::combigrid::MIVec miVec(N_DIM, N_MI);
+  MIVec miVec(N_DIM, N_MI);
 
   miVec(0, 0) = 1;
   miVec(0, 1) = 6;
@@ -308,7 +306,7 @@ BOOST_AUTO_TEST_CASE(RandomSequential) {
   std::uniform_real_distribution<> dis(0.0, 100.0);
 
   // Generating a random MIVec
-  sgpp::combigrid::MIVec miVec(N_DIM, N_MI);
+  MIVec miVec(N_DIM, N_MI);
 
   for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
     for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
@@ -326,7 +324,7 @@ BOOST_AUTO_TEST_CASE(RandomSequential) {
 }
 
 BOOST_AUTO_TEST_CASE(RandomTestConcurrent) {
-  constexpr size_t N_MI = sgpp::combigrid::pareto_maxima::MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
+  constexpr size_t N_MI = constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
 
   constexpr size_t N_DIM = 2;
 
@@ -336,7 +334,7 @@ BOOST_AUTO_TEST_CASE(RandomTestConcurrent) {
   std::uniform_real_distribution<> dis(0.0, 1000.0);
 
   // Generating a random MIVec
-  sgpp::combigrid::MIVec miVec(N_DIM, N_MI);
+  MIVec miVec(N_DIM, N_MI);
 
   for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
     for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
