@@ -24,18 +24,18 @@ bool isMIVecDownwardsClosed(const MIVec& miVec) {
 
   bool closed = true;
 
-#pragma omp parallel for schedule(static) \
-    shared(closed) if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
+  // #pragma omp parallel for schedule(static) \
+  //     shared(closed) if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
     const MI mi = miVec[miIdx];
 
     for (const std::vector<MIType>& offset : offsets) {
       if (offset <= mi && !lookup->contains(mi - offset)) {
         closed = false;
-#pragma omp cancel for
+        // #pragma omp cancel for
       }
     }
-#pragma omp cancellation point for
+    // #pragma omp cancellation point for
   }
 
   return closed;
@@ -49,7 +49,8 @@ MIVec genMIVecDownwardsClosure(const MIVec& miVec) {
   const std::shared_ptr<std::vector<size_t>> paretoMaxima = miVec.paretoMaxima();
   const misc::DiscRectBB<MIType> boundingBox = genRectMIBoundingBox(miVec);
 
-  std::vector<std::vector<MIType>> closure(boundingBox.size());
+  std::vector<std::vector<MIType>> closure{};
+  closure.reserve(boundingBox.size());
 
   for (const std::vector<MIType>& mi : boundingBox) {
     if (miVecDominatesMI(miVec, *paretoMaxima, mi)) {

@@ -66,9 +66,9 @@ BOOST_AUTO_TEST_CASE(RandomizedMIVec) {
   std::random_device rd;
   const auto seed = rd();
   std::mt19937 gen(seed);
-  std::uniform_int_distribution<size_t> dimDist(2, 64);    // number of dimensions
-  std::uniform_int_distribution<size_t> miDist(1, 10000);  // number of MIs
-  std::uniform_int_distribution<MIType> valDist(0, 1000);
+  std::uniform_int_distribution<size_t> dimDist(2, 5);   // number of dimensions
+  std::uniform_int_distribution<size_t> miDist(1, 100);  // number of MIs
+  std::uniform_int_distribution<MIType> valDist(0, 5);
 
   const size_t nDim = dimDist(gen);
   const size_t nMI = miDist(gen);

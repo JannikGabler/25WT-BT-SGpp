@@ -13,27 +13,27 @@ namespace combigrid {
 namespace misc {
 
 MIVecLookup::MIVecLookup(const MIVec& miVec)
-    : nDim(miVec.nDim()),
+    : miVec((miVec)),
       map(miVec.nMI(), MIVecLookupHash(miVec.nDim()), MIVecLookupEqual(miVec.nDim())) {
   const MIType* dataPtr = miVec.data();
 
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
     map.emplace(dataPtr, miIdx);
-    dataPtr += nDim;
+    dataPtr += miVec.nDim();
   }
 }
 
-bool MIVecLookup::contains(const MI& mi) const { return find(mi) < map.size(); }
+bool MIVecLookup::contains(const MI& mi) const { return find(mi) < miVec.nMI(); }
 
 size_t MIVecLookup::find(const MI& mi) const {
-  if (mi.size() != nDim) {
-    return map.size();
+  if (mi.size() != miVec.nDim()) {
+    return miVec.nMI();
   }
 
   const auto entry = map.find(mi.data());
 
   if (entry == map.end()) {
-    return map.size();
+    return miVec.nMI();
   }
 
   return entry->second;

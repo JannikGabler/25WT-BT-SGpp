@@ -15,8 +15,8 @@ namespace misc {
 template <typename T>
 struct DiscRectBB {
  public:
-  const std::vector<T>& lowerBound;
-  const std::vector<T>& upperBound;
+  const std::vector<T> lowerBound;
+  const std::vector<T> upperBound;
 
   DiscRectBB(const std::vector<T>& lowerBound, const std::vector<T>& upperBond)
       : lowerBound(lowerBound), upperBound(upperBond) {

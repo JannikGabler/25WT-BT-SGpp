@@ -141,6 +141,9 @@ std::vector<size_t> computeParetoMaxParallelNonDWC(const MIVec& miVec) {
 
 std::vector<size_t> computeParetoMaxima(const MIVec& miVec, const bool isDownwardsClosed) {
   const size_t length = miVec.nMI() * miVec.nDim();
+  if (length == 0) {
+    return std::vector<size_t>{};
+  }
 
   if (isDownwardsClosed) {
     if (length < constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {

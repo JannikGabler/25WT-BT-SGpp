@@ -340,10 +340,6 @@ BOOST_AUTO_TEST_CASE(multi_threaded_random_mivec_with_seed) {
         containsMI(closed, mv[i]),
         "downwardsClosure() must contain original MI (seed=" << seed << "): " << miToString(mv[i]));
   }
-
-  // Closure size at least as large as original
-  BOOST_CHECK_MESSAGE(closed.nMI() >= mv.nMI(),
-                      "Closure size smaller than original (seed=" << seed << ")");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

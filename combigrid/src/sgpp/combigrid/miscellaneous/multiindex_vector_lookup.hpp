@@ -24,7 +24,7 @@ class MIVecLookup {
   size_t find(const MI& mi) const;
 
  private:
-  const size_t nDim;
+  const MIVec& miVec;
   std::unordered_map<const MIType*, size_t, MIVecLookupHash, MIVecLookupEqual> map;
 };
 

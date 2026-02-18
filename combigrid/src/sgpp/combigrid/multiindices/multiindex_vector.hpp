@@ -16,9 +16,9 @@ namespace combigrid {
 class MIVec {
  public:
   MIVec(size_t nDim, size_t nMI);
-  explicit MIVec(const std::vector<MI>& mi);
-  explicit MIVec(const std::vector<std::vector<MIType>>& mi);
-  explicit MIVec(const std::initializer_list<MI> initList);
+  MIVec(const std::vector<MI>& mi);
+  MIVec(const std::vector<std::vector<MIType>>& mi);
+  MIVec(const std::initializer_list<MI> initList);
 
   size_t nDim() const;
   size_t nMI() const;
