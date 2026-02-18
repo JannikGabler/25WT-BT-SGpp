@@ -1,180 +1,83 @@
-// // Copyright (C) 2008-today The SG++ project
-// // This file is part of the SG++ project. For conditions of distribution and
-// // use, please see the copyright notice provided with SG++ or at
-// // sgpp.sparsegrids.org
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+#include "sgpp/combigrid/tools/combitech_coefficients.hpp"
+#include <boost/test/unit_test_log.hpp>
+#include <vector>
+#include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
+#define BOOST_TEST_DYN_LINK
 
-// #include <cmath>
-// #include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
-// #include "sgpp/combigrid/multiindices/multiindex.hpp"
-// #define BOOST_TEST_DYN_LINK
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test.hpp>
+#include <boost/test/unit_test_suite.hpp>
 
-// #include <boost/test/tools/old/interface.hpp>
-// #include <boost/test/unit_test.hpp>
+#include <random>
+#include <sgpp/combigrid/constants.hpp>
+#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 
-// #include <cstddef>
-// #include <random>
-// #include <sgpp/combigrid/constants.hpp>
-// #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-// #include <sgpp/combigrid/tools/combitech_coefficients.hpp>
-// #include <sgpp_base.hpp>
-// #include <vector>
+using namespace sgpp::combigrid;
 
-// using namespace sgpp::combigrid;
+BOOST_AUTO_TEST_SUITE(Tools_computeCTCoeffs)
 
-// namespace {
+BOOST_AUTO_TEST_CASE(Simple1DExample) {
+  const MIVec miVec{{0}, {1}, {2}};
 
-// std::vector<sgpp::combigrid::MI> makeSimpleMIs(const size_t nDim) {
-//   // Erstelle eine kleine, definitiv downwards-closed Menge:
-//   // - Null-MI
-//   // - ein paar Einheits-MIs in den ersten min(4, nDim) Dimensionen
-//   std::vector<MI> res;
-//   MI zero(nDim, static_cast<MIType>(0));
-//   res.push_back(zero);
-//   size_t add = std::min<size_t>(4, nDim);
-//   for (size_t d = 0; d < add; ++d) {
-//     MI mi = zero;
-//     mi[d] = static_cast<MIType>(1);
-//     res.push_back(mi);
-//   }
-//   return res;
-// }
+  BOOST_CHECK(miVec.isDownwardsClosed());
 
-// sgpp::combigrid::MIVec make_random_downwards_closed_mivec(const size_t nDim,
-//                                                           const size_t targetSize,
-//                                                           const uint64_t seed = 123456789ULL) {
-//   std::mt19937_64 rng(seed);
-//   std::vector<MI> list;
+  const std::vector<int> result1 = tools::computeCTCoeffsNaive(miVec);
+  const std::vector<int> result2 = tools::computeCTCoeffs(miVec);
 
-//   // Verwende set von vector<MIVal> um Duplikate zu vermeiden
-//   std::set<std::vector<MIType>> s;
+  const std::vector<int> expected{0, 0, 1};
 
-//   // Start mit Null-MI
-//   std::vector<MIType> zeroVec(nDim, MIType(0));
-//   s.insert(zeroVec);
+  BOOST_CHECK_EQUAL_COLLECTIONS(result1.begin(), result1.end(), expected.begin(), expected.end());
+  BOOST_CHECK_EQUAL_COLLECTIONS(result2.begin(), result2.end(), expected.begin(), expected.end());
+}
 
-//   std::vector<std::vector<MIType>> currentElements;
-//   currentElements.push_back(zeroVec);
+BOOST_AUTO_TEST_CASE(Simple2DExample) {
+  const MIVec miVec{{0, 0}, {0, 1}, {0, 2}, {0, 3}, {1, 0}, {1, 1}, {1, 2}, {2, 0}, {3, 0}, {4, 0}};
 
-//   std::uniform_int_distribution<size_t> distExisting(0, 0);
-//   std::uniform_int_distribution<size_t> distDim(0, nDim > 0 ? nDim - 1 : 0);
+  BOOST_CHECK(miVec.isDownwardsClosed());
 
-//   while (s.size() < targetSize) {
-//     // wähle zufälliges vorhandenes Element
-//     if (currentElements.empty()) currentElements.push_back(zeroVec);
-//     distExisting = std::uniform_int_distribution<size_t>(0, currentElements.size() - 1);
-//     size_t idx = distExisting(rng);
-//     std::vector<MIType> candidate = currentElements[idx];
+  const std::vector<int> result1 = tools::computeCTCoeffsNaive(miVec);
+  const std::vector<int> result2 = tools::computeCTCoeffs(miVec);
 
-//     // wähle Dimension zum Inkrementieren
-//     size_t dim = distDim(rng);
-//     candidate[dim] = candidate[dim] + MIType(1);
+  const std::vector<int> expected{0, 0, -1, 1, -1, 0, 1, 0, 0, 1};
 
-//     // falls neu, einfügen und auch in currentElements aufnehmen
-//     auto it = s.insert(candidate);
-//     if (it.second) {
-//       // neu
-//       currentElements.push_back(candidate);
-//     } else {
-//       // existiert bereits -> try again (loop)
-//       // to avoid potential infinite loops if we can't grow (shouldn't happen for reasonable
-//       // targetSize) but we still continue trying
-//       continue;
-//     }
-//   }
+  BOOST_CHECK_EQUAL_COLLECTIONS(result1.begin(), result1.end(), expected.begin(), expected.end());
+  BOOST_CHECK_EQUAL_COLLECTIONS(result2.begin(), result2.end(), expected.begin(), expected.end());
+}
 
-//   // Baue vector<MI> aus set s (Set ist geordnet, aber Reihenfolge ist für MIVec nicht wichtig)
-//   for (const auto& vec : s) {
-//     MI mi;
-//     mi.assign(vec.begin(), vec.end());
-//     list.push_back(mi);
-//   }
+BOOST_AUTO_TEST_CASE(Simple3DExample) {
+  const MIVec miVec{{0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {0, 1, 0},
+                    {0, 1, 1}, {0, 1, 2}, {0, 2, 0}, {1, 0, 0}};
 
-//   // Konvertiere zu MIVec
-//   return MIVec(list);
-// }
+  BOOST_CHECK(miVec.isDownwardsClosed());
 
-// }  // namespace
+  const std::vector<int> result1 = tools::computeCTCoeffsNaive(miVec);
+  const std::vector<int> result2 = tools::computeCTCoeffs(miVec);
 
-// BOOST_AUTO_TEST_SUITE(op_computeCTCoeffs)
+  const std::vector<int> expected{-1, 0, 0, -1, 0, 1, 1, 1};
 
-// // Test: viele Dimensionen 1..64 mit einem kleinen, downwards-closed MIVec
-// BOOST_AUTO_TEST_CASE(Dimensions1to64_SimpleCases) {
-//   for (size_t dim = 1; dim <= 64; ++dim) {
-//     const std::vector<sgpp::combigrid::MI> mis = makeSimpleMIs(dim);
-//     const MIVec miVec(mis);
+  BOOST_CHECK_EQUAL_COLLECTIONS(result1.begin(), result1.end(), expected.begin(), expected.end());
+  BOOST_CHECK_EQUAL_COLLECTIONS(result2.begin(), result2.end(), expected.begin(), expected.end());
+}
 
-//     // BOOST_CHECK_MESSAGE(miVec.isDownwardsClosed(),
-//     //                     "MIVec should be downwards-closed for dim = " << dim);
+BOOST_AUTO_TEST_CASE(RandomComplexExample) {}
 
-//     const std::vector<int> expected = tools::computeCTCoeffsNaive(miVec);
-//     const std::vector<int> got = tools::computeCTCoeffs(miVec);
+BOOST_AUTO_TEST_CASE(RandomParallelExample) {
+  std::random_device rd;
+  const auto seed = rd();
+  const std::mt19937 gen(seed);
+  std::uniform_int_distribution<size_t> dimDist(1, 5);  // number of dimensions
+  std::uniform_int_distribution<MIType> maxLvlDist(
+      constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY,
+      constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY + 5);
 
-//     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(), got.begin(), got.end());
-//   }
-// }
+  const size_t nDim = dimDist(gen);
+  const MIType maxLvl = maxLvlDist(gen);
 
-// // Test: Variation mit etwas größeren MIs (ein paar Komponenten = 2) über mehrere Dimensionen
-// BOOST_AUTO_TEST_CASE(MultiValueEntries_VariousDimensions) {
-//   for (size_t dim = 1; dim <= 64; dim += 7) {  // springe in Schritten, um Anzahl Tests zu
-//   begrenzen
-//     MI zero(dim, static_cast<MIType>(0));
-//     std::vector<MI> mis;
-//     mis.push_back(zero);
+  // TODO
+}
 
-//     // füge einige MIs mit Komponenten 1 und 2 hinzu (immer so bauen, dass downwards-closed
-//     bleibt) for (size_t d = 0; d < std::min<size_t>(dim, 6); ++d) {
-//       MI a = zero;
-//       a[d] = static_cast<MIType>(1);
-//       mis.push_back(a);
-
-//       MI b = a;
-//       b[d] = static_cast<MIType>(2);
-//       // um b downwards-closed zu halten, stelle sicher, dass a bereits in mis ist (ist so)
-//       mis.push_back(b);
-//     }
-
-//     MIVec miVec(mis);
-//     // BOOST_CHECK_MESSAGE(miVec.isDownwardsClosed(),
-//     //                     "MIVec should be downwards-closed for dim = " << dim);
-
-//     std::vector<int> expected = tools::computeCTCoeffsNaive(miVec);
-//     std::vector<int> got = tools::computeCTCoeffs(miVec);
-
-//     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(), got.begin(), got.end());
-//   }
-// }
-
-// // Random tests: ein Test mit "serieller" Anzahl an Multiindizes (weniger als
-// // MIN_MIS_FOR_CONCURRENCY) und ein Test mit "paralleler" Anzahl (>= MIN_MIS_FOR_CONCURRENCY).
-// BOOST_AUTO_TEST_CASE(RandomDownwardsClosed_Serial) {
-//   const size_t nMI = constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY - 1;
-//   const size_t nDim = 12;  // ausreichend viele Dimensionen für zufällige Verteilung
-
-//   MIVec serialMIVec = make_random_downwards_closed_mivec(nDim, nMI, /*seed=*/1111);
-//   //   BOOST_CHECK_MESSAGE(serialMIVec.isDownwardsClosed(), "serialMIVec must be
-//   downwards-closed"); BOOST_CHECK_MESSAGE(serialMIVec.nMI() == nMI, "serialMIVec should have
-//   requested size");
-
-//   std::vector<int> expectedSerial = tools::computeCTCoeffsNaive(serialMIVec);
-//   std::vector<int> gotSerial = tools::computeCTCoeffs(serialMIVec);
-//   BOOST_CHECK_EQUAL_COLLECTIONS(expectedSerial.begin(), expectedSerial.end(), gotSerial.begin(),
-//                                 gotSerial.end());
-// }
-
-// BOOST_AUTO_TEST_CASE(RandomDownwardsClosed_Parallel) {
-//   const size_t nMI = constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY - 1;
-//   const size_t nDim = 12;  // ausreichend viele Dimensionen für zufällige Verteilung
-
-//   MIVec parallelMIVec = make_random_downwards_closed_mivec(nDim, nMI, /*seed=*/2222);
-//   //   BOOST_CHECK_MESSAGE(parallelMIVec.isDownwardsClosed(), "parallelMIVec must be
-//   //   downwards-closed");
-//   BOOST_CHECK_MESSAGE(parallelMIVec.nMI() >= nMI,
-//                       "parallelMIVec should have at least requested size");
-
-//   std::vector<int> expectedParallel = tools::computeCTCoeffsNaive(parallelMIVec);
-//   std::vector<int> gotParallel = tools::computeCTCoeffs(parallelMIVec);
-//   BOOST_CHECK_EQUAL_COLLECTIONS(expectedParallel.begin(), expectedParallel.end(),
-//                                 gotParallel.begin(), gotParallel.end());
-// }
-
-// BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
