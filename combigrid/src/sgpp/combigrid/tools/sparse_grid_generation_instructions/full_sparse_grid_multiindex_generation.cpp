@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cassert>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/math/math_operations.hpp>
@@ -6,7 +5,6 @@
 #include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_multiindex_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <stdexcept>
-#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -16,7 +14,11 @@ namespace tools {
 namespace {
 
 MIType minComponentSum(const MIType maxSum, const size_t nDim) {
-  return std::max(MIType(0), maxSum - (MIType)nDim + 1);
+  if (nDim > maxSum) {
+    return 0;
+  }
+
+  return maxSum - (MIType)nDim + 1 <= 0;
 }
 
 std::vector<size_t> nMICntPerComponentSum(const MIType minSum, const MIType maxSum,
@@ -26,7 +28,7 @@ std::vector<size_t> nMICntPerComponentSum(const MIType minSum, const MIType maxS
 
   size_t acc = 0;
   for (MIType sum = minSum; sum <= maxSum; sum++) {
-    acc += tools::numberOfMIWithComponentSum(nDim, sum);
+    acc += numberOfMIWithComponentSum(nDim, sum);
     nMIs[sum - minSum] = acc;
   }
 
@@ -112,7 +114,7 @@ void getBarPosOfMIIdx(std::vector<MIType>& barPos, const size_t miIdx,
     for (size_t curBarPos = minCurBarPos; true; curBarPos++) {
       const size_t barsToTheRight = barPos.size() - 1 - barIdx;
       const size_t slotsLeftForTheRight = maxBarPos - curBarPos;
-      const size_t nMIForCurSelection = tools::binomial(slotsLeftForTheRight, barsToTheRight);
+      const size_t nMIForCurSelection = binomial(slotsLeftForTheRight, barsToTheRight);
 
       if (miIdxLeft < nMIForCurSelection) {  // Did we find the pos of the bar with idx 'barIdx'?
         minCurBarPos = curBarPos + 1;
@@ -153,8 +155,8 @@ Based on the mathematical stars and bars concept
 /*
 Based on the mathematical stars and bars concept
 */
-void populateMIVec(MIVec& miVec, const std::vector<size_t>& miVecOffsets, const MIType minSum,
-                   const MIType maxSum, const std::vector<size_t>& nMIs) {
+void populateMIVec(MIVec& miVec, const MIType minSum, const MIType maxSum,
+                   const std::vector<size_t>& nMIs) {
   const size_t totalNumberOfMIs = nMIs[nMIs.size() - 1];
 
   // #pragma omp parallel if (totalNumberOfMIs > 5)  // TODO
@@ -166,7 +168,7 @@ void populateMIVec(MIVec& miVec, const std::vector<size_t>& miVecOffsets, const 
       const size_t sumIdx = getSumIdxOfMIIdx(miIdx, nMIs);
       const MIType maxBarPos = minSum + sumIdx + miVec.nDim() - 2;
 
-      getBarPosOfMIIdx(localBarPos, miIdx, nMIs, miVec.nDim(), minSum);
+      getBarPosOfMIIdx(localBarPos, miIdx, nMIs, sumIdx, maxBarPos);
       addBarPosAsMI(miVec, miIdx, localBarPos, maxBarPos);
     }
   }
@@ -183,10 +185,9 @@ MIVec genMIVecForFullSG(const MIType maxLvl, const size_t nDim) {
 
   const MIType minSum = minComponentSum(maxLvl, nDim);
   const std::vector<size_t> nMIs = nMICntPerComponentSum(minSum, maxLvl, nDim);
-  // const std::vector<size_t> miVecOffsets = miVecOffsetPerComponentSum(numberOfMIs.first);
 
   MIVec miVec(nDim, nMIs[nMIs.size() - 1]);
-  // populateMIVec(miVec, miVecOffsets, minSum, maxLvl, numberOfMIs.first);
+  populateMIVec(miVec, minSum, maxLvl, nMIs);
   return miVec;
 }
 

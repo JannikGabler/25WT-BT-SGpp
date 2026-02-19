@@ -52,7 +52,9 @@ class MI {
    ========================= */
   size_t toLinearIndex() const;
 
-  size_t productofElems() const;
+  MIType productofElems() const;
+
+  MIType sumOfElems() const;
 
   size_t nDim() const { return this->size(); }
 

@@ -136,19 +136,29 @@ size_t MI::toLinearIndex() const {
   return idx;
 }
 
-size_t MI::productofElems() const {
+MIType MI::productofElems() const {
   const size_t nDim = this->size();
 
   if (nDim == 0) {
     return 0;
   } else {
-    size_t product = 1;
+    MIType product = 1;
+
     for (size_t dim = 0; dim < nDim; dim++) {
       product *= static_cast<size_t>((*this)[dim]);
     }
 
     return product;
   }
+}
+
+MIType MI::sumOfElems() const {
+  MIType sum = 0;
+  for (const MIType v : *this) {
+    sum += v;
+  }
+
+  return sum;
 }
 
 void MI::clear() noexcept { data_.clear(); }

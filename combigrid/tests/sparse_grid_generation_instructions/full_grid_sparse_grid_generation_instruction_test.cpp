@@ -2,7 +2,10 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+#include <boost/test/tools/context.hpp>
+#include <string>
 #include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
+#include "sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -23,7 +26,10 @@ static sgpp::base::RandomNumberGenerator& randGen =
 namespace {
 
 size_t requiredNumberOfMIs(const size_t nDim, const MIType maxLvl) {
-  const MIType minSum = std::max(MIType(0), maxLvl - (MIType)nDim + 1);
+  MIType minSum = 0;
+  if (nDim <= maxLvl) {
+    minSum = maxLvl - (MIType)nDim + 1;
+  }
 
   size_t totalNumber = 0;
   for (MIType sum = minSum; sum <= maxLvl; sum++) {
@@ -32,16 +38,6 @@ size_t requiredNumberOfMIs(const size_t nDim, const MIType maxLvl) {
   }
 
   return totalNumber;
-}
-
-MIType sumOfMI(const MI& mi) {
-  MIType sum = 0;
-
-  for (const MIType v : mi) {
-    sum += v;
-  }
-
-  return sum;
 }
 
 bool checkForDuplicates(const MIVec& miVec) {
@@ -61,33 +57,45 @@ bool checkForDuplicates(const MIVec& miVec) {
 BOOST_AUTO_TEST_SUITE(FullGridSGGenInstr_genCompleteMIVec)
 
 BOOST_AUTO_TEST_CASE(Random1D) {
-  const MIType maxLvl = (MIType)randGen.getUniformIndexRN(1000);
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    const MIType maxLvl = (MIType)randGen.getUniformIndexRN(1000);
 
-  const FullGridSGGenInstr instr(maxLvl, 1);
-  const MIVec result = instr.genCompleteMIVec();
+    const FullGridSGGenInstr instr(maxLvl, 1);
+    const MIVec result = instr.genCompleteMIVec();
 
-  BOOST_CHECK_MESSAGE(result.nDim() == 1, "Seed: " << randGen.getSeed());
-  BOOST_CHECK_MESSAGE(result.nMI() == 1, "Seed: " << randGen.getSeed());
-  BOOST_CHECK_MESSAGE(result(0, 0) == maxLvl, "Seed: " << randGen.getSeed());
+    BOOST_CHECK_MESSAGE(result.nDim() == 1, "Seed: " << randGen.getSeed());
+    BOOST_CHECK_MESSAGE(result.nMI() == 1, "Seed: " << randGen.getSeed());
+    BOOST_CHECK_MESSAGE(result(0, 0) == maxLvl, "Seed: " << randGen.getSeed());
+  }
 }
 
 BOOST_AUTO_TEST_CASE(RandomSerial) {
-  const MIType maxLvl = (MIType)randGen.getUniformIndexRN(10);
-  const size_t nDim = randGen.getUniformIndexRN(6);
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    const MIType maxLvl = (MIType)randGen.getUniformIndexRN(10);
+    const size_t nDim = randGen.getUniformIndexRN(6);
 
-  const FullGridSGGenInstr instr(maxLvl, 2);
-  const MIVec result = instr.genCompleteMIVec();
+    const FullGridSGGenInstr instr(maxLvl, nDim);
+    const MIVec result = instr.genCompleteMIVec();
 
-  const size_t expectedMICnt = requiredNumberOfMIs(nDim, maxLvl);
+    const size_t expectedMICnt = requiredNumberOfMIs(nDim, maxLvl);
 
-  BOOST_CHECK_MESSAGE(result.nDim() == nDim, "Wrong nDim! Seed: " << randGen.getSeed());
-  BOOST_CHECK_MESSAGE(result.nMI() == expectedMICnt, "Wrong nMI! Seed: " << randGen.getSeed());
-  BOOST_CHECK_MESSAGE(checkForDuplicates(result), "Duplicates! Seed: " << randGen.getSeed());
+    BOOST_CHECK_MESSAGE(result.nDim() == nDim, "Wrong nDim! Seed: " << randGen.getSeed());
+    BOOST_CHECK_MESSAGE(result.nMI() == expectedMICnt, "Wrong nMI! Seed: " << randGen.getSeed());
+    BOOST_CHECK_MESSAGE(!checkForDuplicates(result), "Duplicates! Seed: " << randGen.getSeed());
 
-  for (size_t miIdx = 0; miIdx < result.nMI(); miIdx++) {
-    BOOST_CHECK_MESSAGE(sumOfMI(result[miIdx]) > maxLvl,
-                        "MI at idx " << miIdx << " has a sum over maxLvl " << maxLvl
-                                     << "! Seed: " << randGen.getSeed());
+    for (size_t miIdx = 0; miIdx < result.nMI(); miIdx++) {
+      const MIType componentSum = result[miIdx].sumOfElems();
+      BOOST_CHECK_MESSAGE(componentSum <= maxLvl,
+                          "MI at idx '" << miIdx << "' has a sum of '" << componentSum
+                                        << "', which is larger than the maxLvl '" << maxLvl
+                                        << "'! Seed: " << randGen.getSeed());
+
+      if (componentSum > maxLvl) {
+        break;
+      }
+    }
   }
 }
 
