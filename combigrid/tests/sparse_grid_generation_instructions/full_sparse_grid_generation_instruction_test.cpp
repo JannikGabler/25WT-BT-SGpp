@@ -14,9 +14,8 @@
 
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_grid_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/math/math_operations.hpp>
-// #include <sgpp/combigrid/tools/random/random_number_generator.hpp>
 
 using namespace sgpp::combigrid;
 
@@ -54,7 +53,7 @@ bool checkForDuplicates(const MIVec& miVec) {
 
 }  // namespace
 
-BOOST_AUTO_TEST_SUITE(FullGridSGGenInstr_genCompleteMIVec)
+BOOST_AUTO_TEST_SUITE(FullSGGenInstr_genCompleteMIVec)
 
 BOOST_AUTO_TEST_CASE(Random1D) {
   randGen.setSeed();

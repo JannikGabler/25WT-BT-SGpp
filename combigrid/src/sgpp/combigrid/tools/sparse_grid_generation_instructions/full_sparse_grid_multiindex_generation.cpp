@@ -21,7 +21,7 @@ MIType minComponentSum(const MIType maxSum, const size_t nDim) {
     return 0;
   }
 
-  return maxSum - (MIType)nDim + 1 <= 0;
+  return maxSum - (MIType)nDim + 1;
 }
 
 std::vector<size_t> nMICntPerComponentSum(const MIType minSum, const MIType maxSum,
@@ -171,7 +171,7 @@ void populateMIVecSerial(MIVec& miVec, const size_t startIdx, const size_t endId
   std::vector<size_t> barPos = getBarPosOfMIIdx(startIdx, nMIs, sumIdx, maxBarPos, miVec.nDim());
 
   for (size_t miIdx = startIdx; miIdx <= endIdx; miIdx++) {
-    if (sumIdx + 1 < nMIs.size() && miIdx >= nMIs[sumIdx + 1]) {
+    if (miIdx >= nMIs[sumIdx]) {  // Go to the next sum
       sumIdx++;
       maxBarPos++;
       barPos = initBarPos(miVec.nDim());
@@ -193,7 +193,7 @@ void populateMIVec(MIVec& miVec, const size_t minSum, const size_t maxSum,
       totalNumberOfMIs, constants::sg_gen_instr::FSG_MIN_MI_FOR_CONCURRENCY,
       constants::sg_gen_instr::FSG_MIN_MI_PER_THREAD);
 
-#pragma omp parallel num_threads(part.size() - 1) if (part.size() > 2)
+  // #pragma omp parallel num_threads(part.size() - 1) if (part.size() > 2)
   {
     const size_t threadId = (size_t)omp_get_thread_num();
     populateMIVecSerial(miVec, part[threadId], part[threadId + 1] - 1, minSum, nMIs);
