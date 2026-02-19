@@ -12,7 +12,9 @@ class MISetSGGenInstr : public SGGenInstr {
  public:
   MISetSGGenInstr(const MIVec& miSet);
 
-  MIVec genParetoMaximum() override;
+  MIVec genCompleteMIVec() const override;
+
+  std::pair<MIVec, std::vector<CTCoeffType>> genCompleteMIVecWithCoeff() const override;
 
  private:
   const MIVec& miSet;

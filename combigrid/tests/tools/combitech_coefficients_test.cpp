@@ -2,19 +2,18 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
-#include "sgpp/combigrid/tools/combitech_coefficients.hpp"
-#include <boost/test/unit_test_log.hpp>
-#include <vector>
-#include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
 #include <boost/test/unit_test.hpp>
+#include <boost/test/unit_test_log.hpp>
 #include <boost/test/unit_test_suite.hpp>
 
 #include <random>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/tools/combitech_coefficients.hpp>
+#include <vector>
 
 using namespace sgpp::combigrid;
 
@@ -68,7 +67,7 @@ BOOST_AUTO_TEST_CASE(RandomComplexExample) {}
 BOOST_AUTO_TEST_CASE(RandomParallelExample) {
   std::random_device rd;
   const auto seed = rd();
-  const std::mt19937 gen(seed);
+  std::mt19937 gen(seed);
   std::uniform_int_distribution<size_t> dimDist(1, 5);  // number of dimensions
   std::uniform_int_distribution<MIType> maxLvlDist(
       constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY,

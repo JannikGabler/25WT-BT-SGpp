@@ -13,16 +13,14 @@ namespace tools {
 
 namespace {
 
-std::pair<MIType, MIType> minAndMaxComponentSum(const MIType maxLvl, const size_t nDim) {
-  const MIType maxSum = maxLvl;
-  const size_t minSum = std::max(MIType(0), maxSum - (MIType)nDim + 1);
-  return {minSum, maxSum};
+MIType minComponentSum(const MIType maxSum, const size_t nDim) {
+  return std::max(MIType(0), maxSum - (MIType)nDim + 1);
 }
 
 std::pair<std::vector<size_t>, size_t> nMICntPerComponentSum(const MIType minSum,
                                                              const MIType maxSum,
                                                              const size_t nDim) {
-  std::vector<size_t> numbers{maxSum - minSum + 1};
+  std::vector<size_t> numbers(maxSum - minSum + 1);
   size_t totalNumber = 0;
 
   for (MIType sum = minSum; sum <= maxSum; sum++) {
@@ -73,7 +71,7 @@ void incrementBarPos(std::vector<MIType>& barPos, const MIType maxBarPos) {
 
 void addBarPosAsMI(MIVec& miVec, const size_t miIdx, const std::vector<MIType>& barPos,
                    const MIType maxBarPos) {
-  assert(barPos.size() >= 2);
+  assert(barPos.size() >= 1);
 
   miVec(miIdx, 0) = barPos[0];
 
@@ -118,12 +116,14 @@ MIVec genMIVecForFullSG(const MIType maxLvl, const size_t nDim) {
     return {{maxLvl}};
   }
 
-  const std::pair<MIType, MIType> minMaxSum = minAndMaxComponentSum(maxLvl, nDim);
+  const MIType minSum = minComponentSum(maxLvl, nDim);
   const std::pair<std::vector<size_t>, size_t> numberOfMIs =
-      nMICntPerComponentSum(minMaxSum.first, minMaxSum.second, nDim);
+      nMICntPerComponentSum(minSum, maxLvl, nDim);
   const std::vector<size_t> miVecOffsets = miVecOffsetPerComponentSum(numberOfMIs.first);
 
   MIVec miVec(nDim, numberOfMIs.second);
+  populateMIVec(miVec, miVecOffsets, minSum, maxLvl, numberOfMIs.first);
+  return miVec;
 }
 
 }  // namespace tools

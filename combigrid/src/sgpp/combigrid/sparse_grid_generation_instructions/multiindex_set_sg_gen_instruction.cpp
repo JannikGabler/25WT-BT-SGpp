@@ -11,8 +11,11 @@ namespace combigrid {
 
 MISetSGGenInstr::MISetSGGenInstr(const MIVec& miSet) : SGGenInstr(miSet.nDim()), miSet(miSet) {}
 
-MIVec MISetSGGenInstr::genParetoMaximum() {
-  // TODO: Compute pareto Maximum of this->miSet
+MIVec MISetSGGenInstr::genCompleteMIVec() const {
+  throw sgpp::base::not_implemented_exception("Operation is not implemented yet!");
+}
+
+std::pair<MIVec, std::vector<CTCoeffType>> MISetSGGenInstr::genCompleteMIVecWithCoeff() const {
   throw sgpp::base::not_implemented_exception("Operation is not implemented yet!");
 }
 

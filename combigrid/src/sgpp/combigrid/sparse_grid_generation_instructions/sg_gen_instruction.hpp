@@ -28,9 +28,9 @@ class SGGenInstr {
 
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs, size_t dim);
 
-  virtual MIVec genCompleteMIVec() = 0;
+  virtual MIVec genCompleteMIVec() const = 0;
 
-  virtual std::pair<MIVec, std::vector<CTCoeffType>> genCompleteMIVecWithCoeff() = 0;
+  virtual std::pair<MIVec, std::vector<CTCoeffType>> genCompleteMIVecWithCoeff() const = 0;
 
   void resize(size_t newDimCnt);
 
