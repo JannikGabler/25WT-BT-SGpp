@@ -1,11 +1,11 @@
 #ifndef COMBIGRID_SGGENINSTRUCTION_HPP
 #define COMBIGRID_SGGENINSTRUCTION_HPP
 
+#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
 #include <utility>
 #include <vector>
-#include "sgpp/combigrid/multiindices/multiindex_vector.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -28,7 +28,9 @@ class SGGenInstr {
 
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs, size_t dim);
 
-  virtual MIVec genParetoMaximum() = 0;
+  virtual MIVec genCompleteMIVec() = 0;
+
+  virtual std::pair<MIVec, std::vector<CTCoeffType>> genCompleteMIVecWithCoeff() = 0;
 
   void resize(size_t newDimCnt);
 
