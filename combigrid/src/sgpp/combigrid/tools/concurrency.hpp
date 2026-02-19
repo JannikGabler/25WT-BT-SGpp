@@ -9,9 +9,11 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-std::vector<size_t> partitionRange(
-    const size_t length, const size_t minPartitionLength,
-    const size_t maxPartitionCnt = std::numeric_limits<size_t>::max());
+std::vector<size_t> partitionRange(size_t length, size_t minPartitionLength,
+                                   size_t maxPartitionCnt = std::numeric_limits<size_t>::max());
+
+std::vector<size_t> partitionRangeForConcurrency(size_t length, size_t minLengthForConcurrency,
+                                                 size_t minLengthPerThread);
 
 }  // namespace tools
 }  // namespace combigrid

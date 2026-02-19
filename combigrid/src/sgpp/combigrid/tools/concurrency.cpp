@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <cstddef>
 #include <sgpp/combigrid/tools/concurrency.hpp>
 #include <vector>
@@ -8,7 +9,7 @@ namespace tools {
 
 std::vector<size_t> partitionRange(const size_t length, const size_t minPartitionLength,
                                    const size_t maxPartitionCnt) {
-  if (length < minPartitionLength) {
+  if (length <= minPartitionLength) {
     return {0, length};
   }
 
@@ -24,6 +25,16 @@ std::vector<size_t> partitionRange(const size_t length, const size_t minPartitio
   }
 
   return partitioning;
+}
+
+std::vector<size_t> partitionRangeForConcurrency(const size_t length,
+                                                 const size_t minLengthForConcurrency,
+                                                 const size_t minLengthPerThread) {
+  if (length < minLengthForConcurrency) {
+    return {0, length};
+  }
+
+  return partitionRange(length, minLengthPerThread, (size_t)omp_get_max_threads());
 }
 
 }  // namespace tools

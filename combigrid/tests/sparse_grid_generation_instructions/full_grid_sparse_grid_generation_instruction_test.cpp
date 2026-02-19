@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(Random1D) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const MIType maxLvl = (MIType)randGen.getUniformIndexRN(1000);
 
-    const FullGridSGGenInstr instr(maxLvl, 1);
+    const FullSGGenInstr instr(maxLvl, 1);
     const MIVec result = instr.genCompleteMIVec();
 
     BOOST_CHECK_MESSAGE(result.nDim() == 1, "Seed: " << randGen.getSeed());
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(RandomSerial) {
     const MIType maxLvl = (MIType)randGen.getUniformIndexRN(10);
     const size_t nDim = randGen.getUniformIndexRN(6);
 
-    const FullGridSGGenInstr instr(maxLvl, nDim);
+    const FullSGGenInstr instr(maxLvl, nDim);
     const MIVec result = instr.genCompleteMIVec();
 
     const size_t expectedMICnt = requiredNumberOfMIs(nDim, maxLvl);
