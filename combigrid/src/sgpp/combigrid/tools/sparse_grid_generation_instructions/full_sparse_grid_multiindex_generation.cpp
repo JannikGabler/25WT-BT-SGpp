@@ -1,6 +1,7 @@
 #include <omp.h>
 #include <cassert>
 #include <iostream>
+#include <limits>
 #include <ostream>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
@@ -102,8 +103,12 @@ std::vector<size_t> initBarPos(const size_t nDim) {
 }
 
 void incrementBarPos(std::vector<size_t>& barPos, const size_t maxBarPos) {
-  for (size_t barIdx = barPos.size() - 1; barIdx >= 0; barIdx--) {
+  for (size_t barIdx = barPos.size() - 1; barIdx != std::numeric_limits<size_t>::max(); barIdx--) {
     const size_t mostRightPos = maxBarPos - (barPos.size() - 1 - barIdx);
+
+    if (barIdx < 0 || barIdx >= barPos.size()) {
+      const int tmp = 0;
+    }
 
     if (barPos[barIdx] < mostRightPos) {
       barPos[barIdx]++;
@@ -152,60 +157,18 @@ std::vector<size_t> getBarPosOfMIIdx(const size_t miIdx, const std::vector<size_
 void populateMIVecSerial(MIVec& miVec, const size_t startIdx, const size_t endIdx,
                          const MIType minSum, const std::vector<size_t>& nMIs) {
   size_t sumIdx = getSumIdxOfMIIdx(startIdx, nMIs);
-  size_t maxBarPos = full_sg_mi_gen::getMaxBarPos(minSum + sumIdx, miVec.nDim());
-  std::vector<size_t> barPos =
-      full_sg_mi_gen::getBarPosOfMIIdx(startIdx, nMIs, sumIdx, maxBarPos, miVec.nDim());
-
-  if (startIdx > 0) {
-    std::cout << "Thread2" << std::endl;
-    for (size_t dim = 0; dim < barPos.size(); dim++) {  // TODO: Remove
-      std::cout << barPos[dim] << " ";
-    }
-    std::cout << std::endl;
-  }
+  size_t maxBarPos = getMaxBarPos(minSum + (MIType)sumIdx, miVec.nDim());
+  std::vector<size_t> barPos = getBarPosOfMIIdx(startIdx, nMIs, sumIdx, maxBarPos, miVec.nDim());
 
   for (size_t miIdx = startIdx; miIdx <= endIdx; miIdx++) {
-    if (miIdx == 115) {  // TODO: remove
-      const int tmp = 0;
-    }
-
     if (miIdx >= nMIs[sumIdx]) {  // Go to the next sum
       sumIdx++;
       maxBarPos++;
-      barPos = full_sg_mi_gen::initBarPos(miVec.nDim());
+      barPos = initBarPos(miVec.nDim());
     }
 
     addBarPosAsMI(miVec, miIdx, barPos, maxBarPos);
-
-    if (startIdx == 0 && miIdx == endIdx) {
-      std::cout << "Thread1" << std::endl;
-      for (size_t dim = 0; dim < barPos.size(); dim++) {  // TODO: Remove
-        std::cout << barPos[dim] << " ";
-      }
-      std::cout << std::endl;
-    }
-
-    // TODO: Remove
-    if (startIdx == 0) {
-      const std::vector<size_t> barPos2 =
-          full_sg_mi_gen::getBarPosOfMIIdx(miIdx, nMIs, sumIdx, maxBarPos, miVec.nDim());
-      for (size_t dim = 0; dim < barPos2.size(); dim++) {
-        assert(barPos[dim] == barPos2[dim]);
-      }
-    }
-
-    full_sg_mi_gen::incrementBarPos(barPos, maxBarPos);
-
-    // if (startIdx == 0) {
-    //   const std::vector<size_t> barPos1 =
-    //       getBarPosOfMIIdx(miIdx, nMIs, sumIdx, maxBarPos, miVec.nDim());
-    //   const std::vector<size_t> barPos2 =
-    //       getBarPosOfMIIdx_fixed(miIdx, minSum + sumIdx, miVec.nDim());
-
-    //   for (size_t dim = 0; dim < barPos1.size(); dim++) {
-    //     assert(barPos1[dim] == barPos2[dim]);
-    //   }
-    // }
+    incrementBarPos(barPos, maxBarPos);
   }
 }
 
@@ -222,28 +185,7 @@ void populateMIVec(MIVec& miVec, const MIType minSum, const MIType maxSum,
 #pragma omp parallel num_threads(part.size() - 1) if (part.size() > 2)
   {
     const size_t threadId = (size_t)omp_get_thread_num();
-
-    if (threadId == 1) {
-      const int tmp = 0;
-    }
-
     populateMIVecSerial(miVec, part[threadId], part[threadId + 1] - 1, minSum, nMIs);
-  }
-
-  // TODO: Remove
-  for (size_t threadId = 0; threadId < part.size() - 2; threadId++) {
-    const MI mi1 = miVec[part[threadId + 1] - 1];
-    const MI mi2 = miVec[part[threadId + 1]];
-
-    std::cout << "Übergang '" << threadId << "':" << std::endl;
-    for (size_t dim = 0; dim < mi1.nDim(); dim++) {
-      std::cout << mi1[dim] << " ";
-    }
-    std::cout << std::endl;
-    for (size_t dim = 0; dim < mi1.nDim(); dim++) {
-      std::cout << mi2[dim] << " ";
-    }
-    std::cout << std::endl;
   }
 }
 

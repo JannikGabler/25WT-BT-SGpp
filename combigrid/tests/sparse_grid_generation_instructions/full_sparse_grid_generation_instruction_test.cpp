@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(RandomSerial) {
 BOOST_AUTO_TEST_CASE(ResolveTest) {}
 
 BOOST_AUTO_TEST_CASE(RandomParallel) {
-  randGen.setSeed(1771596475);
+  randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const MIType maxLvl = 12 + (MIType)randGen.getUniformIndexRN(5);
     const size_t nDim = 4 + randGen.getUniformIndexRN(3);
