@@ -10,7 +10,12 @@ namespace tools {
 
 MIVec genMIVecForFullSG(MIType maxLvl, size_t nDim);
 
-namespace full_sg_mi_gen {
+std::vector<CTCoeffType> genCoeffForFullSG(MIType maxLvl, size_t nDim);
+
+/******************
+Internal operations
+******************/
+namespace full_sg_gen {
 
 MIType getMinComponentSum(MIType maxSum, size_t nDim);
 
@@ -32,7 +37,9 @@ std::vector<size_t> getBarPosOfMIIdx(size_t miIdx, const std::vector<size_t>& nM
 
 void populateMIVec(MIVec& miVec, MIType minSum, MIType maxSum, const std::vector<size_t>& nMIs);
 
-}  // namespace full_sg_mi_gen
+std::vector<CTCoeffType> getBinomialsForCTCoeffs(MIType minSum, MIType maxSum, size_t nDim);
+
+}  // namespace full_sg_gen
 
 }  // namespace tools
 }  // namespace combigrid
