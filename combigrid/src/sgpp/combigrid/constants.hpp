@@ -24,8 +24,8 @@ constexpr size_t DWC_MIN_MI_FOR_CONCURRENCY = 10000;
 namespace sg_gen_instr {
 
 // Full sg gen instruction
-constexpr size_t FSG_MIN_MI_FOR_CONCURRENCY = 10000;
-constexpr size_t FSG_MIN_MI_PER_THREAD = 5000;
+constexpr size_t FSG_MIN_MI_FOR_CONCURRENCY = 1000;
+constexpr size_t FSG_MIN_MI_PER_THREAD = 500;
 
 }  // namespace sg_gen_instr
 

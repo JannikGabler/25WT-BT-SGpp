@@ -18,12 +18,14 @@ T binomial(const T n, T k) {
     k = n - k;
   }
 
-  __int128 res = 1;
+  __uint128_t res = 1;
 
   for (T i = 1; i <= k; i++) {
-    res *= (__int128)(n - k + i) / (__int128)i;
+    // Do not simplify to res *= (__uint128_t)(n - k + i) / (__uint128_t)i, because this changes the
+    // semantics
+    res = res * (__uint128_t)(n - k + i) / (__uint128_t)i;
 
-    if (res > (__int128)std::numeric_limits<T>::max()) {
+    if (res > (__uint128_t)std::numeric_limits<T>::max()) {
       throw std::overflow_error("An overflow occured while computing a binomial!");
     }
   }
