@@ -3,7 +3,6 @@
 
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <sgpp/globaldef.hpp>
 #include <utility>
 #include <vector>
 
@@ -12,9 +11,13 @@ namespace combigrid {
 
 class SGGenInstr {
  public:
-  SGGenInstr(size_t dimCount);
+  SGGenInstr(size_t nDim);
 
   size_t nDim() const;
+
+  MIType getBoundaryIndexOffset() const;
+
+  void setBoundaryIndexOffset(MIType boundaryIndexOffset);
 
   void setBoundForDim(std::pair<double, double> bound, size_t dim);
 
@@ -34,7 +37,11 @@ class SGGenInstr {
 
   void resize(size_t newDimCnt);
 
+  std::vector<GPGenFunc> getUniqueGPGenFuncs() const;
+
  private:
+  MIType boundaryIndexOffset;
+
   std::vector<std::pair<double, double>> bounds;
   std::vector<GPGenFunc> gPGenFuncs;
   std::vector<std::vector<unsigned int> (*)(unsigned int)> lvl2GPCntFuncs;

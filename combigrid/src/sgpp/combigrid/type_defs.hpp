@@ -1,14 +1,24 @@
-#include <sgpp/globaldef.hpp>
-#include "sgpp/base/datatypes/DataVector.hpp"
+#include <sgpp/base/datatypes/DataVector.hpp>
 
 namespace sgpp {
 namespace combigrid {
 
+/******************************************************************************************
+-Variable types-
+Can be changed to better suit specific needs.
+Larger data types are necessary when dealing with higher levels, coefficients, or number of
+gridpoints. Smaller data types may increase performance.
+******************************************************************************************/
 using MIType = unsigned int;
 using CTCoeffType = int;
+using GPCntType = size_t;
 
+/*********************
+-Fixed types-
+Should not be changed.
+*********************/
 using GPGenFunc = sgpp::base::DataVector (*)(unsigned int);
-using Lvl2GPCntFunc = std::vector<unsigned int> (*)(unsigned int);
+using Lvl2GPCntFunc = std::vector<unsigned int> (*)(MIType);
 
 }  // namespace combigrid
 }  // namespace sgpp

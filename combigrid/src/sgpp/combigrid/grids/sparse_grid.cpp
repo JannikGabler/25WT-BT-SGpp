@@ -1,8 +1,12 @@
-#include "sgpp/combigrid/grids/sparse_grid.hpp"
-#include "sgpp/base/exception/not_implemented_exception.hpp"
+#include <sgpp/base/exception/not_implemented_exception.hpp>
+#include <sgpp/combigrid/grids/sparse_grid.hpp>
 
 namespace sgpp {
 namespace combigrid {
+
+SparseGrid::SparseGrid(const size_t nDim) : nDim_(nDim), tensorGridData(0) {}
+
+SparseGrid::SparseGrid(const SGGenInstr& genInstruction) : nDim_(genInstruction.nDim()) {}
 
 size_t SparseGrid::nDim() const { return nDim_; }
 

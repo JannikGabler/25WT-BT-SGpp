@@ -9,10 +9,19 @@ namespace sgpp {
 namespace combigrid {
 
 // TODO: Set default of lvl2GPCntFuncs
-SGGenInstr::SGGenInstr(const size_t dimCount)
-    : bounds(dimCount, {0, 1}), gPGenFuncs(dimCount, nullptr), lvl2GPCntFuncs(dimCount, nullptr) {}
+SGGenInstr::SGGenInstr(const size_t nDim)
+    : boundaryIndexOffset(0),
+      bounds(nDim, {0, 1}),
+      gPGenFuncs(nDim, nullptr),
+      lvl2GPCntFuncs(nDim, nullptr) {}
 
 size_t sgpp::combigrid::SGGenInstr::nDim() const { return this->bounds.size(); }
+
+MIType SGGenInstr::getBoundaryIndexOffset() const { return boundaryIndexOffset; }
+
+void SGGenInstr::setBoundaryIndexOffset(const MIType boundaryIndexOffset) {
+  this->boundaryIndexOffset = boundaryIndexOffset;
+}
 
 void SGGenInstr::setBoundForDim(const std::pair<double, double> bound, const size_t dim) {
   bounds[dim] = bound;
@@ -45,6 +54,27 @@ void SGGenInstr::resize(const size_t newDimCnt) {
   bounds.resize(newDimCnt);
   gPGenFuncs.resize(newDimCnt);
   lvl2GPCntFuncs.resize(newDimCnt);
+}
+
+std::vector<GPGenFunc> SGGenInstr::getUniqueGPGenFuncs() const {
+  std::vector<GPGenFunc> uniqueGPGenFuncs;
+
+  for (const GPGenFunc candidate : gPGenFuncs) {
+    bool unique = true;
+
+    for (const GPGenFunc gpGenFunc : uniqueGPGenFuncs) {
+      if (candidate == gpGenFunc) {
+        unique = false;
+        break;
+      }
+    }
+
+    if (unique) {
+      uniqueGPGenFuncs.push_back(candidate);
+    }
+  }
+
+  return uniqueGPGenFuncs;
 }
 
 }  // namespace combigrid

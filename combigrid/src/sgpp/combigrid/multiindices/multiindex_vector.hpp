@@ -2,12 +2,10 @@
 #define COMBIGRID_MULTIINDEX_VECTOR_HPP
 
 #include <initializer_list>
-#include <memory>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector_element_proxy.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <sgpp/globaldef.hpp>
 #include <vector>
 
 namespace sgpp {

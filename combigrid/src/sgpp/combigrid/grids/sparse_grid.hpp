@@ -7,12 +7,15 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
 #include <vector>
+#include "sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp"
 
 namespace sgpp {
 namespace combigrid {
 
 class SparseGrid {
  public:
+  SparseGrid(size_t nDim);
+
   SparseGrid(const SGGenInstr& genInstruction);
 
   size_t nDim() const;
@@ -25,7 +28,7 @@ class SparseGrid {
 
  private:
   const size_t nDim_;
-  std::vector<TensorGrid> tensorGrids;
+  std::vector<TensorGridCTData> tensorGridData;
 };
 
 }  // namespace combigrid
