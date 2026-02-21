@@ -109,8 +109,8 @@ BOOST_AUTO_TEST_SUITE(Tools_genCoeffForFullSG)
 BOOST_AUTO_TEST_CASE(RandomTest) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const MIType maxLvl = (MIType)randGen.getUniformIndexRN(10);
-    const size_t nDim = 2 + randGen.getUniformIndexRN(3);  // nDim has to be at least 2
+    const MIType maxLvl = (MIType)randGen.getUniformIndexRN(14);
+    const size_t nDim = randGen.getUniformIndexRN(4);  // nDim has to be at least 2
 
     const MIVec miVec = tools::genMIVecForFullSG(maxLvl, nDim);
     const std::vector<CTCoeffType> coeff = tools::genCoeffForFullSG(maxLvl, nDim);
@@ -123,7 +123,12 @@ BOOST_AUTO_TEST_CASE(RandomTest) {
 
     for (size_t miIdx = 0; miIdx < coeff.size(); miIdx++) {
       const MIType sum = miVec[miIdx].sumOfElems();
-      const MIType expectedCoeff2 = tools::binomial((MIType)(nDim - 1), maxLvl - sum);
+      const MIType diffToMaxLvl = maxLvl - sum;
+      CTCoeffType expectedCoeff2 =
+          tools::binomial((CTCoeffType)(nDim - 1), (CTCoeffType)(diffToMaxLvl));
+      if (diffToMaxLvl % 2 == 1) {
+        expectedCoeff2 *= -1;
+      }
 
       BOOST_CHECK_MESSAGE(coeff[miIdx] == expectedCoeff1[miIdx],
                           "The coefficient at index '"

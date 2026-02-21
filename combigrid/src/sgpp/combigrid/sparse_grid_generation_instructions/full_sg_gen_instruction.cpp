@@ -1,9 +1,9 @@
+#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_multiindex_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
 #include <vector>
 #include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
-#include "sgpp/combigrid/multiindices/multiindex_vector.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -17,6 +17,8 @@ MIVec FullSGGenInstr::genCompleteMIVec() const { return tools::genMIVecForFullSG
 
 std::pair<MIVec, std::vector<CTCoeffType>> FullSGGenInstr::genCompleteMIVecWithCoeff() const {
   const MIVec miVec = genCompleteMIVec();
+  const std::vector<CTCoeffType> coeff = tools::genCoeffForFullSG(maxLvl, nDim());
+  return {miVec, coeff};
 }
 
 }  // namespace combigrid

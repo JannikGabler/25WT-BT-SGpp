@@ -24,18 +24,18 @@ bool isMIVecDownwardsClosed(const MIVec& miVec) {
 
   bool closed = true;
 
-  // #pragma omp parallel for schedule(static) \
-  //     shared(closed) if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
+#pragma omp parallel for schedule(static) \
+    shared(closed) if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
     const MI mi = miVec[miIdx];
 
     for (const std::vector<MIType>& offset : offsets) {
       if (offset <= mi && !lookup->contains(mi - offset)) {
         closed = false;
-        // #pragma omp cancel for
+#pragma omp cancel for
       }
     }
-    // #pragma omp cancellation point for
+#pragma omp cancellation point for
   }
 
   return closed;

@@ -47,7 +47,7 @@ std::vector<CTCoeffType> genCoeffForFullSG(const MIType maxLvl, const size_t nDi
 
   for (MIType sumIdx = 0; sumIdx <= maxLvl - minSum; sumIdx++) {
     const size_t startIdx = sumIdx == 0 ? 0 : nMIs[sumIdx - 1];
-    const size_t endIdx = (sumIdx == maxLvl - minSum ? coeff.size() : nMIs[sumIdx]) - 1;
+    const size_t endIdx = sumIdx == maxLvl - minSum ? coeff.size() : nMIs[sumIdx];
 
     std::fill(coeff.begin() + startIdx, coeff.begin() + endIdx, binomials[sumIdx]);
   }

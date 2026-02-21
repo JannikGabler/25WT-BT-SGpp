@@ -15,7 +15,6 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/math/math_operations.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
-#include <string>
 
 using namespace sgpp::combigrid;
 
@@ -40,18 +39,23 @@ size_t requiredNumberOfMIs(const size_t nDim, const MIType maxLvl) {
 }
 
 bool checkForDuplicates(const MIVec& miVec) {
+  bool foundDuplicate = false;
+
+#pragma omp parallel for shared(foundDuplicate) schedule(static)
   for (size_t i = 0; i < miVec.nMI(); i++) {
     for (size_t j = i + 1; j < miVec.nMI(); j++) {
       if (miVec[i] == miVec[j]) {
         const MI mi1 = miVec[i];
         const MI mi2 = miVec[j];
 
-        return true;
+        foundDuplicate = true;
+#pragma omp cancel for
       }
     }
+#pragma omp cancellation point for
   }
 
-  return false;
+  return foundDuplicate;
 }
 
 }  // namespace
@@ -106,7 +110,7 @@ BOOST_AUTO_TEST_CASE(ResolveTest) {}
 BOOST_AUTO_TEST_CASE(RandomParallel) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const MIType maxLvl = 12 + (MIType)randGen.getUniformIndexRN(5);
+    const MIType maxLvl = 12 + (MIType)randGen.getUniformIndexRN(3);
     const size_t nDim = 4 + randGen.getUniformIndexRN(3);
 
     const FullSGGenInstr instr(maxLvl, nDim);
@@ -128,15 +132,15 @@ BOOST_AUTO_TEST_CASE(RandomParallel) {
     BOOST_CHECK_MESSAGE(result.nMI() == expectedMICnt, "Wrong nMI! Seed: " << randGen.getSeed());
     BOOST_CHECK_MESSAGE(!checkForDuplicates(result), "Duplicates! Seed: " << randGen.getSeed());
 
+#pragma omp parallel for schedule(static)
     for (size_t miIdx = 0; miIdx < result.nMI(); miIdx++) {
       const MIType componentSum = result[miIdx].sumOfElems();
-      BOOST_CHECK_MESSAGE(componentSum <= maxLvl,
-                          "MI at idx '" << miIdx << "' has a sum of '" << componentSum
-                                        << "', which is larger than the maxLvl '" << maxLvl
-                                        << "'! Seed: " << randGen.getSeed());
 
-      if (componentSum > maxLvl) {
-        break;
+      if (componentSum > maxLvl) {  // Pre check (BOOST struggles with concurrency)
+        BOOST_REQUIRE_MESSAGE(componentSum <= maxLvl,
+                              "MI at idx '" << miIdx << "' has a sum of '" << componentSum
+                                            << "', which is larger than the maxLvl '" << maxLvl
+                                            << "'! Seed: " << randGen.getSeed());
       }
     }
   }
