@@ -15,21 +15,23 @@ class SGGenInstr {
 
   size_t nDim() const;
 
-  MIType getBoundaryIndexOffset() const;
-
   void setBoundaryIndexOffset(MIType boundaryIndexOffset);
+
+  MIType getBoundaryIndexOffset() const;
 
   void setBoundForDim(std::pair<double, double> bound, size_t dim);
 
   void setBounds(const std::vector<std::pair<double, double>>& bounds);
 
   void setGPGenFuncForDim(GPGenFunc gPGenFunc, size_t dim);
-
   void setGPGenFuncs(const std::vector<GPGenFunc>& gPGenFuncs);
+  const std::vector<GPGenFunc>& getGPGenFuncs() const;
+  GPGenFunc getGPGenFuncForDim(size_t nDim) const;
 
   void setLvl2GPCntFuncForDim(Lvl2GPCntFunc lvl2GPCntFunc, size_t dim);
-
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs, size_t dim);
+  const std::vector<Lvl2GPCntFunc>& getLvl2GPCntFuncs() const;
+  Lvl2GPCntFunc getLvl2GPCntFuncForDim(size_t nDim) const;
 
   virtual MIVec genCompleteMIVec() const = 0;
 

@@ -1,4 +1,6 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/miscellaneous/hash/std_pair_hash.hpp>
+#include <unordered_map>
 
 namespace sgpp {
 namespace combigrid {
@@ -17,8 +19,11 @@ using GPCntType = size_t;
 -Fixed types-
 Should not be changed.
 *********************/
-using GPGenFunc = sgpp::base::DataVector (*)(unsigned int);
-using Lvl2GPCntFunc = std::vector<unsigned int> (*)(MIType);
+using GPGenFunc = sgpp::base::DataVector (*)(GPCntType);
+using Lvl2GPCntFunc = GPCntType (*)(MIType);
+
+using SGGenGPLookup = std::unordered_map<std::pair<GPGenFunc, GPCntType>, base::DataVector,
+                                         misc::PairHash<GPGenFunc, GPCntType>>;
 
 }  // namespace combigrid
 }  // namespace sgpp

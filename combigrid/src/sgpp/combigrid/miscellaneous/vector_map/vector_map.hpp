@@ -28,7 +28,6 @@ class VecMap {
   /***********
   Constructors
   ***********/
-
   VecMap() = default;
 
   explicit VecMap(size_type reserve_n) { data_.reserve(reserve_n); }
@@ -85,21 +84,24 @@ class VecMap {
   /*************
   Element access
   *************/
-  mapped_type& operator[](const key_type& key) {
-    auto it = find_it(key);
-    if (it != data_.end()) return it->second;
+  value_type& operator[](const size_t idx) {
+    // auto it = find_it(key);
+    // if (it != data_.end()) return it->second;
 
-    data_.emplace_back(key, mapped_type{});
-    return data_.back().second;
+    // data_.emplace_back(key, mapped_type{});
+    // return data_.back().second;
+    return data_[idx];
   }
 
-  mapped_type& operator[](key_type&& key) {
-    auto it = find_it(key);
-    if (it != data_.end()) return it->second;
+  const value_type& operator[](const size_t idx) const { return data_[idx]; }
 
-    data_.emplace_back(std::move(key), mapped_type{});
-    return data_.back().second;
-  }
+  // mapped_type& operator[](key_type&& key) {
+  //   auto it = find_it(key);
+  //   if (it != data_.end()) return it->second;
+
+  //   data_.emplace_back(std::move(key), mapped_type{});
+  //   return data_.back().second;
+  // }
 
   /********
   Modifiers
