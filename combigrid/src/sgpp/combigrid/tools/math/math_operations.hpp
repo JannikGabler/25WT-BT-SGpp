@@ -32,6 +32,12 @@ T binomial(const T n, T k) {
   return (T)res;
 }
 
+int ceil(const int a, const int b);
+
+unsigned int ceil(const unsigned int a, const unsigned int b);
+
+unsigned long ceil(const unsigned long a, const unsigned long b);
+
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp

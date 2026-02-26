@@ -35,6 +35,12 @@ constexpr size_t MIN_MIS_FOR_CONCURRENCY = 10000;
 
 }
 
+namespace sg_gen_node_lookup {
+
+constexpr size_t FOR_ITERATIONS_TO_TASK_QUEUE_PUSH = 100;
+
+}
+
 }  // namespace constants
 
 }  // namespace combigrid

@@ -1,3 +1,6 @@
+#ifndef COMBIGRID_MISC_CONCURRENT_TASK_QUEUE_HPP
+#define COMBIGRID_MISC_CONCURRENT_TASK_QUEUE_HPP
+
 #include <condition_variable>
 #include <cstddef>
 #include <memory>
@@ -221,3 +224,5 @@ class ConcurrentTaskQueue {
   std::condition_variable not_full_;
   bool closed_;
 };
+
+#endif

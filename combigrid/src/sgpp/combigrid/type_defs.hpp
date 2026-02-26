@@ -19,11 +19,11 @@ using GPCntType = size_t;
 -Fixed types-
 Should not be changed.
 *********************/
-using GPGenFunc = sgpp::base::DataVector (*)(GPCntType);
+using NodeGenFunc = sgpp::base::DataVector (*)(GPCntType);
 using Lvl2GPCntFunc = GPCntType (*)(MIType);
 
-using SGGenGPLookup = std::unordered_map<std::pair<GPGenFunc, GPCntType>, base::DataVector,
-                                         misc::PairHash<GPGenFunc, GPCntType>>;
+using SGGenNodeLookup = std::unordered_map<std::pair<NodeGenFunc, GPCntType>, base::DataVector,
+                                           misc::PairHash<NodeGenFunc, GPCntType>>;
 
 }  // namespace combigrid
 }  // namespace sgpp

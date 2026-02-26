@@ -12,7 +12,7 @@ namespace combigrid {
 SGGenInstr::SGGenInstr(const size_t nDim)
     : boundaryIndexOffset(0),
       bounds(nDim, {0, 1}),
-      gPGenFuncs(nDim, nullptr),
+      nodeGenFuncs(nDim, nullptr),
       lvl2GPCntFuncs(nDim, nullptr) {}
 
 size_t sgpp::combigrid::SGGenInstr::nDim() const { return this->bounds.size(); }
@@ -32,13 +32,13 @@ void SGGenInstr::setBounds(const std::vector<std::pair<double, double>>& bounds)
   std::copy_n(bounds.begin(), nElemsToCopy, this->bounds.begin());
 }
 
-void SGGenInstr::setGPGenFuncForDim(const GPGenFunc gPGenFunc, const size_t dim) {
-  this->gPGenFuncs.at(dim) = gPGenFunc;
+void SGGenInstr::setNodeGenFuncForDim(const NodeGenFunc nodeGenFunc, const size_t dim) {
+  this->nodeGenFuncs.at(dim) = nodeGenFunc;
 }
 
-void SGGenInstr::setGPGenFuncs(const std::vector<GPGenFunc>& gPGenFuncs) {
-  const size_t nElemsToCopy = std::min(this->gPGenFuncs.size(), gPGenFuncs.size());
-  std::copy_n(gPGenFuncs.begin(), nElemsToCopy, this->gPGenFuncs.begin());
+void SGGenInstr::setNodeGenFuncs(const std::vector<NodeGenFunc>& nodeGenFuncs) {
+  const size_t nElemsToCopy = std::min(this->nodeGenFuncs.size(), nodeGenFuncs.size());
+  std::copy_n(nodeGenFuncs.begin(), nElemsToCopy, this->nodeGenFuncs.begin());
 }
 
 void SGGenInstr::setLvl2GPCntFuncForDim(const Lvl2GPCntFunc lvl2GPCntFunc, const size_t dim) {
@@ -52,29 +52,29 @@ void SGGenInstr::setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFu
 
 void SGGenInstr::resize(const size_t newDimCnt) {
   bounds.resize(newDimCnt);
-  gPGenFuncs.resize(newDimCnt);
+  nodeGenFuncs.resize(newDimCnt);
   lvl2GPCntFuncs.resize(newDimCnt);
 }
 
-std::vector<GPGenFunc> SGGenInstr::getUniqueGPGenFuncs() const {
-  std::vector<GPGenFunc> uniqueGPGenFuncs;
+std::vector<NodeGenFunc> SGGenInstr::getUniqueNodeGenFuncs() const {
+  std::vector<NodeGenFunc> uniqueNodeGenFuncs;
 
-  for (const GPGenFunc candidate : gPGenFuncs) {
+  for (const NodeGenFunc candidate : uniqueNodeGenFuncs) {
     bool unique = true;
 
-    for (const GPGenFunc gpGenFunc : uniqueGPGenFuncs) {
-      if (candidate == gpGenFunc) {
+    for (const NodeGenFunc nodeGenFunc : uniqueNodeGenFuncs) {
+      if (candidate == nodeGenFunc) {
         unique = false;
         break;
       }
     }
 
     if (unique) {
-      uniqueGPGenFuncs.push_back(candidate);
+      uniqueNodeGenFuncs.push_back(candidate);
     }
   }
 
-  return uniqueGPGenFuncs;
+  return uniqueNodeGenFuncs;
 }
 
 }  // namespace combigrid

@@ -23,10 +23,10 @@ class SGGenInstr {
 
   void setBounds(const std::vector<std::pair<double, double>>& bounds);
 
-  void setGPGenFuncForDim(GPGenFunc gPGenFunc, size_t dim);
-  void setGPGenFuncs(const std::vector<GPGenFunc>& gPGenFuncs);
-  const std::vector<GPGenFunc>& getGPGenFuncs() const;
-  GPGenFunc getGPGenFuncForDim(size_t nDim) const;
+  void setNodeGenFuncForDim(NodeGenFunc gPGenFunc, size_t dim);
+  void setNodeGenFuncs(const std::vector<NodeGenFunc>& gPGenFuncs);
+  const std::vector<NodeGenFunc>& getNodeGenFuncs() const;
+  NodeGenFunc getNodeGenFuncForDim(size_t nDim) const;
 
   void setLvl2GPCntFuncForDim(Lvl2GPCntFunc lvl2GPCntFunc, size_t dim);
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs, size_t dim);
@@ -39,14 +39,14 @@ class SGGenInstr {
 
   void resize(size_t newDimCnt);
 
-  std::vector<GPGenFunc> getUniqueGPGenFuncs() const;
+  std::vector<NodeGenFunc> getUniqueNodeGenFuncs() const;
 
  private:
   MIType boundaryIndexOffset;
 
   std::vector<std::pair<double, double>> bounds;
-  std::vector<GPGenFunc> gPGenFuncs;
-  std::vector<std::vector<unsigned int> (*)(unsigned int)> lvl2GPCntFuncs;
+  std::vector<NodeGenFunc> nodeGenFuncs;
+  std::vector<Lvl2GPCntFunc> lvl2GPCntFuncs;
 };
 
 }  // namespace combigrid
