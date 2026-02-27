@@ -11,32 +11,48 @@ namespace combigrid {
 
 class SGGenInstr {
  public:
+  /***********
+  Constructors
+  ***********/
   SGGenInstr(size_t nDim);
 
+  /******
+  Getters
+  ******/
   size_t nDim() const;
-
-  void setBoundaryIndexOffset(MIType boundaryIndexOffset);
 
   MIType getBoundaryIndexOffset() const;
 
-  void setBoundForDim(std::pair<double, double> bound, size_t dim);
+  const std::vector<NodeGenFunc>& getNodeGenFuncs() const;
+  NodeGenFunc getNodeGenFuncForDim(size_t dim) const;
 
+  const std::vector<Lvl2GPCntFunc>& getLvl2GPCntFuncs() const;
+  Lvl2GPCntFunc getLvl2GPCntFuncForDim(size_t dim) const;
+
+  /******
+  Setters
+  ******/
+  void setBoundaryIndexOffset(MIType boundaryIndexOffset);
+
+  void setBoundForDim(std::pair<double, double> bound, size_t dim);
   void setBounds(const std::vector<std::pair<double, double>>& bounds);
 
   void setNodeGenFuncForDim(NodeGenFunc gPGenFunc, size_t dim);
   void setNodeGenFuncs(const std::vector<NodeGenFunc>& gPGenFuncs);
-  const std::vector<NodeGenFunc>& getNodeGenFuncs() const;
-  NodeGenFunc getNodeGenFuncForDim(size_t nDim) const;
 
   void setLvl2GPCntFuncForDim(Lvl2GPCntFunc lvl2GPCntFunc, size_t dim);
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs, size_t dim);
-  const std::vector<Lvl2GPCntFunc>& getLvl2GPCntFuncs() const;
-  Lvl2GPCntFunc getLvl2GPCntFuncForDim(size_t nDim) const;
 
+  /*********************
+  Sparse grid generation
+  *********************/
   virtual MIVec genCompleteMIVec() const = 0;
 
   virtual std::pair<MIVec, std::vector<CTCoeffType>> genCompleteMIVecWithCoeff() const = 0;
 
+  /****************
+  Helper operations
+  ****************/
   void resize(size_t newDimCnt);
 
   std::vector<NodeGenFunc> getUniqueNodeGenFuncs() const;

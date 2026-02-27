@@ -19,7 +19,7 @@ Internal operations
 ******************/
 namespace sg_gen {
 
-std::vector<size_t> getDimWithUniqueGP(const SGGenInstr& genInstr);
+// std::vector<size_t> getDimWithUniqueGP(const SGGenInstr& genInstr);
 
 // misc::VecMap<GPGenFunc, std::vector<GPCntType>> getGPCntRequiredPerGPTypes(
 //     const SGGenInstr& genInstr, const MIVec& miVec);

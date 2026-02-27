@@ -3,21 +3,43 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
+#include "sgpp/combigrid/node_generation_functions/node_generation_functions.hpp"
 
 namespace sgpp {
-
 namespace combigrid {
+
+/***********
+Constructors
+***********/
 
 // TODO: Set default of lvl2GPCntFuncs
 SGGenInstr::SGGenInstr(const size_t nDim)
     : boundaryIndexOffset(0),
       bounds(nDim, {0, 1}),
-      nodeGenFuncs(nDim, nullptr),
+      nodeGenFuncs(nDim, genEquidistantNodes),
       lvl2GPCntFuncs(nDim, nullptr) {}
 
-size_t sgpp::combigrid::SGGenInstr::nDim() const { return this->bounds.size(); }
+/******
+Getters
+******/
+
+size_t SGGenInstr::nDim() const { return this->bounds.size(); }
 
 MIType SGGenInstr::getBoundaryIndexOffset() const { return boundaryIndexOffset; }
+
+const std::vector<NodeGenFunc>& SGGenInstr::getNodeGenFuncs() const { return nodeGenFuncs; }
+
+NodeGenFunc SGGenInstr::getNodeGenFuncForDim(const size_t dim) const { return nodeGenFuncs[dim]; }
+
+const std::vector<Lvl2GPCntFunc>& SGGenInstr::getLvl2GPCntFuncs() const { return lvl2GPCntFuncs; }
+
+Lvl2GPCntFunc SGGenInstr::getLvl2GPCntFuncForDim(const size_t dim) const {
+  return lvl2GPCntFuncs[dim];
+}
+
+/******
+Setters
+******/
 
 void SGGenInstr::setBoundaryIndexOffset(const MIType boundaryIndexOffset) {
   this->boundaryIndexOffset = boundaryIndexOffset;
@@ -50,6 +72,9 @@ void SGGenInstr::setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFu
   std::copy_n(lvl2GPCntFuncs.begin(), nElemsToCopy, this->lvl2GPCntFuncs.begin());
 }
 
+/****************
+Helper operations
+****************/
 void SGGenInstr::resize(const size_t newDimCnt) {
   bounds.resize(newDimCnt);
   nodeGenFuncs.resize(newDimCnt);

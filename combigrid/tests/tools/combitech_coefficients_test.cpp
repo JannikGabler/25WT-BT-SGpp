@@ -2,6 +2,8 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+#include "sgpp/base/tools/RandomNumberGenerator.hpp"
+#include "sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -16,6 +18,9 @@
 #include <vector>
 
 using namespace sgpp::combigrid;
+
+static sgpp::base::RandomNumberGenerator& randGen =
+    sgpp::base::RandomNumberGenerator::getInstance();
 
 BOOST_AUTO_TEST_SUITE(Tools_computeCTCoeffs)
 
@@ -65,18 +70,19 @@ BOOST_AUTO_TEST_CASE(Simple3DExample) {
 BOOST_AUTO_TEST_CASE(RandomComplexExample) {}
 
 BOOST_AUTO_TEST_CASE(RandomParallelExample) {
-  std::random_device rd;
-  const auto seed = rd();
-  std::mt19937 gen(seed);
-  std::uniform_int_distribution<size_t> dimDist(1, 5);  // number of dimensions
-  std::uniform_int_distribution<MIType> maxLvlDist(
-      constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY,
-      constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY + 5);
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    const MIType maxLvl =
+        constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY + (MIType)randGen.getUniformIndexRN(5);
+    const size_t nDim = 2 + randGen.getUniformIndexRN(1);
 
-  const size_t nDim = dimDist(gen);
-  const MIType maxLvl = maxLvlDist(gen);
+    const MIVec miVec = tools::genMIVecForFullSG(maxLvl, nDim);
 
-  // TODO
+    const std::vector<int> result1 = tools::computeCTCoeffsNaive(miVec);
+    const std::vector<int> result2 = tools::computeCTCoeffs(miVec);
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(result1.begin(), result1.end(), result2.begin(), result2.end());
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

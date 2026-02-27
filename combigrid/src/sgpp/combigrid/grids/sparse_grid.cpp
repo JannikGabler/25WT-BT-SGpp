@@ -4,20 +4,23 @@
 namespace sgpp {
 namespace combigrid {
 
-SparseGrid::SparseGrid(const size_t nDim) : nDim_(nDim), tensorGridData(0) {}
+SparseGrid::SparseGrid(const size_t nDim) : nDim_(nDim), tensorGridData() {}
 
-SparseGrid::SparseGrid(const SGGenInstr& genInstruction) : nDim_(genInstruction.nDim()) {}
+SparseGrid::SparseGrid(const SGGenInstr& genInstruction) : nDim_(genInstruction.nDim()) {
+  // TODO
+  throw base::not_implemented_exception("Function is not implemented yet!");
+}
 
 size_t SparseGrid::nDim() const { return nDim_; }
 
-const TensorGrid& SparseGrid::getTensorGrid(size_t idx) const { return this->tensorGrids[idx]; }
+const TensorGridCTData& SparseGrid::getTensorGrid(size_t idx) const { return tensorGridData[idx]; }
 
-const TensorGrid& SparseGrid::getTensorGrid(const MI& mi) const {
+const TensorGridCTData& SparseGrid::getTensorGrid(const MI& mi) const {
   // TODO
   throw base::not_implemented_exception("Operation is not implemented yet!");
 }
 
-const std::vector<TensorGrid>& SparseGrid::getTensorGrids() const { return this->tensorGrids; }
+const std::vector<TensorGridCTData>& SparseGrid::getTensorGrids() const { return tensorGridData; }
 
 }  // namespace combigrid
 }  // namespace sgpp

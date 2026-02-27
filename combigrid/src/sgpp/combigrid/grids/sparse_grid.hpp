@@ -20,11 +20,11 @@ class SparseGrid {
 
   size_t nDim() const;
 
-  const TensorGrid& getTensorGrid(size_t idx) const;
+  const TensorGridCTData& getTensorGrid(size_t idx) const;
 
-  const TensorGrid& getTensorGrid(const MI& mi) const;
+  const TensorGridCTData& getTensorGrid(const MI& mi) const;
 
-  const std::vector<TensorGrid>& getTensorGrids() const;
+  const std::vector<TensorGridCTData>& getTensorGrids() const;
 
  private:
   const size_t nDim_;
