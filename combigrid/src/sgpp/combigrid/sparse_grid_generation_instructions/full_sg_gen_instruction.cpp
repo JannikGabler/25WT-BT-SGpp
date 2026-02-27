@@ -13,10 +13,10 @@ FullSGGenInstr::FullSGGenInstr(const MIType maxLvl, const size_t nDim)
 
 void FullSGGenInstr::setMaxLvl(MIType maxLvl) { this->maxLvl = maxLvl; }
 
-MIVec FullSGGenInstr::genCompleteMIVec() const { return tools::genMIVecForFullSG(maxLvl, nDim()); }
+MIVec FullSGGenInstr::genMIVec() const { return tools::genMIVecForFullSG(maxLvl, nDim()); }
 
-std::pair<MIVec, std::vector<CTCoeffType>> FullSGGenInstr::genCompleteMIVecWithCoeff() const {
-  const MIVec miVec = genCompleteMIVec();
+std::pair<MIVec, std::vector<CTCoeffType>> FullSGGenInstr::genMIVecWithCoeff() const {
+  const MIVec miVec = genMIVec();
   const std::vector<CTCoeffType> coeff = tools::genCoeffForFullSG(maxLvl, nDim());
   return {miVec, coeff};
 }

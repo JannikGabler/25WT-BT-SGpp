@@ -12,9 +12,9 @@ namespace combigrid {
 
 class TensorGrid {
  public:
-  TensorGrid(const MI& nGPPerDim);
+  TensorGrid(const std::vector<size_t>& nGPPerDim);
 
-  TensorGrid(const MI& nGPPerDim, const std::vector<base::DataVector>& gridPoints);
+  TensorGrid(const std::vector<size_t>& nGPPerDim, const std::vector<base::DataVector>& gridPoints);
 
   size_t nDim() const;
 
@@ -22,13 +22,14 @@ class TensorGrid {
 
   base::DataVector getGridPoint(size_t idx) const;
 
-  base::DataVector getGridPoint(const MI& mi) const;
+  base::DataVector getGridPoint(const std::vector<size_t>& mi) const;
 
   // const std::vector<base::DataVector>& getGridPoints() const;
 
   void setGridPoint(const size_t idx, const base::DataVector& gp);
 
-  void setGridPoint(const MI& mi, const base::DataVector& gp);
+  void setGridPoint(const std::vector<size_t>& mi,
+                    const base::DataVector& gp);  // TODO: Is MI a good data type?
 
   //   bool containsABoundary();
 
@@ -42,7 +43,7 @@ class TensorGrid {
 
  private:
   const size_t nGP_;
-  const MI nGPPerDim;
+  const std::vector<size_t> nGPPerDim;
   base::DataVector gridPoints;  // flattened vector, row-major layout
 };
 

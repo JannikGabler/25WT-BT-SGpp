@@ -28,8 +28,7 @@ BOOST_AUTO_TEST_SUITE(Tools_genSGNodeLookup)
 
 BOOST_AUTO_TEST_CASE(ZeroDims) {
   const FullSGGenInstr instr(3, 0);
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff =
-      instr.genCompleteMIVecWithCoeff();
+  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -43,8 +42,7 @@ BOOST_AUTO_TEST_CASE(ZeroDims) {
 
 BOOST_AUTO_TEST_CASE(Simple1D) {
   const FullSGGenInstr instr(2, 1);
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff =
-      instr.genCompleteMIVecWithCoeff();
+  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -58,8 +56,7 @@ BOOST_AUTO_TEST_CASE(Simple1D) {
 
 BOOST_AUTO_TEST_CASE(Simple2D) {
   const FullSGGenInstr instr(3, 2);
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff =
-      instr.genCompleteMIVecWithCoeff();
+  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -77,8 +74,7 @@ BOOST_AUTO_TEST_CASE(Complex2D) {
   instr.setNodeGenFuncForDim(genFirstTypeChebyshevNodes, 1);
   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 1);
 
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff =
-      instr.genCompleteMIVecWithCoeff();
+  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -104,8 +100,7 @@ BOOST_AUTO_TEST_CASE(Complex3D) {
   instr.setNodeGenFuncForDim(genSecondTypeChebyshevNodes, 3);
   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 3);
 
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff =
-      instr.genCompleteMIVecWithCoeff();
+  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -129,8 +124,6 @@ BOOST_AUTO_TEST_CASE(Complex3D) {
       {{genSecondTypeChebyshevNodes, 3}, genSecondTypeChebyshevNodes(3)},
       {{genSecondTypeChebyshevNodes, 4}, genSecondTypeChebyshevNodes(4)},
       {{genSecondTypeChebyshevNodes, 5}, genSecondTypeChebyshevNodes(5)}};
-
-  const int tmp = 1;
 
   BOOST_CHECK(result == expected);
 }

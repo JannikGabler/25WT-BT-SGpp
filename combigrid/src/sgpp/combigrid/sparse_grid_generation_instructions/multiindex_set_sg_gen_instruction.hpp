@@ -12,9 +12,9 @@ class MISetSGGenInstr : public SGGenInstr {
  public:
   MISetSGGenInstr(const MIVec& miSet);
 
-  MIVec genCompleteMIVec() const override;
+  MIVec genMIVec() const override;
 
-  std::pair<MIVec, std::vector<CTCoeffType>> genCompleteMIVecWithCoeff() const override;
+  std::pair<MIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
 
  private:
   const MIVec& miSet;

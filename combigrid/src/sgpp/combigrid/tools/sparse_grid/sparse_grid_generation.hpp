@@ -2,6 +2,8 @@
 #define COMBIGRID_TOOLS_SPARSE_GRID_GENERATION_HPP
 
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
 #include <sgpp/combigrid/miscellaneous/vector_map/vector_map.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
@@ -11,30 +13,22 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-// SGGenGPLookup genSGGPLookup(const SGGenInstr& genInstr, const MIVec& miVec,
-//                             const std::vector<CTCoeffType> coeff);
+SparseGrid genSG(const SGGenInstr& genInstr);
+
+TensorGrid genTGForMI(const MI& mi, const SGGenInstr& genInstr, const SGGenNodeLookup& lookup);
 
 /******************
 Internal operations
 ******************/
 namespace sg_gen {
 
-// std::vector<size_t> getDimWithUniqueGP(const SGGenInstr& genInstr);
+std::vector<size_t> getGPCntPerDim(const MI& mi, const SGGenInstr& genInstr);
 
-// misc::VecMap<GPGenFunc, std::vector<GPCntType>> getGPCntRequiredPerGPTypes(
-//     const SGGenInstr& genInstr, const MIVec& miVec);
+misc::DiscRectBB<size_t> getBBForIteration(const std::vector<size_t>& gpCntPerDim);
 
-// std::vector<GPCntType> getGPCntRequiredByDim(size_t dim, const SGGenInstr& genInstr,
-//                                              const MI& componentWiseMax);
-
-// misc::VecMap<GPGenFunc, std::vector<GPCntType>> turnVecOfLocalGPCntsIntoMap(
-//     const std::vector<std::pair<GPGenFunc, std::vector<GPCntType>>>& vecOfLocalGPCnts,
-//     const SGGenInstr& genInstr, const std::vector<GPGenFunc>& uniqueGPGenFuncs);
-
-// std::vector<size_t> getIdxBoundaries(
-//     const misc::VecMap<GPGenFunc, std::vector<GPCntType>>& gpCntPerType);
-
-// size_t getGPGenFuncIdxByGPCntIdx(size_t gpCntIdx, const std::vector<size_t>& idxBoundaries);
+std::vector<base::DataVector> getNodesPerDimForTG(const MI& mi, const SGGenInstr& genInstr,
+                                                  const std::vector<size_t>& gpCntPerDim,
+                                                  const SGGenNodeLookup& lookup);
 
 }  // namespace sg_gen
 

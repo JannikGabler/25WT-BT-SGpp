@@ -13,9 +13,9 @@ class FullSGGenInstr : public SGGenInstr {
 
   void setMaxLvl(MIType maxLvl);
 
-  MIVec genCompleteMIVec() const override;
+  MIVec genMIVec() const override;
 
-  std::pair<MIVec, std::vector<CTCoeffType>> genCompleteMIVecWithCoeff() const override;
+  std::pair<MIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
 
  private:
   MIType maxLvl;

@@ -46,9 +46,9 @@ class SGGenInstr {
   /*********************
   Sparse grid generation
   *********************/
-  virtual MIVec genCompleteMIVec() const = 0;
+  virtual MIVec genMIVec() const = 0;
 
-  virtual std::pair<MIVec, std::vector<CTCoeffType>> genCompleteMIVecWithCoeff() const = 0;
+  virtual std::pair<MIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const = 0;
 
   /****************
   Helper operations

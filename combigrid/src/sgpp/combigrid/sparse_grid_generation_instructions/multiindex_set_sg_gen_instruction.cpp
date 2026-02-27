@@ -11,11 +11,11 @@ namespace combigrid {
 
 MISetSGGenInstr::MISetSGGenInstr(const MIVec& miSet) : SGGenInstr(miSet.nDim()), miSet(miSet) {}
 
-MIVec MISetSGGenInstr::genCompleteMIVec() const {
+MIVec MISetSGGenInstr::genMIVec() const {
   throw sgpp::base::not_implemented_exception("Operation is not implemented yet!");
 }
 
-std::pair<MIVec, std::vector<CTCoeffType>> MISetSGGenInstr::genCompleteMIVecWithCoeff() const {
+std::pair<MIVec, std::vector<CTCoeffType>> MISetSGGenInstr::genMIVecWithCoeff() const {
   throw sgpp::base::not_implemented_exception("Operation is not implemented yet!");
 }
 

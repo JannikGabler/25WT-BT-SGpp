@@ -101,7 +101,7 @@ misc::VecMap<NodeGenFunc, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
   std::vector<std::pair<NodeGenFunc, std::vector<GPCntType>>> localEntries(
       uniqueNodeGenFuncs.size());  // Required because VecMap is not thread safe
 
-  // #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
   for (size_t i = 0; i < uniqueNodeGenFuncs.size(); i++) {
     const NodeGenFunc nodeGenFunc = uniqueNodeGenFuncs[i];
     std::vector<
