@@ -2,11 +2,6 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
-#include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
-#include "sgpp/combigrid/multiindices/multiindex_vector.hpp"
-#include "sgpp/combigrid/tools/combitech_coefficients.hpp"
-#include "sgpp/combigrid/tools/math/math_operations.hpp"
-#include "sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -14,6 +9,10 @@
 #include <boost/test/unit_test_suite.hpp>
 
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
+#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/tools/combitech_coefficients.hpp>
+#include <sgpp/combigrid/tools/math/binomial.hpp>
+#include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
 #include <vector>
 

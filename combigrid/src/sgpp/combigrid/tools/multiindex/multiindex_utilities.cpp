@@ -1,4 +1,4 @@
-#include <sgpp/combigrid/tools/math/math_operations.hpp>
+#include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 

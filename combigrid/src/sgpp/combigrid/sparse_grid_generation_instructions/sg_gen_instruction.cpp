@@ -1,9 +1,10 @@
 #include <algorithm>
+#include <sgpp/combigrid/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
+#include <sgpp/combigrid/node_generation_functions/node_generation_functions.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
-#include "sgpp/combigrid/node_generation_functions/node_generation_functions.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -17,7 +18,7 @@ SGGenInstr::SGGenInstr(const size_t nDim)
     : boundaryIndexOffset(0),
       bounds(nDim, {0, 1}),
       nodeGenFuncs(nDim, genEquidistantNodes),
-      lvl2GPCntFuncs(nDim, nullptr) {}
+      lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {}
 
 /******
 Getters
@@ -84,7 +85,7 @@ void SGGenInstr::resize(const size_t newDimCnt) {
 std::vector<NodeGenFunc> SGGenInstr::getUniqueNodeGenFuncs() const {
   std::vector<NodeGenFunc> uniqueNodeGenFuncs;
 
-  for (const NodeGenFunc candidate : uniqueNodeGenFuncs) {
+  for (const NodeGenFunc candidate : nodeGenFuncs) {
     bool unique = true;
 
     for (const NodeGenFunc nodeGenFunc : uniqueNodeGenFuncs) {

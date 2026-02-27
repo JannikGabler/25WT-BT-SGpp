@@ -13,7 +13,7 @@
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/math/math_operations.hpp>
+#include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 
 using namespace sgpp::combigrid;

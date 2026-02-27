@@ -5,7 +5,7 @@
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
-#include <sgpp/combigrid/tools/math/math_operations.hpp>
+#include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -131,10 +131,6 @@ std::vector<size_t> initBarPos(const size_t nDim) {
 void incrementBarPos(std::vector<size_t>& barPos, const size_t maxBarPos) {
   for (size_t barIdx = barPos.size() - 1; barIdx != std::numeric_limits<size_t>::max(); barIdx--) {
     const size_t mostRightPos = maxBarPos - (barPos.size() - 1 - barIdx);
-
-    if (barIdx < 0 || barIdx >= barPos.size()) {
-      const int tmp = 0;
-    }
 
     if (barPos[barIdx] < mostRightPos) {
       barPos[barIdx]++;
