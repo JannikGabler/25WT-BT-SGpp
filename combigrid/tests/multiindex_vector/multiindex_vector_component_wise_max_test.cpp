@@ -9,15 +9,17 @@
 #include <boost/test/unit_test_suite.hpp>
 
 #include <cstddef>
-#include <random>
+#include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/multiindices/multiindex.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/multiindex_domination.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
 using namespace sgpp::combigrid;
+
+static sgpp::base::RandomNumberGenerator& randGen =
+    sgpp::base::RandomNumberGenerator::getInstance();
 
 BOOST_AUTO_TEST_SUITE(op_componentWiseMax)
 
@@ -26,8 +28,8 @@ BOOST_AUTO_TEST_CASE(Basic2D) {
   // (1,2)
   // (3,1)
   // (2,5)
-  const std::vector<MI> mis = {MI{1, 2}, MI{3, 1}, MI{2, 5}};
-  const MIVec vec(mis);
+  const std::vector<LvlMI> mis = {LvlMI{1, 2}, LvlMI{3, 1}, LvlMI{2, 5}};
+  const LvlMIVec vec(mis);
 
   const auto result = vec.componentWiseMax();
 
@@ -39,9 +41,9 @@ BOOST_AUTO_TEST_CASE(Basic2D) {
 }
 
 BOOST_AUTO_TEST_CASE(Basic3D) {
-  std::vector<MI> mis = {MI{0, 7, 1}, MI{5, 2, 9}, MI{3, 4, 6}};
+  std::vector<LvlMI> mis = {LvlMI{0, 7, 1}, LvlMI{5, 2, 9}, LvlMI{3, 4, 6}};
 
-  MIVec vec(mis);
+  LvlMIVec vec(mis);
   auto result = vec.componentWiseMax();
 
   BOOST_REQUIRE(result);
@@ -53,9 +55,9 @@ BOOST_AUTO_TEST_CASE(Basic3D) {
 }
 
 BOOST_AUTO_TEST_CASE(ComponentWiseMax_SingleMI) {
-  std::vector<MI> mis = {MI{4, 8, 15}};
+  std::vector<LvlMI> mis = {LvlMI{4, 8, 15}};
 
-  MIVec vec(mis);
+  LvlMIVec vec(mis);
   auto result = vec.componentWiseMax();
 
   BOOST_REQUIRE(result);
@@ -65,9 +67,9 @@ BOOST_AUTO_TEST_CASE(ComponentWiseMax_SingleMI) {
 }
 
 BOOST_AUTO_TEST_CASE(AllEqual) {
-  std::vector<MI> mis = {MI{2, 2}, MI{2, 2}, MI{2, 2}};
+  std::vector<LvlMI> mis = {LvlMI{2, 2}, LvlMI{2, 2}, LvlMI{2, 2}};
 
-  MIVec vec(mis);
+  LvlMIVec vec(mis);
   auto result = vec.componentWiseMax();
 
   BOOST_REQUIRE(result);
@@ -76,10 +78,10 @@ BOOST_AUTO_TEST_CASE(AllEqual) {
 }
 
 BOOST_AUTO_TEST_CASE(DistributedMaxima) {
-  std::vector<MI> mis = {MI{10, 1, 1}, MI{1, 10, 1}, MI{1, 1, 10}};
+  const std::vector<LvlMI> mis = {LvlMI{10, 1, 1}, LvlMI{1, 10, 1}, LvlMI{1, 1, 10}};
 
-  MIVec vec(mis);
-  auto result = vec.componentWiseMax();
+  const LvlMIVec vec(mis);
+  const auto result = vec.componentWiseMax();
 
   BOOST_REQUIRE(result);
   BOOST_CHECK_EQUAL((*result)[0], 10u);
@@ -88,15 +90,14 @@ BOOST_AUTO_TEST_CASE(DistributedMaxima) {
 }
 
 BOOST_AUTO_TEST_CASE(OrderIndependence) {
-  std::vector<MI> mis1 = {MI{1, 3}, MI{4, 2}};
+  const std::vector<LvlMI> mis1 = {LvlMI{1, 3}, LvlMI{4, 2}};
+  const std::vector<LvlMI> mis2 = {LvlMI{4, 2}, LvlMI{1, 3}};
 
-  std::vector<MI> mis2 = {MI{4, 2}, MI{1, 3}};
+  const LvlMIVec vec1(mis1);
+  const LvlMIVec vec2(mis2);
 
-  MIVec vec1(mis1);
-  MIVec vec2(mis2);
-
-  auto r1 = vec1.componentWiseMax();
-  auto r2 = vec2.componentWiseMax();
+  const auto r1 = vec1.componentWiseMax();
+  const auto r2 = vec2.componentWiseMax();
 
   BOOST_REQUIRE(r1);
   BOOST_REQUIRE(r2);
@@ -106,12 +107,12 @@ BOOST_AUTO_TEST_CASE(OrderIndependence) {
 }
 
 BOOST_AUTO_TEST_CASE(RepeatedCallsConsistent) {
-  std::vector<MI> mis = {MI{2, 5}, MI{7, 1}};
+  const std::vector<LvlMI> mis = {LvlMI{2, 5}, LvlMI{7, 1}};
 
-  MIVec vec(mis);
+  const LvlMIVec vec(mis);
 
-  auto r1 = vec.componentWiseMax();
-  auto r2 = vec.componentWiseMax();
+  const auto r1 = vec.componentWiseMax();
+  const auto r2 = vec.componentWiseMax();
 
   BOOST_REQUIRE(r1);
   BOOST_REQUIRE(r2);
@@ -121,10 +122,10 @@ BOOST_AUTO_TEST_CASE(RepeatedCallsConsistent) {
 }
 
 BOOST_AUTO_TEST_CASE(LargeValues) {
-  std::vector<MI> mis = {MI{1000000, 1}, MI{2, 999999}};
+  std::vector<LvlMI> mis = {LvlMI{1000000, 1}, LvlMI{2, 999999}};
 
-  MIVec vec(mis);
-  auto result = vec.componentWiseMax();
+  const LvlMIVec vec(mis);
+  const auto result = vec.componentWiseMax();
 
   BOOST_REQUIRE(result);
   BOOST_CHECK_EQUAL((*result)[0], 1000000u);
@@ -135,43 +136,40 @@ BOOST_AUTO_TEST_CASE(ConcurrencyRandom) {
   const size_t nDim = 5;
   const size_t nMI = constants::mi_vec::CWM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
 
-  // Zufälliger Seed generieren
-  std::random_device rd;
-  unsigned int seed = rd();
-  std::mt19937 rng(seed);
-  std::uniform_int_distribution<MIType> dist(0, 1000);
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    std::vector<LvlMI> mis;
+    mis.reserve(nMI);
 
-  std::vector<MI> mis;
-  mis.reserve(nMI);
-
-  for (size_t i = 0; i < nMI; ++i) {
-    MI mi(nDim);
-    for (size_t d = 0; d < nDim; ++d) {
-      mi[d] = dist(rng);
-    }
-    mis.push_back(mi);
-  }
-
-  MIVec vec(mis);
-
-  auto result = vec.componentWiseMax();
-  BOOST_REQUIRE(result);
-
-  // Prüfen, dass jede Komponente >= allen Einträgen ist
-  bool failure = false;
-  for (size_t d = 0; d < nDim; ++d) {
-    MIType maxVal = (*result)[d];
     for (size_t i = 0; i < nMI; ++i) {
-      if (!(maxVal >= vec(i, d))) {
-        failure = true;
-        break;
+      LvlMI mi(nDim);
+      for (size_t d = 0; d < nDim; ++d) {
+        mi[d] = (LvlType)randGen.getUniformIndexRN(1000);
       }
+      mis.push_back(mi);
     }
-    if (failure) break;
-  }
 
-  // Wenn der Test fehlschlägt, den Seed ausgeben
-  BOOST_CHECK_MESSAGE(!failure, "componentWiseMax failed with random seed: " << seed);
+    const LvlMIVec vec(mis);
+
+    const auto result = vec.componentWiseMax();
+    BOOST_REQUIRE(result);
+
+    // Prüfen, dass jede Komponente >= allen Einträgen ist
+    bool failure = false;
+    for (size_t d = 0; d < nDim; ++d) {
+      LvlType maxVal = (*result)[d];
+      for (size_t i = 0; i < nMI; ++i) {
+        if (!(maxVal >= vec(i, d))) {
+          failure = true;
+          break;
+        }
+      }
+      if (failure) break;
+    }
+
+    // Wenn der Test fehlschlägt, den Seed ausgeben
+    BOOST_CHECK(!failure);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -180,7 +178,7 @@ BOOST_AUTO_TEST_SUITE(op_paretoMaximum)
 
 namespace {
 
-std::vector<size_t> naivParetoMaximum(const MIVec input) {
+std::vector<size_t> naivParetoMaximum(const LvlMIVec& input) {
   std::vector<size_t> skyline;
 
   for (size_t miIdx1 = 0; miIdx1 < input.nMI(); miIdx1++) {
@@ -214,7 +212,7 @@ BOOST_AUTO_TEST_CASE(SmallSequential) {
   constexpr size_t N_MI = 8;
   constexpr size_t N_DIM = 2;
 
-  MIVec miVec(N_DIM, N_MI);
+  LvlMIVec miVec(N_DIM, N_MI);
 
   miVec(0, 0) = 1;
   miVec(0, 1) = 6;
@@ -256,7 +254,7 @@ BOOST_AUTO_TEST_CASE(DuplicateSequential) {
   constexpr size_t N_MI = 8;
   constexpr size_t N_DIM = 2;
 
-  MIVec miVec(N_DIM, N_MI);
+  LvlMIVec miVec(N_DIM, N_MI);
 
   miVec(0, 0) = 1;
   miVec(0, 1) = 6;
@@ -295,55 +293,50 @@ BOOST_AUTO_TEST_CASE(RandomSequential) {
   constexpr size_t N_MI = 20;
   constexpr size_t N_DIM = 4;
 
-  // Random generator
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<> dis(0.0, 100.0);
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    // Generating a random MIVec
+    LvlMIVec miVec(N_DIM, N_MI);
 
-  // Generating a random MIVec
-  MIVec miVec(N_DIM, N_MI);
-
-  for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
-    for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
-      miVec(miIdx, dimIdx) = static_cast<sgpp::combigrid::MIType>(dis(gen));
+    for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
+      for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
+        miVec(miIdx, dimIdx) = (LvlType)randGen.getUniformIndexRN(100);
+      }
     }
+
+    // Generating the pareto maxima
+    const std::vector<size_t> expectedResult = naivParetoMaximum(miVec);
+
+    const std::shared_ptr<std::vector<size_t>> result = miVec.paretoMaxima();
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), result->begin(),
+                                  result->end());
   }
-
-  // Generating the pareto maxima
-  const std::vector<size_t> expectedResult = naivParetoMaximum(miVec);
-
-  const std::shared_ptr<std::vector<size_t>> result = miVec.paretoMaxima();
-
-  BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), result->begin(),
-                                result->end());
 }
 
 BOOST_AUTO_TEST_CASE(RandomTestConcurrent) {
   constexpr size_t N_MI = constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
-
   constexpr size_t N_DIM = 2;
 
-  // Random generator
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<> dis(0.0, 1000.0);
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    // Generating a random MIVec
+    LvlMIVec miVec(N_DIM, N_MI);
 
-  // Generating a random MIVec
-  MIVec miVec(N_DIM, N_MI);
-
-  for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
-    for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
-      miVec(miIdx, dimIdx) = static_cast<size_t>(dis(gen));
+    for (size_t miIdx = 0; miIdx < N_MI; miIdx++) {
+      for (size_t dimIdx = 0; dimIdx < N_DIM; dimIdx++) {
+        miVec(miIdx, dimIdx) = (LvlType)randGen.getUniformIndexRN(1000);
+      }
     }
+
+    // Generating the pareto maxima
+    const std::vector<size_t> expectedResult = naivParetoMaximum(miVec);
+
+    const std::shared_ptr<std::vector<size_t>> result = miVec.paretoMaxima();
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), result->begin(),
+                                  result->end());
   }
-
-  // Generating the pareto maxima
-  const std::vector<size_t> expectedResult = naivParetoMaximum(miVec);
-
-  const std::shared_ptr<std::vector<size_t>> result = miVec.paretoMaxima();
-
-  BOOST_CHECK_EQUAL_COLLECTIONS(expectedResult.begin(), expectedResult.end(), result->begin(),
-                                result->end());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

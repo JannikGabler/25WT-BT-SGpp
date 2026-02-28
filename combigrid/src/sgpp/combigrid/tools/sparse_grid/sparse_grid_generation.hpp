@@ -15,18 +15,18 @@ namespace tools {
 
 SparseGrid genSG(const SGGenInstr& genInstr);
 
-TensorGrid genTGForMI(const MI& mi, const SGGenInstr& genInstr, const SGGenNodeLookup& lookup);
+TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr, const SGGenNodeLookup& lookup);
 
 /******************
 Internal operations
 ******************/
 namespace sg_gen {
 
-std::vector<size_t> getGPCntPerDim(const MI& mi, const SGGenInstr& genInstr);
+std::vector<size_t> getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr);
 
 misc::DiscRectBB<size_t> getBBForIteration(const std::vector<size_t>& gpCntPerDim);
 
-std::vector<base::DataVector> getNodesPerDimForTG(const MI& mi, const SGGenInstr& genInstr,
+std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
                                                   const std::vector<size_t>& gpCntPerDim,
                                                   const SGGenNodeLookup& lookup);
 

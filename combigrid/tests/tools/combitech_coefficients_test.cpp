@@ -11,9 +11,9 @@
 
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
 using namespace sgpp::combigrid;
@@ -24,7 +24,7 @@ static sgpp::base::RandomNumberGenerator& randGen =
 BOOST_AUTO_TEST_SUITE(Tools_computeCTCoeffs)
 
 BOOST_AUTO_TEST_CASE(Simple1DExample) {
-  const MIVec miVec{{0}, {1}, {2}};
+  const LvlMIVec miVec{{0}, {1}, {2}};
 
   BOOST_CHECK(miVec.isDownwardsClosed());
 
@@ -38,7 +38,8 @@ BOOST_AUTO_TEST_CASE(Simple1DExample) {
 }
 
 BOOST_AUTO_TEST_CASE(Simple2DExample) {
-  const MIVec miVec{{0, 0}, {0, 1}, {0, 2}, {0, 3}, {1, 0}, {1, 1}, {1, 2}, {2, 0}, {3, 0}, {4, 0}};
+  const LvlMIVec miVec{{0, 0}, {0, 1}, {0, 2}, {0, 3}, {1, 0},
+                       {1, 1}, {1, 2}, {2, 0}, {3, 0}, {4, 0}};
 
   BOOST_CHECK(miVec.isDownwardsClosed());
 
@@ -52,8 +53,8 @@ BOOST_AUTO_TEST_CASE(Simple2DExample) {
 }
 
 BOOST_AUTO_TEST_CASE(Simple3DExample) {
-  const MIVec miVec{{0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {0, 1, 0},
-                    {0, 1, 1}, {0, 1, 2}, {0, 2, 0}, {1, 0, 0}};
+  const LvlMIVec miVec{{0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {0, 1, 0},
+                       {0, 1, 1}, {0, 1, 2}, {0, 2, 0}, {1, 0, 0}};
 
   BOOST_CHECK(miVec.isDownwardsClosed());
 
@@ -71,11 +72,11 @@ BOOST_AUTO_TEST_CASE(RandomComplexExample) {}
 BOOST_AUTO_TEST_CASE(RandomParallelExample) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const MIType maxLvl =
-        constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY + (MIType)randGen.getUniformIndexRN(5);
+    const LvlType maxLvl =
+        constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY + (LvlType)randGen.getUniformIndexRN(5);
     const size_t nDim = 2 + randGen.getUniformIndexRN(1);
 
-    const MIVec miVec = tools::genMIVecForFullSG(maxLvl, nDim);
+    const LvlMIVec miVec = tools::genMIVecForFullSG(maxLvl, nDim);
 
     const std::vector<int> result1 = tools::computeCTCoeffsNaive(miVec);
     const std::vector<int> result2 = tools::computeCTCoeffs(miVec);

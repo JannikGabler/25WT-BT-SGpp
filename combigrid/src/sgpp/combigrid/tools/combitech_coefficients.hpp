@@ -6,14 +6,12 @@
 #include <vector>
 
 namespace sgpp {
-
 namespace combigrid {
-
 namespace tools {
 
-std::vector<int> computeCTCoeffs(const MIVec& miVec);
+std::vector<int> computeCTCoeffs(const LvlMIVec& miVec);
 
-std::vector<int> computeCTCoeffsNaive(const MIVec& miVec);
+std::vector<int> computeCTCoeffsNaive(const LvlMIVec& miVec);
 
 }  // namespace tools
 }  // namespace combigrid

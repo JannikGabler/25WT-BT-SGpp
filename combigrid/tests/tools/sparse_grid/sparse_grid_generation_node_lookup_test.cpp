@@ -12,11 +12,11 @@
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/node_generation_functions/node_generation_functions.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
 using namespace sgpp::combigrid;
@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_SUITE(Tools_genSGNodeLookup)
 
 BOOST_AUTO_TEST_CASE(ZeroDims) {
   const FullSGGenInstr instr(3, 0);
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+  const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(ZeroDims) {
 
 BOOST_AUTO_TEST_CASE(Simple1D) {
   const FullSGGenInstr instr(2, 1);
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+  const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(Simple1D) {
 
 BOOST_AUTO_TEST_CASE(Simple2D) {
   const FullSGGenInstr instr(3, 2);
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+  const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(Complex2D) {
   instr.setNodeGenFuncForDim(genFirstTypeChebyshevNodes, 1);
   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 1);
 
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+  const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(Complex3D) {
   instr.setNodeGenFuncForDim(genSecondTypeChebyshevNodes, 3);
   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 3);
 
-  const std::pair<MIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+  const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
   const SGGenNodeLookup result =
       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);

@@ -2,32 +2,34 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
-#include <boost/test/unit_test_log.hpp>
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/test/unit_test_suite.hpp>
 
-#include <random>
+#include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 
 using namespace sgpp::combigrid;
+
+static sgpp::base::RandomNumberGenerator& randGen =
+    sgpp::base::RandomNumberGenerator::getInstance();
 
 BOOST_AUTO_TEST_SUITE(MIVec_downwardsClosure)
 
 BOOST_AUTO_TEST_CASE(EmptyMIVec) {
-  const MIVec vec(3, 0);  // 3 dimensions, 0 multi-indices
-  const MIVec closure = vec.downwardsClosure();
+  const LvlMIVec vec(3, 0);  // 3 dimensions, 0 multi-indices
+  const LvlMIVec closure = vec.downwardsClosure();
 
   BOOST_TEST(closure.nMI() == 0);
   BOOST_TEST(closure.isDownwardsClosed());
 }
 
 BOOST_AUTO_TEST_CASE(SingleMultiIndex) {
-  const MIVec vec{{2, 1, 3}};  // single MI
-  const MIVec closure = vec.downwardsClosure();
+  const LvlMIVec vec{{2, 1, 3}};  // single MI
+  const LvlMIVec closure = vec.downwardsClosure();
 
   BOOST_TEST(closure.isDownwardsClosed());
 
@@ -36,16 +38,16 @@ BOOST_AUTO_TEST_CASE(SingleMultiIndex) {
 }
 
 BOOST_AUTO_TEST_CASE(AlreadyDownwardsClosed) {
-  const MIVec vec{{0, 0}, {1, 0}, {0, 1}, {1, 1}};  // Is downwards-closed
-  const MIVec closure = vec.downwardsClosure();
+  const LvlMIVec vec{{0, 0}, {1, 0}, {0, 1}, {1, 1}};  // Is downwards-closed
+  const LvlMIVec closure = vec.downwardsClosure();
 
   BOOST_TEST(closure.isDownwardsClosed());
   BOOST_TEST(closure.nMI() == vec.nMI());  // should be unchanged
 }
 
 BOOST_AUTO_TEST_CASE(SimpleNonClosed) {
-  const MIVec vec{{1, 1}, {2, 0}};  // Not downwards-closed
-  const MIVec closure = vec.downwardsClosure();
+  const LvlMIVec vec{{1, 1}, {2, 0}};  // Not downwards-closed
+  const LvlMIVec closure = vec.downwardsClosure();
 
   BOOST_TEST(closure.isDownwardsClosed());
 
@@ -63,52 +65,55 @@ BOOST_AUTO_TEST_CASE(SimpleNonClosed) {
 }
 
 BOOST_AUTO_TEST_CASE(RandomizedMIVec) {
-  std::random_device rd;
-  const auto seed = rd();
-  std::mt19937 gen(seed);
-  std::uniform_int_distribution<size_t> dimDist(2, 5);   // number of dimensions
-  std::uniform_int_distribution<size_t> miDist(1, 100);  // number of MIs
-  std::uniform_int_distribution<MIType> valDist(0, 5);
+  // std::random_device rd;
+  // const auto seed = rd();
+  // std::mt19937 gen(seed);
+  // std::uniform_int_distribution<size_t> dimDist(2, 5);   // number of dimensions
+  // std::uniform_int_distribution<size_t> miDist(1, 100);  // number of MIs
+  // std::uniform_int_distribution<LvlType> valDist(0, 5);
 
-  const size_t nDim = dimDist(gen);
-  const size_t nMI = miDist(gen);
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    const size_t nDim = 2 + randGen.getUniformIndexRN(4);
+    const size_t nMI = 1 + randGen.getUniformIndexRN(100);
 
-  std::vector<std::vector<MIType>> miVec(nMI, std::vector<MIType>(nDim));
-  for (size_t i = 0; i < nMI; ++i) {
-    for (size_t d = 0; d < nDim; ++d) {
-      miVec[i][d] = valDist(gen);
-    }
-  }
-
-  const MIVec vec(miVec);
-  const MIVec closure = vec.downwardsClosure();
-
-  // closure should be downwards-closed
-  BOOST_CHECK_MESSAGE(closure.isDownwardsClosed(), "Seed: " << seed);
-
-  // original MIs must be present in closure
-  for (size_t i = 0; i < vec.nMI(); ++i) {
-    bool found = false;
-    for (size_t j = 0; j < closure.nMI(); ++j) {
-      if (vec[i] == closure[j]) {
-        found = true;
-        break;
+    std::vector<std::vector<LvlType>> miVec(nMI, std::vector<LvlType>(nDim));
+    for (size_t i = 0; i < nMI; ++i) {
+      for (size_t d = 0; d < nDim; ++d) {
+        miVec[i][d] = (LvlType)randGen.getUniformIndexRN(6);
       }
     }
-    BOOST_CHECK_MESSAGE(found, "Seed: " << seed);
+
+    const LvlMIVec vec(miVec);
+    const LvlMIVec closure = vec.downwardsClosure();
+
+    // closure should be downwards-closed
+    BOOST_CHECK(closure.isDownwardsClosed());
+
+    // original MIs must be present in closure
+    for (size_t i = 0; i < vec.nMI(); ++i) {
+      bool found = false;
+      for (size_t j = 0; j < closure.nMI(); ++j) {
+        if (vec[i] == closure[j]) {
+          found = true;
+          break;
+        }
+      }
+      BOOST_CHECK(found);
+    }
   }
 }
 
 BOOST_AUTO_TEST_CASE(MultiDimZeros) {
-  const MIVec vec{{0, 0, 0}, {0, 1, 0}, {1, 0, 1}};
-  const MIVec closure = vec.downwardsClosure();
+  const LvlMIVec vec{{0, 0, 0}, {0, 1, 0}, {1, 0, 1}};
+  const LvlMIVec closure = vec.downwardsClosure();
 
   BOOST_TEST(closure.isDownwardsClosed());
 
   // Closure must contain the zero vector
   bool zeroFound = false;
   for (size_t i = 0; i < closure.nMI(); ++i) {
-    if (closure[i] == MI({0, 0, 0})) {
+    if (closure[i] == LvlMI({0, 0, 0})) {
       zeroFound = true;
     }
   }

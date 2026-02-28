@@ -1,7 +1,6 @@
 #ifndef COMBIGRID_SGGENINSTRUCTION_HPP
 #define COMBIGRID_SGGENINSTRUCTION_HPP
 
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
@@ -21,7 +20,7 @@ class SGGenInstr {
   ******/
   size_t nDim() const;
 
-  MIType getBoundaryIndexOffset() const;
+  LvlType getBoundaryIndexOffset() const;
 
   const std::vector<NodeGenFunc>& getNodeGenFuncs() const;
   NodeGenFunc getNodeGenFuncForDim(size_t dim) const;
@@ -32,7 +31,7 @@ class SGGenInstr {
   /******
   Setters
   ******/
-  void setBoundaryIndexOffset(MIType boundaryIndexOffset);
+  void setBoundaryIndexOffset(LvlType boundaryIndexOffset);
 
   void setBoundForDim(std::pair<double, double> bound, size_t dim);
   void setBounds(const std::vector<std::pair<double, double>>& bounds);
@@ -46,9 +45,9 @@ class SGGenInstr {
   /*********************
   Sparse grid generation
   *********************/
-  virtual MIVec genMIVec() const = 0;
+  virtual LvlMIVec genMIVec() const = 0;
 
-  virtual std::pair<MIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const = 0;
+  virtual std::pair<LvlMIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const = 0;
 
   /****************
   Helper operations
@@ -58,7 +57,7 @@ class SGGenInstr {
   std::vector<NodeGenFunc> getUniqueNodeGenFuncs() const;
 
  private:
-  MIType boundaryIndexOffset;
+  LvlType boundaryIndexOffset;
 
   std::vector<std::pair<double, double>> bounds;
   std::vector<NodeGenFunc> nodeGenFuncs;

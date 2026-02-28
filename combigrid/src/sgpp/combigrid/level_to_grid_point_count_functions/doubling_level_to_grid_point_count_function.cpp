@@ -5,7 +5,7 @@
 namespace sgpp {
 namespace combigrid {
 
-GPCntType doublingLvl2GPCntFunction(const MIType lvl) {
+GPCntType doublingLvl2GPCntFunction(const LvlType lvl) {
   return tools::pow(static_cast<GPCntType>(2), static_cast<GPCntType>(lvl + 1)) - 1;
 }
 

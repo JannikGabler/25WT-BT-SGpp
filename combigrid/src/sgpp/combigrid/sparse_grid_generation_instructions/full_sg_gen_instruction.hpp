@@ -9,16 +9,16 @@ namespace combigrid {
 
 class FullSGGenInstr : public SGGenInstr {
  public:
-  FullSGGenInstr(MIType maxLvl, size_t nDim);
+  FullSGGenInstr(LvlType maxLvl, size_t nDim);
 
-  void setMaxLvl(MIType maxLvl);
+  void setMaxLvl(LvlType maxLvl);
 
-  MIVec genMIVec() const override;
+  LvlMIVec genMIVec() const override;
 
-  std::pair<MIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
+  std::pair<LvlMIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
 
  private:
-  MIType maxLvl;
+  LvlType maxLvl;
 };
 
 }  // namespace combigrid

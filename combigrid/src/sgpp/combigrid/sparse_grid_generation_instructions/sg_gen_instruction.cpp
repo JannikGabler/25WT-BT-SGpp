@@ -26,7 +26,7 @@ Getters
 
 size_t SGGenInstr::nDim() const { return this->bounds.size(); }
 
-MIType SGGenInstr::getBoundaryIndexOffset() const { return boundaryIndexOffset; }
+LvlType SGGenInstr::getBoundaryIndexOffset() const { return boundaryIndexOffset; }
 
 const std::vector<NodeGenFunc>& SGGenInstr::getNodeGenFuncs() const { return nodeGenFuncs; }
 
@@ -42,7 +42,7 @@ Lvl2GPCntFunc SGGenInstr::getLvl2GPCntFuncForDim(const size_t dim) const {
 Setters
 ******/
 
-void SGGenInstr::setBoundaryIndexOffset(const MIType boundaryIndexOffset) {
+void SGGenInstr::setBoundaryIndexOffset(const LvlType boundaryIndexOffset) {
   this->boundaryIndexOffset = boundaryIndexOffset;
 }
 

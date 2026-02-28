@@ -2,6 +2,7 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+#include "sgpp/combigrid/type_defs.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -11,27 +12,17 @@
 #include <random>
 #include <set>
 #include <sgpp/combigrid/constants.hpp>
-// #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
-// #include <sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <vector>
 
 using namespace sgpp::combigrid;
 
 namespace {
 
-// Helper: create MI from initializer_list
-// static MI miFromList(std::initializer_list<MIType> elems) {
-//   MI m;
-//   m.insert(m.end(), elems.begin(), elems.end());
-//   return m;
-// }
-
 // Helper: create MIVec from a list of MI initializer lists
-MIVec mivecFromList(size_t nDim, std::initializer_list<std::initializer_list<MIType>> list) {
-  std::vector<MI> vec;
+LvlMIVec mivecFromList(size_t nDim, std::initializer_list<std::initializer_list<LvlType>> list) {
+  std::vector<LvlMI> vec;
   for (const auto& l : list) {
-    MI m{l};
+    LvlMI m{l};
     // ensure correct dimension
     if (m.size() != nDim) {
       // If user supplied wrong dimension, pad with zeros (safe choice for tests)
@@ -42,11 +33,11 @@ MIVec mivecFromList(size_t nDim, std::initializer_list<std::initializer_list<MIT
     }
     vec.push_back(m);
   }
-  return MIVec(vec);
+  return LvlMIVec(vec);
 }
 
 // Check existence of an MI in an MIVec via linear scan (uses MI::operator==)
-bool containsMI(const MIVec& mv, const MI& needle) {
+bool containsMI(const LvlMIVec& mv, const LvlMI& needle) {
   for (size_t i = 0; i < mv.nMI(); ++i) {
     if (mv[i] == needle) return true;
   }
@@ -55,22 +46,22 @@ bool containsMI(const MIVec& mv, const MI& needle) {
 
 // Compute expected "downwards closed" property by brute force:
 // For every multi-index m in mv, all componentwise smaller-or-equal indices must be present.
-bool expectedIsDownwardsClosed(const MIVec& mv) {
+bool expectedIsDownwardsClosed(const LvlMIVec& mv) {
   const size_t nMI = mv.nMI();
   if (nMI == 0) return true;  // vacuously true
 
   const size_t ndim = mv[0].nDim();
   for (size_t i = 0; i < nMI; ++i) {
-    const MI mi = mv[i];
+    const LvlMI mi = mv[i];
 
     // iterate over all componentwise <= vectors (cartesian product)
-    std::vector<MIType> counter(ndim, 0);
-    std::vector<MIType> limits(ndim);
+    std::vector<LvlType> counter(ndim, 0);
+    std::vector<LvlType> limits(ndim);
     for (size_t d = 0; d < ndim; ++d) limits[d] = mi[d];
 
     bool done = false;
     while (!done) {
-      MI candidate;
+      LvlMI candidate;
       for (size_t d = 0; d < ndim; ++d) candidate.push_back(counter[d]);
       if (!containsMI(mv, candidate)) return false;
 
@@ -90,7 +81,7 @@ bool expectedIsDownwardsClosed(const MIVec& mv) {
 }
 
 // Utility: compare two MIs for ordering when inserting into set<string> for uniqueness
-std::string miToString(const MI& m) {
+std::string miToString(const LvlMI& m) {
   std::ostringstream os;
   os << "(";
   for (size_t i = 0; i < m.nDim(); ++i) {
@@ -102,21 +93,21 @@ std::string miToString(const MI& m) {
 }
 
 // Compute closure size (all sub-multi-indices of each mi, unique)
-std::set<std::string> computeDownwardsClosureSet(const MIVec& mv) {
+std::set<std::string> computeDownwardsClosureSet(const LvlMIVec& mv) {
   std::set<std::string> s;
   if (mv.nMI() == 0) return s;
   const size_t ndim = mv[0].nDim();
 
   for (size_t i = 0; i < mv.nMI(); ++i) {
-    const MI mi = mv[i];
+    const LvlMI mi = mv[i];
     // counters
-    std::vector<MIType> counter(ndim, 0);
-    std::vector<MIType> limits(ndim);
+    std::vector<LvlType> counter(ndim, 0);
+    std::vector<LvlType> limits(ndim);
     for (size_t d = 0; d < ndim; ++d) limits[d] = mi[d];
 
     bool done = false;
     while (!done) {
-      MI candidate;
+      LvlMI candidate;
       for (size_t d = 0; d < ndim; ++d) candidate.push_back(counter[d]);
       s.insert(miToString(candidate));
 
@@ -139,7 +130,7 @@ BOOST_AUTO_TEST_SUITE(MIVec_isDownwardsClosed)
 BOOST_AUTO_TEST_CASE(empty_mivec_is_downwards_closed) {
   // Create empty MIVec using the (nDim, nMI) constructor
   const size_t ndim = 3;
-  MIVec empty(ndim, 0);
+  LvlMIVec empty(ndim, 0);
   BOOST_CHECK_EQUAL(empty.nMI(), 0u);
   BOOST_CHECK(empty.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(empty));
@@ -147,8 +138,8 @@ BOOST_AUTO_TEST_CASE(empty_mivec_is_downwards_closed) {
 
 // 2) Single zero MI (all components 0) should be downwards-closed
 BOOST_AUTO_TEST_CASE(single_zero_mi_is_downwards_closed) {
-  const MI zero{0, 0, 0, 0};
-  const MIVec mv(std::vector<MI>{zero});
+  const LvlMI zero{0, 0, 0, 0};
+  const LvlMIVec mv(std::vector<LvlMI>{zero});
 
   BOOST_CHECK_EQUAL(mv.nDim(), zero.nDim());
   BOOST_CHECK(mv.isDownwardsClosed());
@@ -157,8 +148,8 @@ BOOST_AUTO_TEST_CASE(single_zero_mi_is_downwards_closed) {
 
 // 3) Single non-zero MI should NOT be downwards-closed unless all lower combos included
 BOOST_AUTO_TEST_CASE(single_nonzero_mi_not_downwards_closed) {
-  const MI mi{1, 0, 2};
-  const MIVec mv(std::vector<MI>{mi});
+  const LvlMI mi{1, 0, 2};
+  const LvlMIVec mv(std::vector<LvlMI>{mi});
 
   // This should be false because e.g. (0,0,0) etc. are missing.
   BOOST_CHECK(!mv.isDownwardsClosed());
@@ -168,10 +159,10 @@ BOOST_AUTO_TEST_CASE(single_nonzero_mi_not_downwards_closed) {
 // 4) Fully closed small 2D set: all combinations up to (1,1) -> should be closed
 BOOST_AUTO_TEST_CASE(complete_rectangle_is_downwards_closed) {
   // All of: (0,0), (1,0), (0,1), (1,1)
-  const MIVec mv = mivecFromList(2, {{0, 0}, {1, 0}, {0, 1}, {1, 1}});
+  const LvlMIVec mv = mivecFromList(2, {{0, 0}, {1, 0}, {0, 1}, {1, 1}});
 
   // Try elements in random order to ensure order doesn't matter
-  MIVec shuffled = mv;  // assuming copy ctor exists
+  LvlMIVec shuffled = mv;  // assuming copy ctor exists
   // (if you want to be strict about re-ordering, use setMI to reorder; but copy should be OK)
 
   BOOST_CHECK(shuffled.isDownwardsClosed());
@@ -181,7 +172,7 @@ BOOST_AUTO_TEST_CASE(complete_rectangle_is_downwards_closed) {
 // 5) Missing one required lower element -> not downwards-closed
 BOOST_AUTO_TEST_CASE(missing_lower_element_is_not_downwards_closed) {
   // Have (1,1) and (0,0) but missing (0,1)
-  MIVec mv = mivecFromList(2, {{1, 1}, {0, 0}, {1, 0}});
+  LvlMIVec mv = mivecFromList(2, {{1, 1}, {0, 0}, {1, 0}});
   // (0,1) is missing so should be false
   BOOST_CHECK(!mv.isDownwardsClosed());
   BOOST_CHECK(!expectedIsDownwardsClosed(mv));
@@ -189,14 +180,14 @@ BOOST_AUTO_TEST_CASE(missing_lower_element_is_not_downwards_closed) {
 
 // 6) Duplicate entries should not affect decision
 BOOST_AUTO_TEST_CASE(duplicates_do_not_affect_downwards_closedness) {
-  MIVec mv = mivecFromList(2, {
-                                  {0, 0},
-                                  {1, 0},
-                                  {0, 1},
-                                  {1, 1},
-                                  {1, 1},  // duplicate
-                                  {0, 1}   // duplicate
-                              });
+  LvlMIVec mv = mivecFromList(2, {
+                                     {0, 0},
+                                     {1, 0},
+                                     {0, 1},
+                                     {1, 1},
+                                     {1, 1},  // duplicate
+                                     {0, 1}   // duplicate
+                                 });
   BOOST_CHECK(mv.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(mv));
 }
@@ -204,7 +195,7 @@ BOOST_AUTO_TEST_CASE(duplicates_do_not_affect_downwards_closedness) {
 // 7) Higher dimension example: 3D set that is closed
 BOOST_AUTO_TEST_CASE(three_dimensional_closed_example) {
   // include all combinations up to (1,1,1) => 8 elements
-  MIVec mv = mivecFromList(
+  LvlMIVec mv = mivecFromList(
       3, {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 0}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}});
   BOOST_CHECK(mv.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(mv));
@@ -212,14 +203,14 @@ BOOST_AUTO_TEST_CASE(three_dimensional_closed_example) {
 
 // 8) downwardsClosure() should produce a downwards-closed superset
 BOOST_AUTO_TEST_CASE(downwards_closure_produces_closed_superset) {
-  MIVec mv = mivecFromList(2, {{2, 1},  // requires many lower elements
-                               {0, 1},
-                               {1, 0}});
+  LvlMIVec mv = mivecFromList(2, {{2, 1},  // requires many lower elements
+                                  {0, 1},
+                                  {1, 0}});
 
   // original is likely not closed
   BOOST_CHECK(!mv.isDownwardsClosed());
 
-  MIVec closed = mv.downwardsClosure();
+  LvlMIVec closed = mv.downwardsClosure();
   BOOST_CHECK(closed.isDownwardsClosed());
 
   // Original elements must be present in closure
@@ -243,16 +234,16 @@ BOOST_AUTO_TEST_CASE(downwards_closure_produces_closed_superset) {
 BOOST_AUTO_TEST_CASE(randomized_small_tests) {
   std::mt19937_64 rng(123456789ULL);
   const size_t ndim = 3;
-  std::uniform_int_distribution<MIType> compDist(0, 2);  // small components
+  std::uniform_int_distribution<LvlType> compDist(0, 2);  // small components
   for (int trial = 0; trial < 50; ++trial) {
     size_t nmi = 1 + (rng() % 10);
-    std::vector<MI> v;
+    std::vector<LvlMI> v;
     for (size_t i = 0; i < nmi; ++i) {
-      MI m;
+      LvlMI m;
       for (size_t d = 0; d < ndim; ++d) m.push_back(compDist(rng));
       v.push_back(m);
     }
-    MIVec mv(v);
+    LvlMIVec mv(v);
     bool expected = expectedIsDownwardsClosed(mv);
     bool actual = mv.isDownwardsClosed();
     BOOST_CHECK_MESSAGE(actual == expected,
@@ -264,19 +255,19 @@ BOOST_AUTO_TEST_CASE(randomized_small_tests) {
 // 10) Large-but-sparse: ensures function handles bigger indices correctly (not performance test)
 BOOST_AUTO_TEST_CASE(large_values_non_closed) {
   // Single huge index (3,2,1) but missing many lower ones
-  MIVec mv = mivecFromList(3, {{3, 2, 1}});
+  LvlMIVec mv = mivecFromList(3, {{3, 2, 1}});
   BOOST_CHECK(!mv.isDownwardsClosed());
   // The downwards closure should be closed and contain the (3,2,1)
-  MIVec closed = mv.downwardsClosure();
+  LvlMIVec closed = mv.downwardsClosure();
   BOOST_CHECK(closed.isDownwardsClosed());
-  BOOST_CHECK(containsMI(closed, MI{3, 2, 1}));
+  BOOST_CHECK(containsMI(closed, LvlMI{3, 2, 1}));
 }
 
 // 11) Check that ordering / insertion order doesn't matter: create closed set in shuffled order
 BOOST_AUTO_TEST_CASE(order_independence_for_closed_sets) {
-  MIVec mv = mivecFromList(2, {{1, 1}, {0, 1}, {1, 0}, {0, 0}});
+  LvlMIVec mv = mivecFromList(2, {{1, 1}, {0, 1}, {1, 0}, {0, 0}});
   // shuffle by constructing new vector in different order:
-  MIVec mv_shuffled = mivecFromList(2, {{0, 1}, {1, 0}, {1, 1}, {0, 0}});
+  LvlMIVec mv_shuffled = mivecFromList(2, {{0, 1}, {1, 0}, {1, 1}, {0, 0}});
   BOOST_CHECK(mv.isDownwardsClosed());
   BOOST_CHECK(mv_shuffled.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(mv));
@@ -300,13 +291,13 @@ BOOST_AUTO_TEST_CASE(multi_threaded_random_mivec_with_seed) {
   std::mt19937_64 rng(seed);
 
   // Keep component values small to keep brute-force expected-check tractable
-  std::uniform_int_distribution<MIType> compDist(0, 3);
+  std::uniform_int_distribution<LvlType> compDist(0, 3);
 
   // Generate exactly minMIForConcurrency random multi-indices
-  std::vector<MI> mis;
+  std::vector<LvlMI> mis;
   mis.reserve(minMIForConcurrency);
   for (size_t i = 0; i < minMIForConcurrency; ++i) {
-    MI m;
+    LvlMI m;
     m.resize(ndim);
     for (size_t d = 0; d < ndim; ++d) {
       m[d] = compDist(rng);
@@ -314,7 +305,7 @@ BOOST_AUTO_TEST_CASE(multi_threaded_random_mivec_with_seed) {
     mis.push_back(m);
   }
 
-  const MIVec mv(mis);
+  const LvlMIVec mv(mis);
 
   // BOOST_TEST_MESSAGE("Generated MIVec: nDim=" << mv.nDim() << " nMI=" << mv.nMI());
 
@@ -330,7 +321,7 @@ BOOST_AUTO_TEST_CASE(multi_threaded_random_mivec_with_seed) {
 
   // Additional consistency checks for downwardsClosure (only run if not too big)
   // (we still print seed above so it's reproducible if this becomes expensive)
-  const MIVec closed = mv.downwardsClosure();
+  const LvlMIVec closed = mv.downwardsClosure();
   BOOST_CHECK_MESSAGE(closed.isDownwardsClosed(),
                       "downwardsClosure() result is not downwards-closed (seed=" << seed << ")");
 

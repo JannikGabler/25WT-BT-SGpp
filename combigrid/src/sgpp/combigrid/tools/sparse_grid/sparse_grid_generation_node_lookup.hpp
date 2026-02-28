@@ -13,7 +13,7 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const MIVec& miVec,
+SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const LvlMIVec& miVec,
                                 const std::vector<CTCoeffType> coeff);
 
 /******************
@@ -30,10 +30,10 @@ struct SGGenNodeLookupInsert {
 std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr);
 
 misc::VecMap<NodeGenFunc, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
-    const SGGenInstr& genInstr, const MIVec& miVec);
+    const SGGenInstr& genInstr, const LvlMIVec& miVec);
 
 std::vector<GPCntType> getNodeCntRequiredByDim(size_t dim, const SGGenInstr& genInstr,
-                                               const MI& componentWiseMax);
+                                               const LvlMI& componentWiseMax);
 
 misc::VecMap<NodeGenFunc, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
     const std::vector<std::pair<NodeGenFunc, std::vector<GPCntType>>>& vecOfLocalGPCnts,

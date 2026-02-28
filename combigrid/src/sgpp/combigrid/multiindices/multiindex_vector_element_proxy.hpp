@@ -1,24 +1,28 @@
 #ifndef COMBIGRID_MULTIINDEX_VECTOR__ELEMENT_PROXY_HPP
 #define COMBIGRID_MULTIINDEX_VECTOR__ELEMENT_PROXY_HPP
 
-#include <sgpp/combigrid/type_defs.hpp>
-
 namespace sgpp {
 namespace combigrid {
 
+template <typename T>
 class MIVec;  // Forward declaration to avoid circular includes
 
+template <typename T>
 class MIVecElemProxy {
  public:
-  MIVecElemProxy(const MIVec& miVec, MIType& ref);
+  MIVecElemProxy<T>(const MIVec<T>& miVec, T& ref) : miVec(miVec), ref(ref) {}
 
-  MIVecElemProxy& operator=(const MIType value);
+  MIVecElemProxy<T>& operator=(const T value) {
+    miVec.clearCachedValues();
+    ref = value;
+    return *this;
+  }
 
-  operator MIType() const;
+  operator T() const { return ref; }
 
  private:
-  const MIVec& miVec;
-  MIType& ref;
+  const MIVec<T>& miVec;
+  T& ref;
 };
 
 }  // namespace combigrid

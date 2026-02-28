@@ -1,7 +1,6 @@
 #ifndef COMBIGRID_MISETSGGENINSTR_HPP
 #define COMBIGRID_MISETSGGENINSTR_HPP
 
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
@@ -10,14 +9,14 @@ namespace combigrid {
 
 class MISetSGGenInstr : public SGGenInstr {
  public:
-  MISetSGGenInstr(const MIVec& miSet);
+  MISetSGGenInstr(const LvlMI& miSet);
 
-  MIVec genMIVec() const override;
+  LvlMIVec genMIVec() const override;
 
-  std::pair<MIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
+  std::pair<LvlMIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
 
  private:
-  const MIVec& miSet;
+  const LvlMI& miSet;
 };
 
 }  // namespace combigrid

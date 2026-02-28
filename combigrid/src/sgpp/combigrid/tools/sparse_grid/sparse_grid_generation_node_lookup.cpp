@@ -1,17 +1,16 @@
 #include <omp.h>
-#include <algorithm>
+// #include <algorithm>
 #include <cassert>
-#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/concurrent_task_queue.hpp>
 #include <sgpp/combigrid/miscellaneous/vector_map/vector_map.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/node_generation_functions/node_generation_functions.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/collections/kway_unique_merge_sorted_collections.hpp>
 #include <sgpp/combigrid/tools/math/ceil.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <stdexcept>
 #include <thread>
 #include <utility>
@@ -21,7 +20,7 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const MIVec& miVec,
+SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const LvlMIVec& miVec,
                                 const std::vector<CTCoeffType> coeff) {
   const misc::VecMap<NodeGenFunc, std::vector<GPCntType>> nodeCntPerType =
       sg_gen_node_lookup::getNodeCntRequiredPerNodeType(genInstr, miVec);
@@ -56,8 +55,8 @@ std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr) {
 }
 
 misc::VecMap<NodeGenFunc, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
-    const SGGenInstr& genInstr, const MIVec& miVec) {
-  const std::shared_ptr<MI> componentWiseMax = miVec.componentWiseMax();
+    const SGGenInstr& genInstr, const LvlMIVec& miVec) {
+  const std::shared_ptr<LvlMI> componentWiseMax = miVec.componentWiseMax();
   const std::vector<NodeGenFunc> uniqueNodeGenFuncs = genInstr.getUniqueNodeGenFuncs();
   const std::vector<size_t> dimWithUniqueNodes = getDimWithUniqueNodes(genInstr);
 
@@ -76,12 +75,12 @@ misc::VecMap<NodeGenFunc, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
 }
 
 std::vector<GPCntType> getNodeCntRequiredByDim(const size_t dim, const SGGenInstr& genInstr,
-                                               const MI& componentWiseMax) {
+                                               const LvlMI& componentWiseMax) {
   const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
 
   std::vector<GPCntType> gpCnts(componentWiseMax[dim] + 1);
 
-  for (MIType lvl = 0; lvl <= componentWiseMax[dim]; lvl++) {
+  for (LvlType lvl = 0; lvl <= componentWiseMax[dim]; lvl++) {
     gpCnts[lvl] = lvl2GPCntFunc(lvl);
   }
 

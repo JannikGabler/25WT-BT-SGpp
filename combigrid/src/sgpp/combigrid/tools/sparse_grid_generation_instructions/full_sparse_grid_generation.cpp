@@ -16,36 +16,36 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-MIVec genMIVecForFullSG(const MIType maxLvl, const size_t nDim) {
+LvlMIVec genMIVecForFullSG(const LvlType maxLvl, const size_t nDim) {
   if (nDim == 0) {
     return {0, 0};
   } else if (nDim == 1) {
     return {{maxLvl}};
   }
 
-  const MIType minSum = full_sg_gen::getMinComponentSum(maxLvl, nDim);
+  const LvlType minSum = full_sg_gen::getMinComponentSum(maxLvl, nDim);
   const std::vector<size_t> nMIs = full_sg_gen::nMICntPerComponentSum(minSum, maxLvl, nDim);
 
-  MIVec miVec(nDim, nMIs[nMIs.size() - 1]);
+  LvlMIVec miVec(nDim, nMIs[nMIs.size() - 1]);
   full_sg_gen::populateMIVec(miVec, minSum, maxLvl, nMIs);
   return miVec;
 }
 
-std::vector<CTCoeffType> genCoeffForFullSG(const MIType maxLvl, const size_t nDim) {
+std::vector<CTCoeffType> genCoeffForFullSG(const LvlType maxLvl, const size_t nDim) {
   if (nDim == 0) {
     return {};
   } else if (nDim == 1) {
     return {1};
   }
 
-  const MIType minSum = tools::full_sg_gen::getMinComponentSum(maxLvl, nDim);
+  const LvlType minSum = tools::full_sg_gen::getMinComponentSum(maxLvl, nDim);
   const std::vector<size_t> nMIs = tools::full_sg_gen::nMICntPerComponentSum(minSum, maxLvl, nDim);
   const std::vector<CTCoeffType> binomials =
       full_sg_gen::getBinomialsForCTCoeffs(minSum, maxLvl, nDim);
 
   std::vector<CTCoeffType> coeff(nMIs[nMIs.size() - 1]);
 
-  for (MIType sumIdx = 0; sumIdx <= maxLvl - minSum; sumIdx++) {
+  for (LvlType sumIdx = 0; sumIdx <= maxLvl - minSum; sumIdx++) {
     const size_t startIdx = sumIdx == 0 ? 0 : nMIs[sumIdx - 1];
     const size_t endIdx = sumIdx == maxLvl - minSum ? coeff.size() : nMIs[sumIdx];
 
@@ -60,21 +60,22 @@ Internal operations
 ******************/
 namespace full_sg_gen {
 
-MIType getMinComponentSum(const MIType maxSum, const size_t nDim) {
+LvlType getMinComponentSum(const LvlType maxSum, const size_t nDim) {
   if (nDim > maxSum) {
     return 0;
   }
 
-  return maxSum - (MIType)nDim + 1;
+  // return maxSum - static_cast<LvlType>(nDim + 1);
+  return maxSum - static_cast<LvlType>(nDim - 1);
 }
 
-std::vector<size_t> nMICntPerComponentSum(const MIType minSum, const MIType maxSum,
+std::vector<size_t> nMICntPerComponentSum(const LvlType minSum, const LvlType maxSum,
                                           const size_t nDim) {
   assert(maxSum >= minSum);
   std::vector<size_t> nMIs(maxSum - minSum + 1);
 
   size_t acc = 0;
-  for (MIType sum = minSum; sum <= maxSum; sum++) {
+  for (LvlType sum = minSum; sum <= maxSum; sum++) {
     acc += numberOfMIWithComponentSum(nDim, sum);
     nMIs[sum - minSum] = acc;
   }
@@ -82,17 +83,17 @@ std::vector<size_t> nMICntPerComponentSum(const MIType minSum, const MIType maxS
   return nMIs;
 }
 
-void addBarPosAsMI(MIVec& miVec, const size_t miIdx, const std::vector<size_t>& barPos,
+void addBarPosAsMI(LvlMIVec& miVec, const size_t miIdx, const std::vector<size_t>& barPos,
                    const size_t maxBarPos) {
   assert(barPos.size() >= 1);
 
-  miVec(miIdx, 0) = (MIType)barPos[0];
+  miVec(miIdx, 0) = static_cast<LvlType>(barPos[0]);
 
   for (size_t dim = 1; dim < miVec.nDim() - 1; dim++) {
-    miVec(miIdx, dim) = (MIType)(barPos[dim] - barPos[dim - 1] - 1);
+    miVec(miIdx, dim) = static_cast<LvlType>(barPos[dim] - barPos[dim - 1] - 1);
   }
 
-  miVec(miIdx, miVec.nDim() - 1) = (MIType)(maxBarPos - barPos[miVec.nDim() - 2]);
+  miVec(miIdx, miVec.nDim() - 1) = static_cast<LvlType>(maxBarPos - barPos[miVec.nDim() - 2]);
 }
 
 /*
@@ -110,7 +111,7 @@ size_t getSumIdxOfMIIdx(const size_t miIdx, const std::vector<size_t>& nMIs) {
   throw std::out_of_range("Specified mi idx is out of range (>= total number of mis)!");
 }
 
-size_t getMaxBarPos(const MIType sum, const size_t nDim) {
+size_t getMaxBarPos(const LvlType sum, const size_t nDim) {
   assert(sum + nDim >= 2);
 
   return sum + nDim - 2;
@@ -176,10 +177,10 @@ std::vector<size_t> getBarPosOfMIIdx(const size_t miIdx, const std::vector<size_
   return barPos;
 }
 
-void populateMIVecSerial(MIVec& miVec, const size_t startIdx, const size_t endIdx,
-                         const MIType minSum, const std::vector<size_t>& nMIs) {
+void populateMIVecSerial(LvlMIVec& miVec, const size_t startIdx, const size_t endIdx,
+                         const LvlType minSum, const std::vector<size_t>& nMIs) {
   size_t sumIdx = getSumIdxOfMIIdx(startIdx, nMIs);
-  size_t maxBarPos = getMaxBarPos(minSum + (MIType)sumIdx, miVec.nDim());
+  size_t maxBarPos = getMaxBarPos(minSum + static_cast<LvlType>(sumIdx), miVec.nDim());
   std::vector<size_t> barPos = getBarPosOfMIIdx(startIdx, nMIs, sumIdx, maxBarPos, miVec.nDim());
 
   for (size_t miIdx = startIdx; miIdx <= endIdx; miIdx++) {
@@ -197,7 +198,7 @@ void populateMIVecSerial(MIVec& miVec, const size_t startIdx, const size_t endId
 /*
 Based on the mathematical stars and bars concept
 */
-void populateMIVec(MIVec& miVec, const MIType minSum, const MIType maxSum,
+void populateMIVec(LvlMIVec& miVec, const LvlType minSum, const LvlType maxSum,
                    const std::vector<size_t>& nMIs) {
   const size_t totalNumberOfMIs = nMIs[nMIs.size() - 1];
   const std::vector<size_t> part = tools::partitionRangeForConcurrency(
@@ -211,11 +212,11 @@ void populateMIVec(MIVec& miVec, const MIType minSum, const MIType maxSum,
   }
 }
 
-std::vector<CTCoeffType> getBinomialsForCTCoeffs(const MIType minSum, const MIType maxSum,
+std::vector<CTCoeffType> getBinomialsForCTCoeffs(const LvlType minSum, const LvlType maxSum,
                                                  const size_t nDim) {
   std::vector<CTCoeffType> binomials(maxSum - minSum + 1);
 
-  for (MIType sum = minSum; sum <= maxSum; sum++) {
+  for (LvlType sum = minSum; sum <= maxSum; sum++) {
     const CTCoeffType distanceToMaxSum = (CTCoeffType)(maxSum - sum);
 
     if (distanceToMaxSum % 2 == 0) {

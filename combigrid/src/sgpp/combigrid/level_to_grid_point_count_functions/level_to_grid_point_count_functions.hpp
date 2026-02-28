@@ -6,9 +6,9 @@
 namespace sgpp {
 namespace combigrid {
 
-GPCntType linearLvl2GPCntFunction(MIType lvl);
+GPCntType linearLvl2GPCntFunction(LvlType lvl);
 
-GPCntType doublingLvl2GPCntFunction(MIType lvl);
+GPCntType doublingLvl2GPCntFunction(LvlType lvl);
 
 }  // namespace combigrid
 }  // namespace sgpp

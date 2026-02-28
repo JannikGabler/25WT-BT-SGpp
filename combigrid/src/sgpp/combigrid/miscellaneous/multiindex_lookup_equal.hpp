@@ -1,7 +1,7 @@
 #ifndef COMBIGRID_MISC_MULTIINDEX_VECTOR_LOOKUP_EQUAL_HPP
 #define COMBIGRID_MISC_MULTIINDEX_VECTOR_LOOKUP_EQUAL_HPP
 
-#include <sgpp/combigrid/type_defs.hpp>
+#include <cstddef>
 
 namespace sgpp {
 
@@ -9,10 +9,19 @@ namespace combigrid {
 
 namespace misc {
 
+template <typename T>
 struct MIVecLookupEqual {
-  MIVecLookupEqual(size_t nDim);
+  MIVecLookupEqual<T>(const size_t nDim) : nDim(nDim) {}
 
-  bool operator()(const MIType* a, const MIType* b) const;
+  bool operator()(const T* a, const T* b) const {
+    for (size_t dim = 0; dim < nDim; dim++) {
+      if (a[dim] != b[dim]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
  private:
   const size_t nDim;

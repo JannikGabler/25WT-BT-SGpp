@@ -1,10 +1,8 @@
 #ifndef COMBIGRID_MISC_DISCRETE_RECT_BOUNDING_BOX_HPP
 #define COMBIGRID_MISC_DISCRETE_RECT_BOUNDING_BOX_HPP
 
-#include <algorithm>
 #include <cassert>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box_iterator.hpp>
-#include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
 #include <vector>
 

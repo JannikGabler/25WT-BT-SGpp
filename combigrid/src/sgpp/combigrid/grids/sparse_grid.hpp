@@ -22,7 +22,7 @@ class SparseGrid {
 
   const TensorGridCTData& getTensorGrid(size_t idx) const;
 
-  const TensorGridCTData& getTensorGrid(const MI& mi) const;
+  const TensorGridCTData& getTensorGrid(const LvlMI& mi) const;
 
   const std::vector<TensorGridCTData>& getTensorGrids() const;
 

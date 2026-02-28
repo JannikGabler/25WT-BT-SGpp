@@ -9,11 +9,11 @@
 #include <boost/test/unit_test_suite.hpp>
 
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
 using namespace sgpp::combigrid;
@@ -73,15 +73,15 @@ BOOST_AUTO_TEST_CASE(Simple3DTest) {
 BOOST_AUTO_TEST_CASE(RandomTest) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const MIType maxLvl = (MIType)randGen.getUniformIndexRN(10);
+    const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(10);
     const size_t nDim = 2 + randGen.getUniformIndexRN(3);  // nDim has to be at least 2
 
-    const MIType minSum = tools::full_sg_gen::getMinComponentSum(maxLvl, nDim);
+    const LvlType minSum = tools::full_sg_gen::getMinComponentSum(maxLvl, nDim);
     const std::vector<size_t>& nMIs =
         tools::full_sg_gen::nMICntPerComponentSum(minSum, maxLvl, nDim);
 
     size_t miIdx = 0;
-    for (MIType sum = minSum; sum <= maxLvl; sum++) {
+    for (LvlType sum = minSum; sum <= maxLvl; sum++) {
       const size_t nMIWithSum = tools::numberOfMIWithComponentSum(nDim, sum);
       const size_t maxBarPos = tools::full_sg_gen::getMaxBarPos(sum, nDim);
 
@@ -108,10 +108,10 @@ BOOST_AUTO_TEST_SUITE(Tools_genCoeffForFullSG)
 BOOST_AUTO_TEST_CASE(RandomTest) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const MIType maxLvl = (MIType)randGen.getUniformIndexRN(14);
+    const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(14);
     const size_t nDim = randGen.getUniformIndexRN(4);  // nDim has to be at least 2
 
-    const MIVec miVec = tools::genMIVecForFullSG(maxLvl, nDim);
+    const LvlMIVec miVec = tools::genMIVecForFullSG(maxLvl, nDim);
     const std::vector<CTCoeffType> coeff = tools::genCoeffForFullSG(maxLvl, nDim);
     const std::vector<CTCoeffType> expectedCoeff1 = tools::computeCTCoeffs(miVec);
 
@@ -121,8 +121,8 @@ BOOST_AUTO_TEST_CASE(RandomTest) {
                                                          << "' from the coeff vector.");
 
     for (size_t miIdx = 0; miIdx < coeff.size(); miIdx++) {
-      const MIType sum = miVec[miIdx].sumOfElems();
-      const MIType diffToMaxLvl = maxLvl - sum;
+      const LvlType sum = miVec[miIdx].sumOfElems();
+      const LvlType diffToMaxLvl = maxLvl - sum;
       CTCoeffType expectedCoeff2 =
           tools::binomial((CTCoeffType)(nDim - 1), (CTCoeffType)(diffToMaxLvl));
       if (diffToMaxLvl % 2 == 1) {

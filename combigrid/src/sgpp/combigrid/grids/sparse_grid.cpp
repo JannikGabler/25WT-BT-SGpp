@@ -1,5 +1,6 @@
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -15,7 +16,7 @@ size_t SparseGrid::nDim() const { return nDim_; }
 
 const TensorGridCTData& SparseGrid::getTensorGrid(size_t idx) const { return tensorGridData[idx]; }
 
-const TensorGridCTData& SparseGrid::getTensorGrid(const MI& mi) const {
+const TensorGridCTData& SparseGrid::getTensorGrid(const LvlMI& mi) const {
   // TODO
   throw base::not_implemented_exception("Operation is not implemented yet!");
 }

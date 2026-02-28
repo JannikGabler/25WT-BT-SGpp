@@ -4,7 +4,7 @@
 namespace sgpp {
 namespace combigrid {
 
-GPCntType linearLvl2GPCntFunction(const MIType lvl) { return lvl + 1; }
+GPCntType linearLvl2GPCntFunction(const LvlType lvl) { return lvl + 1; }
 
 }  // namespace combigrid
 }  // namespace sgpp

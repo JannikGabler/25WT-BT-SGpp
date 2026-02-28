@@ -7,7 +7,7 @@ namespace sgpp {
 namespace combigrid {
 
 struct TensorGridCTData {
-  MI mi;
+  LvlMI mi;
   CTCoeffType coefficient;
   TensorGrid tensorGrid;
 };

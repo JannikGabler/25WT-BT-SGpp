@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_unit_bounding_box_iterator.hpp>
-#include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
 namespace combigrid {
