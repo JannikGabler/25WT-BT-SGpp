@@ -3,12 +3,16 @@
 
 
 #getting rid of weverything without a . in examples folder and all subfolders (executables on linux)
-*/examples*/*
-!*/examples*/*/
-!*/examples*/*.*
+*/examples/*
+!*/examples/*.*
+#!*/examples*/*.*
 
 #ignoring ide files
-*.vscode/
+.vscode/
+.idea/
+
+#ignoring Python virtual environments
+.venv/
 
 #ignoring c++ build files
 *.o
@@ -114,10 +118,6 @@ datadriven/tests/uq/analysis/genz/results/
 
 # ignoring custom.py file
 custom.py
-
-#ignoring IDE directories
-.vscode/
-.idea/
 
 # ignore .cache
 .cache/
