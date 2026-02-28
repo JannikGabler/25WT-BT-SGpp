@@ -6,3 +6,4 @@
 #pragma once
 
 // #include <sgpp/combigrid/LevelIndexTypes.hpp>
+#include <sgpp/combigrid/mi_test.hpp>

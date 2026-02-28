@@ -12,11 +12,10 @@
 namespace sgpp {
 namespace combigrid {
 
-TensorGrid::TensorGrid(const std::vector<size_t>& nGPPerDim)
+TensorGrid::TensorGrid(const MI& nGPPerDim)
     : nGP_(nGPPerDim.productofElems()), nGPPerDim(nGPPerDim), gridPoints(nGP_ * nGPPerDim.size()) {}
 
-TensorGrid::TensorGrid(const std::vector<size_t>& nGPPerDim,
-                       const std::vector<base::DataVector>& gridPoints)
+TensorGrid::TensorGrid(const MI& nGPPerDim, const std::vector<base::DataVector>& gridPoints)
     : TensorGrid(nGPPerDim) {
   assert(gridPoints.size() == nGP_);
 
@@ -44,7 +43,7 @@ base::DataVector TensorGrid::getGridPoint(const size_t idx) const {
   return gp;
 }
 
-base::DataVector TensorGrid::getGridPoint(const std::vector<size_t>& mi) const {
+base::DataVector TensorGrid::getGridPoint(const MI& mi) const {
   assert(mi.size() == nDim());
 
   return getGridPoint(mi.toLinearIndex());
@@ -64,7 +63,7 @@ void TensorGrid::setGridPoint(const size_t idx, const base::DataVector& gp) {
   }
 }
 
-void TensorGrid::setGridPoint(const std::vector<size_t>& mi, const base::DataVector& gp) {
+void TensorGrid::setGridPoint(const MI& mi, const base::DataVector& gp) {
   assert(mi.nDim() == nDim());
 
   setGridPoint(mi.toLinearIndex(), gp);
