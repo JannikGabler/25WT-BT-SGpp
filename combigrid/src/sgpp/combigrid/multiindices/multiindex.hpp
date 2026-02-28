@@ -63,6 +63,20 @@ class MI {
     return idx;
   }
 
+  size_t toLinearIndex(const MI<T> nPerDim) const {
+    if (nDim() == 0) {
+      return 0;
+    }
+
+    size_t idx = static_cast<size_t>(data_[0]);
+
+    for (size_t dim = 1; dim < nDim(); dim++) {
+      idx *= nPerDim[dim - 1];
+      idx += static_cast<size_t>((*this)[dim]);
+    }
+    return idx;
+  }
+
   value_type productofElems() const {
     const size_t nDim = this->size();
     if (nDim == 0) {

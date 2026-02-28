@@ -8,7 +8,6 @@
 #include <sgpp/combigrid/tools/downwards_closedness.hpp>
 #include <sgpp/combigrid/tools/multiindex_vector/multiindex_vector_component_wise_max.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
-#include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
 namespace sgpp {
@@ -17,6 +16,9 @@ namespace combigrid {
 template <typename T>
 class MIVec {
  public:
+  /**********
+  Constructor
+  **********/
   MIVec<T>(const size_t nDim, const size_t nMI)
       : nDim_(nDim), nMI_(nMI), data_(nMI * nDim), cacheCleared(true) {}
 
@@ -51,6 +53,9 @@ class MIVec {
     }
   }
 
+  /*****
+  Getter
+  *****/
   size_t nDim() const { return nDim_; }
   size_t nMI() const { return nMI_; }
 
@@ -75,6 +80,10 @@ class MIVec {
     return mi;
   }
 
+  /*****
+  Setter
+  *****/
+
   void setMI(size_t idx, const MI<T>& mi) {
     clearCachedValues();
     for (size_t dim = 0; dim < nDim_; dim++) {
@@ -89,6 +98,9 @@ class MIVec {
     }
   }
 
+  /*****************
+  Utility operations
+  *****************/
   bool isDownwardsClosed() const { return tools::isMIVecDownwardsClosed(*this); }
 
   MIVec<T> downwardsClosure() const { return tools::genMIVecDownwardsClosure(*this); }

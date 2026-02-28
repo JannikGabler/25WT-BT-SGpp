@@ -1,46 +1,53 @@
-#include <algorithm>
+// #include <algorithm>
+#include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
-#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
-#include "sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp"
 
 namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-SparseGrid genSG(const SGGenInstr& genInstr) {
-  const std::pair<LvlMIVec, std::vector<CTCoeffType>> p = genInstr.genMIVecWithCoeff();
-  const SGGenNodeLookup lookup = genSGNodeLookup(genInstr, p.first, p.second);
+void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
+                const std::vector<CTCoeffType>& coeffs, SparseGrid& out) {
+  assert(out.nTG() >= miVec.nMI());
 
-#pragma omp parallel for  // TODO: schedule
-  for (size_t miIdx = 0; miIdx < p.first.nMI(); miIdx++) {
-    const LvlMI mi = p.first[miIdx];
+  const SGGenNodeLookup lookup = genSGNodeLookup(genInstr, miVec, coeffs);
+
+#pragma omp parallel for schedule(guided)
+  for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
+    const LvlMI mi = miVec[miIdx];
+    const CTCoeffType coeff = coeffs[miIdx];
+
     const TensorGrid tg = genTGForMI(mi, genInstr, lookup);
+    out.setTensorGrid(miIdx, {mi, coeff, tg});
   }
 }
 
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr, const SGGenNodeLookup& lookup) {
-  const std::vector<size_t> gpCntPerDim = sg_gen::getGPCntPerDim(mi, genInstr);
-  const misc::DiscRectBB<size_t> iterationBB = sg_gen::getBBForIteration(gpCntPerDim);
+  const GPMI gpCntPerDim = sg_gen::getGPCntPerDim(mi, genInstr);
+  const misc::DiscRectBB<GPCntType> iterationBB = sg_gen::getBBForIteration(gpCntPerDim);
   const std::vector<base::DataVector> nodesPerDimForTG =
       sg_gen::getNodesPerDimForTG(mi, genInstr, gpCntPerDim, lookup);
 
-  // TensorGrid tg(gpCntPerDim);  // TODO
-  // size_t idx = 0;
+  TensorGrid tg(gpCntPerDim);
+  size_t idx = 0;
 
-  // for (const std::vector<size_t>& it : iterationBB) {
-  //   for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-  //     const base::DataVector& nodes = nodesPerDimForTG[dim];
-  //     tg(idx, dim) = nodes[it[dim]];
-  //   }
-  //   idx++;
-  // }
+  for (const std::vector<GPCntType>& it : iterationBB) {
+    for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
+      const base::DataVector& nodes = nodesPerDimForTG[dim];
+      tg(idx, dim) = nodes[it[dim]];
+    }
+    idx++;
+  }
+
+  return tg;
 }
 
 namespace sg_gen {
@@ -48,8 +55,8 @@ namespace sg_gen {
 /*
 Does include the grid points on the boundary
 */
-std::vector<size_t> getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
-  std::vector<size_t> gpCntPerDim(genInstr.nDim());
+GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
+  GPMI gpCntPerDim(genInstr.nDim());
 
   for (size_t dim = 0; dim < gpCntPerDim.size(); dim++) {
     if (mi[dim] < genInstr.getBoundaryIndexOffset()) {  // Should the boundary be included?
@@ -62,12 +69,12 @@ std::vector<size_t> getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) 
   return gpCntPerDim;
 }
 
-misc::DiscRectBB<size_t> getBBForIteration(const std::vector<size_t>& gpCntPerDim) {
-  return misc::DiscRectBB<size_t>(std::vector<size_t>(gpCntPerDim.size()), gpCntPerDim);
+misc::DiscRectBB<GPCntType> getBBForIteration(const GPMI& gpCntPerDim) {
+  return misc::DiscRectBB<GPCntType>(std::vector<GPCntType>(gpCntPerDim.size()), gpCntPerDim);
 }
 
 std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
-                                                  const std::vector<size_t>& gpCntPerDim,
+                                                  const GPMI& gpCntPerDim,
                                                   const SGGenNodeLookup& lookup) {
   std::vector<base::DataVector> nodesPerDim(gpCntPerDim.size());
 

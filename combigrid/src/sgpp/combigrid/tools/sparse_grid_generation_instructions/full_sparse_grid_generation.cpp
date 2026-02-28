@@ -61,6 +61,8 @@ Internal operations
 namespace full_sg_gen {
 
 LvlType getMinComponentSum(const LvlType maxSum, const size_t nDim) {
+  assert(nDim >= 1);
+
   if (nDim > maxSum) {
     return 0;
   }

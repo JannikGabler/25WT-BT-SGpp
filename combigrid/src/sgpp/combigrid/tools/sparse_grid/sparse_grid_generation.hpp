@@ -13,7 +13,8 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-SparseGrid genSG(const SGGenInstr& genInstr);
+void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
+                const std::vector<CTCoeffType>& coeffs, SparseGrid& out);
 
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr, const SGGenNodeLookup& lookup);
 
@@ -22,12 +23,12 @@ Internal operations
 ******************/
 namespace sg_gen {
 
-std::vector<size_t> getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr);
+GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr);
 
-misc::DiscRectBB<size_t> getBBForIteration(const std::vector<size_t>& gpCntPerDim);
+misc::DiscRectBB<GPCntType> getBBForIteration(const GPMI& gpCntPerDim);
 
 std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
-                                                  const std::vector<size_t>& gpCntPerDim,
+                                                  const GPMI& gpCntPerDim,
                                                   const SGGenNodeLookup& lookup);
 
 }  // namespace sg_gen

@@ -9,6 +9,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/unit_test_suite.hpp>
 
+#include <cassert>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
@@ -24,9 +25,13 @@ static sgpp::base::RandomNumberGenerator& randGen =
 namespace {
 
 size_t requiredNumberOfMIs(const size_t nDim, const LvlType maxLvl) {
+  if (nDim == 0) {
+    return 0;
+  }
+
   LvlType minSum = 0;
   if (nDim <= maxLvl) {
-    minSum = maxLvl - static_cast<LvlType>(nDim + 1);
+    minSum = maxLvl - static_cast<LvlType>(nDim - 1);
   }
 
   size_t totalNumber = 0;
@@ -77,7 +82,7 @@ BOOST_AUTO_TEST_CASE(Random1D) {
 }
 
 BOOST_AUTO_TEST_CASE(RandomSerial) {
-  randGen.setSeed(1772301879);
+  randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(10));
     const size_t nDim = randGen.getUniformIndexRN(6);
@@ -108,7 +113,7 @@ BOOST_AUTO_TEST_CASE(RandomSerial) {
 BOOST_AUTO_TEST_CASE(ResolveTest) {}
 
 BOOST_AUTO_TEST_CASE(RandomParallel) {
-  randGen.setSeed(1772302453);
+  randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const LvlType maxLvl = 12 + static_cast<LvlType>(randGen.getUniformIndexRN(3));
     const size_t nDim = 4 + randGen.getUniformIndexRN(3);
