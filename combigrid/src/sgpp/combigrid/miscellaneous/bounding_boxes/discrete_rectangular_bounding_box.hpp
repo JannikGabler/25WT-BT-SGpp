@@ -16,8 +16,8 @@ struct DiscRectBB {
   const std::vector<T> lowerBound;
   const std::vector<T> upperBound;
 
-  DiscRectBB(const std::vector<T>& lowerBound, const std::vector<T>& upperBond)
-      : lowerBound(lowerBound), upperBound(upperBond) {
+  DiscRectBB(std::vector<T> lowerBound, std::vector<T> upperBond)
+      : lowerBound(std::move(lowerBound)), upperBound(std::move(upperBond)) {
     assert(lowerBound.size() == upperBond.size());
   }
 

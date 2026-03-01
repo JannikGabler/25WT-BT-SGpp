@@ -45,13 +45,15 @@ class TensorGrid {
 
   //   bool containsABoundary();
 
-  /*******
-  Operator
-  *******/
+  /********
+  Operators
+  ********/
   base::DataVector operator[](size_t idx) const;
 
   double operator()(size_t idx, size_t dim) const;
   double& operator()(size_t idx, size_t dim);
+
+  bool operator==(const TensorGrid& other) const;
 
  private:
   size_t nGP_;                  // Fixed (not const because this will delete the copy assig constr)

@@ -25,7 +25,7 @@ namespace sg_gen {
 
 GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr);
 
-misc::DiscRectBB<GPCntType> getBBForIteration(const GPMI& gpCntPerDim);
+misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim);
 
 std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
                                                   const GPMI& gpCntPerDim,

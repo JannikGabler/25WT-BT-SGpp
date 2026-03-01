@@ -10,6 +10,8 @@ struct TensorGridCTData {
   LvlMI mi;
   CTCoeffType coefficient;
   TensorGrid tensorGrid;
+
+  bool operator==(const TensorGridCTData& other) const;
 };
 
 }  // namespace combigrid

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -53,26 +54,26 @@ class MI {
   /* =========================
    Additional methods
    ========================= */
-  size_t toLinearIndex() const {
-    const size_t nDim = this->size();
-    size_t idx = 0;
-    for (size_t dim = 0; dim < nDim; dim++) {
-      idx *= nDim;
-      idx += static_cast<size_t>((*this)[dim]);
-    }
-    return idx;
-  }
+  // size_t toLinearIndex() const {
+  //   const size_t nDim = this->size();
+  //   size_t idx = 0;
+  //   for (size_t dim = 0; dim < nDim; dim++) {
+  //     idx *= nDim;
+  //     idx += static_cast<size_t>((*this)[dim]);
+  //   }
+  //   return idx;
+  // }
 
-  size_t toLinearIndex(const MI<T> nPerDim) const {
+  size_t toLinearIndex(const MI<T>& nPerDim) const {
     if (nDim() == 0) {
       return 0;
     }
 
-    size_t idx = static_cast<size_t>(data_[0]);
+    size_t idx = static_cast<size_t>(data_[nDim() - 1]);
 
-    for (size_t dim = 1; dim < nDim(); dim++) {
-      idx *= nPerDim[dim - 1];
-      idx += static_cast<size_t>((*this)[dim]);
+    for (size_t dim = nDim() - 2; dim != std::numeric_limits<size_t>::max(); dim--) {
+      idx *= nPerDim[dim + 1];
+      idx += static_cast<size_t>(data_[dim]);
     }
     return idx;
   }

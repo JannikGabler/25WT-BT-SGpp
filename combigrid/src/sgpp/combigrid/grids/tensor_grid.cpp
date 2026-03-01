@@ -1,9 +1,11 @@
 
+#include <algorithm>
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <vector>
+#include "sgpp/combigrid/tools/comparison/nearly_equal.hpp"
 
 // bool sgpp::combigrid::TensorGrid::containsABoundary() {
 //     return this->gridPoints
@@ -27,9 +29,11 @@ TensorGrid::TensorGrid(const GPMI& nGPPerDim, const std::vector<base::DataVector
   const size_t nDim = nGPPerDim.size();
 
   for (size_t i = 0; i < gridPoints.size(); i++) {
-    for (size_t dim = 0; dim < nDim; dim++) {
-      this->gridPoints[i * nDim + dim] = gridPoints[i][dim];
-    }
+    // for (size_t dim = 0; dim < nDim; dim++) {
+    //   this->gridPoints[i * nDim + dim] = gridPoints[i][dim];
+    // }
+    assert(gridPoints[i].size() == nDim);
+    std::copy_n(gridPoints[i].begin(), nDim, this->gridPoints.begin() + i * nDim);
   }
 }
 
@@ -47,9 +51,10 @@ base::DataVector TensorGrid::getGridPoint(const size_t idx) const {
   const size_t nDim = this->nDim();
   base::DataVector gp(nDim);
 
-  for (size_t dim = 0; dim < nDim; dim++) {
-    gp[dim] = gridPoints[nDim * idx + dim];
-  }
+  // for (size_t dim = 0; dim < nDim; dim++) {
+  //   gp[dim] = gridPoints[nDim * idx + dim];
+  // }
+  std::copy_n(gridPoints.begin() + idx * nDim, nDim, gp.begin());
 
   return gp;
 }
@@ -70,9 +75,10 @@ void TensorGrid::setGridPoint(const size_t idx, const base::DataVector& gp) {
 
   const size_t nDim = this->nDim();
 
-  for (size_t dim = 0; dim < nDim; dim++) {
-    gridPoints[idx * nDim + dim] = gp[dim];
-  }
+  // for (size_t dim = 0; dim < nDim; dim++) {
+  //   gridPoints[idx * nDim + dim] = gp[dim];
+  // }
+  std::copy_n(gp.begin(), nDim, gridPoints.begin() + idx * nDim);
 }
 
 void TensorGrid::setGridPoint(const GPMI& mi, const base::DataVector& gp) {
@@ -99,6 +105,11 @@ double& TensorGrid::operator()(const size_t idx, const size_t dim) {
   assert(dim < nDim());
 
   return gridPoints[idx * nDim() + dim];
+}
+
+bool TensorGrid::operator==(const TensorGrid& other) const {
+  return nGP() == other.nGP() && nGPPerDim == other.nGPPerDim &&
+         tools::nearly_equal(gridPoints, other.gridPoints);
 }
 
 }  // namespace combigrid

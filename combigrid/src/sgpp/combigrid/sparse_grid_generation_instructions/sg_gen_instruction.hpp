@@ -40,7 +40,7 @@ class SGGenInstr {
   void setNodeGenFuncs(const std::vector<NodeGenFunc>& gPGenFuncs);
 
   void setLvl2GPCntFuncForDim(Lvl2GPCntFunc lvl2GPCntFunc, size_t dim);
-  void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs, size_t dim);
+  void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs);
 
   /*********************
   Sparse grid generation

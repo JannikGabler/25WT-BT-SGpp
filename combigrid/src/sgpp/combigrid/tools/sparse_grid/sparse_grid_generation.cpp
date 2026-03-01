@@ -20,13 +20,13 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
 
   const SGGenNodeLookup lookup = genSGNodeLookup(genInstr, miVec, coeffs);
 
-#pragma omp parallel for schedule(guided)
+  // #pragma omp parallel for schedule(guided)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
     const LvlMI mi = miVec[miIdx];
     const CTCoeffType coeff = coeffs[miIdx];
 
-    const TensorGrid tg = genTGForMI(mi, genInstr, lookup);
-    out.setTensorGrid(miIdx, {mi, coeff, tg});
+    TensorGrid tg = genTGForMI(mi, genInstr, lookup);
+    out.setTensorGrid(miIdx, {mi, coeff, std::move(tg)});
   }
 }
 
@@ -69,8 +69,13 @@ GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
   return gpCntPerDim;
 }
 
-misc::DiscRectBB<GPCntType> getBBForIteration(const GPMI& gpCntPerDim) {
-  return misc::DiscRectBB<GPCntType>(std::vector<GPCntType>(gpCntPerDim.size()), gpCntPerDim);
+misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim) {
+  for (size_t dim = 0; dim < gpCntPerDim.size(); dim++) {
+    gpCntPerDim[dim]--;
+  }
+
+  return misc::DiscRectBB<GPCntType>(std::vector<GPCntType>(gpCntPerDim.size()),
+                                     std::move(gpCntPerDim));
 }
 
 std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
