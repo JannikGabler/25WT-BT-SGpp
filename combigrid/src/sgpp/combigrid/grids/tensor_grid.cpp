@@ -7,10 +7,6 @@
 #include <vector>
 #include "sgpp/combigrid/tools/comparison/nearly_equal.hpp"
 
-// bool sgpp::combigrid::TensorGrid::containsABoundary() {
-//     return this->gridPoints
-// }
-
 namespace sgpp {
 namespace combigrid {
 
@@ -44,6 +40,8 @@ Getter
 size_t TensorGrid::nDim() const { return this->nGPPerDim.size(); }
 
 size_t TensorGrid::nGP() const { return nGP_; }
+
+const GPMI& TensorGrid::getGPCntPerDim() const { return nGPPerDim; }
 
 base::DataVector TensorGrid::getGridPoint(const size_t idx) const {
   assert(idx < nGP_);

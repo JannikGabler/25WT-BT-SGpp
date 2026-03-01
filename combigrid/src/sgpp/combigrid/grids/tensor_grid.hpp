@@ -29,6 +29,8 @@ class TensorGrid {
 
   size_t nGP() const;
 
+  const GPMI& getGPCntPerDim() const;
+
   base::DataVector getGridPoint(size_t idx) const;
 
   base::DataVector getGridPoint(const GPMI& mi) const;
