@@ -5,6 +5,7 @@
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/node_generation_functions/node_generation_function.hpp>
 #include <unordered_map>
 
 namespace sgpp {
@@ -25,13 +26,14 @@ using GPCntType = unsigned int;
 using GPMI = MI<GPCntType>;
 
 using CTCoeffType = int;
-// using GPCntType = size_t;
 
 /*********************
 -Fixed types-
 Should not be changed.
 *********************/
-using NodeGenFunc = sgpp::base::DataVector (*)(GPCntType);
+using SourceFunc = double (*)(sgpp::base::DataVector);
+
+// using NodeGenFunc = sgpp::base::DataVector (*)(GPCntType);
 using Lvl2GPCntFunc = GPCntType (*)(LvlType);
 
 using SGGenNodeLookup = std::unordered_map<std::pair<NodeGenFunc, GPCntType>, base::DataVector,

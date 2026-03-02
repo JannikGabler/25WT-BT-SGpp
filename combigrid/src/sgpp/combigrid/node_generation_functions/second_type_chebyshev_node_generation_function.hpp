@@ -9,7 +9,7 @@
 namespace sgpp {
 namespace combigrid {
 
-class SecondTypeChebyshevNodeGenFunc : NodeGenFunc {
+class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
  public:
   base::DataVector operator()(const size_t nNodes) const override {
     const double f1 = M_PI / static_cast<double>(nNodes + 1);

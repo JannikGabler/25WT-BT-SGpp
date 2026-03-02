@@ -8,10 +8,9 @@
 namespace sgpp {
 namespace combigrid {
 
-class TrapezoidalQuadRule : QuadRule {
-  static constexpr uint64_t ID = tools::fnv1aHash("Trapezoidal Quadrature Rule");
-
-  TrapezoidalQuadRule() : QuadRule(ID) {}
+class TrapezoidalQuadRule : public QuadRule {
+ public:
+  TrapezoidalQuadRule() : QuadRule(tools::fnv1aHash("Trapezoidal Quadrature Rule")) {}
 
   base::DataVector getWeights(const size_t nNodes) const override {
     if (nNodes == 0) {

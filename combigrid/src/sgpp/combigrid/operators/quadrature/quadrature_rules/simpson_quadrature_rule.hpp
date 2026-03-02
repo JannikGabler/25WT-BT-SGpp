@@ -9,10 +9,9 @@
 namespace sgpp {
 namespace combigrid {
 
-class SimpsonQuadRule : QuadRule {
-  static constexpr uint64_t ID = tools::fnv1aHash("Simpson Quadrature Rule");
-
-  SimpsonQuadRule() : QuadRule(ID) {}
+class SimpsonQuadRule : public QuadRule {
+ public:
+  SimpsonQuadRule() : QuadRule(tools::fnv1aHash("Simpson Quadrature Rule")) {}
 
   base::DataVector getWeights(const size_t nNodes) const override {
     if ((nNodes & 1) == 0) {  // Is nNodes even?

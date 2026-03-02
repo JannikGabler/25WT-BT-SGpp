@@ -11,7 +11,7 @@ class QuadRule {
 
   virtual base::DataVector getWeights(size_t nNodes) const;
 
-  uint64_t id() { return id_; }
+  uint64_t id() const { return id_; }
 
  private:
   const uint64_t id_;
