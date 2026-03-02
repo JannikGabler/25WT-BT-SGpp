@@ -19,15 +19,16 @@ using const_reverse_iterator = std::vector<TensorGridCTData>::const_reverse_iter
 Constructor
 **********/
 
-SparseGrid::SparseGrid(const size_t nDim) : nDim_(nDim), tensorGridData() {}
+SparseGrid::SparseGrid(const size_t nDim) : nDim_(nDim), tensorGridData(), nodeGenFuncs() {}
 
-SparseGrid::SparseGrid(const size_t nDim, const size_t nTG) : nDim_(nDim), tensorGridData(nTG) {}
+SparseGrid::SparseGrid(const size_t nDim, const size_t nTG)
+    : nDim_(nDim), tensorGridData(nTG), nodeGenFuncs() {}
 
-SparseGrid::SparseGrid(const SGGenInstr& genInstr) : nDim_(genInstr.nDim()) {
+SparseGrid::SparseGrid(const SGGenInstr& genInstr)
+    : nDim_(genInstr.nDim()), nodeGenFuncs(genInstr.getNodeGenFuncs()) {
   const std::pair<LvlMIVec, std::vector<CTCoeffType>> p = genInstr.genMIVecWithCoeff();
 
   tensorGridData.resize(p.first.nMI());
-
   tools::populateSG(genInstr, p.first, p.second, *this);
 }
 
@@ -48,6 +49,8 @@ const_iterator SparseGrid::getTensorGrid(const LvlMI& mi) const {
 
 const std::vector<TensorGridCTData>& SparseGrid::getTensorGrids() const { return tensorGridData; }
 
+const std::vector<NodeGenFunc>& SparseGrid::getNodeGenFuncs() const { return nodeGenFuncs; }
+
 /*****
 Setter
 *****/
@@ -66,6 +69,18 @@ void SparseGrid::setTensorGrid(const size_t idx, TensorGridCTData&& tg) {
   assert(idx < tensorGridData.size());
 
   tensorGridData[idx] = std::move(tg);
+}
+
+void SparseGrid::setNodeGenFuncs(const std::vector<NodeGenFunc>& nodeGenFuncs) {
+  assert(nodeGenFuncs.size() == nDim_);
+
+  this->nodeGenFuncs = nodeGenFuncs;
+}
+
+void SparseGrid::setNodeGenFuncs(std::vector<NodeGenFunc>&& nodeGenFuncs) {
+  assert(nodeGenFuncs.size() == nDim_);
+
+  this->nodeGenFuncs = std::move(nodeGenFuncs);
 }
 
 /*******

@@ -8,6 +8,7 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
 #include <vector>
+#include "sgpp/combigrid/node_generation_functions/node_generation_function.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -44,6 +45,8 @@ class SparseGrid {
 
   const std::vector<TensorGridCTData>& getTensorGrids() const;
 
+  const std::vector<NodeGenFunc>& getNodeGenFuncs() const;
+
   /*****
   Setter
   *****/
@@ -54,6 +57,10 @@ class SparseGrid {
   void setTensorGrid(size_t idx, const TensorGridCTData& tg);
 
   void setTensorGrid(size_t idx, TensorGridCTData&& tg);
+
+  void setNodeGenFuncs(const std::vector<NodeGenFunc>& nodeGenFuncs);
+
+  void setNodeGenFuncs(std::vector<NodeGenFunc>&& nodeGenFuncs);
 
   /*******
   Iterator
@@ -85,6 +92,7 @@ class SparseGrid {
  private:
   const size_t nDim_;
   std::vector<TensorGridCTData> tensorGridData;
+  std::vector<NodeGenFunc> nodeGenFuncs;
 };
 
 }  // namespace combigrid

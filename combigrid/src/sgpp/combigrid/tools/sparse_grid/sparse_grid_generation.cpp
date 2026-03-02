@@ -32,7 +32,8 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
 
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr, const SGGenNodeLookup& lookup) {
   const GPMI gpCntPerDim = sg_gen::getGPCntPerDim(mi, genInstr);
-  const misc::DiscRectBB<GPCntType> iterationBB = sg_gen::getBBForIteration(gpCntPerDim);
+  const misc::DiscRectBB<GPCntType> iterationBB(std::vector<GPCntType>(genInstr.nDim()),
+                                                gpCntPerDim, false);
   const std::vector<base::DataVector> nodesPerDimForTG =
       sg_gen::getNodesPerDimForTG(mi, genInstr, gpCntPerDim, lookup);
 
@@ -69,14 +70,9 @@ GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
   return gpCntPerDim;
 }
 
-misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim) {
-  for (size_t dim = 0; dim < gpCntPerDim.size(); dim++) {
-    gpCntPerDim[dim]--;
-  }
-
-  return misc::DiscRectBB<GPCntType>(std::vector<GPCntType>(gpCntPerDim.size()),
-                                     std::move(gpCntPerDim));
-}
+// misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim) {
+//   return
+// }
 
 std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
                                                   const GPMI& gpCntPerDim,

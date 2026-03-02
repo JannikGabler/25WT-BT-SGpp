@@ -23,12 +23,22 @@ class DiscRectBBIterator {
   const std::vector<T>* operator->() const { return &curPos; }
 
   DiscRectBBIterator& operator++() {
-    for (size_t dim = 0; dim < curPos.size(); dim++) {
-      if (++curPos[dim] <= rectDiscBB.upperBound[dim]) {
-        return *this;
+    if (rectDiscBB.includeUpperBound) {
+      for (size_t dim = 0; dim < curPos.size(); dim++) {
+        if (++curPos[dim] <= rectDiscBB.upperBound[dim]) {
+          return *this;
+        }
+        curPos[dim] = rectDiscBB.lowerBound[dim];
       }
-      curPos[dim] = rectDiscBB.lowerBound[dim];
+    } else {
+      for (size_t dim = 0; dim < curPos.size(); dim++) {
+        if (++curPos[dim] < rectDiscBB.upperBound[dim]) {
+          return *this;
+        }
+        curPos[dim] = rectDiscBB.lowerBound[dim];
+      }
     }
+
     finished = true;
     return *this;
   }

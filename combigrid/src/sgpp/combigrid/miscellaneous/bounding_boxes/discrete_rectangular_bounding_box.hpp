@@ -1,5 +1,4 @@
-#ifndef COMBIGRID_MISC_DISCRETE_RECT_BOUNDING_BOX_HPP
-#define COMBIGRID_MISC_DISCRETE_RECT_BOUNDING_BOX_HPP
+#pragma once
 
 #include <cassert>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box_iterator.hpp>
@@ -15,10 +14,14 @@ struct DiscRectBB {
  public:
   const std::vector<T> lowerBound;
   const std::vector<T> upperBound;
+  const bool includeUpperBound;
 
-  DiscRectBB(std::vector<T> lowerBound, std::vector<T> upperBond)
-      : lowerBound(std::move(lowerBound)), upperBound(std::move(upperBond)) {
-    assert(lowerBound.size() == upperBond.size());
+  DiscRectBB(std::vector<T> lowerBound, std::vector<T> upperBound,
+             const bool includeUpperBound = true)
+      : lowerBound(std::move(lowerBound)),
+        upperBound(std::move(upperBound)),
+        includeUpperBound(includeUpperBound) {
+    assert(lowerBound.size() == upperBound.size());
   }
 
   size_t size() const {
@@ -44,5 +47,3 @@ struct DiscRectBB {
 }  // namespace misc
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif
