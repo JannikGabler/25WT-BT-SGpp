@@ -15,6 +15,8 @@ class MISetSGGenInstr : public SGGenInstr {
 
   std::pair<LvlMIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
 
+  std::shared_ptr<SGGenInstr> clone() const override;
+
  private:
   const LvlMI& miSet;
 };

@@ -1,4 +1,5 @@
 #include <cassert>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
@@ -6,6 +7,7 @@
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -13,18 +15,24 @@ namespace sgpp {
 namespace combigrid {
 
 double quadrature(const SparseGrid& sparseGrid, const SourceFunc sourceFunc) {
-  const std::vector<NodeGenFunc>& nodeGenFuncs = sparseGrid.getNodeGenFuncs();
+  assert(sparseGrid.getGenInstr() != nullptr);
+
+  const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
+  const std::vector<NodeGenFunc*>& nodeGenFuncs = genInstr->getNodeGenFuncs();
   double result = 0;
 
   // #pragma omp parallel for reduction(+:result)
   for (const TensorGridCTData& tgData : sparseGrid) {
-    result += tgData.coefficient * quadrature(tgData.tensorGrid, nodeGenFuncs, sourceFunc);
+    result += tgData.coefficient *
+              quadrature_operator::quadrature(tgData.tensorGrid, nodeGenFuncs, sourceFunc);
   }
 
-  return result;
+  return genInstr->getVolumeOfBounds() * result;
 }
 
-double quadrature(const TensorGrid& tg, const std::vector<NodeGenFunc>& nodeGenFuncs,
+namespace quadrature_operator {
+
+double quadrature(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
                   const SourceFunc sourceFunc) {
   assert(nodeGenFuncs.size() == tg.nDim());
 
@@ -49,7 +57,19 @@ double quadrature(const TensorGrid& tg, const std::vector<NodeGenFunc>& nodeGenF
   return result;
 }
 
-namespace quadrature_operator {
+std::vector<base::DataVector> getWeights(const TensorGrid& tg,
+                                         const std::vector<NodeGenFunc*>& nodeGenFuncs) {
+  const GPMI& gpCntPerDim = tg.getGPCntPerDim();
+  const std::vector<QuadRule*> quadRules = getQuadRules(tg, nodeGenFuncs);
+  std::vector<base::DataVector> weights;
+
+  for (size_t dim = 0; dim < tg.nDim(); dim++) {
+    const GPCntType nNodes = gpCntPerDim[dim];
+    weights[dim] = quadRules[dim]->getWeights(nNodes);
+  }
+
+  return weights;
+}
 
 double getWeightForGP(const std::vector<GPCntType>& gpMI,
                       const std::vector<base::DataVector>& weights) {
@@ -62,22 +82,13 @@ double getWeightForGP(const std::vector<GPCntType>& gpMI,
   return weight;
 }
 
-std::vector<base::DataVector> getWeights(const TensorGrid& tg,
-                                         const std::vector<NodeGenFunc>& nodeGenFuncs) {
+std::vector<QuadRule*> getQuadRules(
+    const TensorGrid& tg, const std::vector<std::shared_ptr<const NodeGenFunc>>& nodeGenFuncs) {
   const GPMI& gpCntPerDim = tg.getGPCntPerDim();
-  const std::vector<QuadRule> quadRules = getQuadRules(tg, nodeGenFuncs);
-
-  quadRules[0].getWeights(5);
-}
-
-std::vector<QuadRule> getQuadRules(const TensorGrid& tg,
-                                   const std::vector<NodeGenFunc>& nodeGenFuncs) {
-  const GPMI& gpCntPerDim = tg.getGPCntPerDim();
-  std::vector<QuadRule> quadRules;
-  quadRules.reserve(nodeGenFuncs.size());
+  std::vector<QuadRule*> quadRules(nodeGenFuncs.size());
 
   for (size_t dim = 0; dim < nodeGenFuncs.size(); dim++) {
-    quadRules.emplace_back(nodeGenFuncs[dim].getQuadRule(gpCntPerDim[dim]));
+    quadRules[dim] = nodeGenFuncs[dim]->getQuadRule(gpCntPerDim[dim]);
   }
 
   return quadRules;

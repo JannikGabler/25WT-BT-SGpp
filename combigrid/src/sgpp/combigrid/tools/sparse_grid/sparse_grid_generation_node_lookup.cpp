@@ -4,7 +4,6 @@
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/concurrent_task_queue.hpp>
 #include <sgpp/combigrid/miscellaneous/vector_map/vector_map.hpp>
-#include <sgpp/combigrid/node_generation_functions/node_generation_functions.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/collections/kway_unique_merge_sorted_collections.hpp>
 #include <sgpp/combigrid/tools/math/ceil.hpp>
@@ -21,7 +20,7 @@ namespace tools {
 
 SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const LvlMIVec& miVec,
                                 const std::vector<CTCoeffType> coeff) {
-  const misc::VecMap<NodeGenFunc, std::vector<GPCntType>> nodeCntPerType =
+  const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> nodeCntPerType =
       sg_gen_node_lookup::getNodeCntRequiredPerNodeType(genInstr, miVec);
 
   return sg_gen_node_lookup::genLookupBasedOnNodeCntPerType(nodeCntPerType);
@@ -29,11 +28,31 @@ SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const LvlMIVec& miVe
 
 namespace sg_gen_node_lookup {
 
+misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
+    const SGGenInstr& genInstr, const LvlMIVec& miVec) {
+  const std::shared_ptr<LvlMI> componentWiseMax = miVec.componentWiseMax();
+  const std::vector<NodeGenFunc*> uniqueNodeGenFuncs = genInstr.getUniqueNodeGenFuncs();
+  const std::vector<size_t> dimWithUniqueNodes = getDimWithUniqueNodes(genInstr);
+
+  std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>> vecOfLocalNodeCnts(
+      dimWithUniqueNodes.size());
+
+#pragma omp parallel for schedule(static) if (dimWithUniqueNodes.size() >= 2)
+  for (const size_t dim : dimWithUniqueNodes) {
+    NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+    const std::vector<GPCntType> localGPCnts =
+        getNodeCntRequiredByDim(dim, genInstr, *componentWiseMax);
+    vecOfLocalNodeCnts[dim] = {nodeGenFunc, localGPCnts};
+  }
+
+  return turnVecOfLocalNodeCntsIntoMap(vecOfLocalNodeCnts, genInstr, uniqueNodeGenFuncs);
+}
+
 std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr) {
   std::vector<size_t> result;
 
   for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-    const NodeGenFunc nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+    const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
     const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
     bool duplicate = false;
 
@@ -53,26 +72,6 @@ std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr) {
   return result;
 }
 
-misc::VecMap<NodeGenFunc, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
-    const SGGenInstr& genInstr, const LvlMIVec& miVec) {
-  const std::shared_ptr<LvlMI> componentWiseMax = miVec.componentWiseMax();
-  const std::vector<NodeGenFunc> uniqueNodeGenFuncs = genInstr.getUniqueNodeGenFuncs();
-  const std::vector<size_t> dimWithUniqueNodes = getDimWithUniqueNodes(genInstr);
-
-  std::vector<std::pair<NodeGenFunc, std::vector<GPCntType>>> vecOfLocalNodeCnts(
-      dimWithUniqueNodes.size());
-
-#pragma omp parallel for schedule(static) if (dimWithUniqueNodes.size() >= 2)
-  for (const size_t dim : dimWithUniqueNodes) {
-    const NodeGenFunc nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
-    const std::vector<GPCntType> localGPCnts =
-        getNodeCntRequiredByDim(dim, genInstr, *componentWiseMax);
-    vecOfLocalNodeCnts[dim] = {nodeGenFunc, localGPCnts};
-  }
-
-  return turnVecOfLocalNodeCntsIntoMap(vecOfLocalNodeCnts, genInstr, uniqueNodeGenFuncs);
-}
-
 std::vector<GPCntType> getNodeCntRequiredByDim(const size_t dim, const SGGenInstr& genInstr,
                                                const LvlMI& componentWiseMax) {
   const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
@@ -86,27 +85,28 @@ std::vector<GPCntType> getNodeCntRequiredByDim(const size_t dim, const SGGenInst
   return gpCnts;
 }
 
-misc::VecMap<NodeGenFunc, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
-    const std::vector<std::pair<NodeGenFunc, std::vector<GPCntType>>>& vecOfLocalNodeCnts,
-    const SGGenInstr& genInstr, const std::vector<NodeGenFunc>& uniqueNodeGenFuncs) {
-  misc::VecMap<NodeGenFunc, std::vector<GPCntType>> result(uniqueNodeGenFuncs.size());
+misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
+    const std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>>& vecOfLocalNodeCnts,
+    const SGGenInstr& genInstr, const std::vector<NodeGenFunc*>& uniqueNodeGenFuncs) {
+  misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> result(uniqueNodeGenFuncs.size());
 
   if (vecOfLocalNodeCnts.size() == 1) {
     result.insert_or_assign(vecOfLocalNodeCnts[0].first, vecOfLocalNodeCnts[0].second);
     return result;
   }
 
-  std::vector<std::pair<NodeGenFunc, std::vector<GPCntType>>> localEntries(
+  std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>> localEntries(
       uniqueNodeGenFuncs.size());  // Required because VecMap is not thread safe
 
 #pragma omp parallel for schedule(static)
   for (size_t i = 0; i < uniqueNodeGenFuncs.size(); i++) {
-    const NodeGenFunc nodeGenFunc = uniqueNodeGenFuncs[i];
+    NodeGenFunc* const nodeGenFunc = uniqueNodeGenFuncs[i];
     std::vector<
         std::pair<std::vector<GPCntType>::const_iterator, std::vector<GPCntType>::const_iterator>>
         iterators;
 
     for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
+      // There should be only one object per unique NodeGenFunc
       if (vecOfLocalNodeCnts[dim].first == nodeGenFunc) {
         iterators.push_back(
             {vecOfLocalNodeCnts[dim].second.begin(), vecOfLocalNodeCnts[dim].second.end()});
@@ -125,7 +125,7 @@ misc::VecMap<NodeGenFunc, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
 }
 
 SGGenNodeLookup genLookupBasedOnNodeCntPerType(
-    const misc::VecMap<NodeGenFunc, std::vector<GPCntType>>& nodeCntPerType) {
+    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType) {
   const std::vector<size_t> idxBoundaries = getIdxBoundaries(nodeCntPerType);
 
   SGGenNodeLookup lookup(idxBoundaries[idxBoundaries.size() - 1]);
@@ -140,7 +140,7 @@ SGGenNodeLookup genLookupBasedOnNodeCntPerType(
 }
 
 void populateTaskQueueForLookup(
-    const misc::VecMap<NodeGenFunc, std::vector<GPCntType>>& nodeCntPerType,
+    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType,
     const std::vector<size_t>& idxBoundaries,
     ConcurrentTaskQueue<std::vector<SGGenNodeLookupInsert>>& queue) {
   const size_t localBufferSize =
@@ -161,10 +161,10 @@ void populateTaskQueueForLookup(
       }
 
       const size_t vecMapIdx = getVecMapIdxByNodeCntIdx(i, idxBoundaries);
-      const std::pair<NodeGenFunc, std::vector<GPCntType>> vecMapEntry = nodeCntPerType[vecMapIdx];
+      const std::pair<NodeGenFunc*, std::vector<GPCntType>> vecMapEntry = nodeCntPerType[vecMapIdx];
 
       const GPCntType nodeCnt = vecMapEntry.second[i - idxBoundaries[vecMapIdx]];
-      const base::DataVector gridsPoints = vecMapEntry.first(nodeCnt);
+      const base::DataVector gridsPoints = vecMapEntry.first->genGPs(nodeCnt);
       localInserts.push_back({vecMapEntry.first, nodeCnt, gridsPoints});
     }
 
@@ -189,7 +189,7 @@ std::thread startLookupInserterThread(
       }
 
       for (const SGGenNodeLookupInsert& insert : output) {
-        std::pair<NodeGenFunc, GPCntType> key{insert.gpGenFunc, insert.gpCnt};
+        std::pair<NodeGenFunc*, GPCntType> key{insert.gpGenFunc, insert.gpCnt};
         lookup.emplace(std::move(key), std::move(insert.nodes));
       }
     }
@@ -200,11 +200,11 @@ std::thread startLookupInserterThread(
 Always adds a leading 0 for less edge cases in the other methods
 */
 std::vector<size_t> getIdxBoundaries(
-    const misc::VecMap<NodeGenFunc, std::vector<GPCntType>>& nodeCntPerType) {
+    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType) {
   std::vector<size_t> idxBoundaries(nodeCntPerType.size() + 1);
 
   for (size_t i = 0; i < nodeCntPerType.size(); i++) {
-    const std::pair<NodeGenFunc, std::vector<GPCntType>>& p = nodeCntPerType[i];
+    const std::pair<NodeGenFunc*, std::vector<GPCntType>>& p = nodeCntPerType[i];
     idxBoundaries[i + 1] = idxBoundaries[i] + p.second.size();
   }
 

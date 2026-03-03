@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/miscellaneous/hash/std_pair_hash.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
@@ -35,9 +36,10 @@ using SourceFunc = double (*)(sgpp::base::DataVector);
 
 // using NodeGenFunc = sgpp::base::DataVector (*)(GPCntType);
 using Lvl2GPCntFunc = GPCntType (*)(LvlType);
+// using NodeGenFuncId = uint64_t;
 
-using SGGenNodeLookup = std::unordered_map<std::pair<NodeGenFunc, GPCntType>, base::DataVector,
-                                           misc::PairHash<NodeGenFunc, GPCntType>>;
+using SGGenNodeLookup = std::unordered_map<std::pair<NodeGenFunc*, GPCntType>, base::DataVector,
+                                           misc::PairHash<NodeGenFunc*, GPCntType>>;
 
 }  // namespace combigrid
 }  // namespace sgpp

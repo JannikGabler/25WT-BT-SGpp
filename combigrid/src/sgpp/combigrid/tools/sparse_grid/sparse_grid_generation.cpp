@@ -80,7 +80,7 @@ std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenIn
   std::vector<base::DataVector> nodesPerDim(gpCntPerDim.size());
 
   for (size_t dim = 0; dim < nodesPerDim.size(); dim++) {
-    const NodeGenFunc nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+    NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
 
     if (mi[dim] < genInstr.getBoundaryIndexOffset()) {  // Should the boundary be included?
       const size_t innerNodeCnt = gpCntPerDim[dim];

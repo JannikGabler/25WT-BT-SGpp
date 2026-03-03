@@ -8,9 +8,13 @@ namespace combigrid {
 
 class NodeGenFunc {
  public:
-  virtual base::DataVector operator()(size_t nNodes) const;
+  virtual ~NodeGenFunc() = default;
 
-  virtual QuadRule getQuadRule(size_t nNodes) const;
+  virtual base::DataVector genGPs(size_t nNodes) const = 0;
+
+  virtual QuadRule* getQuadRule(size_t nNodes) const = 0;
+
+  virtual bool operator==(const NodeGenFunc& other) const = 0;
 };
 
 }  // namespace combigrid

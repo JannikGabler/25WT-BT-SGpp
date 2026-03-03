@@ -22,28 +22,28 @@ Internal operations
 namespace sg_gen_node_lookup {
 
 struct SGGenNodeLookupInsert {
-  NodeGenFunc gpGenFunc;
+  NodeGenFunc* gpGenFunc;
   GPCntType gpCnt;
   base::DataVector nodes;
 };
 
-std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr);
-
-misc::VecMap<NodeGenFunc, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
+misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
     const SGGenInstr& genInstr, const LvlMIVec& miVec);
+
+std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr);
 
 std::vector<GPCntType> getNodeCntRequiredByDim(size_t dim, const SGGenInstr& genInstr,
                                                const LvlMI& componentWiseMax);
 
-misc::VecMap<NodeGenFunc, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
-    const std::vector<std::pair<NodeGenFunc, std::vector<GPCntType>>>& vecOfLocalGPCnts,
-    const SGGenInstr& genInstr, const std::vector<NodeGenFunc>& uniqueNodeGenFuncs);
+misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
+    const std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>>& vecOfLocalGPCnts,
+    const SGGenInstr& genInstr, const std::vector<NodeGenFunc*>& uniqueNodeGenFuncs);
 
 SGGenNodeLookup genLookupBasedOnNodeCntPerType(
-    const misc::VecMap<NodeGenFunc, std::vector<GPCntType>>& nodeCntPerType);
+    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType);
 
 void populateTaskQueueForLookup(
-    const misc::VecMap<NodeGenFunc, std::vector<GPCntType>>& nodeCntPerType,
+    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType,
     const std::vector<size_t>& idxBoundaries,
     ConcurrentTaskQueue<std::vector<SGGenNodeLookupInsert>>& queue);
 
@@ -51,7 +51,7 @@ std::thread startLookupInserterThread(
     SGGenNodeLookup& lookup, ConcurrentTaskQueue<std::vector<SGGenNodeLookupInsert>>& queue);
 
 std::vector<size_t> getIdxBoundaries(
-    const misc::VecMap<NodeGenFunc, std::vector<GPCntType>>& nodeCntPerType);
+    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType);
 
 size_t getVecMapIdxByNodeCntIdx(size_t gpCntIdx, const std::vector<size_t>& idxBoundaries);
 

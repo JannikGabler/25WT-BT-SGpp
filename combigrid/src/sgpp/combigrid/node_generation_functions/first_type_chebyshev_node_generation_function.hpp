@@ -11,7 +11,7 @@ namespace combigrid {
 
 class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
  public:
-  base::DataVector operator()(const size_t nNodes) const override {
+  base::DataVector genGPs(const size_t nNodes) const override {
     const double f1 = M_PI / (2 * static_cast<double>(nNodes));
     base::DataVector nodes(nNodes);
 
@@ -24,9 +24,13 @@ class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
     return nodes;
   }
 
-  QuadRule getQuadRule(const size_t nNodes) const override {
+  QuadRule* getQuadRule(const size_t nNodes) const override {
     // TODO
     throw base::not_implemented_exception("Operation is not yet implemented!");
+  }
+
+  bool operator==(const NodeGenFunc& other) const override {
+    return typeid(*this) == typeid(other);
   }
 };
 

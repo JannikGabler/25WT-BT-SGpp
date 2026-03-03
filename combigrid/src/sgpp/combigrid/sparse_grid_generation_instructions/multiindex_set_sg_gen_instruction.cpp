@@ -19,6 +19,10 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MISetSGGenInstr::genMIVecWithCoeff
   throw sgpp::base::not_implemented_exception("Operation is not implemented yet!");
 }
 
+std::shared_ptr<SGGenInstr> MISetSGGenInstr::clone() const {
+  return std::make_shared<MISetSGGenInstr>(*this);
+}
+
 }  // namespace combigrid
 
 }  // namespace sgpp

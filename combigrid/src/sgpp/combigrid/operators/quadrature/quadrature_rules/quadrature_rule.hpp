@@ -9,7 +9,9 @@ class QuadRule {
  public:
   QuadRule(const uint64_t id) : id_(id) {}
 
-  virtual base::DataVector getWeights(size_t nNodes) const;
+  virtual ~QuadRule() = default;
+
+  virtual base::DataVector getWeights(size_t nNodes) const = 0;
 
   uint64_t id() const { return id_; }
 

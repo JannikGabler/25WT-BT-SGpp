@@ -1,14 +1,14 @@
 #ifndef COMBIGRID_SPARSE_GRID_HPP
 #define COMBIGRID_SPARSE_GRID_HPP
 
+#include <memory>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <sgpp/combigrid/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <sgpp/globaldef.hpp>
 #include <vector>
-#include "sgpp/combigrid/node_generation_functions/node_generation_function.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -45,7 +45,7 @@ class SparseGrid {
 
   const std::vector<TensorGridCTData>& getTensorGrids() const;
 
-  const std::vector<NodeGenFunc>& getNodeGenFuncs() const;
+  const std::shared_ptr<const SGGenInstr> getGenInstr() const;
 
   /*****
   Setter
@@ -58,9 +58,9 @@ class SparseGrid {
 
   void setTensorGrid(size_t idx, TensorGridCTData&& tg);
 
-  void setNodeGenFuncs(const std::vector<NodeGenFunc>& nodeGenFuncs);
+  void setGenInstr(const SGGenInstr& genInstr);
 
-  void setNodeGenFuncs(std::vector<NodeGenFunc>&& nodeGenFuncs);
+  void setGenInstr(std::shared_ptr<const SGGenInstr>&& genInstr);
 
   /*******
   Iterator
@@ -92,7 +92,7 @@ class SparseGrid {
  private:
   const size_t nDim_;
   std::vector<TensorGridCTData> tensorGridData;
-  std::vector<NodeGenFunc> nodeGenFuncs;
+  std::shared_ptr<const SGGenInstr> genInstr;
 };
 
 }  // namespace combigrid

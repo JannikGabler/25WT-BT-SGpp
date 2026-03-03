@@ -1,10 +1,12 @@
 #include <algorithm>
 #include <sgpp/combigrid/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/node_generation_functions/node_generation_functions.hpp>
+#include <sgpp/combigrid/node_generation_functions/equidistant_node_generation_function.hpp>
+#include <sgpp/combigrid/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
+#include "sgpp/base/exception/not_implemented_exception.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -13,12 +15,13 @@ namespace combigrid {
 Constructors
 ***********/
 
-// TODO: Set default of lvl2GPCntFuncs
 SGGenInstr::SGGenInstr(const size_t nDim)
     : boundaryIndexOffset(0),
       bounds(nDim, {0, 1}),
-      nodeGenFuncs(nDim, genEquidistantNodes),
-      lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {}
+      nodeGenFuncs(nDim, nullptr),  // TODO
+      lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {
+  throw base::not_implemented_exception("");
+}
 
 /******
 Getters
@@ -28,9 +31,9 @@ size_t SGGenInstr::nDim() const { return this->bounds.size(); }
 
 LvlType SGGenInstr::getBoundaryIndexOffset() const { return boundaryIndexOffset; }
 
-const std::vector<NodeGenFunc>& SGGenInstr::getNodeGenFuncs() const { return nodeGenFuncs; }
+const std::vector<NodeGenFunc*>& SGGenInstr::getNodeGenFuncs() const { return nodeGenFuncs; }
 
-NodeGenFunc SGGenInstr::getNodeGenFuncForDim(const size_t dim) const { return nodeGenFuncs[dim]; }
+NodeGenFunc* SGGenInstr::getNodeGenFuncForDim(const size_t dim) const { return nodeGenFuncs[dim]; }
 
 const std::vector<Lvl2GPCntFunc>& SGGenInstr::getLvl2GPCntFuncs() const { return lvl2GPCntFuncs; }
 
@@ -55,11 +58,11 @@ void SGGenInstr::setBounds(const std::vector<std::pair<double, double>>& bounds)
   std::copy_n(bounds.begin(), nElemsToCopy, this->bounds.begin());
 }
 
-void SGGenInstr::setNodeGenFuncForDim(const NodeGenFunc nodeGenFunc, const size_t dim) {
-  this->nodeGenFuncs.at(dim) = nodeGenFunc;
+void SGGenInstr::setNodeGenFuncForDim(NodeGenFunc* const nodeGenFunc, const size_t dim) {
+  nodeGenFuncs[dim] = nodeGenFunc;
 }
 
-void SGGenInstr::setNodeGenFuncs(const std::vector<NodeGenFunc>& nodeGenFuncs) {
+void SGGenInstr::setNodeGenFuncs(const std::vector<NodeGenFunc*>& gPGenFuncs) {
   const size_t nElemsToCopy = std::min(this->nodeGenFuncs.size(), nodeGenFuncs.size());
   std::copy_n(nodeGenFuncs.begin(), nElemsToCopy, this->nodeGenFuncs.begin());
 }
@@ -82,13 +85,27 @@ void SGGenInstr::resize(const size_t newDimCnt) {
   lvl2GPCntFuncs.resize(newDimCnt);
 }
 
-std::vector<NodeGenFunc> SGGenInstr::getUniqueNodeGenFuncs() const {
-  std::vector<NodeGenFunc> uniqueNodeGenFuncs;
+double SGGenInstr::getVolumeOfBounds() const {
+  if (nDim() == 0) {
+    return 0;
+  }
 
-  for (const NodeGenFunc candidate : nodeGenFuncs) {
+  double volume = 1;
+  for (size_t dim = 0; dim < nDim(); dim++) {
+    volume *= bounds[dim].second - bounds[dim].first;
+  }
+
+  return volume;
+}
+
+std::vector<NodeGenFunc*> SGGenInstr::getUniqueNodeGenFuncs() const {
+  std::vector<NodeGenFunc*> uniqueNodeGenFuncs;
+
+  for (NodeGenFunc* const candidate : nodeGenFuncs) {
     bool unique = true;
 
-    for (const NodeGenFunc nodeGenFunc : uniqueNodeGenFuncs) {
+    for (NodeGenFunc* const nodeGenFunc : uniqueNodeGenFuncs) {
+      // There should be only one object for each unique NodeGenFunc
       if (candidate == nodeGenFunc) {
         unique = false;
         break;

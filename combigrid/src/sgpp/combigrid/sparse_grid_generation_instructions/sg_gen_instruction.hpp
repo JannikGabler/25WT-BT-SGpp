@@ -1,9 +1,11 @@
 #ifndef COMBIGRID_SGGENINSTRUCTION_HPP
 #define COMBIGRID_SGGENINSTRUCTION_HPP
 
+#include <memory>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
+#include "sgpp/combigrid/node_generation_functions/node_generation_function.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -15,6 +17,11 @@ class SGGenInstr {
   ***********/
   SGGenInstr(size_t nDim);
 
+  /**********
+  Destructors
+  **********/
+  virtual ~SGGenInstr() = default;
+
   /******
   Getters
   ******/
@@ -22,8 +29,8 @@ class SGGenInstr {
 
   LvlType getBoundaryIndexOffset() const;
 
-  const std::vector<NodeGenFunc>& getNodeGenFuncs() const;
-  NodeGenFunc getNodeGenFuncForDim(size_t dim) const;
+  const std::vector<NodeGenFunc*>& getNodeGenFuncs() const;
+  NodeGenFunc* getNodeGenFuncForDim(size_t dim) const;
 
   const std::vector<Lvl2GPCntFunc>& getLvl2GPCntFuncs() const;
   Lvl2GPCntFunc getLvl2GPCntFuncForDim(size_t dim) const;
@@ -36,8 +43,8 @@ class SGGenInstr {
   void setBoundForDim(std::pair<double, double> bound, size_t dim);
   void setBounds(const std::vector<std::pair<double, double>>& bounds);
 
-  void setNodeGenFuncForDim(NodeGenFunc gPGenFunc, size_t dim);
-  void setNodeGenFuncs(const std::vector<NodeGenFunc>& gPGenFuncs);
+  void setNodeGenFuncForDim(NodeGenFunc* nodeGenFunc, size_t dim);
+  void setNodeGenFuncs(const std::vector<NodeGenFunc*>& gPGenFuncs);
 
   void setLvl2GPCntFuncForDim(Lvl2GPCntFunc lvl2GPCntFunc, size_t dim);
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs);
@@ -52,15 +59,19 @@ class SGGenInstr {
   /****************
   Helper operations
   ****************/
+  virtual std::shared_ptr<SGGenInstr> clone() const = 0;
+
   void resize(size_t newDimCnt);
 
-  std::vector<NodeGenFunc> getUniqueNodeGenFuncs() const;
+  double getVolumeOfBounds() const;
+
+  std::vector<NodeGenFunc*> getUniqueNodeGenFuncs() const;
 
  private:
   LvlType boundaryIndexOffset;
 
   std::vector<std::pair<double, double>> bounds;
-  std::vector<NodeGenFunc> nodeGenFuncs;
+  std::vector<NodeGenFunc*> nodeGenFuncs;
   std::vector<Lvl2GPCntFunc> lvl2GPCntFuncs;
 };
 

@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <cassert>
+#include <memory>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
@@ -19,13 +21,13 @@ using const_reverse_iterator = std::vector<TensorGridCTData>::const_reverse_iter
 Constructor
 **********/
 
-SparseGrid::SparseGrid(const size_t nDim) : nDim_(nDim), tensorGridData(), nodeGenFuncs() {}
+SparseGrid::SparseGrid(const size_t nDim) : nDim_(nDim), tensorGridData(), genInstr() {}
 
 SparseGrid::SparseGrid(const size_t nDim, const size_t nTG)
-    : nDim_(nDim), tensorGridData(nTG), nodeGenFuncs() {}
+    : nDim_(nDim), tensorGridData(nTG), genInstr() {}
 
 SparseGrid::SparseGrid(const SGGenInstr& genInstr)
-    : nDim_(genInstr.nDim()), nodeGenFuncs(genInstr.getNodeGenFuncs()) {
+    : nDim_(genInstr.nDim()), genInstr(genInstr.clone()) {
   const std::pair<LvlMIVec, std::vector<CTCoeffType>> p = genInstr.genMIVecWithCoeff();
 
   tensorGridData.resize(p.first.nMI());
@@ -49,7 +51,7 @@ const_iterator SparseGrid::getTensorGrid(const LvlMI& mi) const {
 
 const std::vector<TensorGridCTData>& SparseGrid::getTensorGrids() const { return tensorGridData; }
 
-const std::vector<NodeGenFunc>& SparseGrid::getNodeGenFuncs() const { return nodeGenFuncs; }
+const std::shared_ptr<const SGGenInstr> SparseGrid::getGenInstr() const { return genInstr; }
 
 /*****
 Setter
@@ -71,16 +73,16 @@ void SparseGrid::setTensorGrid(const size_t idx, TensorGridCTData&& tg) {
   tensorGridData[idx] = std::move(tg);
 }
 
-void SparseGrid::setNodeGenFuncs(const std::vector<NodeGenFunc>& nodeGenFuncs) {
-  assert(nodeGenFuncs.size() == nDim_);
+void SparseGrid::setGenInstr(const SGGenInstr& genInstr) {
+  assert(genInstr.nDim() == nDim_);
 
-  this->nodeGenFuncs = nodeGenFuncs;
+  this->genInstr = genInstr.clone();
 }
 
-void SparseGrid::setNodeGenFuncs(std::vector<NodeGenFunc>&& nodeGenFuncs) {
-  assert(nodeGenFuncs.size() == nDim_);
+void SparseGrid::setGenInstr(std::shared_ptr<const SGGenInstr>&& genInstr) {
+  assert(genInstr->nDim() == nDim_);
 
-  this->nodeGenFuncs = std::move(nodeGenFuncs);
+  this->genInstr = std::move(genInstr);
 }
 
 /*******
