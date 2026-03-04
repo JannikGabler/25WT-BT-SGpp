@@ -44,7 +44,7 @@ class SGGenInstr {
   void setBounds(const std::vector<std::pair<double, double>>& bounds);
 
   void setNodeGenFuncForDim(NodeGenFunc* nodeGenFunc, size_t dim);
-  void setNodeGenFuncs(const std::vector<NodeGenFunc*>& gPGenFuncs);
+  void setNodeGenFuncs(const std::vector<NodeGenFunc*>& nodeGenFuncs);
 
   void setLvl2GPCntFuncForDim(Lvl2GPCntFunc lvl2GPCntFunc, size_t dim);
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs);

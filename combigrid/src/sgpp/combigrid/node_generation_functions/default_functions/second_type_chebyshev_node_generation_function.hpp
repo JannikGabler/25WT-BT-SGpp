@@ -9,16 +9,18 @@
 namespace sgpp {
 namespace combigrid {
 
-class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
+namespace node_gen_funcs {
+
+class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
  public:
   base::DataVector genGPs(const size_t nNodes) const override {
-    const double f1 = M_PI / (2 * static_cast<double>(nNodes));
+    const double f1 = M_PI / static_cast<double>(nNodes + 1);
     base::DataVector nodes(nNodes);
 
-    for (GPCntType i = 0; i < nNodes; i++) {
-      const double f2 = 2 * static_cast<double>(nNodes - 1 - i) + 1;  // Reverse order
+    for (GPCntType i = 1; i <= nNodes; i++) {
+      const double f2 = static_cast<double>(nNodes - i + 1);  // Reverse order
       const double nonTransformedNode = std::cos(f1 * f2);
-      nodes[i] = nonTransformedNode / 2 + 0.5;
+      nodes[i - 1] = nonTransformedNode / 2 + 0.5;
     }
 
     return nodes;
@@ -33,6 +35,8 @@ class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
     return typeid(*this) == typeid(other);
   }
 };
+
+}  // namespace node_gen_funcs
 
 }  // namespace combigrid
 }  // namespace sgpp

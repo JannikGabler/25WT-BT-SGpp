@@ -82,8 +82,8 @@ double getWeightForGP(const std::vector<GPCntType>& gpMI,
   return weight;
 }
 
-std::vector<QuadRule*> getQuadRules(
-    const TensorGrid& tg, const std::vector<std::shared_ptr<const NodeGenFunc>>& nodeGenFuncs) {
+std::vector<QuadRule*> getQuadRules(const TensorGrid& tg,
+                                    const std::vector<NodeGenFunc*>& nodeGenFuncs) {
   const GPMI& gpCntPerDim = tg.getGPCntPerDim();
   std::vector<QuadRule*> quadRules(nodeGenFuncs.size());
 

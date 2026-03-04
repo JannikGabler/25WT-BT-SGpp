@@ -12,7 +12,7 @@ namespace sgpp {
 namespace combigrid {
 namespace misc {
 
-template <typename K, typename V, size_t SHARDS = 64>
+template <typename K, typename V, size_t SHARDS = 2>
 class InMemoryCache : public BaseCache,
                       public std::enable_shared_from_this<InMemoryCache<K, V, SHARDS> > {
  public:

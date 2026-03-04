@@ -1,12 +1,11 @@
 #include <algorithm>
 #include <sgpp/combigrid/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/node_generation_functions/equidistant_node_generation_function.hpp>
+#include <sgpp/combigrid/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
-#include "sgpp/base/exception/not_implemented_exception.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -18,10 +17,8 @@ Constructors
 SGGenInstr::SGGenInstr(const size_t nDim)
     : boundaryIndexOffset(0),
       bounds(nDim, {0, 1}),
-      nodeGenFuncs(nDim, nullptr),  // TODO
-      lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {
-  throw base::not_implemented_exception("");
-}
+      nodeGenFuncs(nDim, getEquidistantNodeGenFunc()),
+      lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {}
 
 /******
 Getters
@@ -62,7 +59,7 @@ void SGGenInstr::setNodeGenFuncForDim(NodeGenFunc* const nodeGenFunc, const size
   nodeGenFuncs[dim] = nodeGenFunc;
 }
 
-void SGGenInstr::setNodeGenFuncs(const std::vector<NodeGenFunc*>& gPGenFuncs) {
+void SGGenInstr::setNodeGenFuncs(const std::vector<NodeGenFunc*>& nodeGenFuncs) {
   const size_t nElemsToCopy = std::min(this->nodeGenFuncs.size(), nodeGenFuncs.size());
   std::copy_n(nodeGenFuncs.begin(), nElemsToCopy, this->nodeGenFuncs.begin());
 }

@@ -15,7 +15,7 @@ Default binary serializer for trivially copyable types
 */
 template <typename T>
 typename std::enable_if<std::is_trivially_copyable<T>::value, CacheSerializer<T>>::type
-defaultCacheSerializer() {
+getDefaultCacheSerializer() {
   return
       [](const T& v, std::ostream& os) { os.write(reinterpret_cast<const char*>(&v), sizeof(T)); };
 }
@@ -25,7 +25,7 @@ Default binary deserializer for trivially copyable types
 */
 template <typename T>
 typename std::enable_if<std::is_trivially_copyable<T>::value, CacheDeserializer<T>>::type
-defaultCacheDeserializer() {
+getDefaultCacheDeserializer() {
   return [](T& v, std::istream& is) -> bool {
     is.read(reinterpret_cast<char*>(&v), sizeof(T));
     return (bool)is;

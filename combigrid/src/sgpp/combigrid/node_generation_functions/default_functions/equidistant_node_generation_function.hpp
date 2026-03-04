@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/node_generation_functions/node_generation_function.hpp>
@@ -11,6 +10,8 @@
 
 namespace sgpp {
 namespace combigrid {
+
+namespace node_gen_funcs {
 
 class EquidistantNodeGenFunc : public NodeGenFunc {
  public:
@@ -40,6 +41,8 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
     return typeid(*this) == typeid(other);
   }
 };
+
+}  // namespace node_gen_funcs
 
 }  // namespace combigrid
 }  // namespace sgpp

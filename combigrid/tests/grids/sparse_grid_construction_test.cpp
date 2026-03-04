@@ -18,7 +18,9 @@
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
-#include <sgpp/combigrid/node_generation_functions/node_generation_functions.hpp>
+#include <sgpp/combigrid/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
@@ -29,6 +31,8 @@ using namespace sgpp::combigrid;
 
 static sgpp::base::RandomNumberGenerator& randGen =
     sgpp::base::RandomNumberGenerator::getInstance();
+static NodeGenFunc* equidistantNodeGenFunc = getEquidistantNodeGenFunc();
+static NodeGenFunc* clenshawCurtisNodeGenFunc = getClenshawCurtisNodeGenFunc();
 
 namespace {
 
@@ -86,7 +90,7 @@ BOOST_AUTO_TEST_CASE(Random_Full_1D_SG) {
     const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(10000);
 
     FullSGGenInstr genInstr(maxLvl, 1);
-    genInstr.setNodeGenFuncs({genEquidistantNodes});
+    genInstr.setNodeGenFuncs({equidistantNodeGenFunc});
     genInstr.setLvl2GPCntFuncs({linearLvl2GPCntFunction});
 
     // Expected
@@ -96,7 +100,8 @@ BOOST_AUTO_TEST_CASE(Random_Full_1D_SG) {
 
     const CTCoeffType coeff = 1;
 
-    const sgpp::base::DataVector nodes = genEquidistantNodes(linearLvl2GPCntFunction(maxLvl));
+    const sgpp::base::DataVector nodes =
+        equidistantNodeGenFunc->genGPs(linearLvl2GPCntFunction(maxLvl));
     std::vector<sgpp::base::DataVector> gps(nodes.size() + 2);
     gps[0] = sgpp::base::DataVector{0};
     for (size_t i = 0; i < nodes.size(); i++) {
@@ -117,7 +122,7 @@ BOOST_AUTO_TEST_CASE(Random_Full_1D_SG) {
 
 BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
   FullSGGenInstr genInstr(2, 2);
-  genInstr.setNodeGenFuncs({genEquidistantNodes, genClenshawCurtisNodes});
+  genInstr.setNodeGenFuncs({equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
   genInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryIndexOffset(1);
 
@@ -129,11 +134,16 @@ BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
 
   CTCoeffType coeff = 1;
 
-  sgpp::base::DataVector nodesDim1{
-      static_cast<double>(0),    genEquidistantNodes(7)[0], genEquidistantNodes(7)[1],
-      genEquidistantNodes(7)[2], genEquidistantNodes(7)[3], genEquidistantNodes(7)[4],
-      genEquidistantNodes(7)[5], genEquidistantNodes(7)[6], static_cast<double>(1)};
-  sgpp::base::DataVector nodesDim2{genClenshawCurtisNodes(1)[0]};
+  sgpp::base::DataVector nodesDim1{static_cast<double>(0),
+                                   equidistantNodeGenFunc->genGPs(7)[0],
+                                   equidistantNodeGenFunc->genGPs(7)[1],
+                                   equidistantNodeGenFunc->genGPs(7)[2],
+                                   equidistantNodeGenFunc->genGPs(7)[3],
+                                   equidistantNodeGenFunc->genGPs(7)[4],
+                                   equidistantNodeGenFunc->genGPs(7)[5],
+                                   equidistantNodeGenFunc->genGPs(7)[6],
+                                   static_cast<double>(1)};
+  sgpp::base::DataVector nodesDim2{clenshawCurtisNodeGenFunc->genGPs(1)[0]};
 
   TensorGrid tg({GPCntType(9), GPCntType(1)}, prod2DGPs(nodesDim1, nodesDim2));
   expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
@@ -143,11 +153,12 @@ BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
 
   coeff = 1;
 
-  nodesDim1 = sgpp::base::DataVector{static_cast<double>(0), genEquidistantNodes(3)[0],
-                                     genEquidistantNodes(3)[1], genEquidistantNodes(3)[2],
-                                     static_cast<double>(1)};
-  nodesDim2 = sgpp::base::DataVector{static_cast<double>(0), genClenshawCurtisNodes(2)[0],
-                                     genClenshawCurtisNodes(2)[1], static_cast<double>(1)};
+  nodesDim1 = sgpp::base::DataVector{static_cast<double>(0), equidistantNodeGenFunc->genGPs(3)[0],
+                                     equidistantNodeGenFunc->genGPs(3)[1],
+                                     equidistantNodeGenFunc->genGPs(3)[2], static_cast<double>(1)};
+  nodesDim2 =
+      sgpp::base::DataVector{static_cast<double>(0), clenshawCurtisNodeGenFunc->genGPs(2)[0],
+                             clenshawCurtisNodeGenFunc->genGPs(2)[1], static_cast<double>(1)};
 
   tg = TensorGrid({GPCntType(5), GPCntType(4)}, prod2DGPs(nodesDim1, nodesDim2));
   expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
@@ -157,10 +168,11 @@ BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
 
   coeff = 1;
 
-  nodesDim1 = sgpp::base::DataVector{genEquidistantNodes(1)[0]};
-  nodesDim2 = sgpp::base::DataVector{static_cast<double>(0), genClenshawCurtisNodes(3)[0],
-                                     genClenshawCurtisNodes(3)[1], genClenshawCurtisNodes(3)[2],
-                                     static_cast<double>(1)};
+  nodesDim1 = sgpp::base::DataVector{equidistantNodeGenFunc->genGPs(1)[0]};
+  nodesDim2 =
+      sgpp::base::DataVector{static_cast<double>(0), clenshawCurtisNodeGenFunc->genGPs(3)[0],
+                             clenshawCurtisNodeGenFunc->genGPs(3)[1],
+                             clenshawCurtisNodeGenFunc->genGPs(3)[2], static_cast<double>(1)};
 
   tg = TensorGrid({GPCntType(1), GPCntType(5)}, prod2DGPs(nodesDim1, nodesDim2));
   expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
@@ -170,10 +182,10 @@ BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
 
   coeff = -1;
 
-  nodesDim1 = sgpp::base::DataVector{static_cast<double>(0), genEquidistantNodes(3)[0],
-                                     genEquidistantNodes(3)[1], genEquidistantNodes(3)[2],
-                                     static_cast<double>(1)};
-  nodesDim2 = sgpp::base::DataVector{genClenshawCurtisNodes(1)[0]};
+  nodesDim1 = sgpp::base::DataVector{static_cast<double>(0), equidistantNodeGenFunc->genGPs(3)[0],
+                                     equidistantNodeGenFunc->genGPs(3)[1],
+                                     equidistantNodeGenFunc->genGPs(3)[2], static_cast<double>(1)};
+  nodesDim2 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genGPs(1)[0]};
 
   tg = TensorGrid({GPCntType(5), GPCntType(1)}, prod2DGPs(nodesDim1, nodesDim2));
   expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
@@ -183,9 +195,10 @@ BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
 
   coeff = -1;
 
-  nodesDim1 = sgpp::base::DataVector{genEquidistantNodes(1)[0]};
-  nodesDim2 = sgpp::base::DataVector{static_cast<double>(0), genClenshawCurtisNodes(2)[0],
-                                     genClenshawCurtisNodes(2)[1], static_cast<double>(1)};
+  nodesDim1 = sgpp::base::DataVector{equidistantNodeGenFunc->genGPs(1)[0]};
+  nodesDim2 =
+      sgpp::base::DataVector{static_cast<double>(0), clenshawCurtisNodeGenFunc->genGPs(2)[0],
+                             clenshawCurtisNodeGenFunc->genGPs(2)[1], static_cast<double>(1)};
 
   tg = TensorGrid({GPCntType(1), GPCntType(4)}, prod2DGPs(nodesDim1, nodesDim2));
   expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
@@ -202,7 +215,8 @@ BOOST_AUTO_TEST_CASE(Simple_Full_3D_Level0) {
   const LvlType maxLvl = 0;
   FullSGGenInstr genInstr(maxLvl, 3);
 
-  genInstr.setNodeGenFuncs({genEquidistantNodes, genEquidistantNodes, genEquidistantNodes});
+  genInstr.setNodeGenFuncs(
+      {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryIndexOffset(1);
@@ -214,9 +228,9 @@ BOOST_AUTO_TEST_CASE(Simple_Full_3D_Level0) {
   const LvlMI mi({0, 0, 0});
   const CTCoeffType coeff = 1;
 
-  const sgpp::base::DataVector nodesDim1{genEquidistantNodes(1)[0]};
-  const sgpp::base::DataVector nodesDim2{genEquidistantNodes(1)[0]};
-  const sgpp::base::DataVector nodesDim3{genEquidistantNodes(1)[0]};
+  const sgpp::base::DataVector nodesDim1{equidistantNodeGenFunc->genGPs(1)[0]};
+  const sgpp::base::DataVector nodesDim2{equidistantNodeGenFunc->genGPs(1)[0]};
+  const sgpp::base::DataVector nodesDim3{equidistantNodeGenFunc->genGPs(1)[0]};
 
   const TensorGrid tg({GPCntType(1), GPCntType(1), GPCntType(1)},
                       prod3DGPs(nodesDim1, nodesDim2, nodesDim3));
@@ -236,7 +250,8 @@ BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
 
   FullSGGenInstr genInstr(maxLvl, dim);
 
-  genInstr.setNodeGenFuncs({genEquidistantNodes, genClenshawCurtisNodes, genEquidistantNodes});
+  genInstr.setNodeGenFuncs(
+      {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
       {doublingLvl2GPCntFunction, linearLvl2GPCntFunction, doublingLvl2GPCntFunction});
   genInstr.setBoundaryIndexOffset(1);
@@ -268,11 +283,11 @@ BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
           if (l1 > 0) {
             nodesDim1.resize(gpCnt + 2);
             nodesDim1[0] = 0;
-            sgpp::base::DataVector interior = genEquidistantNodes(gpCnt);
+            sgpp::base::DataVector interior = equidistantNodeGenFunc->genGPs(gpCnt);
             for (size_t i = 0; i < gpCnt; ++i) nodesDim1[i + 1] = interior[i];
             nodesDim1[nodesDim1.size() - 1] = 1;
           } else {
-            nodesDim1 = sgpp::base::DataVector{genEquidistantNodes(1)[0]};
+            nodesDim1 = sgpp::base::DataVector{equidistantNodeGenFunc->genGPs(1)[0]};
           }
         }
 
@@ -282,11 +297,11 @@ BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
           if (l2 > 0) {
             nodesDim2.resize(gpCnt + 2);
             nodesDim2[0] = 0;
-            sgpp::base::DataVector interior = genClenshawCurtisNodes(gpCnt);
+            sgpp::base::DataVector interior = clenshawCurtisNodeGenFunc->genGPs(gpCnt);
             for (size_t i = 0; i < gpCnt; ++i) nodesDim2[i + 1] = interior[i];
             nodesDim2[nodesDim2.size() - 1] = 1;
           } else {
-            nodesDim2 = sgpp::base::DataVector{genClenshawCurtisNodes(1)[0]};
+            nodesDim2 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genGPs(1)[0]};
           }
         }
 
@@ -296,11 +311,11 @@ BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
           if (l3 > 0) {
             nodesDim3.resize(gpCnt + 2);
             nodesDim3[0] = 0;
-            sgpp::base::DataVector interior = genEquidistantNodes(gpCnt);
+            sgpp::base::DataVector interior = equidistantNodeGenFunc->genGPs(gpCnt);
             for (size_t i = 0; i < gpCnt; ++i) nodesDim3[i + 1] = interior[i];
             nodesDim3[nodesDim3.size() - 1] = 1;
           } else {
-            nodesDim3 = sgpp::base::DataVector{genEquidistantNodes(1)[0]};
+            nodesDim3 = sgpp::base::DataVector{equidistantNodeGenFunc->genGPs(1)[0]};
           }
         }
 
@@ -337,7 +352,8 @@ BOOST_AUTO_TEST_CASE(Random_Full_3D_SG) {
     const size_t dim = 3;
 
     FullSGGenInstr genInstr(maxLvl, dim);
-    genInstr.setNodeGenFuncs({genEquidistantNodes, genClenshawCurtisNodes, genEquidistantNodes});
+    genInstr.setNodeGenFuncs(
+        {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
     genInstr.setLvl2GPCntFuncs(
         {doublingLvl2GPCntFunction, linearLvl2GPCntFunction, doublingLvl2GPCntFunction});
     genInstr.setBoundaryIndexOffset(1);
@@ -367,11 +383,11 @@ BOOST_AUTO_TEST_CASE(Random_Full_3D_SG) {
             if (l1 > 0) {
               nodesDim1.resize(gpCnt + 2);
               nodesDim1[0] = 0;
-              sgpp::base::DataVector interior = genEquidistantNodes(gpCnt);
+              sgpp::base::DataVector interior = equidistantNodeGenFunc->genGPs(gpCnt);
               for (size_t i = 0; i < gpCnt; ++i) nodesDim1[i + 1] = interior[i];
               nodesDim1[nodesDim1.size() - 1] = 1;
             } else {
-              nodesDim1 = sgpp::base::DataVector{genEquidistantNodes(1)[0]};
+              nodesDim1 = sgpp::base::DataVector{equidistantNodeGenFunc->genGPs(1)[0]};
             }
           }
 
@@ -381,11 +397,11 @@ BOOST_AUTO_TEST_CASE(Random_Full_3D_SG) {
             if (l2 > 0) {
               nodesDim2.resize(gpCnt + 2);
               nodesDim2[0] = 0;
-              sgpp::base::DataVector interior = genClenshawCurtisNodes(gpCnt);
+              sgpp::base::DataVector interior = clenshawCurtisNodeGenFunc->genGPs(gpCnt);
               for (size_t i = 0; i < gpCnt; ++i) nodesDim2[i + 1] = interior[i];
               nodesDim2[nodesDim2.size() - 1] = double(1);
             } else {
-              nodesDim2 = sgpp::base::DataVector{genClenshawCurtisNodes(1)[0]};
+              nodesDim2 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genGPs(1)[0]};
             }
           }
 
@@ -395,11 +411,11 @@ BOOST_AUTO_TEST_CASE(Random_Full_3D_SG) {
             if (l3 > 0) {
               nodesDim3.resize(gpCnt + 2);
               nodesDim3[0] = 0;
-              sgpp::base::DataVector interior = genEquidistantNodes(gpCnt);
+              sgpp::base::DataVector interior = equidistantNodeGenFunc->genGPs(gpCnt);
               for (size_t i = 0; i < gpCnt; ++i) nodesDim3[i + 1] = interior[i];
               nodesDim3[nodesDim3.size() - 1] = 1;
             } else {
-              nodesDim3 = sgpp::base::DataVector{genEquidistantNodes(1)[0]};
+              nodesDim3 = sgpp::base::DataVector{equidistantNodeGenFunc->genGPs(1)[0]};
             }
           }
 
@@ -436,7 +452,8 @@ BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
   const size_t dim = 3;
 
   FullSGGenInstr genInstr(maxLvl, dim);
-  genInstr.setNodeGenFuncs({genClenshawCurtisNodes, genEquidistantNodes, genClenshawCurtisNodes});
+  genInstr.setNodeGenFuncs(
+      {clenshawCurtisNodeGenFunc, equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryIndexOffset(1);
@@ -465,11 +482,11 @@ BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
           if (l1 > 0) {
             nodesDim1.resize(gpCnt + 2);
             nodesDim1[0] = 0;
-            sgpp::base::DataVector interior = genClenshawCurtisNodes(gpCnt);
+            sgpp::base::DataVector interior = clenshawCurtisNodeGenFunc->genGPs(gpCnt);
             for (size_t i = 0; i < gpCnt; ++i) nodesDim1[i + 1] = interior[i];
             nodesDim1[nodesDim1.size() - 1] = 1;
           } else {
-            nodesDim1 = sgpp::base::DataVector{genClenshawCurtisNodes(1)[0]};
+            nodesDim1 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genGPs(1)[0]};
           }
         }
 
@@ -479,11 +496,11 @@ BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
           if (l2 > 0) {
             nodesDim2.resize(gpCnt + 2);
             nodesDim2[0] = 0;
-            sgpp::base::DataVector interior = genEquidistantNodes(gpCnt);
+            sgpp::base::DataVector interior = equidistantNodeGenFunc->genGPs(gpCnt);
             for (size_t i = 0; i < gpCnt; ++i) nodesDim2[i + 1] = interior[i];
             nodesDim2[nodesDim2.size() - 1] = 1;
           } else {
-            nodesDim2 = sgpp::base::DataVector{genEquidistantNodes(1)[0]};
+            nodesDim2 = sgpp::base::DataVector{equidistantNodeGenFunc->genGPs(1)[0]};
           }
         }
 
@@ -493,11 +510,11 @@ BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
           if (l3 > 0) {
             nodesDim3.resize(gpCnt + 2);
             nodesDim3[0] = 0;
-            sgpp::base::DataVector interior = genClenshawCurtisNodes(gpCnt);
+            sgpp::base::DataVector interior = clenshawCurtisNodeGenFunc->genGPs(gpCnt);
             for (size_t i = 0; i < gpCnt; ++i) nodesDim3[i + 1] = interior[i];
             nodesDim3[nodesDim3.size() - 1] = 1;
           } else {
-            nodesDim3 = sgpp::base::DataVector{genClenshawCurtisNodes(1)[0]};
+            nodesDim3 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genGPs(1)[0]};
           }
         }
 
@@ -530,7 +547,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
   // Generation instruction for boundaryIndexOffset = 0
   FullSGGenInstr genInstrNoBoundary(maxLvl, dim);
   genInstrNoBoundary.setNodeGenFuncs(
-      {genEquidistantNodes, genEquidistantNodes, genEquidistantNodes});
+      {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
   genInstrNoBoundary.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstrNoBoundary.setBoundaryIndexOffset(1);
@@ -540,14 +557,14 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
   // Generation instruction for boundaryIndexOffset = 1
   FullSGGenInstr genInstrWithBoundary(maxLvl, dim);
   genInstrWithBoundary.setNodeGenFuncs(
-      {genEquidistantNodes, genEquidistantNodes, genEquidistantNodes});
+      {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
   genInstrWithBoundary.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstrWithBoundary.setBoundaryIndexOffset(0);
 
   const SparseGrid resultWithBoundary(genInstrWithBoundary);
 
-  // Inspect one representative tensor grid: multi-index (1,0,0) should differ in GPCnt for dim2 and
+  // Inspect one representative tensor grid: multi-index (1,0,0) should differ in GPCnt for dim2 &
   // dim3
   LvlMI mi({1, 0, 0});
   const auto tgNoB = resultNoBoundary.getTensorGrid(mi);
@@ -594,7 +611,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
 //   for (size_t tgIdx = 0; tgIdx < sg.nTG(); ++tgIdx) {
 //     const TensorGridCTData& tg = sg.getTensorGrid(tgIdx);
 
-//     // Multiindex und Koeffizient sollten exakt mit genInstr.genMIVecWithCoeff() übereinstimmen
+//     // Multiindex und Koeffizient sollten exakt mit genInstr.genMIVecWithCoeff übereinstimmen
 //     BOOST_CHECK(tg.mi == expectedMIVec[tgIdx]);
 //     BOOST_CHECK_EQUAL(tg.coefficient, expectedCoeffs[tgIdx]);
 
