@@ -155,7 +155,7 @@ class Module(object):
                               "python pysgpp/doxy2swig.py -o -c -q $SOURCE $TARGET")
       pydocTargetList.append(doxy2swig)
 
-  def buildExamples(self, exampleFolder="examples", additionalExampleDependencies=[]):
+  def buildExamples(self, exampleFolder="examples", additionalExampleDependencies=[], recursive=False):
     """Build the examples.
     """
     if not os.path.isdir(exampleFolder): return
@@ -166,19 +166,43 @@ class Module(object):
                                  self.moduleDependencies + self.additionalDependencies +
                                  additionalExampleDependencies)
 
-    # for each example
-    for fileName in os.listdir(exampleFolder):
-      if fnmatch.fnmatch(fileName, "*.cpp"):
-        # source file
-        cpp = os.path.join(exampleFolder, fileName)
-        self.cpps.append(cpp)
-        example = exampleEnv.Program(source=cpp)
-        exampleEnv.Depends(example, self.libInstall)
-        exampleTargetList.append(example)
-      elif fnmatch.fnmatch(fileName, "*.hpp"):
-        # header file
-        hpp = os.path.join(exampleFolder, fileName)
-        self.hpps.append(hpp)
+    # # for each example
+    # for fileName in os.listdir(exampleFolder):
+    #   if fnmatch.fnmatch(fileName, "*.cpp"):
+    #     # source file
+    #     cpp = os.path.join(exampleFolder, fileName)
+    #     self.cpps.append(cpp)
+    #     example = exampleEnv.Program(source=cpp)
+    #     exampleEnv.Depends(example, self.libInstall)
+    #     exampleTargetList.append(example)
+    #   elif fnmatch.fnmatch(fileName, "*.hpp"):
+    #     # header file
+    #     hpp = os.path.join(exampleFolder, fileName)
+    #     self.hpps.append(hpp)
+    # collect files
+    if recursive:
+        fileList = []
+        for root, dirs, files in os.walk(exampleFolder):
+            for f in files:
+                fileList.append(os.path.join(root, f))
+    else:
+        fileList = [os.path.join(exampleFolder, f)
+                    for f in os.listdir(exampleFolder)]
+
+    # for each example file
+    for path in fileList:
+        fileName = os.path.basename(path)
+
+        if fnmatch.fnmatch(fileName, "*.cpp"):
+            cpp = path
+            self.cpps.append(cpp)
+            example = exampleEnv.Program(source=cpp)
+            exampleEnv.Depends(example, self.libInstall)
+            exampleTargetList.append(example)
+
+        elif fnmatch.fnmatch(fileName, "*.hpp"):
+            hpp = path
+            self.hpps.append(hpp)
 
   def runExamples(self, exampleFolder="examples", language="all"):
     """Run the examples.
