@@ -11,10 +11,10 @@
 
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>

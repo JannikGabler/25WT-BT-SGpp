@@ -2,10 +2,10 @@
 #define COMBIGRID_SGGENINSTRUCTION_HPP
 
 #include <memory>
+#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
-#include "sgpp/combigrid/node_generation_functions/node_generation_function.hpp"
 
 namespace sgpp {
 namespace combigrid {

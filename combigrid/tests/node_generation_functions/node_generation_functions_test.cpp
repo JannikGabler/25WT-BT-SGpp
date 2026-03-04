@@ -12,9 +12,9 @@
 #include <cmath>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/node_generation_functions/default_functions/equidistant_node_generation_function.hpp>
-#include <sgpp/combigrid/node_generation_functions/default_functions/first_type_chebyshev_node_generation_function.hpp>
-#include <sgpp/combigrid/node_generation_functions/default_functions/second_type_chebyshev_node_generation_function.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/default_functions/equidistant_node_generation_function.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/default_functions/first_type_chebyshev_node_generation_function.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/default_functions/second_type_chebyshev_node_generation_function.hpp>
 
 using namespace sgpp::combigrid;
 using namespace sgpp::base;

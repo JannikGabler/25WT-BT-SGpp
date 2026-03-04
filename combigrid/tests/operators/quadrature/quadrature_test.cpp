@@ -2,7 +2,6 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
-#include <utility>
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -19,6 +18,7 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <utility>
 
 using namespace sgpp::combigrid;
 using DataVector = sgpp::base::DataVector;
@@ -354,7 +354,7 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 1 + randGen.getUniformIndexRN(5);                           // 1..5
-    const LvlType maxLvl = static_cast<LvlType>(8 + randGen.getUniformIndexRN(3));  // 8..10
+    const LvlType maxLvl = static_cast<LvlType>(9 + randGen.getUniformIndexRN(3));  // 9..11
 
     // Random exponents 0..4
     std::vector<int> exponents(nDim);
