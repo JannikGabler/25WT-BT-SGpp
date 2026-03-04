@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/miscellaneous/hash/std_pair_hash.hpp>
+#include <sgpp/combigrid/miscellaneous/hashing/std_pair_hash.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
@@ -32,7 +32,7 @@ using CTCoeffType = int;
 -Fixed types-
 Should not be changed.
 *********************/
-using SourceFunc = double (*)(sgpp::base::DataVector);
+using SourceFunc = double (*)(const sgpp::base::DataVector&);
 
 // using NodeGenFunc = sgpp::base::DataVector (*)(GPCntType);
 using Lvl2GPCntFunc = GPCntType (*)(LvlType);
@@ -40,6 +40,8 @@ using Lvl2GPCntFunc = GPCntType (*)(LvlType);
 
 using SGGenNodeLookup = std::unordered_map<std::pair<NodeGenFunc*, GPCntType>, base::DataVector,
                                            misc::PairHash<NodeGenFunc*, GPCntType>>;
+
+using CacheId = uint64_t;
 
 }  // namespace combigrid
 }  // namespace sgpp
