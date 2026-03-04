@@ -11,8 +11,10 @@
 #include <omp.h>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
+#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <string>
 #include <vector>
 
 using namespace sgpp::combigrid;
@@ -23,15 +25,18 @@ static sgpp::base::RandomNumberGenerator& randGen =
 
 namespace {
 
-double simpleSum(const sgpp::base::DataVector& v) {
-  double sum = 0.0;
-  for (size_t i = 0; i < v.getSize(); ++i) {
-    sum += v[i];
+double simpleSum(const DataVector& point) {
+  double sum = 0;
+
+  for (const double v : point) {
+    sum += v;
   }
+
   return sum;
 }
 
 }  // namespace
+
 BOOST_AUTO_TEST_CASE(empty_cache) {
   misc::SourceFunctionCache cache;
 
@@ -93,31 +98,43 @@ BOOST_AUTO_TEST_CASE(test_erase) {
   BOOST_CHECK(cache.size() == 0);
 }
 
-BOOST_AUTO_TEST_CASE(test_find_or_compute_single_evaluation) {
+BOOST_AUTO_TEST_CASE(test_double_insert) {
   misc::SourceFunctionCache cache;
-
-  const SourceFunc sourceFunc = simpleSum;
 
   const DataVector point{1.0, 2.0, 3.0};
 
-  const double v1 = cache.findOrCompute(point, sourceFunc);
-  const double v2 = cache.findOrCompute(point, sourceFunc);
+  cache.insert(point, 6.0);
+
+  double v1 = -1;
+  cache.find(point, v1);
+
+  cache.insert(point, 6.0);
+
+  double v2 = -1;
+  cache.find(point, v2);
 
   BOOST_CHECK(v1 == 6.0);
   BOOST_CHECK(v2 == 6.0);
   BOOST_CHECK(cache.size() == 1);
 }
 
-BOOST_AUTO_TEST_CASE(test_find_or_compute_multiple_points) {
+BOOST_AUTO_TEST_CASE(test_insert_and_find_multiple_points) {
   misc::SourceFunctionCache cache;
-
-  const SourceFunc sourceFunc = simpleSum;
 
   const DataVector point1{1.0};
   const DataVector point2{2.0};
 
-  BOOST_CHECK(cache.findOrCompute(point1, sourceFunc) == 1.0);
-  BOOST_CHECK(cache.findOrCompute(point2, sourceFunc) == 2.0);
+  cache.insert(point1, 1.0);
+  cache.insert(point2, 2.0);
+
+  double v1 = -1;
+  cache.find(point1, v1);
+
+  double v2 = -1;
+  cache.find(point2, v2);
+
+  BOOST_CHECK(v1 == 1.0);
+  BOOST_CHECK(v2 == 2.0);
   BOOST_CHECK(cache.size() == 2);
 }
 
@@ -127,17 +144,28 @@ BOOST_AUTO_TEST_CASE(test_shard_count) {
   BOOST_CHECK(cache.shardCnt() == 16);
 }
 
-BOOST_AUTO_TEST_CASE(test_multithreaded_find_or_compute) {
+BOOST_AUTO_TEST_CASE(test_multithreaded_insert_and_find) {
+  const size_t n = 20;
+
   misc::SourceFunctionCache cache(2);
 
-  const SourceFunc sourceFunc = simpleSum;
-
   const DataVector point{1.0, 2.0, 3.0};
+  std::vector<bool> errors(n, false);
 
 #pragma omp parallel for schedule(static)
-  for (int i = 0; i < 8; ++i) {
-    double value = cache.findOrCompute(point, sourceFunc);
-    BOOST_CHECK(value == 6.0);
+  for (size_t i = 0; i < n; ++i) {
+    cache.insert(point, 6);
+
+    double v = -1;
+    cache.find(point, v);
+
+    if (v != 6.0) {
+      errors[i] = true;
+    }
+  }
+
+  for (size_t i = 0; i < n; i++) {
+    BOOST_CHECK_MESSAGE(!errors[i], "Iteration '" + std::to_string(i) + "' has reported an error.");
   }
 
   BOOST_CHECK(cache.size() == 1);
@@ -152,8 +180,6 @@ BOOST_AUTO_TEST_CASE(test_randomized_multithreaded_access_openmp) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     misc::SourceFunctionCache cache(64);
 
-    const SourceFunc sourceFunc = simpleSum;
-
     std::vector<bool> error(numThreads);
 
 // Parallel randomized access
@@ -167,19 +193,15 @@ BOOST_AUTO_TEST_CASE(test_randomized_multithreaded_access_openmp) {
           point[d] = randGen.getUniformRN(-10.0, 10.0);
         }
 
-        const int action = static_cast<int>(randGen.getUniformRN(0.0, 4.0));
+        const size_t action = randGen.getUniformIndexRN(3);
 
-        if (action == 0) {  // findOrCompute
-          const double value = cache.findOrCompute(point, sourceFunc);
-          const double expected = sourceFunc(point);
-          if (value != expected) error[threadId] = true;
-        } else if (action == 1) {  // insert
-          const double value = sourceFunc(point);
+        if (action == 0) {  // insert
+          const double value = simpleSum(point);
           cache.insert(point, value);
-        } else if (action == 2) {  // find
+        } else if (action == 1) {  // find
           double value = 0.0;
           if (cache.find(point, value)) {
-            const double expected = sourceFunc(point);
+            const double expected = simpleSum(point);
             if (value != expected) error[threadId] = true;
           }
         } else {  // Erase
@@ -203,7 +225,7 @@ BOOST_AUTO_TEST_CASE(test_randomized_multithreaded_access_openmp) {
         const sgpp::base::DataVector& point = kv.first;
         const double storedValue = kv.second;
 
-        const double expectedValue = sourceFunc(point);
+        const double expectedValue = simpleSum(point);
 
         // Validate value correctness
         BOOST_CHECK(storedValue == expectedValue);
@@ -213,16 +235,5 @@ BOOST_AUTO_TEST_CASE(test_randomized_multithreaded_access_openmp) {
     }
 
     BOOST_CHECK(totalEntries == cache.size());
-
-    // Additional spot-checks after dump
-    for (size_t i = 0; i < 100; ++i) {
-      DataVector point(dimension);
-      for (size_t d = 0; d < dimension; ++d) {
-        point[d] = randGen.getUniformRN(-5.0, 5.0);
-      }
-
-      const double value = cache.findOrCompute(point, sourceFunc);
-      BOOST_CHECK(value == sourceFunc(point));
-    }
   }
 }

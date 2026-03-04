@@ -12,15 +12,17 @@ namespace sgpp {
 namespace combigrid {
 namespace misc {
 
-SourceFunctionCache::SourceFunctionCache(const size_t shard_count, const size_t per_shard_reserve)
-    : shards_(std::max<size_t>(1, shard_count)) {
-  for (auto& s : shards_) {
-    if (per_shard_reserve) s.map.reserve(per_shard_reserve);
+SourceFunctionCache::SourceFunctionCache(const size_t nShards, const size_t perShardReserve)
+    : shards_(std::max<size_t>(1, nShards)) {
+  if (perShardReserve > 0) {
+    for (auto& s : shards_) {
+      s.map.reserve(perShardReserve);
+    }
   }
 }
 
 bool SourceFunctionCache::find(const base::DataVector& point, double& f_out) const {
-  size_t idx = shard_index(point);
+  size_t idx = shardIndex(point);
   Shard const& sh = shards_[idx];
   std::lock_guard<std::mutex> lock(sh.mutex);
   auto it = sh.map.find(point);
@@ -34,7 +36,7 @@ bool SourceFunctionCache::find(const base::DataVector& point, double& f_out) con
 
 // Insert / overwrite
 void SourceFunctionCache::insert(const base::DataVector& point, double value) {
-  size_t idx = shard_index(point);
+  size_t idx = shardIndex(point);
   Shard& sh = shards_[idx];
   std::lock_guard<std::mutex> lock(sh.mutex);
   sh.map[point] = value;
@@ -42,14 +44,14 @@ void SourceFunctionCache::insert(const base::DataVector& point, double value) {
 
 // Insert / overwrite
 void SourceFunctionCache::insert(base::DataVector&& point, double value) {
-  size_t idx = shard_index(point);
+  size_t idx = shardIndex(point);
   Shard& sh = shards_[idx];
   std::lock_guard<std::mutex> lock(sh.mutex);
   sh.map[std::move(point)] = value;
 }
 
 bool SourceFunctionCache::erase(const base::DataVector& point) {
-  size_t idx = shard_index(point);
+  size_t idx = shardIndex(point);
   Shard& sh = shards_[idx];
   std::lock_guard<std::mutex> lock(sh.mutex);
   auto it = sh.map.find(point);
@@ -71,21 +73,7 @@ size_t SourceFunctionCache::size() const {
 
 size_t SourceFunctionCache::shardCnt() const noexcept { return shards_.size(); }
 
-double SourceFunctionCache::findOrCompute(const base::DataVector& point,
-                                          const SourceFunc sourceFunc) {
-  double val;
-
-  if (find(point, val)) {
-    return val;
-  }
-
-  double computed = sourceFunc(point);
-
-  insert(point, computed);
-  return computed;
-}
-
-size_t SourceFunctionCache::shard_index(const base::DataVector& v) const noexcept {
+size_t SourceFunctionCache::shardIndex(const base::DataVector& v) const noexcept {
   return hasher_(v) % shards_.size();
 }
 

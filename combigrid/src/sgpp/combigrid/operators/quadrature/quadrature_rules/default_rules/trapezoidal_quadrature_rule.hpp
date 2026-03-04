@@ -8,6 +8,8 @@
 namespace sgpp {
 namespace combigrid {
 
+namespace quadrature_rules {
+
 class TrapezoidalQuadRule : public QuadRule {
  public:
   TrapezoidalQuadRule() : QuadRule(tools::fnv1aHash("Trapezoidal Quadrature Rule")) {}
@@ -29,6 +31,8 @@ class TrapezoidalQuadRule : public QuadRule {
     return weights;
   }
 };
+
+}  // namespace quadrature_rules
 
 }  // namespace combigrid
 }  // namespace sgpp

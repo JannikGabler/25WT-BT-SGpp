@@ -1,18 +1,19 @@
 #pragma once
 
-#include <memory>
+#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
 namespace combigrid {
 
-double quadrature(const SparseGrid& sparseGrid, SourceFunc sourceFunc);
+double quadrature(const SparseGrid& sparseGrid, const SourceFunc& sourceFunc);
 
+/******************
+Internal operations
+******************/
 namespace quadrature_operator {
 
-double quadrature(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                  const SourceFunc sourceFunc);
+double quadrature(const TensorGrid& tg, const SGGenInstr& genInstr, const SourceFunc& sourceFunc);
 
 std::vector<base::DataVector> getWeights(const TensorGrid& tg,
                                          const std::vector<NodeGenFunc*>& nodeGenFuncs);

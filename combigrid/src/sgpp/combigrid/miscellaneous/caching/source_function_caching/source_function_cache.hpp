@@ -14,13 +14,26 @@ namespace misc {
 
 class SourceFunctionCache {
  public:
-  explicit SourceFunctionCache(size_t shard_count = 256, size_t per_shard_reserve = 0);
+  /***********
+  Constructors
+  ***********/
+  explicit SourceFunctionCache(size_t nShards = 256, size_t perShardReserve = 0);
 
   // For now not copyable, but movable
+  SourceFunctionCache(SourceFunctionCache&&) noexcept = default;  // TODO
+  SourceFunctionCache& operator=(SourceFunctionCache&&) noexcept = default;
+
   SourceFunctionCache(const SourceFunctionCache&) = delete;
   SourceFunctionCache& operator=(const SourceFunctionCache&) = delete;
 
+  /******
+  Getters
+  ******/
   bool find(const base::DataVector& point, double& f_out) const;
+
+  /******
+  Setters
+  ******/
 
   // Insert / overwrite
   void insert(const base::DataVector& point, double value);
@@ -30,12 +43,14 @@ class SourceFunctionCache {
 
   bool erase(const base::DataVector& point);
 
+  /*****************
+  Further operations
+  *****************/
+
   // Sums over all shards (-> O(#shards))
   size_t size() const;
 
   size_t shardCnt() const noexcept;
-
-  double findOrCompute(const base::DataVector& point, const SourceFunc sourceFunc);
 
   std::vector<std::unordered_map<base::DataVector, double, DataVectorHash>> dump() const;
 
@@ -48,7 +63,7 @@ class SourceFunctionCache {
   std::vector<Shard> shards_;
   DataVectorHash hasher_;
 
-  size_t shard_index(const base::DataVector& v) const noexcept;
+  size_t shardIndex(const base::DataVector& v) const noexcept;
 };
 
 }  // namespace misc

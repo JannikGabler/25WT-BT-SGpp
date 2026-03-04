@@ -9,6 +9,8 @@
 namespace sgpp {
 namespace combigrid {
 
+namespace quadrature_rules {
+
 class SimpsonQuadRule : public QuadRule {
  public:
   SimpsonQuadRule() : QuadRule(tools::fnv1aHash("Simpson Quadrature Rule")) {}
@@ -20,7 +22,7 @@ class SimpsonQuadRule : public QuadRule {
       return base::DataVector{1};
     }
 
-    const double w1 = 1 / (6 * static_cast<double>(nNodes - 1));
+    const double w1 = 1 / (3 * static_cast<double>(nNodes - 1));
     const double w2 = 4 * w1;
     const double w3 = 2 * w1;
     base::DataVector weights(nNodes);
@@ -35,6 +37,8 @@ class SimpsonQuadRule : public QuadRule {
     return weights;
   }
 };
+
+}  // namespace quadrature_rules
 
 }  // namespace combigrid
 }  // namespace sgpp

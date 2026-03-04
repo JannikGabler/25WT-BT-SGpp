@@ -10,6 +10,7 @@
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <vector>
+#include "sgpp/combigrid/type_defs.hpp"
 
 // ==========================================================
 // Compile-time parameters
@@ -36,7 +37,7 @@ size_t getPeakRSS_KB() {
 // ==========================================================
 // Variant A: original (explicit assignment)
 // ==========================================================
-std::vector<int> compute_A(const MIVec& miVec) {
+std::vector<int> compute_A(const LvlMIVec& miVec) {
   const auto lookup = miVec.lookup();
   const size_t nMI = miVec.nMI();
 
@@ -46,7 +47,7 @@ std::vector<int> compute_A(const MIVec& miVec) {
   for (size_t dim = 0; dim < miVec.nDim(); ++dim) {
 #pragma omp parallel for schedule(static)
     for (size_t i = 0; i < nMI; ++i) {
-      MI succ = miVec[i];
+      LvlMI succ = miVec[i];
       succ[dim]++;
       size_t s = lookup->find(succ);
 
@@ -63,7 +64,7 @@ std::vector<int> compute_A(const MIVec& miVec) {
 // ==========================================================
 // Variant B: incremental (corrected version)
 // ==========================================================
-std::vector<int> compute_B(const MIVec& miVec) {
+std::vector<int> compute_B(const LvlMIVec& miVec) {
   const auto lookup = miVec.lookup();
   const size_t nMI = miVec.nMI();
 
@@ -75,7 +76,7 @@ std::vector<int> compute_B(const MIVec& miVec) {
 
 #pragma omp parallel for schedule(static)
     for (size_t i = 0; i < nMI; ++i) {
-      MI succ = miVec[i];
+      LvlMI succ = miVec[i];
       succ[dim]++;
       size_t s = lookup->find(succ);
 
@@ -89,7 +90,7 @@ std::vector<int> compute_B(const MIVec& miVec) {
 // ==========================================================
 // Variant C: HPC-optimized (precompute succIdx + memcpy)
 // ==========================================================
-std::vector<int> compute_C(const MIVec& miVec) {
+std::vector<int> compute_C(const LvlMIVec& miVec) {
   const auto lookup = miVec.lookup();
   const size_t nMI = miVec.nMI();
 
@@ -100,7 +101,7 @@ std::vector<int> compute_C(const MIVec& miVec) {
   for (size_t dim = 0; dim < miVec.nDim(); ++dim) {
 #pragma omp parallel for schedule(static)
     for (size_t i = 0; i < nMI; ++i) {
-      MI succ = miVec[i];
+      LvlMI succ = miVec[i];
       succ[dim]++;
       succIdx[i] = lookup->find(succ);
     }
@@ -137,19 +138,19 @@ int main() {
   std::random_device rd;
   const auto seed = rd();
   std::mt19937 gen(seed);
-  std::uniform_int_distribution<MIType> valDist(0, 10);
+  std::uniform_int_distribution<LvlType> valDist(0, 10);
 
-  std::vector<std::vector<MIType>> miVec(N_MI, std::vector<MIType>(N_DIM));
+  std::vector<std::vector<LvlType>> miVec(N_MI, std::vector<LvlType>(N_DIM));
   for (size_t i = 0; i < N_MI; ++i) {
     for (size_t d = 0; d < N_DIM; ++d) {
       miVec[i][d] = valDist(gen);
     }
   }
 
-  const MIVec vec(miVec);
+  const LvlMIVec vec(miVec);
 
   std::cout << "Constructing closure..." << std::endl;
-  const MIVec closure = vec.downwardsClosure();
+  const LvlMIVec closure = vec.downwardsClosure();
   std::cout << "Constructed closure." << std::endl;
 
   if (!closure.isDownwardsClosed()) {

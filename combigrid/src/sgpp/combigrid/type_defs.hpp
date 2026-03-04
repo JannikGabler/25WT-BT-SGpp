@@ -8,6 +8,8 @@
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/node_generation_functions/node_generation_function.hpp>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -32,7 +34,9 @@ using CTCoeffType = int;
 -Fixed types-
 Should not be changed.
 *********************/
-using SourceFunc = double (*)(const sgpp::base::DataVector&);
+using HyperCubeArea = std::vector<std::pair<double, double>>;
+// using SourceFunc =
+// std::function<double(const base::DataVector&)>;  // double (*)(const sgpp::base::DataVector&);
 
 // using NodeGenFunc = sgpp::base::DataVector (*)(GPCntType);
 using Lvl2GPCntFunc = GPCntType (*)(LvlType);
