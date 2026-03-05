@@ -29,13 +29,13 @@ std::vector<std::complex<T>> fft(const std::vector<std::complex<T>>& vec) {
   return result;
 }
 
-/*
-Real Fast Fourier Transform
-*/
-template <typename T>
-std::vector<std::complex<T>> fftReal(const std::vector<T>& vec) {
-  return fourier_transform::realFFTForward(vec);
-}
+// /*
+// Real Fast Fourier Transform
+// */
+// template <typename T>
+// std::vector<T> fftReal(const std::vector<T>& vec) {
+//   return fourier_transform::realFFTForward(vec);
+// }
 
 }  // namespace tools
 }  // namespace combigrid
