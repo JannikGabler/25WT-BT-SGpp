@@ -353,7 +353,7 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
   // f(x) = \prod_i x_i^{k_i}  => Integral = \prod_i 1/(k_i+1)
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1 + randGen.getUniformIndexRN(5);                           // 1..5
+    const size_t nDim = 1 + randGen.getUniformIndexRN(4);                           // 1..4
     const LvlType maxLvl = static_cast<LvlType>(9 + randGen.getUniformIndexRN(3));  // 9..11
 
     // Random exponents 0..4

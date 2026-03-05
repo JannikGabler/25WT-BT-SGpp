@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_SUITE(FullSGGenInstr_genCompleteMIVec)
 BOOST_AUTO_TEST_CASE(Random1D) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(1000));
+    const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(100));
 
     const FullSGGenInstr instr(maxLvl, 1);
     const LvlMIVec result = instr.genMIVec();

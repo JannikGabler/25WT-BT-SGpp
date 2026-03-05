@@ -1,11 +1,12 @@
 #ifndef COMBIGRID_TOOLS_MATH_POWER_HPP
 #define COMBIGRID_TOOLS_MATH_POWER_HPP
 
+#include <type_traits>
 namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-int pow(int base, int exponent) {
+inline int pow(int base, int exponent) {
   int result = 1;
 
   while (exponent > 0) {
@@ -20,7 +21,7 @@ int pow(int base, int exponent) {
   return result;
 }
 
-unsigned int pow(unsigned int base, unsigned int exponent) {
+inline unsigned int pow(unsigned int base, unsigned int exponent) {
   unsigned int result = 1;
 
   while (exponent > 0) {
@@ -35,7 +36,7 @@ unsigned int pow(unsigned int base, unsigned int exponent) {
   return result;
 }
 
-unsigned long pow(unsigned long base, unsigned long exponent) {
+inline unsigned long pow(unsigned long base, unsigned long exponent) {
   unsigned long result = 1;
 
   while (exponent > 0) {
@@ -48,6 +49,14 @@ unsigned long pow(unsigned long base, unsigned long exponent) {
   }
 
   return result;
+}
+
+/*
+Does not include 0.
+*/
+template <typename T>
+inline typename std::enable_if<std::is_integral<T>::value, bool>::type isPowerOfTwo(const T n) {
+  return n && ((n & (n - 1)) == 0);
 }
 
 }  // namespace tools
