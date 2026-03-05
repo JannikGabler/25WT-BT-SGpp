@@ -37,33 +37,46 @@ base::DataVector ClenshawCurtisQuadRule::getWeights(const size_t nNodes) const {
 #endif
 }
 
+/*
+Naive approach (runtime complexity in O(n^2)).
+Only intended as a fallback.
+*/
 base::DataVector ClenshawCurtisQuadRule::genWeightsNaive(const size_t nNodes) const {
   assert(nNodes >= 2);
 
   const size_t m = nNodes - 1;
-  const size_t Jmax = m / 2;
+  const size_t mHalf = m / 2;
   std::vector<double> s(nNodes, 0.0);
 
-  for (size_t j = 1; j <= Jmax; ++j) {
-    const double bj = ((m % 2 == 0) && (j == m / 2)) ? 1.0 : 2.0;
-    const double denom = 4.0 * static_cast<double>(j) * static_cast<double>(j) - 1.0;
+  for (size_t i = 1; i <= mHalf; i++) {
+    const double bj = ((m % 2 == 0) && (i == m / 2)) ? 1.0 : 2.0;
+    const double denom = 4.0 * static_cast<double>(i) * static_cast<double>(i) - 1.0;
     const double factor = bj / denom;
-    const double phi = 2.0 * static_cast<double>(j) * M_PI / static_cast<double>(m);
+    const double phi = 2.0 * static_cast<double>(i) * M_PI / static_cast<double>(m);
     const double cos_phi = std::cos(phi);
     double c_km1 = cos_phi;
     double c_km2 = 1.0;
 
     s[0] += factor * c_km2;
-    s[1] += factor * c_km1;
 
-    for (size_t k = 2; k <= m; ++k) {
-      double c_k = 2.0 * cos_phi * c_km1 - c_km2;
-      s[k] += factor * c_k;
-      c_km2 = c_km1;
-      c_km1 = c_k;
+    if (mHalf >= 1) {
+      s[1] += factor * c_km1;
+
+      for (size_t j = 2; j <= mHalf; j++) {
+        double c_k = 2.0 * cos_phi * c_km1 - c_km2;
+        s[j] += factor * c_k;
+        c_km2 = c_km1;
+        c_km1 = c_k;
+      }
     }
   }
 
+  // Mirror values
+  for (size_t i = 0; i <= mHalf; i++) {
+    s[m - i] = s[i];
+  }
+
+  // Maps weights
   std::vector<double> wcc(nNodes);
   for (size_t k = 0; k <= m; ++k) {
     double ck = (k == 0 || k == m) ? 1.0 : 2.0;
@@ -79,6 +92,9 @@ base::DataVector ClenshawCurtisQuadRule::genWeightsNaive(const size_t nNodes) co
 
 #if defined(HAVE_EIGEN_FFT) || defined(HAVE_ARMADILLO)
 
+/*
+Waldvogel method using the Inverse Fourier Transformation
+*/
 std::vector<double> clenshawCurtisWeightsFFT(const size_t nNodes) {
   assert(nNodes >= 2);
 

@@ -18,7 +18,6 @@
 #include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/math/fft_internals/fft_debug.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include "sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp"
 #include "sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp"
@@ -51,11 +50,6 @@ BOOST_AUTO_TEST_CASE(one_node) {
 BOOST_AUTO_TEST_CASE(two_nodes_trapezoid) {
   const size_t nNodes = 2;
   const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
-  //   const std::vector<double> ref0 = compute_clenshaw_curtis_weights(0);
-  const std::vector<double> ref1 = compute_clenshaw_curtis_weights(1);
-  const std::vector<double> ref2 = compute_clenshaw_curtis_weights(2);
-  const std::vector<double> ref3 = compute_clenshaw_curtis_weights(3);
-  compute_clenshaw_curtis_weights(1);
 
   BOOST_REQUIRE(weights.size() == 2);
   // trapezoidal rule on [0,1]
