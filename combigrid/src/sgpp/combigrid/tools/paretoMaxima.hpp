@@ -1,18 +1,27 @@
-#ifndef COMBIGRID_PARETO_MAXIMA_HPP
-#define COMBIGRID_PARETO_MAXIMA_HPP
+#pragma once
 
 #include <omp.h>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
-#include <sgpp/combigrid/tools/multiindex_domination.hpp>
+// #include <sgpp/combigrid/tools/multiindex_domination.hpp>
 
 namespace sgpp {
 namespace combigrid {
+
+template <typename T>
+class MIVec;  // Forward Declaration
+
+}
+}  // namespace sgpp
+
+namespace sgpp {
+namespace combigrid {
+
 namespace tools {
 
 template <typename T>
-void updateParetoMaximaDWC(const MIVec<T>& miVec, const misc::MIVecLookup<T>& lookup,
+void updateParetoMaximaDWC(const combigrid::MIVec<T>& miVec, const misc::MIVecLookup<T>& lookup,
                            std::vector<size_t>& paretoMaxima, const size_t candidateIdx) {
   MI<T> candidate = miVec[candidateIdx];
 
@@ -31,7 +40,7 @@ void updateParetoMaximaDWC(const MIVec<T>& miVec, const misc::MIVecLookup<T>& lo
 }
 
 template <typename T>
-void updateParetoMaximaNonDWC(const MIVec<T>& miVec, std::vector<size_t>& paretoMaxima,
+void updateParetoMaximaNonDWC(const combigrid::MIVec<T>& miVec, std::vector<size_t>& paretoMaxima,
                               const size_t candidateIdx) {
   bool dominated = false;
 
@@ -51,7 +60,7 @@ void updateParetoMaximaNonDWC(const MIVec<T>& miVec, std::vector<size_t>& pareto
 }
 
 template <typename T>
-std::vector<size_t> mergeParetoMax(const MIVec<T>& miVec,
+std::vector<size_t> mergeParetoMax(const combigrid::MIVec<T>& miVec,
                                    std::vector<std::vector<size_t>>& localParetoMaxima) {
   std::vector<size_t> merged;
 
@@ -81,7 +90,7 @@ inline std::vector<size_t> zipParetoMax(std::vector<std::vector<size_t>>& localP
 }
 
 template <typename T>
-std::vector<size_t> computeParetoMaxSerialDWC(const MIVec<T>& miVec) {
+std::vector<size_t> computeParetoMaxSerialDWC(const combigrid::MIVec<T>& miVec) {
   std::vector<size_t> paretoMaxima;
 
   const misc::MIVecLookup<T> lookup(miVec);
@@ -106,7 +115,7 @@ std::vector<size_t> computeParetoMaxSerialNotDWC(const combigrid::MIVec<T>& miVe
 }
 
 template <typename T>
-std::vector<size_t> computeParetoMaxParallelDWC(const MIVec<T>& miVec) {
+std::vector<size_t> computeParetoMaxParallelDWC(const combigrid::MIVec<T>& miVec) {
   const size_t nThreads = static_cast<size_t>(omp_get_max_threads());
   const misc::MIVecLookup<T> lookup(miVec);
 
@@ -118,7 +127,7 @@ std::vector<size_t> computeParetoMaxParallelDWC(const MIVec<T>& miVec) {
 
 #pragma omp for schedule(static)
     for (size_t candidateIdx = 0; candidateIdx < miVec.nMI(); candidateIdx++) {
-      updateParetoMaximaDWC(miVec, lookup, localParetoMaxima[threadId], candidateIdx);
+      updateParetoMaximaDWC<T>(miVec, lookup, localParetoMaxima[threadId], candidateIdx);
     }
   }
 
@@ -126,7 +135,7 @@ std::vector<size_t> computeParetoMaxParallelDWC(const MIVec<T>& miVec) {
 }
 
 template <typename T>
-std::vector<size_t> computeParetoMaxParallelNonDWC(const MIVec<T>& miVec) {
+std::vector<size_t> computeParetoMaxParallelNonDWC(const combigrid::MIVec<T>& miVec) {
   // const size_t length = miVec.nMI() * miVec.nDim();
   const size_t minBatchSize =
       (constants::mi_vec::PM_MIN_MIVEC_BATCH_LENGTH_PER_THREAD + miVec.nDim() - 1) / miVec.nDim();
@@ -146,7 +155,8 @@ std::vector<size_t> computeParetoMaxParallelNonDWC(const MIVec<T>& miVec) {
 }
 
 template <typename T>
-std::vector<size_t> computeParetoMaxima(const MIVec<T>& miVec, const bool isDownwardsClosed) {
+std::vector<size_t> computeParetoMaxima(const combigrid::MIVec<T>& miVec,
+                                        const bool isDownwardsClosed) {
   const size_t length = miVec.nMI() * miVec.nDim();
   if (length == 0) {
     return std::vector<size_t>{};
@@ -154,15 +164,15 @@ std::vector<size_t> computeParetoMaxima(const MIVec<T>& miVec, const bool isDown
 
   if (isDownwardsClosed) {
     if (length < constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
-      return computeParetoMaxSerialDWC(miVec);
+      return computeParetoMaxSerialDWC<T>(miVec);
     } else {
-      return computeParetoMaxParallelDWC(miVec);
+      return computeParetoMaxParallelDWC<T>(miVec);
     }
   } else {
     if (length < constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
-      return computeParetoMaxSerialNotDWC(miVec, 0, miVec.nMI() - 1);
+      return computeParetoMaxSerialNotDWC<T>(miVec, 0, miVec.nMI() - 1);
     } else {
-      return computeParetoMaxParallelNonDWC(miVec);
+      return computeParetoMaxParallelNonDWC<T>(miVec);
     }
   }
 }
@@ -170,5 +180,3 @@ std::vector<size_t> computeParetoMaxima(const MIVec<T>& miVec, const bool isDown
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

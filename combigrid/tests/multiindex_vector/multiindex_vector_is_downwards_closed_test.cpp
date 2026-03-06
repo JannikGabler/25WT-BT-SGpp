@@ -2,7 +2,7 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
-#include "sgpp/combigrid/type_defs.hpp"
+#include <string>
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -11,30 +11,35 @@
 
 #include <random>
 #include <set>
+#include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 
 using namespace sgpp::combigrid;
 
+static sgpp::base::RandomNumberGenerator& randGen =
+    sgpp::base::RandomNumberGenerator::getInstance();
+
 namespace {
 
-// Helper: create MIVec from a list of MI initializer lists
-LvlMIVec mivecFromList(size_t nDim, std::initializer_list<std::initializer_list<LvlType>> list) {
-  std::vector<LvlMI> vec;
-  for (const auto& l : list) {
-    LvlMI m{l};
-    // ensure correct dimension
-    if (m.size() != nDim) {
-      // If user supplied wrong dimension, pad with zeros (safe choice for tests)
-      if (m.size() < nDim)
-        m.resize(nDim, 0);
-      else
-        m.resize(nDim);
-    }
-    vec.push_back(m);
-  }
-  return LvlMIVec(vec);
-}
+// // Helper: create MIVec from a list of MI initializer lists
+// LvlMIVec mivecFromList(size_t nDim, std::initializer_list<std::initializer_list<LvlType>> list) {
+//   std::vector<LvlMI> vec;
+//   for (const auto& l : list) {
+//     LvlMI m{l};
+//     // ensure correct dimension
+//     if (m.size() != nDim) {
+//       // If user supplied wrong dimension, pad with zeros (safe choice for tests)
+//       if (m.size() < nDim)
+//         m.resize(nDim, 0);
+//       else
+//         m.resize(nDim);
+//     }
+//     vec.push_back(m);
+//   }
+//   return LvlMIVec(vec);
+// }
 
 // Check existence of an MI in an MIVec via linear scan (uses MI::operator==)
 bool containsMI(const LvlMIVec& mv, const LvlMI& needle) {
@@ -126,17 +131,18 @@ std::set<std::string> computeDownwardsClosureSet(const LvlMIVec& mv) {
 
 BOOST_AUTO_TEST_SUITE(MIVec_isDownwardsClosed)
 
-// 1) Empty MIVec should be downwards-closed (vacuous truth)
+// Empty MIVec should be downwards-closed (vacuous truth)
 BOOST_AUTO_TEST_CASE(empty_mivec_is_downwards_closed) {
   // Create empty MIVec using the (nDim, nMI) constructor
   const size_t ndim = 3;
   LvlMIVec empty(ndim, 0);
+
   BOOST_CHECK_EQUAL(empty.nMI(), 0u);
   BOOST_CHECK(empty.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(empty));
 }
 
-// 2) Single zero MI (all components 0) should be downwards-closed
+// Single zero MI (all components 0) should be downwards-closed
 BOOST_AUTO_TEST_CASE(single_zero_mi_is_downwards_closed) {
   const LvlMI zero{0, 0, 0, 0};
   const LvlMIVec mv(std::vector<LvlMI>{zero});
@@ -146,7 +152,7 @@ BOOST_AUTO_TEST_CASE(single_zero_mi_is_downwards_closed) {
   BOOST_CHECK(expectedIsDownwardsClosed(mv));
 }
 
-// 3) Single non-zero MI should NOT be downwards-closed unless all lower combos included
+// Single non-zero MI should NOT be downwards-closed unless all lower combos included
 BOOST_AUTO_TEST_CASE(single_nonzero_mi_not_downwards_closed) {
   const LvlMI mi{1, 0, 2};
   const LvlMIVec mv(std::vector<LvlMI>{mi});
@@ -156,180 +162,189 @@ BOOST_AUTO_TEST_CASE(single_nonzero_mi_not_downwards_closed) {
   BOOST_CHECK(!expectedIsDownwardsClosed(mv));
 }
 
-// 4) Fully closed small 2D set: all combinations up to (1,1) -> should be closed
+// Fully closed small 2D set: all combinations up to (1,1) -> should be closed
 BOOST_AUTO_TEST_CASE(complete_rectangle_is_downwards_closed) {
   // All of: (0,0), (1,0), (0,1), (1,1)
-  const LvlMIVec mv = mivecFromList(2, {{0, 0}, {1, 0}, {0, 1}, {1, 1}});
+  const LvlMIVec mv({{0, 0}, {1, 0}, {0, 1}, {1, 1}});
 
   // Try elements in random order to ensure order doesn't matter
   LvlMIVec shuffled = mv;  // assuming copy ctor exists
-  // (if you want to be strict about re-ordering, use setMI to reorder; but copy should be OK)
 
   BOOST_CHECK(shuffled.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(shuffled));
 }
 
-// 5) Missing one required lower element -> not downwards-closed
+// Missing one required lower element -> not downwards-closed
 BOOST_AUTO_TEST_CASE(missing_lower_element_is_not_downwards_closed) {
-  // Have (1,1) and (0,0) but missing (0,1)
-  LvlMIVec mv = mivecFromList(2, {{1, 1}, {0, 0}, {1, 0}});
+  // Has (1,1) and (0,0) but missing (0,1)
+  const LvlMIVec mv({{1, 1}, {0, 0}, {1, 0}});
+
   // (0,1) is missing so should be false
   BOOST_CHECK(!mv.isDownwardsClosed());
   BOOST_CHECK(!expectedIsDownwardsClosed(mv));
 }
 
-// 6) Duplicate entries should not affect decision
+// Duplicate entries should not affect decision
 BOOST_AUTO_TEST_CASE(duplicates_do_not_affect_downwards_closedness) {
-  LvlMIVec mv = mivecFromList(2, {
-                                     {0, 0},
-                                     {1, 0},
-                                     {0, 1},
-                                     {1, 1},
-                                     {1, 1},  // duplicate
-                                     {0, 1}   // duplicate
-                                 });
+  const LvlMIVec mv({
+      {0, 0},
+      {1, 0},
+      {0, 1},
+      {1, 1},
+      {1, 1},  // duplicate
+      {0, 1}   // duplicate
+  });
+
   BOOST_CHECK(mv.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(mv));
 }
 
-// 7) Higher dimension example: 3D set that is closed
+// Higher dimension example: 3D set that is closed
 BOOST_AUTO_TEST_CASE(three_dimensional_closed_example) {
   // include all combinations up to (1,1,1) => 8 elements
-  LvlMIVec mv = mivecFromList(
-      3, {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 0}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}});
+  const LvlMIVec mv(
+      {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 0}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}});
+
   BOOST_CHECK(mv.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(mv));
 }
 
-// 8) downwardsClosure() should produce a downwards-closed superset
+// downwardsClosure() should produce a downwards-closed superset
 BOOST_AUTO_TEST_CASE(downwards_closure_produces_closed_superset) {
-  LvlMIVec mv = mivecFromList(2, {{2, 1},  // requires many lower elements
-                                  {0, 1},
-                                  {1, 0}});
+  const LvlMIVec mv({{2, 1},  // requires many lower elements
+                     {0, 1},
+                     {1, 0}});
 
-  // original is likely not closed
-  BOOST_CHECK(!mv.isDownwardsClosed());
+  BOOST_CHECK(!mv.isDownwardsClosed());  // original is not closed
 
-  LvlMIVec closed = mv.downwardsClosure();
+  const LvlMIVec closed = mv.downwardsClosure();
   BOOST_CHECK(closed.isDownwardsClosed());
 
   // Original elements must be present in closure
   for (size_t i = 0; i < mv.nMI(); ++i) {
-    BOOST_CHECK_MESSAGE(containsMI(closed, mv[i]),
-                        "downwardsClosure() must contain original MI: " << miToString(mv[i]));
+    BOOST_REQUIRE_MESSAGE(containsMI(closed, mv[i]),
+                          "downwardsClosure() must contain original MI: " << miToString(mv[i]));
   }
 
   // The closure's unique set should equal brute-force computed set
-  auto expectedSet = computeDownwardsClosureSet(mv);
+  const std::set<std::string> expected = computeDownwardsClosureSet(mv);
+
   std::set<std::string> actualSet;
   for (size_t i = 0; i < closed.nMI(); ++i) {
     actualSet.insert(miToString(closed[i]));
   }
-  BOOST_CHECK_EQUAL_COLLECTIONS(expectedSet.begin(), expectedSet.end(), actualSet.begin(),
+
+  BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(), actualSet.begin(),
                                 actualSet.end());
 }
 
-// 9) Randomized small tests: generate random MIVec, compute expected result, compare.
-//    Keep deterministic seed for reproducibility in tests.
+/*
+Randomized small tests: generate random MIVec, compute expected result, compare.
+Keep deterministic seed for reproducibility in tests.
+*/
 BOOST_AUTO_TEST_CASE(randomized_small_tests) {
-  std::mt19937_64 rng(123456789ULL);
-  const size_t ndim = 3;
-  std::uniform_int_distribution<LvlType> compDist(0, 2);  // small components
-  for (int trial = 0; trial < 50; ++trial) {
-    size_t nmi = 1 + (rng() % 10);
-    std::vector<LvlMI> v;
-    for (size_t i = 0; i < nmi; ++i) {
-      LvlMI m;
-      for (size_t d = 0; d < ndim; ++d) m.push_back(compDist(rng));
-      v.push_back(m);
+  constexpr size_t nDim = 3;
+
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    for (size_t trial = 0; trial < 50; trial++) {
+      const size_t nMI = randGen.getUniformIndexRN(11);  // 0..10
+
+      std::vector<LvlMI> v;
+      for (size_t i = 0; i < nMI; ++i) {
+        LvlMI m;
+
+        for (size_t d = 0; d < nDim; ++d) {
+          const LvlType lvl = static_cast<LvlType>(randGen.getUniformIndexRN(3));
+          m.push_back(lvl);
+        }
+
+        v.push_back(m);
+      }
+
+      const LvlMIVec mv(v);
+
+      bool expected = expectedIsDownwardsClosed(mv);
+      bool actual = mv.isDownwardsClosed();
+
+      BOOST_CHECK_MESSAGE(actual == expected,
+                          "Random test mismatch. expected=" << expected << " actual=" << actual
+                                                            << " ; nMI=" << mv.nMI());
     }
-    LvlMIVec mv(v);
-    bool expected = expectedIsDownwardsClosed(mv);
-    bool actual = mv.isDownwardsClosed();
-    BOOST_CHECK_MESSAGE(actual == expected,
-                        "Random test mismatch. expected=" << expected << " actual=" << actual
-                                                          << " ; nMI=" << mv.nMI());
   }
 }
 
-// 10) Large-but-sparse: ensures function handles bigger indices correctly (not performance test)
+// Large-but-sparse: ensures function handles bigger indices correctly (not performance test)
 BOOST_AUTO_TEST_CASE(large_values_non_closed) {
   // Single huge index (3,2,1) but missing many lower ones
-  LvlMIVec mv = mivecFromList(3, {{3, 2, 1}});
+  const LvlMIVec mv({{3, 2, 1}});
+
   BOOST_CHECK(!mv.isDownwardsClosed());
+
   // The downwards closure should be closed and contain the (3,2,1)
-  LvlMIVec closed = mv.downwardsClosure();
+  const LvlMIVec closed = mv.downwardsClosure();
+
   BOOST_CHECK(closed.isDownwardsClosed());
   BOOST_CHECK(containsMI(closed, LvlMI{3, 2, 1}));
 }
 
-// 11) Check that ordering / insertion order doesn't matter: create closed set in shuffled order
+// Check that ordering / insertion order doesn't matter: create closed set in shuffled order
 BOOST_AUTO_TEST_CASE(order_independence_for_closed_sets) {
-  LvlMIVec mv = mivecFromList(2, {{1, 1}, {0, 1}, {1, 0}, {0, 0}});
-  // shuffle by constructing new vector in different order:
-  LvlMIVec mv_shuffled = mivecFromList(2, {{0, 1}, {1, 0}, {1, 1}, {0, 0}});
+  const LvlMIVec mv({{1, 1}, {0, 1}, {1, 0}, {0, 0}});
+  const LvlMIVec mv_shuffled({{0, 1}, {1, 0}, {1, 1}, {0, 0}});
+
   BOOST_CHECK(mv.isDownwardsClosed());
   BOOST_CHECK(mv_shuffled.isDownwardsClosed());
   BOOST_CHECK(expectedIsDownwardsClosed(mv));
   BOOST_CHECK(expectedIsDownwardsClosed(mv_shuffled));
 }
 
-// 12) Multi-threaded randomized MIVec: generate at least DWC_MIN_MI_FOR_CONCURRENCY MIs randomly.
-//     The used random seed is printed so a failing case can be reproduced.
+/*Multi-threaded randomized MIVec: generate at least DWC_MIN_MI_FOR_CONCURRENCY MIs randomly.
+The used random seed is printed so a failing case can be reproduced.
+*/
 BOOST_AUTO_TEST_CASE(multi_threaded_random_mivec_with_seed) {
-  // Dimension for generated multi-indices
-  constexpr size_t ndim = 3;
+  constexpr size_t nDim = 3;
+  constexpr size_t minMIForConcurrency = constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY;
 
-  // Get required number of multi-indices to trigger concurrency
-  const size_t minMIForConcurrency = constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY;
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    // Generate exactly minMIForConcurrency random multi-indices
+    std::vector<LvlMI> mis(minMIForConcurrency);
 
-  // Produce a (pseudo-)random seed and report it so failures are reproducible
-  std::random_device rd;
-  const uint64_t seed = (static_cast<uint64_t>(rd()) << 32) ^ static_cast<uint64_t>(rd());
-  // BOOST_TEST_MESSAGE("multi_threaded_random_mivec_with_seed: seed = " << seed);
+    for (size_t i = 0; i < minMIForConcurrency; ++i) {
+      LvlMI m(nDim);
 
-  std::mt19937_64 rng(seed);
+      for (size_t d = 0; d < nDim; ++d) {
+        m[d] = static_cast<LvlType>(randGen.getUniformIndexRN(4));
+      }
 
-  // Keep component values small to keep brute-force expected-check tractable
-  std::uniform_int_distribution<LvlType> compDist(0, 3);
-
-  // Generate exactly minMIForConcurrency random multi-indices
-  std::vector<LvlMI> mis;
-  mis.reserve(minMIForConcurrency);
-  for (size_t i = 0; i < minMIForConcurrency; ++i) {
-    LvlMI m;
-    m.resize(ndim);
-    for (size_t d = 0; d < ndim; ++d) {
-      m[d] = compDist(rng);
+      mis[i] = m;
     }
-    mis.push_back(m);
-  }
 
-  const LvlMIVec mv(mis);
+    const LvlMIVec mv(mis);
 
-  // BOOST_TEST_MESSAGE("Generated MIVec: nDim=" << mv.nDim() << " nMI=" << mv.nMI());
+    // BOOST_TEST_MESSAGE("Generated MIVec: nDim=" << mv.nDim() << " nMI=" << mv.nMI());
 
-  // Brute-force expected result (may be expensive but kept feasible by small component range)
-  const bool expected = expectedIsDownwardsClosed(mv);
+    // Brute-force expected result (may be expensive but kept feasible by small component range)
+    const bool expected = expectedIsDownwardsClosed(mv);
 
-  // Actual result (should execute multi-threaded path when nMI >= constant)
-  const bool actual = mv.isDownwardsClosed();
+    // Actual result (should execute multi-threaded path when nMI >= constant)
+    const bool actual = mv.isDownwardsClosed();
+    BOOST_CHECK_MESSAGE(actual == expected, "Mismatch in isDownwardsClosed() - expected="
+                                                << expected << " actual=" << actual
+                                                << " nMI=" << mv.nMI());
 
-  BOOST_CHECK_MESSAGE(actual == expected, "Mismatch in isDownwardsClosed() (seed="
-                                              << seed << "). expected=" << expected
-                                              << " actual=" << actual << " nMI=" << mv.nMI());
+    // Additional consistency checks for downwardsClosure (only run if not too big)
+    // (we still print seed above so it's reproducible if this becomes expensive)
+    const LvlMIVec closed = mv.downwardsClosure();
+    BOOST_CHECK_MESSAGE(closed.isDownwardsClosed(),
+                        "downwardsClosure() result is not downwards-closed");
 
-  // Additional consistency checks for downwardsClosure (only run if not too big)
-  // (we still print seed above so it's reproducible if this becomes expensive)
-  const LvlMIVec closed = mv.downwardsClosure();
-  BOOST_CHECK_MESSAGE(closed.isDownwardsClosed(),
-                      "downwardsClosure() result is not downwards-closed (seed=" << seed << ")");
-
-  // Original elements must be contained in the closure
-  for (size_t i = 0; i < mv.nMI(); ++i) {
-    BOOST_CHECK_MESSAGE(
-        containsMI(closed, mv[i]),
-        "downwardsClosure() must contain original MI (seed=" << seed << "): " << miToString(mv[i]));
+    // Original elements must be contained in the closure
+    for (size_t i = 0; i < mv.nMI(); ++i) {
+      BOOST_REQUIRE_MESSAGE(containsMI(closed, mv[i]),
+                            "downwardsClosure() must contain original MI: " << miToString(mv[i]));
+    }
   }
 }
 

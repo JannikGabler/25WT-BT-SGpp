@@ -6,12 +6,12 @@
 #include <sgpp/combigrid/tools/concurrency.hpp>
 #include <vector>
 
-template <typename T>
-class MIVec;  // Forward Declaration
-
 namespace sgpp {
 namespace combigrid {
 namespace tools {
+
+template <typename T>
+class MIVec;  // Forward Declaration
 
 template <typename T>
 MI<T> mergeComponentWiseMax(const size_t nDim, const std::vector<MI<T>>& localMax) {

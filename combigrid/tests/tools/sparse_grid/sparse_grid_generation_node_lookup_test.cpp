@@ -16,7 +16,7 @@
 #include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/combitech_coefficients.hpp>
+#include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>

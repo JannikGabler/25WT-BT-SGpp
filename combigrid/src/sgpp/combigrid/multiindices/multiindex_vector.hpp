@@ -1,6 +1,9 @@
 #ifndef COMBIGRID_MULTIINDEX_VECTOR_HPP
 #define COMBIGRID_MULTIINDEX_VECTOR_HPP
 
+#include <algorithm>
+#include <cassert>
+#include <cstring>
 #include <initializer_list>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
@@ -8,6 +11,8 @@
 #include <sgpp/combigrid/tools/downwards_closedness.hpp>
 #include <sgpp/combigrid/tools/multiindex_vector/multiindex_vector_component_wise_max.hpp>
 #include <sgpp/combigrid/tools/paretoMaxima.hpp>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -83,20 +88,48 @@ class MIVec {
   /*****
   Setter
   *****/
-
-  void setMI(size_t idx, const MI<T>& mi) {
+  void setMI(const size_t idx, const MI<T>& mi) {
     clearCachedValues();
-    for (size_t dim = 0; dim < nDim_; dim++) {
-      data_[idx * nDim_ + dim] = mi[dim];
-    }
+
+    // for (size_t dim = 0; dim < nDim_; dim++) {
+    //   data_[idx * nDim_ + dim] = mi[dim];
+    // }
+    std::copy_n(mi.begin(), mi.size(), data_.begin() + idx * nDim_);
   }
 
   void setMI(size_t idx, const std::vector<T>& mi) {
     clearCachedValues();
-    for (size_t dim = 0; dim < nDim_; dim++) {
-      data_[idx * nDim_ + dim] = mi[dim];
-    }
+    // for (size_t dim = 0; dim < nDim_; dim++) {
+    //   data_[idx * nDim_ + dim] = mi[dim];
+    // }
+    std::copy_n(mi.begin(), mi.size(), data_.begin() + idx * nDim_);
   }
+
+  // Moves the MI from index src to index dest. State at src after the call is unspecified.
+  void moveMI(const size_t dest, const size_t src) {
+    assert(dest < nMI_ && src < nMI_);
+
+    if (src == dest) {
+      return;
+    }
+    clearCachedValues();
+
+    T* basePtr = data_.data();
+    T* destPtr = basePtr + dest * nDim_;
+    T* srcPtr = basePtr + src * nDim_;
+
+    moveMIImpl(destPtr, srcPtr, std::is_trivially_copyable<T>());
+  }
+
+  /**************
+  Size operations
+  **************/
+  void resize(const size_t nMI) {
+    nMI_ = nMI;
+    data_.resize(nMI * nDim_);
+  }
+
+  void shrink_to_fit() { data_.shrink_to_fit(); }
 
   /*****************
   Utility operations
@@ -107,16 +140,17 @@ class MIVec {
 
   const std::shared_ptr<MI<T>> componentWiseMax() const {
     if (componentWiseMax_ == nullptr) {
-      const MI<T> result = tools::computeComponentWiseMax(*this);
+      const MI<T> result = tools::computeComponentWiseMax<T>(*this);
       componentWiseMax_ = std::make_shared<MI<T>>(std::move(result));
       cacheCleared = false;
     }
     return componentWiseMax_;
   }
 
-  const std::shared_ptr<std::vector<size_t>> paretoMaxima(bool isDownwardsClosed = false) const {
+  const std::shared_ptr<std::vector<size_t>> paretoMaxima(
+      const bool isDownwardsClosed = false) const {
     if (paretoMaxima_ == nullptr) {
-      const std::vector<size_t> result = tools::computeParetoMaxima(*this, isDownwardsClosed);
+      const std::vector<size_t> result = tools::computeParetoMaxima<T>(*this, isDownwardsClosed);
       paretoMaxima_ = std::make_shared<std::vector<size_t>>(std::move(result));
       cacheCleared = false;
     }
@@ -151,6 +185,16 @@ class MIVec {
   mutable std::shared_ptr<MI<T>> componentWiseMax_;
   mutable std::shared_ptr<std::vector<size_t>> paretoMaxima_;
   mutable std::shared_ptr<misc::MIVecLookup<T>> lookup_;
+
+  void moveMIImpl(T* dest, T* src, std::true_type) { std::memmove(dest, src, nDim_ * sizeof(T)); }
+
+  void moveMIImpl(T* dest, T* src, std::false_type) {
+    if (dest < src) {
+      std::move(src, src + nDim_, dest);
+    } else {
+      std::move_backward(src, src + nDim_, dest + nDim_);
+    }
+  }
 };
 
 }  // namespace combigrid

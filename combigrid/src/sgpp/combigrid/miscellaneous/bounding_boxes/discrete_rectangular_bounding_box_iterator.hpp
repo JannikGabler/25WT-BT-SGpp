@@ -1,6 +1,7 @@
 #ifndef COMBIGRID_MISC_DISCRETE_RECT_BOUNDING_BOX_ITERATOR_HPP
 #define COMBIGRID_MISC_DISCRETE_RECT_BOUNDING_BOX_ITERATOR_HPP
 
+#include <cassert>
 #include <cstddef>
 #include <vector>
 
@@ -18,6 +19,11 @@ class DiscRectBBIterator {
       : rectDiscBB(rectDiscBB),
         curPos(finished ? std::vector<T>{} : rectDiscBB.lowerBound),
         finished(finished) {}
+
+  DiscRectBBIterator(const DiscRectBB<T>& rectDiscBB, const std::vector<T>& startPos)
+      : rectDiscBB(rectDiscBB), curPos(startPos), finished(false) {
+    assert(startPos.size() == rectDiscBB.nDim());
+  }
 
   const std::vector<T>& operator*() const { return curPos; }
   const std::vector<T>* operator->() const { return &curPos; }

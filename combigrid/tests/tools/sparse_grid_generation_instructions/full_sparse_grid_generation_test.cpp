@@ -9,7 +9,7 @@
 #include <boost/test/unit_test_suite.hpp>
 
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
-#include <sgpp/combigrid/tools/combitech_coefficients.hpp>
+#include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
