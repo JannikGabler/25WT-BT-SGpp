@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/iterative_interpolation_object.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <vector>
 
@@ -17,9 +16,6 @@ class InterpolationMethod {
 
   virtual double interpolate(double pos, const std::vector<double>& nodes,
                              const std::vector<double>& values) const = 0;
-
-  virtual std::shared_ptr<IterativeInterpolationObj> interpolateIteratively(
-      double pos, const std::vector<double>& nodes) const = 0;
 
   uint64_t id() const;
 

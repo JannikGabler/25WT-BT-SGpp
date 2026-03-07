@@ -1,8 +1,8 @@
 #pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include "sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp"
 
 namespace sgpp {
 namespace combigrid {

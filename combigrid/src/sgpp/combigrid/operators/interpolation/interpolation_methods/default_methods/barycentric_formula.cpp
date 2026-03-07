@@ -2,7 +2,6 @@
 #include <memory>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/default_methods/barycentric_formula_iterative_interpolation_object.hpp>
 #include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
@@ -29,11 +28,6 @@ double BarycentricFormula::interpolate(const double pos, const std::vector<doubl
   }
 
   return result;
-}
-
-std::shared_ptr<IterativeInterpolationObj> BarycentricFormula::interpolateIteratively(
-    const double pos, const std::vector<double>& nodes) const {
-  return std::make_shared<BarycentricFormulaIterativeInterpolationObj>(pos, nodes);
 }
 
 double BarycentricFormula::evaluateFormula(const double pos, const std::vector<double>& nodes,
