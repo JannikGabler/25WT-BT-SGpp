@@ -6,14 +6,14 @@
 namespace sgpp {
 namespace combigrid {
 
-double quadrature(const SparseGrid& sparseGrid, const SourceFunc& sourceFunc);
+double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
 
 /******************
 Internal operations
 ******************/
 namespace quadrature_operator {
 
-double quadrature(const TensorGrid& tg, const SGGenInstr& genInstr, const SourceFunc& sourceFunc);
+double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGenInstr& genInstr);
 
 std::vector<base::DataVector> getWeights(const TensorGrid& tg,
                                          const std::vector<NodeGenFunc*>& nodeGenFuncs);

@@ -107,7 +107,7 @@ double& TensorGrid::operator()(const size_t idx, const size_t dim) {
 
 bool TensorGrid::operator==(const TensorGrid& other) const {
   return nGP() == other.nGP() && nGPPerDim == other.nGPPerDim &&
-         tools::nearly_equal(gridPoints, other.gridPoints);
+         tools::nearlyEqual(gridPoints, other.gridPoints);
 }
 
 }  // namespace combigrid

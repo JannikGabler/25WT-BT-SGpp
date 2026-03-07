@@ -7,6 +7,7 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/trapezoidal_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include "sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -15,6 +16,9 @@ namespace node_gen_funcs {
 
 class EquidistantNodeGenFunc : public NodeGenFunc {
  public:
+  EquidistantNodeGenFunc()
+      : NodeGenFunc(tools::fnv1aHash("Equidistant Node Generation Function")) {}
+
   base::DataVector genGPs(const size_t nNodes) const override {
     const double denominator = static_cast<double>(nNodes + 1);
     base::DataVector nodes(nNodes);
@@ -35,6 +39,14 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
       return getTrapezoidalQuadRule();
     }
   }
+
+  InterpolationMethod* getInterpolationMethod(size_t nNodes) const override {
+    throw base::not_implemented_exception("Operation is not yet implemented!");
+  }
+
+  /********
+  Operators
+  ********/
 
   bool operator==(const NodeGenFunc& other) const override {
     return typeid(*this) == typeid(other);

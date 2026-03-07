@@ -4,6 +4,7 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -13,6 +14,9 @@ namespace node_gen_funcs {
 
 class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
  public:
+  FirstTypeChebyshevNodeGenFunc()
+      : NodeGenFunc(tools::fnv1aHash("First Type Chebyshev Node Generation Function")) {}
+
   base::DataVector genGPs(const size_t nNodes) const override {
     const double f1 = M_PI / (2 * static_cast<double>(nNodes));
     base::DataVector nodes(nNodes);
@@ -28,6 +32,10 @@ class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
 
   QuadRule* getQuadRule(const size_t nNodes) const override {
     // TODO
+    throw base::not_implemented_exception("Operation is not yet implemented!");
+  }
+
+  InterpolationMethod* getInterpolationMethod(size_t nNodes) const override {
     throw base::not_implemented_exception("Operation is not yet implemented!");
   }
 

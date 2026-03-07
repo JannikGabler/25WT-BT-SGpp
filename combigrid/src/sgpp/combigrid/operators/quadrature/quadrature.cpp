@@ -14,7 +14,7 @@
 namespace sgpp {
 namespace combigrid {
 
-double quadrature(const SparseGrid& sparseGrid, const SourceFunc& sourceFunc) {
+double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   assert(sparseGrid.getGenInstr() != nullptr);
 
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
@@ -23,7 +23,7 @@ double quadrature(const SparseGrid& sparseGrid, const SourceFunc& sourceFunc) {
   // #pragma omp parallel for reduction(+:result) // TODO
   for (const TensorGridCTData& tgData : sparseGrid) {
     result += tgData.coefficient *
-              quadrature_operator::quadrature(tgData.tensorGrid, *genInstr, sourceFunc);
+              quadrature_operator::quadrature(sourceFunc, tgData.tensorGrid, *genInstr);
   }
 
   return genInstr->getVolumeOfBounds() * result;
@@ -31,7 +31,7 @@ double quadrature(const SparseGrid& sparseGrid, const SourceFunc& sourceFunc) {
 
 namespace quadrature_operator {
 
-double quadrature(const TensorGrid& tg, const SGGenInstr& genInstr, const SourceFunc& sourceFunc) {
+double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGenInstr& genInstr) {
   assert(genInstr.nDim() == tg.nDim());
 
   if (tg.nGP() == 0) {

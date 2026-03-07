@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(zero_func_unit_cube) {
 
     const SparseGrid sg(genInstr);
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, 0, 1e-12);
   }
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_1D) {
 
     const double expected = value;
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-12);
   }
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_nD) {
 
     const double expected = nDim > 0 ? value : 0;
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-10);
   }
@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
     const SparseGrid sg(genInstr);
 
     const double expected = value * volume;
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-10);
   }
@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
 
     const double expected = -std::cos(1) + 1;
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-10);
   }
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
 
     // ∫ sin(x) dx = cos(a) - cos(b)
     const double expected = std::cos(a) - std::cos(b);
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-10);
   }
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D) {
 
     const double expected = 4 * std::pow(std::sin(0.5), 4);
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-10);
   }
@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_3D) {
     const double oneD = -std::cos(1.0) + 1.0;  // = 1 - cos(1)
     const double expected = oneD * oneD * oneD;
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-10);
   }
@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
     const SourceFunc sourceFunc = genSinSourceFunction();
     const SparseGrid sg(genInstr);
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-10);
   }
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D) {
     const SparseGrid sg(genInstr);
 
     const double expected = a * 0.5 + b;
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-12);
   }
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
     // ∫(a*x + b) dx = a/2 (b^2 - a^2) + b (b - a)
     const double expected = aCoeff * 0.5 * (b * b - a * a) + bCoeff * (b - a);
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-12);
   }
@@ -319,7 +319,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_unit_cube_1D) {
     const SparseGrid sg(genInstr);
 
     const double expected = 1.0 / 3.0;
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-12);
   }
@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_random_interval_1D) {
 
     // ∫ x^2 dx = (b^3 - a^3)/3
     const double expected = (b * b * b - a * a * a) / 3.0;
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-12);
   }
@@ -383,7 +383,7 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
       expected *= 1.0 / static_cast<double>(k + 1);
     }
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-8);
   }
@@ -423,7 +423,7 @@ BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
     });
 
     const SparseGrid sg(genInstr);
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-9);
   }
@@ -481,7 +481,7 @@ BOOST_AUTO_TEST_CASE(random_polynomial_unit_cube_nD) {
       expected += contrib;
     }
 
-    const double result = quadrature(sg, sourceFunc);
+    const double result = quadrature(sourceFunc, sg);
 
     BOOST_CHECK_CLOSE(result, expected, 1e-9);
   }
