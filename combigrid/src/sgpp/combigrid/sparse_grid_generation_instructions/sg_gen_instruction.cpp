@@ -57,11 +57,7 @@ void SGGenInstr::setBoundsForDim(const std::pair<double, double> interval, const
 }
 
 void SGGenInstr::setBounds(const std::pair<double, double> interval) {
-  const size_t nDim = this->nDim();
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    bounds[dim] = interval;
-  }
+  std::fill(bounds.begin(), bounds.end(), interval);
 }
 
 void SGGenInstr::setBounds(const std::vector<std::pair<double, double>>& bounds) {
@@ -74,11 +70,7 @@ void SGGenInstr::setNodeGenFuncForDim(NodeGenFunc* const nodeGenFunc, const size
 }
 
 void SGGenInstr::setNodeGenFunc(NodeGenFunc* const nodeGenFunc) {
-  const size_t nDim = this->nDim();
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    nodeGenFuncs[dim] = nodeGenFunc;
-  }
+  std::fill(nodeGenFuncs.begin(), nodeGenFuncs.end(), nodeGenFunc);
 }
 
 void SGGenInstr::setNodeGenFuncs(const std::vector<NodeGenFunc*>& nodeGenFuncs) {
@@ -91,11 +83,7 @@ void SGGenInstr::setLvl2GPCntFuncForDim(const Lvl2GPCntFunc lvl2GPCntFunc, const
 }
 
 void SGGenInstr::setLvl2GPCntFunc(const Lvl2GPCntFunc lvl2GPCntFunc) {
-  const size_t nDim = this->nDim();
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    lvl2GPCntFuncs[dim] = lvl2GPCntFunc;
-  }
+  std::fill(lvl2GPCntFuncs.begin(), lvl2GPCntFuncs.end(), lvl2GPCntFunc);
 }
 
 void SGGenInstr::setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs) {

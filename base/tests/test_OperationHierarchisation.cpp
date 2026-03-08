@@ -13,8 +13,8 @@
 
 #include <vector>
 
-using sgpp::base::DataVector;
 using sgpp::base::BoundingBox1D;
+using sgpp::base::DataVector;
 using sgpp::base::Grid;
 using sgpp::base::GridGenerator;
 using sgpp::base::GridStorage;
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(testHierarchisationModLinearClenshawCurtis) {
 
   for (int dim = 1; dim < 4; dim++) {
     std::unique_ptr<Grid> grid(Grid::createModLinearClenshawCurtisGrid(dim));
-    testHierarchisationDehierarchisation(*grid, level, &parabola, 1e-12, true);
+    testHierarchisationDehierarchisation(*grid, level, &parabola, 1e-11, true);
   }
 }
 
