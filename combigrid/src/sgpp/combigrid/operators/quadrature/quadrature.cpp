@@ -20,7 +20,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
   double result = 0;
 
-  // #pragma omp parallel for reduction(+:result) // TODO
+#pragma omp parallel for reduction(+ : result)
   for (const TensorGridCTData& tgData : sparseGrid) {
     result += tgData.coefficient *
               quadrature_operator::quadrature(sourceFunc, tgData.tensorGrid, *genInstr);

@@ -46,7 +46,7 @@ size_t requiredNumberOfMIs(const size_t nDim, const LvlType maxLvl) {
 bool checkForDuplicates(const LvlMIVec& miVec) {
   bool foundDuplicate = false;
 
-#pragma omp parallel for shared(foundDuplicate) schedule(static)
+#pragma omp parallel for shared(foundDuplicate) schedule(guided)
   for (size_t i = 0; i < miVec.nMI(); i++) {
     for (size_t j = i + 1; j < miVec.nMI(); j++) {
       if (miVec[i] == miVec[j]) {

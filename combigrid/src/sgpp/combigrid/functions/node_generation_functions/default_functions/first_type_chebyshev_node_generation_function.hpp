@@ -1,11 +1,6 @@
 #pragma once
 
-#include <cmath>
-#include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
-#include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
-#include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -14,34 +9,19 @@ namespace node_gen_funcs {
 
 class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
  public:
-  FirstTypeChebyshevNodeGenFunc()
-      : NodeGenFunc(tools::fnv1aHash("First Type Chebyshev Node Generation Function")) {}
+  FirstTypeChebyshevNodeGenFunc();
 
-  base::DataVector genGPs(const size_t nNodes) const override {
-    const double f1 = M_PI / (2 * static_cast<double>(nNodes));
-    base::DataVector nodes(nNodes);
+  base::DataVector genGPs(GPCntType nNodes, bool addBoundary) const override;
 
-    for (GPCntType i = 0; i < nNodes; i++) {
-      const double f2 = 2 * static_cast<double>(nNodes - 1 - i) + 1;  // Reverse order
-      const double nonTransformedNode = std::cos(f1 * f2);
-      nodes[i] = nonTransformedNode / 2 + 0.5;
-    }
+  QuadRule* getQuadRule(const GPCntType nNodes) const override;
 
-    return nodes;
-  }
+  InterpolationMethod* getInterpolationMethod(const GPCntType nNodes) const override;
 
-  QuadRule* getQuadRule(const size_t nNodes) const override {
-    // TODO
-    throw base::not_implemented_exception("Operation is not yet implemented!");
-  }
+  bool operator==(const NodeGenFunc& other) const override;
 
-  InterpolationMethod* getInterpolationMethod(size_t nNodes) const override {
-    throw base::not_implemented_exception("Operation is not yet implemented!");
-  }
-
-  bool operator==(const NodeGenFunc& other) const override {
-    return typeid(*this) == typeid(other);
-  }
+ private:
+  base::DataVector genGPsWithBoundary(GPCntType GPCntType) const;
+  base::DataVector genGPsWithoutBoundary(GPCntType GPCntType) const;
 };
 
 }  // namespace node_gen_funcs

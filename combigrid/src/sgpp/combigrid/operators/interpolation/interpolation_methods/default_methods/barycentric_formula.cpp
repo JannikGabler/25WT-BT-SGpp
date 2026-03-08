@@ -1,5 +1,4 @@
 #include <cassert>
-#include <memory>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
 #include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
@@ -11,7 +10,7 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace interpolation_methods {
+namespace interpolation {
 
 BarycentricFormula::BarycentricFormula(const NodeGenFunc* nodeGenFunc)
     : InterpolationMethod(tools::fnv1aHashCombine(
@@ -35,10 +34,10 @@ double BarycentricFormula::evaluateFormula(const double pos, const std::vector<d
   const size_t nNodes = nodes.size();
   const std::vector<double> weights = tools::barycentricFormulaWeights(nodes);
 
-  double numerator = 0;
-  double denominator = 0;
+  double numerator = 0.0;
+  double denominator = 0.0;
 
-  for (size_t i = 1; i < nNodes - 1; i++) {
+  for (size_t i = 0; i < nNodes; i++) {
     const double factor = weights[i] / (pos - nodes[i]);
 
     numerator += factor * values[i];
@@ -48,7 +47,7 @@ double BarycentricFormula::evaluateFormula(const double pos, const std::vector<d
   return numerator / denominator;
 }
 
-}  // namespace interpolation_methods
+}  // namespace interpolation
 
 }  // namespace combigrid
 }  // namespace sgpp

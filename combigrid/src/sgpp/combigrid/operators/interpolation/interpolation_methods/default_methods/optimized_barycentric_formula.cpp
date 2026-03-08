@@ -1,6 +1,6 @@
 #include <cassert>
 #include <cstddef>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/default_methods/opt_barycentric_formula.hpp>
+#include <sgpp/combigrid/operators/interpolation/interpolation_methods/default_methods/optimized_barycentric_formula.hpp>
 #include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
@@ -8,7 +8,7 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace interpolation_methods {
+namespace interpolation {
 
 OptBarycentricFormula::OptBarycentricFormula()
     : InterpolationMethod(tools::fnv1aHash("Optimized Barycentric Formula Interpolation Method")) {}
@@ -50,7 +50,7 @@ double OptBarycentricFormula::barycentricFormula(const double pos, const std::ve
   return numerator / denominator;
 }
 
-}  // namespace interpolation_methods
+}  // namespace interpolation
 
 }  // namespace combigrid
 }  // namespace sgpp

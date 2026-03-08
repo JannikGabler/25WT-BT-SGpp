@@ -5,7 +5,7 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace interpolation_methods {
+namespace interpolation {
 
 /*
 Barycentric formula of the second kind optimized for Clenshaw Curtis nodes.
@@ -22,7 +22,7 @@ class OptBarycentricFormula : public InterpolationMethod {
                             const std::vector<double>& values) const;
 };
 
-}  // namespace interpolation_methods
+}  // namespace interpolation
 
 }  // namespace combigrid
 }  // namespace sgpp

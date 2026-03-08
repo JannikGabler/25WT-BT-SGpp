@@ -147,12 +147,12 @@ void populateTaskQueueForLookup(
       std::min(tools::ceil(idxBoundaries[idxBoundaries.size() - 1], (size_t)omp_get_max_threads()),
                constants::sg_gen_node_lookup::FOR_ITERATIONS_TO_TASK_QUEUE_PUSH);
 
-#pragma omp parallel
+  // #pragma omp parallel
   {
     std::vector<SGGenNodeLookupInsert> localInserts;
     localInserts.reserve(localBufferSize);
 
-#pragma omp for schedule(guided)
+    // #pragma omp for schedule(guided)
     for (size_t i = 0; i < idxBoundaries[idxBoundaries.size() - 1]; i++) {
       if (localInserts.size() >= constants::sg_gen_node_lookup::FOR_ITERATIONS_TO_TASK_QUEUE_PUSH) {
         queue.push(std::move(localInserts));
@@ -164,7 +164,7 @@ void populateTaskQueueForLookup(
       const std::pair<NodeGenFunc*, std::vector<GPCntType>> vecMapEntry = nodeCntPerType[vecMapIdx];
 
       const GPCntType nodeCnt = vecMapEntry.second[i - idxBoundaries[vecMapIdx]];
-      const base::DataVector gridsPoints = vecMapEntry.first->genGPs(nodeCnt);
+      const base::DataVector gridsPoints = vecMapEntry.first->genGPs(nodeCnt, false);
       localInserts.push_back({vecMapEntry.first, nodeCnt, gridsPoints});
     }
 

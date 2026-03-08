@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/miscellaneous/hashing/std_pair_hash.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
@@ -13,6 +12,8 @@
 
 namespace sgpp {
 namespace combigrid {
+
+class NodeGenFunc;  // Forward declaration to avoid circular includes
 
 /******************************************************************************************
 -Variable types-

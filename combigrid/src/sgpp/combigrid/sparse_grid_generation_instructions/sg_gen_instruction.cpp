@@ -52,8 +52,16 @@ void SGGenInstr::setBoundaryIndexOffset(const LvlType boundaryIndexOffset) {
   this->boundaryIndexOffset = boundaryIndexOffset;
 }
 
-void SGGenInstr::setBoundsForDim(const std::pair<double, double> bound, const size_t dim) {
-  bounds[dim] = bound;
+void SGGenInstr::setBoundsForDim(const std::pair<double, double> interval, const size_t dim) {
+  bounds[dim] = interval;
+}
+
+void SGGenInstr::setBounds(const std::pair<double, double> interval) {
+  const size_t nDim = this->nDim();
+
+  for (size_t dim = 0; dim < nDim; dim++) {
+    bounds[dim] = interval;
+  }
 }
 
 void SGGenInstr::setBounds(const std::vector<std::pair<double, double>>& bounds) {
@@ -65,6 +73,14 @@ void SGGenInstr::setNodeGenFuncForDim(NodeGenFunc* const nodeGenFunc, const size
   nodeGenFuncs[dim] = nodeGenFunc;
 }
 
+void SGGenInstr::setNodeGenFunc(NodeGenFunc* const nodeGenFunc) {
+  const size_t nDim = this->nDim();
+
+  for (size_t dim = 0; dim < nDim; dim++) {
+    nodeGenFuncs[dim] = nodeGenFunc;
+  }
+}
+
 void SGGenInstr::setNodeGenFuncs(const std::vector<NodeGenFunc*>& nodeGenFuncs) {
   const size_t nElemsToCopy = std::min(this->nodeGenFuncs.size(), nodeGenFuncs.size());
   std::copy_n(nodeGenFuncs.begin(), nElemsToCopy, this->nodeGenFuncs.begin());
@@ -72,6 +88,14 @@ void SGGenInstr::setNodeGenFuncs(const std::vector<NodeGenFunc*>& nodeGenFuncs) 
 
 void SGGenInstr::setLvl2GPCntFuncForDim(const Lvl2GPCntFunc lvl2GPCntFunc, const size_t dim) {
   this->lvl2GPCntFuncs.at(dim) = lvl2GPCntFunc;
+}
+
+void SGGenInstr::setLvl2GPCntFunc(const Lvl2GPCntFunc lvl2GPCntFunc) {
+  const size_t nDim = this->nDim();
+
+  for (size_t dim = 0; dim < nDim; dim++) {
+    lvl2GPCntFuncs[dim] = lvl2GPCntFunc;
+  }
 }
 
 void SGGenInstr::setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs) {

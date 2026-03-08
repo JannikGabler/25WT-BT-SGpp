@@ -43,13 +43,16 @@ class SGGenInstr {
   ******/
   void setBoundaryIndexOffset(LvlType boundaryIndexOffset);
 
-  void setBoundsForDim(std::pair<double, double> bound, size_t dim);
+  void setBoundsForDim(std::pair<double, double> interval, size_t dim);
+  void setBounds(std::pair<double, double> interval);
   void setBounds(const HyperCubeArea& bounds);
 
   void setNodeGenFuncForDim(NodeGenFunc* nodeGenFunc, size_t dim);
+  void setNodeGenFunc(NodeGenFunc* nodeGenFunc);
   void setNodeGenFuncs(const std::vector<NodeGenFunc*>& nodeGenFuncs);
 
   void setLvl2GPCntFuncForDim(Lvl2GPCntFunc lvl2GPCntFunc, size_t dim);
+  void setLvl2GPCntFunc(Lvl2GPCntFunc lvl2GPCntFunc);
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs);
 
   /*********************
