@@ -9,6 +9,8 @@
 #include <boost/test/unit_test_suite.hpp>
 
 #include <omp.h>
+#include <algorithm>
+#include <limits>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
@@ -35,7 +37,30 @@ double simpleSum(const DataVector& point) {
   return sum;
 }
 
+bool isDataVectorContained(const std::vector<DataVector>& vec, const DataVector& dataVec) {
+  for (const DataVector& v : vec) {
+    BOOST_REQUIRE_EQUAL(v.size(), dataVec.size());
+
+    bool equals = true;
+
+    for (size_t i = 0; i < v.size(); i++) {
+      if (v[i] != dataVec[i]) {
+        equals = false;
+        break;
+      }
+    }
+
+    if (equals) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 }  // namespace
+
+BOOST_AUTO_TEST_SUITE(source_function_cache)
 
 BOOST_AUTO_TEST_CASE(empty_cache) {
   misc::SourceFunctionCache cache;
@@ -237,3 +262,50 @@ BOOST_AUTO_TEST_CASE(test_randomized_multithreaded_access_openmp) {
     BOOST_CHECK(totalEntries == cache.size());
   }
 }
+
+BOOST_AUTO_TEST_CASE(number_of_evaluations_test) {
+  constexpr size_t nPoints = 500;
+  constexpr size_t nRetrievals = 500;
+
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    const size_t nDim = randGen.getUniformIndexRN(64);
+    size_t nEvaluations = 0;
+
+    const SourceFunc sourceFunc([&](const DataVector point) {
+      nEvaluations++;
+      double s = -std::numeric_limits<double>::max();
+      for (const double v : point) {
+        s = std::max(s, v);
+      }
+      return s;
+    });
+
+    std::vector<DataVector> points(nPoints, DataVector(nDim));
+    for (size_t i = 0; i < nPoints; i++) {
+      for (size_t dim = 0; dim < nDim; dim++) {
+        points[i][dim] = randGen.getUniformRN(0, +1);
+      }
+    }
+
+    const HyperCubeArea area(nDim, {0, 1});
+    std::vector<DataVector> evaluatedPoints;
+
+    for (size_t i = 0; i < nRetrievals; i++) {
+      const size_t idx = randGen.getUniformIndexRN(nPoints);
+      const DataVector point = points[idx];
+      const size_t nEvaluationsBefore = nEvaluations;
+      const double result = sourceFunc.evaluateNormalized(point, area);
+
+      if (isDataVectorContained(points, point)) {  // Point has not been evaluated before
+        BOOST_REQUIRE_EQUAL(nEvaluations, nEvaluationsBefore + 1);
+        BOOST_REQUIRE_EQUAL(result, *std::max_element(point.begin(), point.end()));
+        evaluatedPoints.push_back(point);
+      } else {  // Point has been evaluated before
+        BOOST_REQUIRE_EQUAL(nEvaluations, nEvaluationsBefore);
+      }
+    }
+  }
+}
+
+BOOST_AUTO_TEST_SUITE_END()

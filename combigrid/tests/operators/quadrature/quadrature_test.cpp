@@ -698,7 +698,7 @@ BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 1;
-    const LvlType maxLvl = 4;
+    const LvlType maxLvl = 5;
     const double a = randGen.getUniformRN(-2.0, 2.0);
     const double b = randGen.getUniformRN(-1.0, 1.0);
 
