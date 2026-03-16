@@ -23,6 +23,12 @@ constexpr size_t DWC_MIN_MI_FOR_CONCURRENCY = 10000;
 
 }  // namespace mi_vec
 
+namespace source_func {
+
+constexpr bool USE_CACHE = false;
+
+}
+
 namespace sg_gen_instr {
 
 // Full sg gen instruction

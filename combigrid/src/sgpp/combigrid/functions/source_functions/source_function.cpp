@@ -1,6 +1,7 @@
 #include <cassert>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
+#include "sgpp/combigrid/constants.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -16,10 +17,12 @@ double SourceFunc::evaluate(const base::DataVector& point) const { return func(p
 double SourceFunc::evaluateNormalized(base::DataVector point, const HyperCubeArea& area) const {
   assert(point.size() == area.size());
 
-  double result = 0;
-  if (cache.find(point, result)) {
-    return result;
-  }
+  // double result = 0;
+  // if (constants::source_func::USE_CACHE) {
+  //   if (cache.find(point, result)) {
+  //     return result;
+  //   }
+  // }
 
   for (size_t dim = 0; dim < point.size(); dim++) {  // Transform on to the area
     assert(point[dim] >= 0 && point[dim] <= 1);

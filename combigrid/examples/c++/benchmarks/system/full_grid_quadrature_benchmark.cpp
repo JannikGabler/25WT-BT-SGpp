@@ -16,8 +16,8 @@ using DataVector = sgpp::base::DataVector;
 
 static constexpr size_t nDim = 5;
 static constexpr size_t maxLvl = 10;
-static constexpr size_t warmupRuns = 2;
-static constexpr size_t runs = 5;
+static constexpr size_t warmupRuns = 1;
+static constexpr size_t runs = 3;
 
 SourceFunc getSinSourceFunc() {
   return SourceFunc([](const sgpp::base::DataVector& x) {
