@@ -25,7 +25,7 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
   const base::DataVector normPoint = interpolation::normalizePoint(point, genInstr->getBounds());
   double result = 0;
 
-  // #pragma omp parallel for reduction(+ : result)
+#pragma omp parallel for reduction(+ : result)
   for (const TensorGridCTData& tgData : sparseGrid) {
     const double v = interpolation::interpolate(sourceFunc, normPoint, tgData, *genInstr);
     result += tgData.coefficient * v;
