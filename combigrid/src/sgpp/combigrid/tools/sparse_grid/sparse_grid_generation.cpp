@@ -20,7 +20,7 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
 
   const SGGenNodeLookup lookup = genSGNodeLookup(genInstr, miVec, coeffs);
 
-  // #pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(guided)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
     const LvlMI mi = miVec[miIdx];
     const CTCoeffType coeff = coeffs[miIdx];

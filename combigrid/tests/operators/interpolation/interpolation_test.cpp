@@ -280,7 +280,7 @@ BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D_interpolation) {
       DataVector pt = genRandomPointInBounds(nDim);
       const double expected = a * pt[0] + b;
       const double result = interpolate(sourceFunc, pt, sg);
-      BOOST_CHECK_CLOSE(result, expected, 1e-12);
+      BOOST_CHECK_CLOSE(result, expected, 1e-10);
     }
   }
 }

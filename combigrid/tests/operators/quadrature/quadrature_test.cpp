@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_nD) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = randGen.getUniformIndexRN(5);
-    const LvlType maxLvl = static_cast<LvlType>(4 + randGen.getUniformIndexRN(3));  // 4...6
+    const LvlType maxLvl = static_cast<LvlType>(5 + randGen.getUniformIndexRN(3));  // 5...7
     const double value = randGen.getUniformRN(-1, 1);
 
     const FullSGGenInstr genInstr(maxLvl, nDim);

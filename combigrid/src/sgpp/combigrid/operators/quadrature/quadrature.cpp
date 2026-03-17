@@ -1,5 +1,8 @@
+#include <omp.h>
 #include <cassert>
+#include <iostream>
 #include <memory>
+#include <ostream>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -20,7 +23,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
   double result = 0;
 
-#pragma omp parallel for reduction(+ : result)
+#pragma omp parallel for reduction(+ : result)  // TODO: Scheduling
   for (const TensorGridCTData& tgData : sparseGrid) {
     result += tgData.coefficient *
               quadrature_operator::quadrature(sourceFunc, tgData.tensorGrid, *genInstr);

@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -70,6 +71,8 @@ int main() {
   double avgGenInstrTime = 0;
   double avgSGGenTime = 0;
   double avgQuadratureTime = 0;
+
+  std::cout << "#OMP Threads: " << omp_get_max_threads() << std::endl << std::endl;
 
   for (size_t i = 0; i < warmupRuns; i++) {
     std::cout << "- Warumup " << i << " -" << std::endl;
