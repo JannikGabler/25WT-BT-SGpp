@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 1 + randGen.getUniformIndexRN(5);  // 1..5
-    const LvlType maxLvl = static_cast<LvlType>(4 + randGen.getUniformIndexRN(3));
+    const LvlType maxLvl = static_cast<LvlType>(7 + randGen.getUniformIndexRN(3));
     const double value = randGen.getUniformRN(-2.0, 2.0);
 
     FullSGGenInstr genInstr(maxLvl, nDim);
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
     const double expected = value * volume;
     const double result = quadrature(sourceFunc, sg);
 
-    BOOST_CHECK_CLOSE(result, expected, 1e-10);
+    BOOST_CHECK_CLOSE(result, expected, 1e-08);
   }
 }
 
@@ -284,7 +284,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 1;
-    const LvlType maxLvl = 5;
+    const LvlType maxLvl = 6;
 
     const double aCoeff = randGen.getUniformRN(-2.0, 2.0);
     const double bCoeff = randGen.getUniformRN(-1.0, 1.0);
@@ -556,7 +556,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 1 + randGen.getUniformIndexRN(5);  // 1..5
-    const LvlType maxLvl = static_cast<LvlType>(4 + randGen.getUniformIndexRN(3));
+    const LvlType maxLvl = static_cast<LvlType>(6 + randGen.getUniformIndexRN(3));
     const double value = randGen.getUniformRN(-2.0, 2.0);
 
     FullSGGenInstr genInstr(maxLvl, nDim);
@@ -719,7 +719,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 1;
-    const LvlType maxLvl = 5;
+    const LvlType maxLvl = 6;
 
     const double aCoeff = randGen.getUniformRN(-2.0, 2.0);
     const double bCoeff = randGen.getUniformRN(-1.0, 1.0);

@@ -22,7 +22,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
   double result = 0;
 
-#pragma omp parallel for reduction(+ : result)  // TODO: Scheduling
+#pragma omp parallel for reduction(+ : result) schedule(guided)
   for (const TensorGridCTData& tgData : sparseGrid) {
     result += tgData.coefficient *
               quadrature_operator::quadrature(sourceFunc, tgData.tensorGrid, *genInstr);
@@ -44,15 +44,15 @@ double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGe
   }
 
   const HyperCubeArea bounds = genInstr.getBounds();
-  // const GPMI& gpCntPerDim = tg.getGPCntPerDim(); TODO: Delete
+  const GPMI& gpCntPerDim = tg.getGPCntPerDim();
   const std::vector<NodeGenFunc*>& nodeGenFuncs = genInstr.getNodeGenFuncs();
-  // const misc::DiscRectBB<GPCntType> iterationBB(std::vector<GPCntType>(nDim), gpCntPerDim,
-  // false); TODO: Delete
+  const misc::DiscRectBB<GPCntType> iterationBB(GPMI(nDim), gpCntPerDim, false);
   const std::vector<base::DataVector> weights = quadrature_operator::getWeights(tg, nodeGenFuncs);
 
   double result = 0;
   GPMI gpMI(nDim);
   base::DataVector gp(nDim);
+  tg.getGridPoint(0, gp);
 
   // TODO: Delete
   // size_t gpIdx = 0;
@@ -62,6 +62,22 @@ double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGe
   //   const double funcValue = sourceFunc.evaluateNormalized(gp, bounds);
   //   result += weight * funcValue;
   // }
+
+  // for (const GPMI& gpMI : iterationBB) {
+  //   tg.getGridPoint(gpMI, gp);
+  //   const double weight = quadrature_operator::getWeightForGP(gpMI, weights);
+  //   const double funcValue = sourceFunc.evaluateNormalizedInPlace(gp, bounds);
+  //   result += weight * funcValue;
+  // }
+
+  // for (size_t i = 0; i < nGP; i++) {
+  //   const double weight = quadrature_operator::getWeightForGP(gpMI, weights);
+  //   const double funcValue = sourceFunc.evaluateNormalizedInPlace(gp, bounds);
+  //   result += weight * funcValue;
+
+  //   tg.getGridPointAndIncr(gpMI, gp);
+  // }
+
   for (size_t i = 0; i < nGP; i++) {
     tg.getGridPointAndMI(i, gp, gpMI);
     const double weight = quadrature_operator::getWeightForGP(gpMI, weights);

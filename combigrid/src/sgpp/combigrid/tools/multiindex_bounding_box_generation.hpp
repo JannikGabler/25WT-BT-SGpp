@@ -16,7 +16,7 @@ namespace tools {
 template <typename T>
 misc::DiscRectBB<T> genRectMIBoundingBox(const MIVec<T>& miVec) {
   const std::shared_ptr<MI<T>> max = miVec.componentWiseMax();
-  const std::vector<T> lowerBound(max->size(), 0);
+  const MI<T> lowerBound(max->size(), 0);
 
   return misc::DiscRectBB<T>(lowerBound, *max);
 }

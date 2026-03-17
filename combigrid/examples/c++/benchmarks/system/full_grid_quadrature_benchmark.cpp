@@ -15,10 +15,10 @@
 using namespace sgpp::combigrid;
 using DataVector = sgpp::base::DataVector;
 
-static constexpr size_t nDim = 5;
+static constexpr size_t nDim = 6;
 static constexpr size_t maxLvl = 10;
-static constexpr size_t warmupRuns = 1;
-static constexpr size_t runs = 3;
+static constexpr size_t warmupRuns = 2;
+static constexpr size_t runs = 5;
 
 SourceFunc getSinSourceFunc() {
   return SourceFunc([](const sgpp::base::DataVector& x) {

@@ -3,7 +3,7 @@
 
 #include <cassert>
 #include <cstddef>
-#include <vector>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -17,16 +17,16 @@ class DiscRectBBIterator {
  public:
   DiscRectBBIterator(const DiscRectBB<T>& rectDiscBB, const bool finished = false)
       : rectDiscBB(rectDiscBB),
-        curPos(finished ? std::vector<T>{} : rectDiscBB.lowerBound),
+        curPos(finished ? MI<T>{} : rectDiscBB.lowerBound),
         finished(finished) {}
 
-  DiscRectBBIterator(const DiscRectBB<T>& rectDiscBB, const std::vector<T>& startPos)
+  DiscRectBBIterator(const DiscRectBB<T>& rectDiscBB, const MI<T>& startPos)
       : rectDiscBB(rectDiscBB), curPos(startPos), finished(false) {
     assert(startPos.size() == rectDiscBB.nDim());
   }
 
-  const std::vector<T>& operator*() const { return curPos; }
-  const std::vector<T>* operator->() const { return &curPos; }
+  const MI<T>& operator*() const { return curPos; }
+  const MI<T>* operator->() const { return &curPos; }
 
   DiscRectBBIterator& operator++() {
     if (rectDiscBB.includeUpperBound) {
@@ -57,7 +57,7 @@ class DiscRectBBIterator {
 
  private:
   const DiscRectBB<T>& rectDiscBB;
-  std::vector<T> curPos;
+  MI<T> curPos;
   bool finished = false;
 };
 

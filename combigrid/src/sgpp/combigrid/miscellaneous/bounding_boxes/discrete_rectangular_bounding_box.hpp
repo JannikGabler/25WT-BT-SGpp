@@ -3,6 +3,7 @@
 #include <cassert>
 #include <limits>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box_iterator.hpp>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/globaldef.hpp>
 #include <vector>
 
@@ -13,12 +14,11 @@ namespace misc {
 template <typename T>
 struct DiscRectBB {
  public:
-  const std::vector<T> lowerBound;
-  const std::vector<T> upperBound;
+  const MI<T> lowerBound;
+  const MI<T> upperBound;
   const bool includeUpperBound;
 
-  DiscRectBB(std::vector<T> lowerBound, std::vector<T> upperBound,
-             const bool includeUpperBound = true)
+  DiscRectBB(MI<T> lowerBound, MI<T> upperBound, const bool includeUpperBound = true)
       : lowerBound(std::move(lowerBound)),
         upperBound(std::move(upperBound)),
         includeUpperBound(includeUpperBound) {
@@ -50,7 +50,7 @@ struct DiscRectBB {
 
   DiscRectBBIterator<T> begin() const { return DiscRectBBIterator<T>(*this); }
 
-  DiscRectBBIterator<T> begin(const std::vector<T>& start) const {
+  DiscRectBBIterator<T> begin(const MI<T>& start) const {
     return DiscRectBBIterator<T>(*this, start);
   }
   DiscRectBBIterator<T> begin(const size_t& startIdx) const {
@@ -79,7 +79,7 @@ struct DiscRectBB {
     return idxCntUntilDimChange;
   }
 
-  std::vector<T> linearIndexToPos(size_t idx) const {
+  MI<T> linearIndexToPos(size_t idx) const {
     const size_t nDim = this->nDim();
     const std::vector<size_t> idxCntUntilDimChange = getIdxCntUntilDimChange();
     std::vector<T> pos(nDim);
