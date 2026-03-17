@@ -96,14 +96,8 @@ BOOST_AUTO_TEST_CASE(Random_Full_1D_SG) {
 
     const sgpp::base::DataVector nodes =
         equidistantNodeGenFunc->genNodes(linearLvl2GPCntFunction(maxLvl) + 2, true);
-    // std::vector<sgpp::base::DataVector> gps(nodes.size() + 2); // TODO: Delete
-    // gps[0] = sgpp::base::DataVector{0};
-    // for (size_t i = 0; i < nodes.size(); i++) {
-    //   gps[i + 1] = sgpp::base::DataVector{nodes[i]};
-    // }
-    // gps[gps.size() - 1] = sgpp::base::DataVector{1};
-    const TensorGrid tg({(GPCntType)(nodes.size() + 2)}, nodes);
 
+    const TensorGrid tg({linearLvl2GPCntFunction(maxLvl) + 2}, nodes);
     expected.setTensorGrid(0, TensorGridCTData{mi, coeff, tg});
 
     // Result

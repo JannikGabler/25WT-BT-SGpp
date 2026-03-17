@@ -7,6 +7,7 @@
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -24,7 +25,8 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
     const LvlMI mi = miVec[miIdx];
     const CTCoeffType coeff = coeffs[miIdx];
 
-    out.setTensorGrid(miIdx, {mi, coeff, genTGForMI(mi, genInstr)});
+    const TensorGrid tg = genTGForMI(mi, genInstr);
+    out.setTensorGrid(miIdx, {mi, coeff, std::move(tg)});
   }
 }
 
@@ -34,6 +36,7 @@ TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr) {
   //                                               gpCntPerDim, false);
   base::DataVector nodesPerDimForTG = sg_gen::getNodesPerDimForTG(mi, genInstr, gpCntPerDim);
 
+  // TODO: Delete
   // TensorGrid tg(gpCntPerDim);
   // size_t idx = 0;
 
@@ -69,10 +72,12 @@ GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
 
 base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
                                      const GPMI& gpCntPerDim) {
+  const size_t nDim = genInstr.nDim();
+
   base::DataVector nodesPerDim(gpCntPerDim.sumOfElems<size_t>());
   size_t vecIdx = 0;
 
-  for (size_t dim = 0; dim < nodesPerDim.size(); dim++) {
+  for (size_t dim = 0; dim < nDim; dim++) {
     NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
     const GPCntType nodeCnt = gpCntPerDim[dim];
     const bool includeBoundary = mi[dim] >= genInstr.getBoundaryIndexOffset();
@@ -80,6 +85,7 @@ base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr
     nodeGenFunc->genNodesInplace(nodeCnt, nodesPerDim, includeBoundary, vecIdx);
     vecIdx += nodeCnt;
 
+    // TODO: Delete
     // if (mi[dim] < genInstr.getBoundaryIndexOffset()) {  // Should the boundary be included?
     //   const size_t innerNodeCnt = gpCntPerDim[dim];
     //   nodeGenFunc nodesPerDim[dim] = lookup.find({nodeGenFunc, innerNodeCnt})->second;
