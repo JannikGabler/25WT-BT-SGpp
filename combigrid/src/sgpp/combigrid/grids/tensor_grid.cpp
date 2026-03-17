@@ -21,9 +21,14 @@ TensorGrid::TensorGrid(const GPMI& nGPPerDim) noexcept
       nGPPerDim(nGPPerDim),
       nodesPerDim(nGPPerDim.sumOfElems<size_t>()) {}
 
-TensorGrid::TensorGrid(const GPMI& nGPPerDim, base::DataVector&& nodesPerDim) noexcept
+TensorGrid::TensorGrid(const GPMI& nGPPerDim, const base::DataVector& nodesPerDim) noexcept
+    : nGP_(nGPPerDim.productofElems<size_t>()), nGPPerDim(nGPPerDim), nodesPerDim(nodesPerDim) {
+  assert(this->nodesPerDim.size() == nGPPerDim.sumOfElems<size_t>());
+}
+
+TensorGrid::TensorGrid(GPMI&& nGPPerDim, base::DataVector&& nodesPerDim) noexcept
     : nGP_(nGPPerDim.productofElems<size_t>()),
-      nGPPerDim(nGPPerDim),
+      nGPPerDim(std::move(nGPPerDim)),
       nodesPerDim(std::move(nodesPerDim)) {
   assert(this->nodesPerDim.size() == nGPPerDim.sumOfElems<size_t>());
 }

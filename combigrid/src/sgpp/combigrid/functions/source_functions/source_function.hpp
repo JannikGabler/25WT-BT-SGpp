@@ -25,6 +25,12 @@ class SourceFunc {
   */
   double evaluateNormalizedInPlace(base::DataVector& point, const HyperCubeArea& area) const;
 
+  /*
+  Inefficient, should not be used in hot loops.
+  */
+  double evaluateNormalizedOutOfPlace(const base::DataVector& point,
+                                      const HyperCubeArea& area) const;
+
  private:
   std::function<double(const base::DataVector&)> func;
   mutable misc::SourceFunctionCache cache;  // Caches normalized points

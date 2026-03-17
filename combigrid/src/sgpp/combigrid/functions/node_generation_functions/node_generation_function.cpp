@@ -5,19 +5,25 @@
 namespace sgpp {
 namespace combigrid {
 
-base::DataVector NodeGenFunc::genNodes(const GPCntType nNodes, const bool addBoundary) const {
-  assert(!addBoundary || nNodes >= 2);
-
+base::DataVector NodeGenFunc::genNodes(const GPCntType nNodes, const bool includeBoundary) const {
   base::DataVector nodes(nNodes);
 
-  if (addBoundary) {
-    genNodesInplace(nNodes - 2, nodes, 1);
-    nodes[nNodes - 1] = 1.0;
-  } else {
-    genNodesInplace(nNodes, nodes);
-  }
+  genNodesInplace(nNodes, nodes, includeBoundary);
 
   return nodes;
+}
+
+void NodeGenFunc::genNodesInplace(const GPCntType nNodes, base::DataVector& out,
+                                  const bool includeBoundary, const size_t startIdx) const {
+  assert(!includeBoundary || nNodes >= 2 && out.size() - startIdx >= nNodes);
+
+  if (includeBoundary) {
+    out[startIdx] = 0.0;
+    genNodesInplace(nNodes - 2, out, startIdx + 1);
+    out[nNodes - 1] = 1.0;
+  } else {
+    genNodesInplace(nNodes, out, startIdx);
+  }
 }
 
 }  // namespace combigrid

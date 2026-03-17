@@ -1,64 +1,66 @@
-#ifndef COMBIGRID_TOOLS_SPARSE_GRID_GENERATION_GRID_POINT_LOOKUP_HPP
-#define COMBIGRID_TOOLS_SPARSE_GRID_GENERATION_GRID_POINT_LOOKUP_HPP
+// TODO: Not used at the moment
 
-#include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/miscellaneous/concurrency/concurrent_task_queue.hpp>
-#include <sgpp/combigrid/miscellaneous/vector_map/vector_map.hpp>
-#include <sgpp/combigrid/multiindices/multiindex.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/type_defs.hpp>
-#include <thread>
+// #ifndef COMBIGRID_TOOLS_SPARSE_GRID_GENERATION_GRID_POINT_LOOKUP_HPP
+// #define COMBIGRID_TOOLS_SPARSE_GRID_GENERATION_GRID_POINT_LOOKUP_HPP
 
-namespace sgpp {
-namespace combigrid {
-namespace tools {
+// #include <sgpp/base/datatypes/DataVector.hpp>
+// #include <sgpp/combigrid/miscellaneous/concurrency/concurrent_task_queue.hpp>
+// #include <sgpp/combigrid/miscellaneous/vector_map/vector_map.hpp>
+// #include <sgpp/combigrid/multiindices/multiindex.hpp>
+// #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+// #include <sgpp/combigrid/type_defs.hpp>
+// #include <thread>
 
-SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                                const std::vector<CTCoeffType> coeff);
+// namespace sgpp {
+// namespace combigrid {
+// namespace tools {
 
-/******************
-Internal operations
-******************/
-namespace sg_gen_node_lookup {
+// SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const LvlMIVec& miVec,
+//                                 const std::vector<CTCoeffType> coeff);
 
-struct SGGenNodeLookupInsert {
-  NodeGenFunc* gpGenFunc;
-  GPCntType gpCnt;
-  base::DataVector nodes;
-};
+// /******************
+// Internal operations
+// ******************/
+// namespace sg_gen_node_lookup {
 
-misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
-    const SGGenInstr& genInstr, const LvlMIVec& miVec);
+// struct SGGenNodeLookupInsert {
+//   NodeGenFunc* gpGenFunc;
+//   GPCntType gpCnt;
+//   base::DataVector nodes;
+// };
 
-std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr);
+// misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
+//     const SGGenInstr& genInstr, const LvlMIVec& miVec);
 
-std::vector<GPCntType> getNodeCntRequiredByDim(size_t dim, const SGGenInstr& genInstr,
-                                               const LvlMI& componentWiseMax);
+// std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr);
 
-misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
-    const std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>>& vecOfLocalGPCnts,
-    const SGGenInstr& genInstr, const std::vector<NodeGenFunc*>& uniqueNodeGenFuncs);
+// std::vector<GPCntType> getNodeCntRequiredByDim(size_t dim, const SGGenInstr& genInstr,
+//                                                const LvlMI& componentWiseMax);
 
-SGGenNodeLookup genLookupBasedOnNodeCntPerType(
-    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType);
+// misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
+//     const std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>>& vecOfLocalGPCnts,
+//     const SGGenInstr& genInstr, const std::vector<NodeGenFunc*>& uniqueNodeGenFuncs);
 
-void populateTaskQueueForLookup(
-    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType,
-    const std::vector<size_t>& idxBoundaries,
-    ConcurrentTaskQueue<std::vector<SGGenNodeLookupInsert>>& queue);
+// SGGenNodeLookup genLookupBasedOnNodeCntPerType(
+//     const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType);
 
-std::thread startLookupInserterThread(
-    SGGenNodeLookup& lookup, ConcurrentTaskQueue<std::vector<SGGenNodeLookupInsert>>& queue);
+// void populateTaskQueueForLookup(
+//     const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType,
+//     const std::vector<size_t>& idxBoundaries,
+//     ConcurrentTaskQueue<std::vector<SGGenNodeLookupInsert>>& queue);
 
-std::vector<size_t> getIdxBoundaries(
-    const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType);
+// std::thread startLookupInserterThread(
+//     SGGenNodeLookup& lookup, ConcurrentTaskQueue<std::vector<SGGenNodeLookupInsert>>& queue);
 
-size_t getVecMapIdxByNodeCntIdx(size_t gpCntIdx, const std::vector<size_t>& idxBoundaries);
+// std::vector<size_t> getIdxBoundaries(
+//     const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType);
 
-}  // namespace sg_gen_node_lookup
+// size_t getVecMapIdxByNodeCntIdx(size_t gpCntIdx, const std::vector<size_t>& idxBoundaries);
 
-}  // namespace tools
-}  // namespace combigrid
-}  // namespace sgpp
+// }  // namespace sg_gen_node_lookup
 
-#endif
+// }  // namespace tools
+// }  // namespace combigrid
+// }  // namespace sgpp
+
+// #endif

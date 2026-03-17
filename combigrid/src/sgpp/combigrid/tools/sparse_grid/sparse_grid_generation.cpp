@@ -24,17 +24,15 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
     const LvlMI mi = miVec[miIdx];
     const CTCoeffType coeff = coeffs[miIdx];
 
-    TensorGrid tg = genTGForMI(mi, genInstr, lookup);
-    out.setTensorGrid(miIdx, {mi, coeff, std::move(tg)});
+    out.setTensorGrid(miIdx, {mi, coeff, genTGForMI(mi, genInstr)});
   }
 }
 
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr) {
-  const GPMI gpCntPerDim = sg_gen::getGPCntPerDim(mi, genInstr);
+  GPMI gpCntPerDim = sg_gen::getGPCntPerDim(mi, genInstr);
   // const misc::DiscRectBB<GPCntType> iterationBB(std::vector<GPCntType>(genInstr.nDim()),
   //                                               gpCntPerDim, false);
-  const std::vector<base::DataVector> nodesPerDimForTG =
-      sg_gen::getNodesPerDimForTG(mi, genInstr, gpCntPerDim, lookup);
+  base::DataVector nodesPerDimForTG = sg_gen::getNodesPerDimForTG(mi, genInstr, gpCntPerDim);
 
   // TensorGrid tg(gpCntPerDim);
   // size_t idx = 0;
@@ -47,7 +45,7 @@ TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr) {
   //   idx++;
   // }
 
-  return tg;
+  return TensorGrid(std::move(gpCntPerDim), std::move(nodesPerDimForTG));
 }
 
 namespace sg_gen {
@@ -70,23 +68,29 @@ GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
 }
 
 base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
-                                     const GPMI& gpCntPerDim, const SGGenNodeLookup& lookup) {
+                                     const GPMI& gpCntPerDim) {
   base::DataVector nodesPerDim(gpCntPerDim.sumOfElems<size_t>());
+  size_t vecIdx = 0;
 
   for (size_t dim = 0; dim < nodesPerDim.size(); dim++) {
     NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+    const GPCntType nodeCnt = gpCntPerDim[dim];
+    const bool includeBoundary = mi[dim] >= genInstr.getBoundaryIndexOffset();
 
-    if (mi[dim] < genInstr.getBoundaryIndexOffset()) {  // Should the boundary be included?
-      const size_t innerNodeCnt = gpCntPerDim[dim];
-      nodeGenFunc nodesPerDim[dim] = lookup.find({nodeGenFunc, innerNodeCnt})->second;
-    } else {
-      const size_t innerNodeCnt = gpCntPerDim[dim] - 2;
-      const base::DataVector& cachedNodes = lookup.find({nodeGenFunc, innerNodeCnt})->second;
+    nodeGenFunc->genNodesInplace(nodeCnt, nodesPerDim, includeBoundary, vecIdx);
+    vecIdx += nodeCnt;
 
-      nodesPerDim[dim] = base::DataVector(gpCntPerDim[dim]);
-      std::copy(cachedNodes.begin(), cachedNodes.end(), nodesPerDim[dim].begin() + 1);
-      nodesPerDim[dim][gpCntPerDim[dim] - 1] = static_cast<double>(1);
-    }
+    // if (mi[dim] < genInstr.getBoundaryIndexOffset()) {  // Should the boundary be included?
+    //   const size_t innerNodeCnt = gpCntPerDim[dim];
+    //   nodeGenFunc nodesPerDim[dim] = lookup.find({nodeGenFunc, innerNodeCnt})->second;
+    // } else {
+    //   const size_t innerNodeCnt = gpCntPerDim[dim] - 2;
+    //   const base::DataVector& cachedNodes = lookup.find({nodeGenFunc, innerNodeCnt})->second;
+
+    //   nodesPerDim[dim] = base::DataVector(gpCntPerDim[dim]);
+    //   std::copy(cachedNodes.begin(), cachedNodes.end(), nodesPerDim[dim].begin() + 1);
+    //   nodesPerDim[dim][gpCntPerDim[dim] - 1] = static_cast<double>(1);
+    // }
   }
 
   return nodesPerDim;

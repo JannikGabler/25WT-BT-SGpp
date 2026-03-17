@@ -19,7 +19,15 @@ class TensorGrid {
 
   TensorGrid(const GPMI& nGPPerDim) noexcept;
 
-  TensorGrid(const GPMI& nGPPerDim, base::DataVector&& nodesPerDim) noexcept;
+  /*
+  Requires a copy
+  */
+  TensorGrid(const GPMI& nGPPerDim, const base::DataVector& nodesPerDim) noexcept;
+
+  /*
+  Moves the arguments
+  */
+  TensorGrid(GPMI&& nGPPerDim, base::DataVector&& nodesPerDim) noexcept;
 
   /*****
   Getter

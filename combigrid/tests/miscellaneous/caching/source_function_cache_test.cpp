@@ -295,7 +295,8 @@ BOOST_AUTO_TEST_CASE(number_of_evaluations_test) {
       const size_t idx = randGen.getUniformIndexRN(nPoints);
       const DataVector point = points[idx];
       const size_t nEvaluationsBefore = nEvaluations;
-      const double result = sourceFunc.evaluateNormalized(point, area);
+
+      const double result = sourceFunc.evaluateNormalizedOutOfPlace(point, area);
 
       if (isDataVectorContained(points, point)) {  // Point has not been evaluated before
         BOOST_REQUIRE_EQUAL(nEvaluations, nEvaluationsBefore + 1);

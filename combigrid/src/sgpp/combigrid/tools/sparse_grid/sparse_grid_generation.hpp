@@ -15,7 +15,7 @@ namespace tools {
 void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
                 const std::vector<CTCoeffType>& coeffs, SparseGrid& out);
 
-TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr, const SGGenNodeLookup& lookup);
+TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr);
 
 /******************
 Internal operations
@@ -26,9 +26,8 @@ GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr);
 
 misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim);
 
-std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
-                                                  const GPMI& gpCntPerDim,
-                                                  const SGGenNodeLookup& lookup);
+base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
+                                     const GPMI& gpCntPerDim);
 
 }  // namespace sg_gen
 

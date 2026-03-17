@@ -29,6 +29,13 @@ double SourceFunc::evaluateNormalizedInPlace(base::DataVector& point,
   return evaluate(point);
 }
 
+double SourceFunc::evaluateNormalizedOutOfPlace(const base::DataVector& point,
+                                                const HyperCubeArea& area) const {
+  assert(point.size() == area.size());
+
+  return evaluate(tools::denormalizeDataVector(point, area));
+}
+
 }  // namespace combigrid
 
 }  // namespace sgpp

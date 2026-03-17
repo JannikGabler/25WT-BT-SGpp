@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_SUITE(op_genEquidistantNodes)
 BOOST_AUTO_TEST_CASE(ZeroNodes) {
   const size_t n = 0;
   const node_gen_funcs::EquidistantNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genGPs(n, false);
+  const DataVector nodes = nodeGenFunc.genNodes(n, false);
 
   BOOST_CHECK_EQUAL(nodes.size(), 0u);
 }
@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(ZeroNodes) {
 BOOST_AUTO_TEST_CASE(BasicPropertiesSmallN) {
   const size_t n = 4;
   const node_gen_funcs::EquidistantNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genGPs(n, false);
+  const DataVector nodes = nodeGenFunc.genNodes(n, false);
 
   checkInteriorAndSorted(nodes, n);
 
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(BasicPropertiesSmallN) {
 BOOST_AUTO_TEST_CASE(UniformSpacingLargerN) {
   const size_t n = 10;
   const node_gen_funcs::EquidistantNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genGPs(n, false);
+  const DataVector nodes = nodeGenFunc.genNodes(n, false);
 
   // Adjacent differences should be equal to 1/(n+1)
   double expectedDiff = 1.0 / double(n + 1);
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_SUITE(op_genFirstTypeChebyshevNodes)
 BOOST_AUTO_TEST_CASE(ZeroNodes) {
   const size_t n = 0;
   const node_gen_funcs::FirstTypeChebyshevNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genGPs(n, false);
+  const DataVector nodes = nodeGenFunc.genNodes(n, false);
 
   BOOST_CHECK_EQUAL(nodes.size(), 0u);
 }
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(ZeroNodes) {
 BOOST_AUTO_TEST_CASE(BasicPropertiesAndValues) {
   const size_t n = 3;
   const node_gen_funcs::FirstTypeChebyshevNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genGPs(n, false);
+  const DataVector nodes = nodeGenFunc.genNodes(n, false);
 
   checkInteriorAndSorted(nodes, n);
 
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_SUITE(op_genSecondTypeChebyshevNodes)
 BOOST_AUTO_TEST_CASE(ZeroNodes) {
   const size_t n = 0;
   const node_gen_funcs::SecondTypeChebyshevNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genGPs(n, false);
+  const DataVector nodes = nodeGenFunc.genNodes(n, false);
 
   BOOST_CHECK_EQUAL(nodes.size(), 0u);
 }
@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE(ZeroNodes) {
 BOOST_AUTO_TEST_CASE(BasicPropertiesAndValues) {
   const size_t n = 3;
   const node_gen_funcs::SecondTypeChebyshevNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genGPs(n, false);
+  const DataVector nodes = nodeGenFunc.genNodes(n, false);
 
   checkInteriorAndSorted(nodes, n);
 

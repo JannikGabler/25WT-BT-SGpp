@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_SUITE(clenshaw_curtis_opt_barycentric_formula)
 
 BOOST_AUTO_TEST_CASE(empty_case) {
   const NodeGenFunc* nodeGenFunc = getClenshawCurtisNodeGenFunc();
-  const DataVector nodes = nodeGenFunc->genGPs(0, false);
+  const DataVector nodes = nodeGenFunc->genNodes(0, false);
   const InterpolationMethod* formula = getOptBarycentricFormula();
   const std::vector<double> values(0);
 
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(one_value_case) {
     const double point = randGen.getUniformRN(0, 1);
 
     const NodeGenFunc* nodeGenFunc = getClenshawCurtisNodeGenFunc();
-    const DataVector nodes = nodeGenFunc->genGPs(1, false);
+    const DataVector nodes = nodeGenFunc->genNodes(1, false);
     const InterpolationMethod* formula = getOptBarycentricFormula();
     const std::vector<double> values{randGen.getUniformRN(-1, 1)};
 
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(two_value_case) {
     const double point = randGen.getUniformRN(0, 1);
 
     const NodeGenFunc* nodeGenFunc = getClenshawCurtisNodeGenFunc();
-    const DataVector nodes = nodeGenFunc->genGPs(2, false);
+    const DataVector nodes = nodeGenFunc->genNodes(2, false);
     const InterpolationMethod* formula = getOptBarycentricFormula();
     const std::vector<double> values{randGen.getUniformRN(-1, 1), randGen.getUniformRN(-1, 1)};
 
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(eval_at_node_case) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const NodeGenFunc* nodeGenFunc = getClenshawCurtisNodeGenFunc();
-    const DataVector nodes = nodeGenFunc->genGPs(nNodes, false);
+    const DataVector nodes = nodeGenFunc->genNodes(nNodes, false);
     const InterpolationMethod* formula = getOptBarycentricFormula();
 
     std::vector<double> values(nNodes);
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(constant_function_case) {
 
   const NodeGenFunc* nodeGenFunc = getClenshawCurtisNodeGenFunc();
 
-  const DataVector nodes = nodeGenFunc->genGPs(nNodes, false);
+  const DataVector nodes = nodeGenFunc->genNodes(nNodes, false);
   const InterpolationMethod* formula = getOptBarycentricFormula();
 
   const double c = 3.141592653589793;
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(linear_polynomial_case) {
 
   const NodeGenFunc* nodeGenFunc = getClenshawCurtisNodeGenFunc();
 
-  const DataVector nodes = nodeGenFunc->genGPs(nNodes, false);
+  const DataVector nodes = nodeGenFunc->genNodes(nNodes, false);
   const InterpolationMethod* formula = getOptBarycentricFormula();
 
   std::vector<double> values(nNodes);
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(quadratic_polynomial_case) {
   constexpr double c = 0.3;
 
   const NodeGenFunc* nodeGenFunc = getClenshawCurtisNodeGenFunc();
-  const DataVector nodes = nodeGenFunc->genGPs(nNodes, false);
+  const DataVector nodes = nodeGenFunc->genNodes(nNodes, false);
   const InterpolationMethod* formula = getOptBarycentricFormula();
 
   std::vector<double> values(nNodes);
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(extrapolation_case) {
   constexpr double point = 1.5;
 
   const NodeGenFunc* nodeGenFunc = getClenshawCurtisNodeGenFunc();
-  const DataVector nodes = nodeGenFunc->genGPs(nNodes, false);
+  const DataVector nodes = nodeGenFunc->genNodes(nNodes, false);
   const InterpolationMethod* formula = getOptBarycentricFormula();
 
   std::vector<double> values(nNodes);

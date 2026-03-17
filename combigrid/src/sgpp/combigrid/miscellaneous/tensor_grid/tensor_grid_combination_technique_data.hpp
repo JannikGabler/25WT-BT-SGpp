@@ -1,5 +1,4 @@
-#ifndef COMBIGRID_MISC_TENSOR_GRID_CT_DATA_HPP
-#define COMBIGRID_MISC_TENSOR_GRID_CT_DATA_HPP
+#pragma once
 
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 
@@ -16,5 +15,3 @@ struct TensorGridCTData {
 
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif
