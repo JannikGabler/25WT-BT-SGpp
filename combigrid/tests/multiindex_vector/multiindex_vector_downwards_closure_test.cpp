@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(RandomizedMIVec) {
   // std::uniform_int_distribution<size_t> miDist(1, 100);  // number of MIs
   // std::uniform_int_distribution<LvlType> valDist(0, 5);
 
-  randGen.setSeed();
+  randGen.setSeed(1773780359);
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 2 + randGen.getUniformIndexRN(4);
     const size_t nMI = 1 + randGen.getUniformIndexRN(100);

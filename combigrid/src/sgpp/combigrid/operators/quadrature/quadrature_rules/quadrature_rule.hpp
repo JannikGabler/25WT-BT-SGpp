@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include "sgpp/combigrid/type_defs.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -11,7 +12,10 @@ class QuadRule {
 
   virtual ~QuadRule() = default;
 
-  virtual base::DataVector getWeights(size_t nNodes) const = 0;
+  virtual base::DataVector getWeights(GPCntType nNodes) const = 0;
+
+  virtual void genWeightsInplace(GPCntType nNodes, base::DataVector& out,
+                                 size_t startIdx = 0) const = 0;
 
   uint64_t id() const { return id_; }
 

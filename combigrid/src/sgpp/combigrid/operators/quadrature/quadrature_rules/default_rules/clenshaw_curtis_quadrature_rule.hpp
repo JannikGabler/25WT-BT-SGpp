@@ -5,6 +5,7 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
+#include "sgpp/combigrid/type_defs.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -15,7 +16,10 @@ class ClenshawCurtisQuadRule : public QuadRule {
  public:
   ClenshawCurtisQuadRule() : QuadRule(tools::fnv1aHash("Clenshaw Curtis Quadrature Rule")) {}
 
-  base::DataVector getWeights(const size_t nNodes) const override;
+  base::DataVector getWeights(const GPCntType nNodes) const override;
+
+  void genWeightsInplace(const GPCntType nNodes, base::DataVector& out,
+                         size_t startIdx = 0) const override;
 
  private:
   /*

@@ -2,6 +2,7 @@
 
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/quadrature_scratch.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -13,16 +14,17 @@ Internal operations
 ******************/
 namespace quadrature_operator {
 
-double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGenInstr& genInstr);
+double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGenInstr& genInstr,
+                  tools::QuadScratch& scratch);
 
-std::vector<base::DataVector> getWeights(const TensorGrid& tg,
-                                         const std::vector<NodeGenFunc*>& nodeGenFuncs);
+void getWeights(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
+                tools::QuadScratch& scratch);
 
-double getWeightForGP(const std::vector<GPCntType>& gpMI,
-                      const std::vector<base::DataVector>& weights);
+double getWeightForGP(const std::vector<GPCntType>& gpMI, const GPMI& gpCntPerDim,
+                      const tools::QuadScratch& scratch);
 
-std::vector<QuadRule*> getQuadRules(const TensorGrid& tg,
-                                    const std::vector<NodeGenFunc*>& nodeGenFuncs);
+void getQuadRules(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
+                  tools::QuadScratch& scratch);
 
 }  // namespace quadrature_operator
 

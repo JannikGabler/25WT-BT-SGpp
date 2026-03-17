@@ -19,15 +19,24 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
   assert(out.nTG() >= miVec.nMI());
 
   // const SGGenNodeLookup lookup = genSGNodeLookup(genInstr, miVec, coeffs);
+  size_t maxGPCnt = 0;
+  size_t maxSumOverGPCntsPerDim = 0;
 
-#pragma omp parallel for schedule(guided)  // TODO: Schedule (benchmark)
+#pragma omp parallel for reduction(max : maxGPCnt, maxSumOverGPCntsPerDim) \
+    schedule(guided)  // TODO: Schedule (benchmark)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
     const LvlMI mi = miVec[miIdx];
     const CTCoeffType coeff = coeffs[miIdx];
 
     const TensorGrid tg = genTGForMI(mi, genInstr);
     out.setTensorGrid(miIdx, {mi, coeff, std::move(tg)});
+
+    maxGPCnt = std::max(maxGPCnt, tg.nGP());
+    maxSumOverGPCntsPerDim = std::max(maxSumOverGPCntsPerDim, tg.getNodesPerDim().size());
   }
+
+  out.setMaxTGGPCnt(maxGPCnt);
+  out.setMaxTGSumOverGPCntsPerDim(maxSumOverGPCntsPerDim);
 }
 
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr) {

@@ -44,6 +44,8 @@ size_t TensorGrid::nGP() const { return nGP_; }
 
 const GPMI& TensorGrid::getGPCntPerDim() const { return nGPPerDim; }
 
+const base::DataVector& TensorGrid::getNodesPerDim() const { return nodesPerDim; }
+
 void TensorGrid::getGridPoint(size_t idx, base::DataVector& out) const {
   assert(idx < nGP_ && out.size() >= nDim());
 

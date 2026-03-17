@@ -47,6 +47,16 @@ class SparseGrid {
 
   const std::shared_ptr<const SGGenInstr> getGenInstr() const;
 
+  /*
+  Return the maximum number of grid points a contained tensor grid has.
+  */
+  size_t getMaxTGGPCnt() const;
+
+  /*
+  Return the maximum sum of grid points per dim a contained tensor grid has.
+  */
+  size_t getMaxTGSumOverGPCntsPerDim() const;
+
   /*****
   Setter
   *****/
@@ -61,6 +71,16 @@ class SparseGrid {
   void setGenInstr(const SGGenInstr& genInstr);
 
   void setGenInstr(std::shared_ptr<const SGGenInstr>&& genInstr);
+
+  /*
+  Sets the maximum number of grid points a contained tensor grid has.
+  */
+  void setMaxTGGPCnt(size_t maximum);
+
+  /*
+  Sets the maximum sum of grid points per dim a contained tensor grid has.
+  */
+  void setMaxTGSumOverGPCntsPerDim(size_t maximum);
 
   /*******
   Iterator
@@ -93,6 +113,9 @@ class SparseGrid {
   const size_t nDim_;
   std::vector<TensorGridCTData> tensorGridData;
   std::shared_ptr<const SGGenInstr> genInstr;
+
+  size_t maxTGGPCnt;
+  size_t maxTGSumOverGPCntsPerDim;
 };
 
 }  // namespace combigrid

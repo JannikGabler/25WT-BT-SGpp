@@ -38,6 +38,8 @@ class TensorGrid {
 
   const GPMI& getGPCntPerDim() const;
 
+  const base::DataVector& getNodesPerDim() const;
+
   void getGridPoint(size_t idx, base::DataVector& out) const;
 
   /*

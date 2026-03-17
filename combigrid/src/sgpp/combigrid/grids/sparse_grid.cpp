@@ -21,10 +21,11 @@ using const_reverse_iterator = std::vector<TensorGridCTData>::const_reverse_iter
 Constructor
 **********/
 
-SparseGrid::SparseGrid(const size_t nDim) : nDim_(nDim), tensorGridData(), genInstr() {}
+SparseGrid::SparseGrid(const size_t nDim)
+    : nDim_(nDim), tensorGridData(), genInstr(), maxTGGPCnt(0), maxTGSumOverGPCntsPerDim(0) {}
 
 SparseGrid::SparseGrid(const size_t nDim, const size_t nTG)
-    : nDim_(nDim), tensorGridData(nTG), genInstr() {}
+    : nDim_(nDim), tensorGridData(nTG), genInstr(), maxTGGPCnt(0), maxTGSumOverGPCntsPerDim(0) {}
 
 SparseGrid::SparseGrid(const SGGenInstr& genInstr)
     : nDim_(genInstr.nDim()), genInstr(genInstr.clone()) {
@@ -52,6 +53,10 @@ const_iterator SparseGrid::getTensorGrid(const LvlMI& mi) const {
 const std::vector<TensorGridCTData>& SparseGrid::getTensorGrids() const { return tensorGridData; }
 
 const std::shared_ptr<const SGGenInstr> SparseGrid::getGenInstr() const { return genInstr; }
+
+size_t SparseGrid::getMaxTGGPCnt() const { return maxTGGPCnt; }
+
+size_t SparseGrid::getMaxTGSumOverGPCntsPerDim() const { return maxTGSumOverGPCntsPerDim; }
 
 /*****
 Setter
@@ -83,6 +88,12 @@ void SparseGrid::setGenInstr(std::shared_ptr<const SGGenInstr>&& genInstr) {
   assert(genInstr->nDim() == nDim_);
 
   this->genInstr = std::move(genInstr);
+}
+
+void SparseGrid::setMaxTGGPCnt(const size_t maximum) { maxTGGPCnt = maximum; }
+
+void SparseGrid::setMaxTGSumOverGPCntsPerDim(const size_t maximum) {
+  maxTGSumOverGPCntsPerDim = maximum;
 }
 
 /*******

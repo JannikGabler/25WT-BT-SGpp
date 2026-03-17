@@ -40,12 +40,17 @@ SourceFunc genContantSourceFunction(const double value) {
 f(x) = a * x + b
 */
 SourceFunc genLinearSourceFunction(const double a, const double b) {
-  return SourceFunc([a, b](const DataVector& point) { return a * point[0] + b; });
+  return SourceFunc([a, b](const DataVector& point) {
+    assert(point.size() == 1);
+    return a * point[0] + b;
+  });
 }
 
 SourceFunc genQuadraticSourceFunction(const double a, const double b, const double c) {
-  return SourceFunc(
-      ([a, b, c](const DataVector& point) { return a * point[0] * point[0] + b * point[1] + c; }));
+  return SourceFunc(([a, b, c](const DataVector& point) {
+    assert(point.size() == 1);
+    return a * point[0] * point[0] + b * point[0] + c;
+  }));
 }
 
 /*
@@ -171,7 +176,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
-  randGen.setSeed(1772646822);
+  randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 1;
     const LvlType maxLvl = static_cast<LvlType>(9);
@@ -601,7 +606,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
-  randGen.setSeed(1772646822);
+  randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const size_t nDim = 1;
     const LvlType maxLvl = static_cast<LvlType>(9);
