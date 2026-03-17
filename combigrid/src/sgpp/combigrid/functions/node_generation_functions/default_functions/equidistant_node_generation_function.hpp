@@ -17,10 +17,19 @@ namespace node_gen_funcs {
 
 class EquidistantNodeGenFunc : public NodeGenFunc {
  public:
+  /***********
+  Constructors
+  ***********/
   EquidistantNodeGenFunc();
 
-  base::DataVector genGPs(GPCntType nNodes, bool addBoundary) const override;
+  /**************
+  Node generation
+  **************/
+  void genNodesInplace(GPCntType nNodes, base::DataVector& out, size_t startIdx = 0) const override;
 
+  /***********
+  SG Operators
+  ***********/
   QuadRule* getQuadRule(GPCntType nNodes) const override;
 
   InterpolationMethod* getInterpolationMethod(GPCntType nNodes) const override;
@@ -28,12 +37,7 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
   /********
   Operators
   ********/
-
   bool operator==(const NodeGenFunc& other) const override;
-
- private:
-  base::DataVector genGPsWithBoundary(GPCntType nNodes) const;
-  base::DataVector genGPsWithoutBoundary(GPCntType nNodes) const;
 };
 
 }  // namespace node_gen_funcs

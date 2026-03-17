@@ -13,47 +13,33 @@ namespace combigrid {
 
 namespace node_gen_funcs {
 
+/***********
+Constructors
+***********/
+
 SecondTypeChebyshevNodeGenFunc::SecondTypeChebyshevNodeGenFunc()
     : NodeGenFunc(tools::fnv1aHash("Second Type Chebyshev Node Generation Function")) {}
 
-base::DataVector SecondTypeChebyshevNodeGenFunc::genGPs(const GPCntType nNodes,
-                                                        const bool addBoundary) const {
-  if (addBoundary) {
-    return genGPsWithBoundary(nNodes);
-  } else {
-    return genGPsWithoutBoundary(nNodes);
-  }
-}
+/**************
+Node generation
+**************/
 
-base::DataVector SecondTypeChebyshevNodeGenFunc::genGPsWithBoundary(const GPCntType nNodes) const {
-  assert(nNodes >= 2);
+void SecondTypeChebyshevNodeGenFunc::genNodesInplace(const GPCntType nNodes, base::DataVector& out,
+                                                     size_t startIdx) const {
+  assert(out.size() - startIdx >= nNodes);
 
-  const GPCntType k = nNodes - 1;
-  const double f1 = M_PI / static_cast<double>(k);
-  base::DataVector nodes(nNodes);
-
-  for (GPCntType i = 0; i <= k; i++) {
-    const double f2 = static_cast<double>(k - i);  // Reverse order
-    const double nonTransformedNode = std::cos(f1 * f2);
-    nodes[i] = nonTransformedNode / 2 + 0.5;
-  }
-
-  return nodes;
-}
-
-base::DataVector SecondTypeChebyshevNodeGenFunc::genGPsWithoutBoundary(
-    const GPCntType nNodes) const {
   const double f1 = M_PI / static_cast<double>(nNodes + 1);
-  base::DataVector nodes(nNodes);
 
   for (GPCntType i = 1; i <= nNodes; i++) {
     const double f2 = static_cast<double>(nNodes - i + 1);  // Reverse order
     const double nonTransformedNode = std::cos(f1 * f2);
-    nodes[i - 1] = nonTransformedNode / 2 + 0.5;
+    out[startIdx++] = nonTransformedNode / 2 + 0.5;
   }
-
-  return nodes;
 }
+
+/***********
+SG Operators
+***********/
 
 QuadRule* SecondTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
   return getClenshawCurtisQuadRule();
@@ -63,6 +49,10 @@ InterpolationMethod* SecondTypeChebyshevNodeGenFunc::getInterpolationMethod(
     const GPCntType nNodes) const {
   return getOptBarycentricFormula();
 }
+
+/********
+Operators
+********/
 
 bool SecondTypeChebyshevNodeGenFunc::operator==(const NodeGenFunc& other) const {
   return typeid(*this) == typeid(other);

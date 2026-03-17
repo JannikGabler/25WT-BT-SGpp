@@ -12,17 +12,33 @@ namespace combigrid {
 
 namespace node_gen_funcs {
 
+/***********
+Constructors
+***********/
+
 FirstTypeChebyshevNodeGenFunc::FirstTypeChebyshevNodeGenFunc()
     : NodeGenFunc(tools::fnv1aHash("First Type Chebyshev Node Generation Function")) {}
 
-base::DataVector FirstTypeChebyshevNodeGenFunc::genGPs(const GPCntType nNodes,
-                                                       const bool addBoundary) const {
-  if (addBoundary) {
-    return genGPsWithBoundary(nNodes);
-  } else {
-    return genGPsWithoutBoundary(nNodes);
+/**************
+Node generation
+**************/
+
+void FirstTypeChebyshevNodeGenFunc::genNodesInplace(const GPCntType nNodes, base::DataVector& out,
+                                                    size_t startIdx) const {
+  assert(out.size() - startIdx >= nNodes);
+
+  const double f1 = M_PI / (2 * static_cast<double>(nNodes));
+
+  for (GPCntType i = 0; i < nNodes; i++) {
+    const double f2 = 2 * static_cast<double>(nNodes - 1 - i) + 1;  // Reverse order
+    const double nonTransformedNode = std::cos(f1 * f2);
+    out[startIdx++] = nonTransformedNode / 2 + 0.5;
   }
 }
+
+/***********
+SG Operators
+***********/
 
 QuadRule* FirstTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
   // TODO
@@ -34,42 +50,12 @@ InterpolationMethod* FirstTypeChebyshevNodeGenFunc::getInterpolationMethod(
   return getBarycentricFormula(this);
 }
 
+/********
+Operators
+********/
+
 bool FirstTypeChebyshevNodeGenFunc::operator==(const NodeGenFunc& other) const {
   return typeid(*this) == typeid(other);
-}
-
-base::DataVector FirstTypeChebyshevNodeGenFunc::genGPsWithBoundary(const GPCntType nNodes) const {
-  assert(nNodes >= 2);
-
-  base::DataVector nodes(nNodes);
-
-  if (nNodes >= 3) {
-    const GPCntType m = nNodes - 2;
-    const double f1 = M_PI / (2 * static_cast<double>(m));
-
-    for (GPCntType i = 0; i < m; i++) {
-      const double f2 = 2 * static_cast<double>(m - 1 - i) + 1;  // Reverse order
-      const double nonTransformedNode = std::cos(f1 * f2);
-      nodes[i + 1] = nonTransformedNode / 2 + 0.5;
-    }
-  }
-
-  nodes[nNodes - 1] = 1.0;
-  return nodes;
-}
-
-base::DataVector FirstTypeChebyshevNodeGenFunc::genGPsWithoutBoundary(
-    const GPCntType nNodes) const {
-  const double f1 = M_PI / (2 * static_cast<double>(nNodes));
-  base::DataVector nodes(nNodes);
-
-  for (GPCntType i = 0; i < nNodes; i++) {
-    const double f2 = 2 * static_cast<double>(nNodes - 1 - i) + 1;  // Reverse order
-    const double nonTransformedNode = std::cos(f1 * f2);
-    nodes[i] = nonTransformedNode / 2 + 0.5;
-  }
-
-  return nodes;
 }
 
 }  // namespace node_gen_funcs

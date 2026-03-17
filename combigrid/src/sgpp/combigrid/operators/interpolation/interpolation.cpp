@@ -11,6 +11,7 @@
 #include <sgpp/combigrid/operators/interpolation/interpolation.hpp>
 #include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -22,7 +23,7 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
   assert(point.size() == sparseGrid.nDim());
 
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
-  const base::DataVector normPoint = interpolation::normalizePoint(point, genInstr->getBounds());
+  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr->getBounds());
   double result = 0;
 
 #pragma omp parallel for reduction(+ : result)
@@ -35,17 +36,6 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
 }
 
 namespace interpolation {
-
-base::DataVector normalizePoint(const base::DataVector& point, const HyperCubeArea& area) {
-  base::DataVector result(point);
-
-  for (size_t dim = 0; dim < result.size(); dim++) {
-    result[dim] -= area[dim].first;
-    result[dim] /= area[dim].second - area[dim].first;
-  }
-
-  return result;
-}
 
 double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
                    const TensorGridCTData& tgData, const SGGenInstr& genInstr) {
@@ -76,17 +66,18 @@ std::vector<double> interpolateFirstDim(const SourceFunc& sourceFunc, const doub
   const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[0];
   const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(0);
   const bool addBoundary = tgData.mi[0] >= genInstr.getBoundaryIndexOffset();
-  const std::vector<double> nodes = nodeGenFunc->genGPs(nNodes, addBoundary);
+  const std::vector<double> nodes = nodeGenFunc->genNodes(nNodes, addBoundary);
   const InterpolationMethod* method = nodeGenFunc->getInterpolationMethod(nNodes);
 
+  base::DataVector gp(tgData.tensorGrid.nDim());
   std::vector<double> results(nInterpolations);
   std::vector<double> funcValues(nNodes);
 
   for (size_t i = 0; i < nInterpolations; i++) {
     const size_t start = i * nNodes;
     for (size_t j = 0; j < nNodes; j++) {
-      const base::DataVector gp = tgData.tensorGrid[start + j];
-      funcValues[j] = sourceFunc.evaluateNormalized(gp, bounds);
+      tgData.tensorGrid.getGridPoint(start + j, gp);
+      funcValues[j] = sourceFunc.evaluateNormalizedInPlace(gp, bounds);
     }
 
     results[i] = method->interpolate(point, nodes, funcValues);
@@ -105,7 +96,7 @@ void interpolateLaterDim(const size_t dim, const double point, const TensorGridC
   const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[dim];
   const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
   const bool addBoundary = tgData.mi[dim] >= genInstr.getBoundaryIndexOffset();
-  const std::vector<double> nodes = nodeGenFunc->genGPs(nNodes, addBoundary);
+  const std::vector<double> nodes = nodeGenFunc->genNodes(nNodes, addBoundary);
   const InterpolationMethod* method = nodeGenFunc->getInterpolationMethod(nNodes);
   std::vector<double> inputValues(nNodes);
 

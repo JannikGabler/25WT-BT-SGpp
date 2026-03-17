@@ -14,7 +14,16 @@ class NodeGenFunc {
 
   virtual ~NodeGenFunc() = default;
 
-  virtual base::DataVector genGPs(GPCntType nNodes, bool addBoundary) const = 0;
+  /*
+  Should not be used in hot loops because it requires memory allocations (-> genNodesInplace).
+  */
+  base::DataVector genNodes(GPCntType nNodes, bool addBoundary) const;
+
+  /*
+  Without boundary
+  */
+  virtual void genNodesInplace(GPCntType nNodes, base::DataVector& out,
+                               size_t startIdx = 0) const = 0;
 
   /******
   Getters

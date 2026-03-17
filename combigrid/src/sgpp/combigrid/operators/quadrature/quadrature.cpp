@@ -1,8 +1,6 @@
 #include <omp.h>
 #include <cassert>
-#include <iostream>
 #include <memory>
-#include <ostream>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -12,6 +10,7 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
 namespace sgpp {
@@ -37,23 +36,36 @@ namespace quadrature_operator {
 double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGenInstr& genInstr) {
   assert(genInstr.nDim() == tg.nDim());
 
-  if (tg.nGP() == 0) {
+  const size_t nGP = tg.nGP();
+  const size_t nDim = tg.nDim();
+
+  if (nGP == 0) {
     return 0;
   }
 
   const HyperCubeArea bounds = genInstr.getBounds();
-  const GPMI& gpCntPerDim = tg.getGPCntPerDim();
+  // const GPMI& gpCntPerDim = tg.getGPCntPerDim(); TODO: Delete
   const std::vector<NodeGenFunc*>& nodeGenFuncs = genInstr.getNodeGenFuncs();
-  const misc::DiscRectBB<GPCntType> iterationBB(std::vector<GPCntType>(tg.nDim()), gpCntPerDim,
-                                                false);
+  // const misc::DiscRectBB<GPCntType> iterationBB(std::vector<GPCntType>(nDim), gpCntPerDim,
+  // false); TODO: Delete
   const std::vector<base::DataVector> weights = quadrature_operator::getWeights(tg, nodeGenFuncs);
-  size_t gpIdx = 0;
-  double result = 0;
 
-  for (const std::vector<GPCntType>& gpMI : iterationBB) {
+  double result = 0;
+  GPMI gpMI(nDim);
+  base::DataVector gp(nDim);
+
+  // TODO: Delete
+  // size_t gpIdx = 0;
+  // for (const std::vector<GPCntType>& gpMI : iterationBB) {
+  //   const double weight = quadrature_operator::getWeightForGP(gpMI, weights);
+  //   const base::DataVector gp = tg[gpIdx++];
+  //   const double funcValue = sourceFunc.evaluateNormalized(gp, bounds);
+  //   result += weight * funcValue;
+  // }
+  for (size_t i = 0; i < nGP; i++) {
+    tg.getGridPointAndMI(i, gp, gpMI);
     const double weight = quadrature_operator::getWeightForGP(gpMI, weights);
-    const base::DataVector gp = tg[gpIdx++];
-    const double funcValue = sourceFunc.evaluateNormalized(gp, bounds);
+    const double funcValue = sourceFunc.evaluateNormalizedInPlace(gp, bounds);
     result += weight * funcValue;
   }
 

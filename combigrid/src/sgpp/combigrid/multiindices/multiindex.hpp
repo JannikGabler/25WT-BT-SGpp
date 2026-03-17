@@ -85,16 +85,44 @@ class MI {
     } else {
       value_type product = 1;
       for (size_t dim = 0; dim < nDim; dim++) {
-        product *= static_cast<value_type>((*this)[dim]);
+        product *= (*this)[dim];
+      }
+      return product;
+    }
+  }
+
+  template <typename U>
+  U productofElems() const {
+    const size_t nDim = this->size();
+
+    if (nDim == 0) {
+      return 0;
+    } else {
+      U product = 1;
+      for (size_t dim = 0; dim < nDim; dim++) {
+        product *= static_cast<U>((*this)[dim]);
       }
       return product;
     }
   }
 
   value_type sumOfElems() const {
+    const size_t nDim = this->size();
+
     value_type sum = 0;
-    for (const value_type v : *this) {
-      sum += v;
+    for (size_t dim = 0; dim < nDim; dim++) {
+      sum += (*this)[dim];
+    }
+    return sum;
+  }
+
+  template <typename U>
+  U sumOfElems() const {
+    const size_t nDim = this->size();
+
+    U sum = 0;
+    for (size_t dim = 0; dim < nDim; dim++) {
+      sum += static_cast<U>((*this)[dim]);
     }
     return sum;
   }

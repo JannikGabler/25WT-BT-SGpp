@@ -17,40 +17,31 @@ namespace combigrid {
 
 namespace node_gen_funcs {
 
+/***********
+Constructors
+***********/
+
 EquidistantNodeGenFunc::EquidistantNodeGenFunc()
     : NodeGenFunc(tools::fnv1aHash("Equidistant Node Generation Function")) {}
 
-base::DataVector EquidistantNodeGenFunc::genGPs(const GPCntType nNodes,
-                                                const bool addBoundary) const {
-  if (addBoundary) {
-    return genGPsWithBoundary(nNodes);
-  } else {
-    return genGPsWithoutBoundary(nNodes);
-  }
-}
+/**************
+Node generation
+**************/
 
-base::DataVector EquidistantNodeGenFunc::genGPsWithBoundary(const GPCntType nNodes) const {
-  assert(nNodes >= 2);
+void EquidistantNodeGenFunc::genNodesInplace(const GPCntType nNodes, base::DataVector& out,
+                                             size_t startIdx) const {
+  assert(out.size() - startIdx >= nNodes);
 
-  const double factor = 1.0 / static_cast<double>(nNodes - 1);
-  base::DataVector nodes(nNodes);
-
-  for (GPCntType i = 0; i < nNodes; i++) {
-    nodes[i] = static_cast<double>(i) * factor;
-  }
-
-  return nodes;
-}
-base::DataVector EquidistantNodeGenFunc::genGPsWithoutBoundary(const GPCntType nNodes) const {
   const double factor = 1.0 / static_cast<double>(nNodes + 1);
-  base::DataVector nodes(nNodes);
 
   for (GPCntType i = 1; i <= nNodes; i++) {
-    nodes[i - 1] = static_cast<double>(i) * factor;
+    out[startIdx++] = static_cast<double>(i) * factor;
   }
-
-  return nodes;
 }
+
+/***********
+SG Operators
+***********/
 
 QuadRule* EquidistantNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
   if (nNodes & 1) {  // nNodes is odd

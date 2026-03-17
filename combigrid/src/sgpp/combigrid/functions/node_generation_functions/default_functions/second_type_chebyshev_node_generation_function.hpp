@@ -16,19 +16,27 @@ namespace node_gen_funcs {
 
 class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
  public:
+  /***********
+  Constructors
+  ***********/
   SecondTypeChebyshevNodeGenFunc();
 
-  base::DataVector genGPs(GPCntType nNodes, bool addBoundary) const override;
+  /**************
+  Node generation
+  **************/
+  void genNodesInplace(GPCntType nNodes, base::DataVector& out, size_t startIdx = 0) const override;
 
+  /***********
+  SG Operators
+  ***********/
   QuadRule* getQuadRule(const GPCntType nNodes) const override;
 
   InterpolationMethod* getInterpolationMethod(const GPCntType nNodes) const override;
 
+  /********
+  Operators
+  ********/
   bool operator==(const NodeGenFunc& other) const override;
-
- private:
-  base::DataVector genGPsWithBoundary(GPCntType nNodes) const;
-  base::DataVector genGPsWithoutBoundary(GPCntType nNodes) const;
 };
 
 }  // namespace node_gen_funcs

@@ -1,5 +1,4 @@
-#ifndef COMBIGRID_TOOLS_SPARSE_GRID_GENERATION_HPP
-#define COMBIGRID_TOOLS_SPARSE_GRID_GENERATION_HPP
+#pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -36,5 +35,3 @@ std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenIn
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

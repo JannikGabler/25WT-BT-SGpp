@@ -1,4 +1,3 @@
-// #include <algorithm>
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -18,9 +17,9 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
                 const std::vector<CTCoeffType>& coeffs, SparseGrid& out) {
   assert(out.nTG() >= miVec.nMI());
 
-  const SGGenNodeLookup lookup = genSGNodeLookup(genInstr, miVec, coeffs);
+  // const SGGenNodeLookup lookup = genSGNodeLookup(genInstr, miVec, coeffs);
 
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(guided)  // TODO: Schedule (benchmark)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
     const LvlMI mi = miVec[miIdx];
     const CTCoeffType coeff = coeffs[miIdx];
@@ -30,23 +29,23 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
   }
 }
 
-TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr, const SGGenNodeLookup& lookup) {
+TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr) {
   const GPMI gpCntPerDim = sg_gen::getGPCntPerDim(mi, genInstr);
-  const misc::DiscRectBB<GPCntType> iterationBB(std::vector<GPCntType>(genInstr.nDim()),
-                                                gpCntPerDim, false);
+  // const misc::DiscRectBB<GPCntType> iterationBB(std::vector<GPCntType>(genInstr.nDim()),
+  //                                               gpCntPerDim, false);
   const std::vector<base::DataVector> nodesPerDimForTG =
       sg_gen::getNodesPerDimForTG(mi, genInstr, gpCntPerDim, lookup);
 
-  TensorGrid tg(gpCntPerDim);
-  size_t idx = 0;
+  // TensorGrid tg(gpCntPerDim);
+  // size_t idx = 0;
 
-  for (const std::vector<GPCntType>& it : iterationBB) {
-    for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-      const base::DataVector& nodes = nodesPerDimForTG[dim];
-      tg(idx, dim) = nodes[it[dim]];
-    }
-    idx++;
-  }
+  // for (const std::vector<GPCntType>& it : iterationBB) {
+  //   for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
+  //     const base::DataVector& nodes = nodesPerDimForTG[dim];
+  //     tg(idx, dim) = nodes[it[dim]];
+  //   }
+  //   idx++;
+  // }
 
   return tg;
 }
@@ -70,21 +69,16 @@ GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
   return gpCntPerDim;
 }
 
-// misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim) {
-//   return
-// }
-
-std::vector<base::DataVector> getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
-                                                  const GPMI& gpCntPerDim,
-                                                  const SGGenNodeLookup& lookup) {
-  std::vector<base::DataVector> nodesPerDim(gpCntPerDim.size());
+base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
+                                     const GPMI& gpCntPerDim, const SGGenNodeLookup& lookup) {
+  base::DataVector nodesPerDim(gpCntPerDim.sumOfElems<size_t>());
 
   for (size_t dim = 0; dim < nodesPerDim.size(); dim++) {
     NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
 
     if (mi[dim] < genInstr.getBoundaryIndexOffset()) {  // Should the boundary be included?
       const size_t innerNodeCnt = gpCntPerDim[dim];
-      nodesPerDim[dim] = lookup.find({nodeGenFunc, innerNodeCnt})->second;
+      nodeGenFunc nodesPerDim[dim] = lookup.find({nodeGenFunc, innerNodeCnt})->second;
     } else {
       const size_t innerNodeCnt = gpCntPerDim[dim] - 2;
       const base::DataVector& cachedNodes = lookup.find({nodeGenFunc, innerNodeCnt})->second;

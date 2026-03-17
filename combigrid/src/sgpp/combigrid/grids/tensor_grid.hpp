@@ -3,7 +3,6 @@
 
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -16,11 +15,11 @@ class TensorGrid {
   /**********
   Constructor
   **********/
-  TensorGrid();
+  TensorGrid() noexcept;
 
-  TensorGrid(const GPMI& nGPPerDim);
+  TensorGrid(const GPMI& nGPPerDim) noexcept;
 
-  TensorGrid(const GPMI& nGPPerDim, const std::vector<base::DataVector>& gridPoints);
+  TensorGrid(const GPMI& nGPPerDim, base::DataVector&& nodesPerDim) noexcept;
 
   /*****
   Getter
@@ -31,9 +30,18 @@ class TensorGrid {
 
   const GPMI& getGPCntPerDim() const;
 
-  base::DataVector getGridPoint(size_t idx) const;
+  void getGridPoint(size_t idx, base::DataVector& out) const;
 
-  base::DataVector getGridPoint(const GPMI& mi) const;
+  /*
+  Requires allocations
+  */
+  // base::DataVector getGridPoint(size_t idx) const;
+
+  void getGridPoint(const GPMI& mi, base::DataVector& out) const;
+
+  // base::DataVector getGridPoint(const GPMI& mi) const;
+
+  void getGridPointAndMI(size_t idx, base::DataVector& outGP, GPMI& outMI) const;
 
   /*****
   Setter
@@ -41,26 +49,26 @@ class TensorGrid {
   /*
   May invoke an extension of the internal vector if there is no left over capacity.
   */
-  void setGridPoint(const size_t idx, const base::DataVector& gp);
+  // void setGridPoint(const size_t idx, const base::DataVector& gp);
 
-  void setGridPoint(const GPMI& mi, const base::DataVector& gp);
+  // void setGridPoint(const GPMI& mi, const base::DataVector& gp);
 
   //   bool containsABoundary();
 
   /********
   Operators
   ********/
-  base::DataVector operator[](size_t idx) const;
+  // base::DataVector operator[](size_t idx) const;
 
-  double operator()(size_t idx, size_t dim) const;
-  double& operator()(size_t idx, size_t dim);
+  // double operator()(size_t idx, size_t dim) const;
+  // double& operator()(size_t idx, size_t dim);
 
   bool operator==(const TensorGrid& other) const;
 
  private:
-  size_t nGP_;                  // Fixed (not const because this will delete the copy assig constr)
-  GPMI nGPPerDim;               // Fixed (not const because this will delete the copy assig constr)
-  base::DataVector gridPoints;  // flattened vector, row-major layout
+  size_t nGP_;     // Fixed (not const because this will delete the copy assig. constr.)
+  GPMI nGPPerDim;  // Fixed (not const because this will delete the copy assig. constr.)
+  base::DataVector nodesPerDim;  // flattened std::vector<base::DataVector>
 };
 
 }  // namespace combigrid

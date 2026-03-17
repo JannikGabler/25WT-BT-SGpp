@@ -21,9 +21,9 @@ class SourceFunc {
 
   /*
   Evaluates the functions by transforming the given normalized point on to the area.
-  This operation does use caching.
+  Warning: This changed the given point in place in order to avoid memory allocations!
   */
-  double evaluateNormalized(base::DataVector point, const HyperCubeArea& area) const;
+  double evaluateNormalizedInPlace(base::DataVector& point, const HyperCubeArea& area) const;
 
  private:
   std::function<double(const base::DataVector&)> func;

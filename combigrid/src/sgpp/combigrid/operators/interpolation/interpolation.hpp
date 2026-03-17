@@ -15,8 +15,6 @@ Internal operations
 ******************/
 namespace interpolation {
 
-base::DataVector normalizePoint(const base::DataVector& point, const HyperCubeArea& area);
-
 double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
                    const TensorGridCTData& tgData, const SGGenInstr& genInstr);
 
