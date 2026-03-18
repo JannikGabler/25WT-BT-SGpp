@@ -6,6 +6,7 @@
 #include <ostream>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -15,7 +16,7 @@
 using namespace sgpp::combigrid;
 using DataVector = sgpp::base::DataVector;
 
-static constexpr size_t nDim = 6;
+static constexpr size_t nDim = 5;
 static constexpr size_t maxLvl = 10;
 static constexpr size_t warmupRuns = 2;
 static constexpr size_t runs = 5;

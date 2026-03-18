@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(ConcurrencyRandom) {
   const size_t nDim = 5;
   const size_t nMI = constants::mi_vec::CWM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY;
 
-  randGen.setSeed(1773780359);
+  randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     std::vector<LvlMI> mis;
     mis.reserve(nMI);

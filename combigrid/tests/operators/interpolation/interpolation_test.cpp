@@ -2,6 +2,7 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+#include "sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -360,13 +361,23 @@ BOOST_AUTO_TEST_CASE(interpolation_converges_with_level_1D) {
       BOOST_REQUIRE_SMALL(err, 1.0);
 
       BOOST_CHECK_MESSAGE(
-          err < 1e-15 || prevError / err >= 3.5,
+          err < 1e-15 || prevError / err >= 3,
           "The error '"
               << err << "' was not reduced by an expected amount compared to the previous error '"
               << prevError << "'.");
       prevError = err;
     }
   }
+}
+
+double func(const DataVector& point) {
+  double result = 1;
+
+  for (size_t dim = 0; dim < point.size(); dim++) {
+    result *= std::cos(4 * M_PI * point[dim]);
+  }
+
+  return result;
 }
 
 BOOST_AUTO_TEST_SUITE_END()

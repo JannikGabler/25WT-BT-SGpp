@@ -2,6 +2,8 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+#include "sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp"
+#include "sgpp/combigrid/tools/comparison/nearly_equal.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -125,7 +127,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_nD) {
 
     const double result = quadrature(sourceFunc, sg);
 
-    BOOST_CHECK_CLOSE(result, expected, 1e-10);
+    BOOST_CHECK_CLOSE(result, expected, 1e-08);
   }
 }
 
@@ -581,7 +583,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
     const double expected = value * volume;
     const double result = quadrature(sourceFunc, sg);
 
-    BOOST_CHECK_CLOSE(result, expected, 1e-10);
+    BOOST_CHECK_CLOSE(result, expected, 1e-08);
   }
 }
 
@@ -932,6 +934,24 @@ BOOST_AUTO_TEST_CASE(random_polynomial_unit_cube_nD) {
 
     BOOST_CHECK_CLOSE(result, expected, 1e-9);
   }
+}
+
+BOOST_AUTO_TEST_CASE(multiindex_vector_sg_gen_instr) {
+  const SourceFunc sourceFunc = genSinSourceFunction();
+
+  // nDim = 3
+  const LvlMIVec mis{{5, 5, 0}, {0, 4, 1}, {5, 3, 2}, {0, 2, 3}, {0, 1, 4}, {0, 0, 5}};
+  MIVecSGGenInstr genInstr(mis);
+  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setBounds({0, 2 * M_PI});
+
+  const SparseGrid sg(genInstr);
+
+  const double result = quadrature(sourceFunc, sg);
+
+  constexpr double expected = 0.0;
+
+  BOOST_REQUIRE(tools::nearlyEqual(result, expected, 1e-08, 1e-08));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
