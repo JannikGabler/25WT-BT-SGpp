@@ -41,10 +41,15 @@ def doConfigure(env, moduleFolders, languageWrapperFolders):
   # as they can make the checks invalid, e.g., by setting "-Werror"
 
   if env["OPT"] == True:
-    config.env.Append(CPPFLAGS=["-O3", "-g"])
-
+    config.env.Append(CPPFLAGS=["-O3"])
   else:
-    config.env.Append(CPPFLAGS=["-g", "-O0"])
+    config.env.Append(CPPFLAGS=["-O0"])
+
+  if env["PROFILING"] == True:
+    config.env.Append(CPPFLAGS=["-fno-omit-frame-pointer -g"])
+  else:
+    config.env.Append(CPPFLAGS=["-fomit-frame-pointer"])
+
 
   # make settings case-insensitive
   config.env["COMPILER"] = config.env["COMPILER"].lower()
@@ -494,9 +499,6 @@ def configureGNUCompiler(config):
 
   #   # limit the number of errors display to something reasonable (useful for templated code)
   #   config.env.Append(CPPFLAGS=["-fmax-errors=5"])
-
-  # required for profiling
-  config.env.Append(CPPFLAGS=["-fno-omit-frame-pointer"])
 
   # GCC has support for colored output since 4.9
   if (version >= (4, 9, 0)) and Helper.terminalSupportsColors():

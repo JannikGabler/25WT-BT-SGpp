@@ -115,6 +115,7 @@ vars.Add("CC", "Override the C compiler, can be used to select a specific compil
 vars.Add("CXX", "Override the C++ compiler, can be used to select a specific compiler version, otherwise use \"COMPILER\"", None)
 vars.Add("LINK", "Override the linker, can be used to select a specific linker version", None)
 vars.Add(BoolVariable("OPT", "Set compiler optimization on and off", True))
+vars.Add(BoolVariable("PROFILING", "Set compiler flags to allow profiling", True))
 vars.Add(BoolVariable("RUN_ON_HAZELHEN", "Add some special options on hazelhen", False))
 vars.Add(BoolVariable("RUN_PYTHON_TESTS", "Run Python unit tests", True))
 vars.Add(BoolVariable("PYDOC", "Build Python wrapper with docstrings", False))
