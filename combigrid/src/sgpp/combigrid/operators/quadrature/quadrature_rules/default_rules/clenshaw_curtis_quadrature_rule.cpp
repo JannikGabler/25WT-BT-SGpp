@@ -6,7 +6,6 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
-#include "sgpp/base/exception/not_implemented_exception.hpp"
 
 // Detect Eigen or Armadillo at compile time
 #if __has_include(<unsupported/Eigen/FFT>)

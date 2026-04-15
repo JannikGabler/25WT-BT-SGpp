@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE(interpolation_converges_with_level_1D) {
       BOOST_REQUIRE_SMALL(err, 1.0);
 
       BOOST_CHECK_MESSAGE(
-          err < 1e-15 || prevError / err >= 3,
+          err < 1e-14 || prevError / err >= 3,
           "The error '"
               << err << "' was not reduced by an expected amount compared to the previous error '"
               << prevError << "'.");

@@ -24,21 +24,19 @@ static constexpr size_t runs = 5;
 using namespace sgpp::combigrid;
 using DataVector = sgpp::base::DataVector;
 
-SourceFunc getSinSourceFunc() {
-  return SourceFunc([](const sgpp::base::DataVector& x) {
-    double result = 1;
+double sinFunc(const sgpp::base::DataVector& x) {
+  double result = 1;
 
-    for (size_t i = 0; i < nDim; i++) {
-      result *= std::sin(x[i]);
-    }
+  for (size_t i = 0; i < nDim; i++) {
+    result *= std::sin(x[i]);
+  }
 
-    return result;
-  });
+  return result;
 }
 
 double perform(tools::Benchmarker<double>::BenchmarkerContext& ctx) {
   // Source func
-  const SourceFunc sourceFunc = getSinSourceFunc();
+  const SourceFunc sourceFunc(sinFunc);
 
   ctx.mark_checkpoint("Source func");
 

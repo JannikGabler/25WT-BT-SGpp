@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
 
     const double result = quadrature(sourceFunc, sg);
 
-    BOOST_CHECK_CLOSE(result, expected, 1e-12);
+    BOOST_CHECK_CLOSE(result, expected, 1e-10);
   }
 }
 

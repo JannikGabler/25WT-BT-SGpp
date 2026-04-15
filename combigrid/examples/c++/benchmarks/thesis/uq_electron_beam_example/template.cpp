@@ -1,10 +1,6 @@
-#include <omp.h>
 #include <cmath>
-#include <functional>
-#include <iostream>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -12,10 +8,8 @@
 #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
 #include <vector>
 
-static constexpr size_t nDim = 3;
+static constexpr size_t nDim = 2;
 static constexpr size_t maxLvl = 10;
-// static constexpr size_t warmupRuns = 2;
-// static constexpr size_t runs = 5;
 
 static constexpr double invDimCnt = 1.0 / nDim;
 
@@ -23,19 +17,29 @@ using namespace sgpp::combigrid;
 using DataVector = sgpp::base::DataVector;
 
 /*
-Implements \prod_{i=1}^d (x^{-0.5} / 2 * e^{-x[i]/d})
+Implements f(\vec x) = \prod_{i=1}^d (4 * (1 - x[i])^3 * e^{-x[i]/d})
 */
 inline double integrant(const DataVector& x) {
   double prod = 1.0;
   double sum = 0.0;
 
-#pragma unroll
   for (size_t dim = 0; dim < nDim; dim++) {
-    prod *= x[dim];
+    const double v = (1 - x[dim]);
+    prod *= 4 * v * v * v;
     sum += x[dim];
   }
 
-  return std::ldexp(1.0, -static_cast<int>(nDim)) * std::exp(-sum * invDimCnt) / std::sqrt(prod);
+  return prod * std::exp(-sum * invDimCnt);
+}
+
+double computeAnalyticalSolution() {
+  const double d2 = nDim * nDim;
+  const double d3 = nDim * nDim * nDim;
+  const double d4 = nDim * nDim * nDim * nDim;
+
+  const double v = nDim - 3 * d2 + 6 * d3 - 6 * d4 + 6 * d4 * std::exp(-1.0 / nDim);
+
+  return std::pow(4 * v, nDim);
 }
 
 double perform(tools::Benchmarker<double>::BenchmarkerContext& ctx) {
@@ -84,6 +88,8 @@ int main(int argc, char* argv[]) {
   tools::Benchmarker<double> benchmarker;
   benchmarker.set_warmups(warmupRuns);
   benchmarker.set_runs(runs);
+  benchmarker.setAnalyticalResult(computeAnalyticalSolution());
+
   benchmarker.enable_progress(true);
 
   benchmarker.add_checkpoint("Source func");
