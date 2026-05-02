@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <cassert>
 #include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
@@ -196,6 +197,53 @@ Operators
 bool TensorGrid::operator==(const TensorGrid& other) const {
   return nGP() == other.nGP() && nGPPerDim == other.nGPPerDim &&
          tools::nearlyEqual(nodesPerDim, other.nodesPerDim);
+}
+
+/*****************
+Utility operations
+*****************/
+void TensorGrid::getNeighborsForLinInterpolation(
+    const base::DataVector& point, std::vector<std::pair<double, double>>& out) const {
+  assert(point.size() >= nDim() && out.size() >= nDim());
+
+  const size_t nDim = this->nDim();
+
+  if (nDim > 0 && nGP_ > 0) {
+    auto firstIter = nodesPerDim.begin();
+    auto lastIter = firstIter;
+
+    for (size_t dim = 0; dim < nDim; dim++) {
+      lastIter += nGPPerDim[dim];
+
+      const double value = point[dim];
+      auto it = std::lower_bound(firstIter, lastIter, value);
+
+      if (it == lastIter) {  // No node >= value
+        out[dim].first = *(lastIter - 1);
+        out[dim].second = 1.0;
+      } else if (std::abs(*it - value) <= 1E-12) {  // There is a node equal to value
+        out[dim].first = *it;
+        out[dim].second = *it;
+      } else if (it == firstIter) {  // No node <= value
+        out[dim].first = 0.0;
+        out[dim].second = *firstIter;
+      } else {
+        out[dim].first = *(it - 1);
+        out[dim].second = *it;
+      }
+
+      firstIter = lastIter;
+    }
+  }
+}
+
+std::vector<std::pair<double, double>> TensorGrid::getNeighborsForLinInterpolation(
+    const base::DataVector& point) {
+  assert(point.size() >= nDim());
+
+  std::vector<std::pair<double, double>> result(nDim());
+  getNeighborsForLinInterpolation(point, result);
+  return result;
 }
 
 }  // namespace combigrid

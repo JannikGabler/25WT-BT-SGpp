@@ -4,13 +4,13 @@
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
-#include <sgpp/combigrid/tools/operators/interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
+#include <sgpp/combigrid/tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
 #include <vector>
 
 namespace sgpp {
 namespace combigrid {
 
-namespace interpolation {
+namespace global_interpolation {
 
 BarycentricFormula::BarycentricFormula(const NodeGenFunc* nodeGenFunc)
     : InterpolationMethod(tools::fnv1aHashCombine(
@@ -47,7 +47,7 @@ double BarycentricFormula::evaluateFormula(const double pos, const std::vector<d
   return numerator / denominator;
 }
 
-}  // namespace interpolation
+}  // namespace global_interpolation
 
 }  // namespace combigrid
 }  // namespace sgpp

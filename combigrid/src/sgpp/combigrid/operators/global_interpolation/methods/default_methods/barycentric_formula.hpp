@@ -7,7 +7,7 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace interpolation {
+namespace global_interpolation {
 
 /*
 Barycentric formula of the second kind for all kind of nodes.
@@ -25,7 +25,7 @@ class BarycentricFormula : public InterpolationMethod {
                          const std::vector<double>& values) const;
 };
 
-}  // namespace interpolation
+}  // namespace global_interpolation
 
 }  // namespace combigrid
 }  // namespace sgpp

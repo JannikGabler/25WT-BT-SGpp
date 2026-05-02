@@ -13,7 +13,7 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
 /******************
 Internal operations
 ******************/
-namespace interpolation {
+namespace global_interpolation {
 
 double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
                    const TensorGridCTData& tgData, const SGGenInstr& genInstr);
@@ -28,6 +28,6 @@ void interpolateLaterDim(size_t dim, double point, const TensorGridCTData& tgDat
 
 std::vector<size_t> getInterpolationCntPerDim(const TensorGrid& tensorGrid);
 
-}  // namespace interpolation
+}  // namespace global_interpolation
 }  // namespace combigrid
 }  // namespace sgpp

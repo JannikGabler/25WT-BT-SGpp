@@ -1,9 +1,11 @@
 #ifndef COMBIGRID_TENSOR_GRID_HPP
 #define COMBIGRID_TENSOR_GRID_HPP
 
+#include <cassert>
 #include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -103,6 +105,22 @@ class TensorGrid {
   // double& operator()(size_t idx, size_t dim);
 
   bool operator==(const TensorGrid& other) const;
+
+  /*****************
+  Utility operations
+  *****************/
+
+  /*
+  In-place variant
+  */
+  void getNeighborsForLinInterpolation(const base::DataVector& point,
+                                       std::vector<std::pair<double, double>>& out) const;
+
+  /*
+  Out-of-place variant
+  */
+  std::vector<std::pair<double, double>> getNeighborsForLinInterpolation(
+      const base::DataVector& point);
 
  private:
   size_t nGP_;     // Fixed (not const because this will delete the copy assig. constr.)

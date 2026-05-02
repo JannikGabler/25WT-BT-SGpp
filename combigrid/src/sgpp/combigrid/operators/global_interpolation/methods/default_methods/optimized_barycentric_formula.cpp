@@ -8,7 +8,7 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace interpolation {
+namespace global_interpolation {
 
 OptBarycentricFormula::OptBarycentricFormula()
     : InterpolationMethod(tools::fnv1aHash("Optimized Barycentric Formula Interpolation Method")) {}
@@ -50,7 +50,7 @@ double OptBarycentricFormula::barycentricFormula(const double pos, const std::ve
   return numerator / denominator;
 }
 
-}  // namespace interpolation
+}  // namespace global_interpolation
 
 }  // namespace combigrid
 }  // namespace sgpp

@@ -22,8 +22,8 @@ InterpolationMethod* getBarycentricFormula(const NodeGenFunc* const nodeGenFunc)
       return it->second.get();
     }
 
-    std::unique_ptr<InterpolationMethod> instance =
-        std::unique_ptr<InterpolationMethod>(new interpolation::BarycentricFormula(nodeGenFunc));
+    std::unique_ptr<InterpolationMethod> instance = std::unique_ptr<InterpolationMethod>(
+        new global_interpolation::BarycentricFormula(nodeGenFunc));
     InterpolationMethod* result = instance.get();
 
     instances.emplace(nodeGenFunc, std::move(instance));

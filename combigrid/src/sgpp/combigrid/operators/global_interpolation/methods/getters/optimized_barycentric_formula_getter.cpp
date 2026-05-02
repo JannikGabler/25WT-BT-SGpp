@@ -7,7 +7,7 @@ namespace sgpp {
 namespace combigrid {
 
 InterpolationMethod* getOptBarycentricFormula() {
-  static interpolation::OptBarycentricFormula instance;
+  static global_interpolation::OptBarycentricFormula instance;
   return &instance;
 }
 

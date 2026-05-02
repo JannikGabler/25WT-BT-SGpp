@@ -28,14 +28,14 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
 
 #pragma omp parallel for reduction(+ : result) schedule(guided)  // TODO: Scheduling
   for (const TensorGridCTData& tgData : sparseGrid) {
-    const double v = interpolation::interpolate(sourceFunc, normPoint, tgData, *genInstr);
+    const double v = global_interpolation::interpolate(sourceFunc, normPoint, tgData, *genInstr);
     result += tgData.coefficient * v;
   }
 
   return result;
 }
 
-namespace interpolation {
+namespace global_interpolation {
 
 double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
                    const TensorGridCTData& tgData, const SGGenInstr& genInstr) {
@@ -122,6 +122,6 @@ std::vector<size_t> getInterpolationCntPerDim(const TensorGrid& tensorGrid) {
   return interpolationCntPerDim;
 }
 
-}  // namespace interpolation
+}  // namespace global_interpolation
 }  // namespace combigrid
 }  // namespace sgpp
