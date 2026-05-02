@@ -46,7 +46,7 @@ def doConfigure(env, moduleFolders, languageWrapperFolders):
     config.env.Append(CPPFLAGS=["-O0"])
 
   if env["PROFILING"] == True:
-    config.env.Append(CPPFLAGS=["-fno-omit-frame-pointer -g"])
+    config.env.Append(CPPFLAGS=["-fno-omit-frame-pointer", "-g"])
   else:
     config.env.Append(CPPFLAGS=["-fomit-frame-pointer"])
 
