@@ -20,7 +20,7 @@ int main() {
   genInstr.setBounds({-1, 1});
   genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
   genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
-  genInstr.setBoundaryIndexOffset(2);
+  genInstr.setBoundaryLevelOffset(2);
 
   const SparseGrid sg(genInstr);
 

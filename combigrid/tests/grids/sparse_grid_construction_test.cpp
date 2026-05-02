@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
   CompleteSGGenInstr genInstr(2, 2);
   genInstr.setNodeGenFuncs({equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
   genInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
-  genInstr.setBoundaryIndexOffset(1);
+  genInstr.setBoundaryLevelOffset(1);
 
   // Expected
   SparseGrid expected(2);
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(Simple_Full_3D_Level0) {
       {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
-  genInstr.setBoundaryIndexOffset(1);
+  genInstr.setBoundaryLevelOffset(1);
 
   // Expected
   SparseGrid expected(3);
@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
       {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
       {doublingLvl2GPCntFunction, linearLvl2GPCntFunction, doublingLvl2GPCntFunction});
-  genInstr.setBoundaryIndexOffset(1);
+  genInstr.setBoundaryLevelOffset(1);
 
   // Expected
   SparseGrid expected(dim);
@@ -347,7 +347,7 @@ BOOST_AUTO_TEST_CASE(Random_Full_3D_SG) {
         {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
     genInstr.setLvl2GPCntFuncs(
         {doublingLvl2GPCntFunction, linearLvl2GPCntFunction, doublingLvl2GPCntFunction});
-    genInstr.setBoundaryIndexOffset(1);
+    genInstr.setBoundaryLevelOffset(1);
 
     // Expected
     SparseGrid expected(dim);
@@ -447,7 +447,7 @@ BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
       {clenshawCurtisNodeGenFunc, equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
-  genInstr.setBoundaryIndexOffset(1);
+  genInstr.setBoundaryLevelOffset(1);
 
   // Expected
   SparseGrid expected(dim);
@@ -526,8 +526,8 @@ BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
 }
 
 /*
-  Verify behavior when boundaryIndexOffset = 0 (no explicit 0/1 boundary points
-  are added) vs boundaryIndexOffset = 1 (0 and 1 are added for levels > 0).
+  Verify behavior when boundaryLevelOffset = 0 (no explicit 0/1 boundary points
+  are added) vs boundaryLevelOffset = 1 (0 and 1 are added for levels > 0).
   This test constructs two gen-instructions and checks that the produced
   tensor node counts reflect the boundary policy.
 */
@@ -535,23 +535,23 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
   const LvlType maxLvl = 1;
   const size_t dim = 3;
 
-  // Generation instruction for boundaryIndexOffset = 0
+  // Generation instruction for boundaryLevelOffset = 0
   CompleteSGGenInstr genInstrNoBoundary(maxLvl, dim);
   genInstrNoBoundary.setNodeGenFuncs(
       {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
   genInstrNoBoundary.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
-  genInstrNoBoundary.setBoundaryIndexOffset(1);
+  genInstrNoBoundary.setBoundaryLevelOffset(1);
 
   const SparseGrid resultNoBoundary(genInstrNoBoundary);
 
-  // Generation instruction for boundaryIndexOffset = 1
+  // Generation instruction for boundaryLevelOffset = 1
   CompleteSGGenInstr genInstrWithBoundary(maxLvl, dim);
   genInstrWithBoundary.setNodeGenFuncs(
       {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
   genInstrWithBoundary.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
-  genInstrWithBoundary.setBoundaryIndexOffset(0);
+  genInstrWithBoundary.setBoundaryLevelOffset(0);
 
   const SparseGrid resultWithBoundary(genInstrWithBoundary);
 

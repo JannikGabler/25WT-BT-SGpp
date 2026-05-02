@@ -65,7 +65,7 @@ std::vector<double> interpolateFirstDim(const SourceFunc& sourceFunc, const doub
   const HyperCubeArea& bounds = genInstr.getBounds();
   const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[0];
   const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(0);
-  const bool addBoundary = tgData.mi[0] >= genInstr.getBoundaryIndexOffset();
+  const bool addBoundary = tgData.mi[0] >= genInstr.getBoundaryLevelOffset();
   const std::vector<double> nodes = nodeGenFunc->genNodes(nNodes, addBoundary);
   const InterpolationMethod* method = nodeGenFunc->getInterpolationMethod(nNodes);
 
@@ -95,7 +95,7 @@ void interpolateLaterDim(const size_t dim, const double point, const TensorGridC
                          std::vector<double>& interpolationResults) {
   const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[dim];
   const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
-  const bool addBoundary = tgData.mi[dim] >= genInstr.getBoundaryIndexOffset();
+  const bool addBoundary = tgData.mi[dim] >= genInstr.getBoundaryLevelOffset();
   const std::vector<double> nodes = nodeGenFunc->genNodes(nNodes, addBoundary);
   const InterpolationMethod* method = nodeGenFunc->getInterpolationMethod(nNodes);
   std::vector<double> inputValues(nNodes);

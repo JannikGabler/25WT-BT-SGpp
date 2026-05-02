@@ -27,7 +27,7 @@ class SGGenInstr {
   ******/
   size_t nDim() const;
 
-  LvlType getBoundaryIndexOffset() const;
+  LvlType getBoundaryLevelOffset() const;
 
   const HyperCubeArea& getBounds() const;
   std::pair<double, double> getBoundsForDim(size_t dim) const;
@@ -41,7 +41,7 @@ class SGGenInstr {
   /******
   Setters
   ******/
-  void setBoundaryIndexOffset(LvlType boundaryIndexOffset);
+  void setBoundaryLevelOffset(LvlType boundaryLevelOffset);
 
   void setBoundsForDim(std::pair<double, double> interval, size_t dim);
   void setBounds(std::pair<double, double> interval);
@@ -74,7 +74,7 @@ class SGGenInstr {
   std::vector<NodeGenFunc*> getUniqueNodeGenFuncs() const;
 
  private:
-  LvlType boundaryIndexOffset;
+  LvlType boundaryLevelOffset;
 
   HyperCubeArea bounds;
   std::vector<NodeGenFunc*> nodeGenFuncs;

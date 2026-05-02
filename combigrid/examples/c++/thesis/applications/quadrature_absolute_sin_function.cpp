@@ -37,7 +37,7 @@ double perform(const size_t nDim, const LvlType maxLvl) {
   // Use equidistant nodes
   genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
   // Grid points on the boundary are on one level lower than the main axis
-  genInstr.setBoundaryIndexOffset(999);
+  genInstr.setBoundaryLevelOffset(999);
 
   /* === 3. Generate Sparse Grid === */
   SparseGrid sg(genInstr);

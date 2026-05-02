@@ -15,7 +15,7 @@ Constructors
 ***********/
 
 SGGenInstr::SGGenInstr(const size_t nDim)
-    : boundaryIndexOffset(0),
+    : boundaryLevelOffset(0),
       bounds(nDim, {0, 1}),
       nodeGenFuncs(nDim, getEquidistantNodeGenFunc()),
       lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {}
@@ -26,7 +26,7 @@ Getters
 
 size_t SGGenInstr::nDim() const { return this->bounds.size(); }
 
-LvlType SGGenInstr::getBoundaryIndexOffset() const { return boundaryIndexOffset; }
+LvlType SGGenInstr::getBoundaryLevelOffset() const { return boundaryLevelOffset; }
 
 const HyperCubeArea& SGGenInstr::getBounds() const { return bounds; }
 
@@ -48,8 +48,8 @@ Lvl2GPCntFunc SGGenInstr::getLvl2GPCntFuncForDim(const size_t dim) const {
 Setters
 ******/
 
-void SGGenInstr::setBoundaryIndexOffset(const LvlType boundaryIndexOffset) {
-  this->boundaryIndexOffset = boundaryIndexOffset;
+void SGGenInstr::setBoundaryLevelOffset(const LvlType boundaryLevelOffset) {
+  this->boundaryLevelOffset = boundaryLevelOffset;
 }
 
 void SGGenInstr::setBoundsForDim(const std::pair<double, double> interval, const size_t dim) {

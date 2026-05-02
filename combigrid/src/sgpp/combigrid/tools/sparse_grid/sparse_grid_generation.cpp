@@ -69,7 +69,7 @@ GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
   GPMI gpCntPerDim(genInstr.nDim());
 
   for (size_t dim = 0; dim < gpCntPerDim.size(); dim++) {
-    if (mi[dim] < genInstr.getBoundaryIndexOffset()) {  // Should the boundary be included?
+    if (mi[dim] < genInstr.getBoundaryLevelOffset()) {  // Should the boundary be included?
       gpCntPerDim[dim] = genInstr.getLvl2GPCntFuncForDim(dim)(mi[dim]);
     } else {
       gpCntPerDim[dim] = genInstr.getLvl2GPCntFuncForDim(dim)(mi[dim]) + 2;
@@ -89,13 +89,13 @@ base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr
   for (size_t dim = 0; dim < nDim; dim++) {
     NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
     const GPCntType nodeCnt = gpCntPerDim[dim];
-    const bool includeBoundary = mi[dim] >= genInstr.getBoundaryIndexOffset();
+    const bool includeBoundary = mi[dim] >= genInstr.getBoundaryLevelOffset();
 
     nodeGenFunc->genNodesInplace(nodeCnt, nodesPerDim, includeBoundary, vecIdx);
     vecIdx += nodeCnt;
 
     // TODO: Delete
-    // if (mi[dim] < genInstr.getBoundaryIndexOffset()) {  // Should the boundary be included?
+    // if (mi[dim] < genInstr.getBoundaryLevelOffset()) {  // Should the boundary be included?
     //   const size_t innerNodeCnt = gpCntPerDim[dim];
     //   nodeGenFunc nodesPerDim[dim] = lookup.find({nodeGenFunc, innerNodeCnt})->second;
     // } else {
