@@ -10,7 +10,7 @@
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(FullInputIsFixedPoint) {
     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(8));
     const size_t nDim = 1 + randGen.getUniformIndexRN(5);
 
-    const FullSGGenInstr fsg(maxLvl, nDim);
+    const CompleteSGGenInstr fsg(maxLvl, nDim);
     const LvlMIVec input = fsg.genMIVec();
 
     MIVecSGGenInstr instr(input);

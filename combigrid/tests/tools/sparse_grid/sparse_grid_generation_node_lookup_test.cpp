@@ -21,7 +21,7 @@
 // <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 // #include
 // <sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp>
-// #include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+// #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 // #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 // #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
 // #include <sgpp/combigrid/type_defs.hpp>
@@ -38,7 +38,7 @@
 // BOOST_AUTO_TEST_SUITE(Tools_genSGNodeLookup)
 
 // BOOST_AUTO_TEST_CASE(ZeroDims) {
-//   const FullSGGenInstr instr(3, 0);
+//   const CompleteSGGenInstr instr(3, 0);
 //   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
 //   const SGGenNodeLookup result =
@@ -52,7 +52,7 @@
 // }
 
 // BOOST_AUTO_TEST_CASE(Simple1D) {
-//   const FullSGGenInstr instr(2, 1);
+//   const CompleteSGGenInstr instr(2, 1);
 //   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
 //   const SGGenNodeLookup result =
@@ -67,7 +67,7 @@
 // }
 
 // BOOST_AUTO_TEST_CASE(Simple2D) {
-//   const FullSGGenInstr instr(3, 2);
+//   const CompleteSGGenInstr instr(3, 2);
 //   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
 
 //   const SGGenNodeLookup result =
@@ -83,7 +83,7 @@
 // }
 
 // BOOST_AUTO_TEST_CASE(Complex2D) {
-//   FullSGGenInstr instr(2, 2);
+//   CompleteSGGenInstr instr(2, 2);
 //   instr.setNodeGenFuncForDim(firstTypeChebyshevNodeGenFunc, 1);
 //   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 1);
 
@@ -104,7 +104,7 @@
 // }
 
 // BOOST_AUTO_TEST_CASE(Complex3D) {
-//   FullSGGenInstr instr(4, 4);
+//   CompleteSGGenInstr instr(4, 4);
 //   instr.setNodeGenFuncForDim(firstTypeChebyshevNodeGenFunc, 0);
 //   instr.setLvl2GPCntFuncForDim(doublingLvl2GPCntFunction, 0);
 //   instr.setNodeGenFuncForDim(equidistantNodeGenFunc, 1);

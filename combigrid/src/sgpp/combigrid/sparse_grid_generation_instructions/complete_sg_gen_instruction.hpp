@@ -8,9 +8,9 @@
 namespace sgpp {
 namespace combigrid {
 
-class FullSGGenInstr : public SGGenInstr {
+class CompleteSGGenInstr : public SGGenInstr {
  public:
-  FullSGGenInstr(LvlType maxLvl, size_t nDim);
+  CompleteSGGenInstr(LvlType maxLvl, size_t nDim);
 
   void setMaxLvl(LvlType maxLvl);
 

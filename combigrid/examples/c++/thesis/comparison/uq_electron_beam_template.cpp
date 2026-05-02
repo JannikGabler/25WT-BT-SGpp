@@ -4,7 +4,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
 #include <vector>
 
@@ -49,7 +49,7 @@ double perform(tools::Benchmarker<double>::BenchmarkerContext& ctx) {
   ctx.mark_checkpoint("Source func");
 
   // SG gen instr
-  FullSGGenInstr genInstr(maxLvl, nDim);
+  CompleteSGGenInstr genInstr(maxLvl, nDim);
   genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
 
   ctx.mark_checkpoint("SG Gen. Instruction");

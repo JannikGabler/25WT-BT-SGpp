@@ -10,7 +10,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <vector>
 
 using namespace sgpp::combigrid;
@@ -42,7 +42,7 @@ std::pair<double, std::array<double, 4>> runSingleBenchmark() {
   const auto afterSourceFunc = std::chrono::high_resolution_clock::now();
 
   // SG gen instr
-  FullSGGenInstr genInstr(maxLvl, nDim);
+  CompleteSGGenInstr genInstr(maxLvl, nDim);
   genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
 
   const auto afterGenInstr = std::chrono::high_resolution_clock::now();

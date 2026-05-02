@@ -6,7 +6,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/interpolation/interpolation.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 
 using namespace sgpp::combigrid;
 using DataVector = sgpp::base::DataVector;
@@ -16,7 +16,7 @@ double func(const DataVector& point) { return -13.7; }
 int main() {
   const SourceFunc sourceFunc(func);
 
-  FullSGGenInstr genInstr(16, 2);
+  CompleteSGGenInstr genInstr(16, 2);
   genInstr.setBounds({-1, 1});
   genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
   genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);

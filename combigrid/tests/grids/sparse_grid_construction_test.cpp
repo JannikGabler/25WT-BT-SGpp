@@ -22,7 +22,7 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(Zero_Dims) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(10);
 
-    const FullSGGenInstr genInstr(maxLvl, 0);
+    const CompleteSGGenInstr genInstr(maxLvl, 0);
 
     const SparseGrid expected(0);
 
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(Random_Full_1D_SG) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(10000);
 
-    FullSGGenInstr genInstr(maxLvl, 1);
+    CompleteSGGenInstr genInstr(maxLvl, 1);
     genInstr.setNodeGenFuncs({equidistantNodeGenFunc});
     genInstr.setLvl2GPCntFuncs({linearLvl2GPCntFunction});
 
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(Random_Full_1D_SG) {
 }
 
 BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
-  FullSGGenInstr genInstr(2, 2);
+  CompleteSGGenInstr genInstr(2, 2);
   genInstr.setNodeGenFuncs({equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
   genInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryIndexOffset(1);
@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
 BOOST_AUTO_TEST_CASE(Simple_Full_3D_Level0) {
   // Generation instruction
   const LvlType maxLvl = 0;
-  FullSGGenInstr genInstr(maxLvl, 3);
+  CompleteSGGenInstr genInstr(maxLvl, 3);
 
   genInstr.setNodeGenFuncs(
       {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
@@ -239,7 +239,7 @@ BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
   const LvlType maxLvl = 2;
   const size_t dim = 3;
 
-  FullSGGenInstr genInstr(maxLvl, dim);
+  CompleteSGGenInstr genInstr(maxLvl, dim);
 
   genInstr.setNodeGenFuncs(
       {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
@@ -342,7 +342,7 @@ BOOST_AUTO_TEST_CASE(Random_Full_3D_SG) {
     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(3));  // 0..2
     const size_t dim = 3;
 
-    FullSGGenInstr genInstr(maxLvl, dim);
+    CompleteSGGenInstr genInstr(maxLvl, dim);
     genInstr.setNodeGenFuncs(
         {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
     genInstr.setLvl2GPCntFuncs(
@@ -442,7 +442,7 @@ BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
   const LvlType maxLvl = 2;
   const size_t dim = 3;
 
-  FullSGGenInstr genInstr(maxLvl, dim);
+  CompleteSGGenInstr genInstr(maxLvl, dim);
   genInstr.setNodeGenFuncs(
       {clenshawCurtisNodeGenFunc, equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
@@ -536,7 +536,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
   const size_t dim = 3;
 
   // Generation instruction for boundaryIndexOffset = 0
-  FullSGGenInstr genInstrNoBoundary(maxLvl, dim);
+  CompleteSGGenInstr genInstrNoBoundary(maxLvl, dim);
   genInstrNoBoundary.setNodeGenFuncs(
       {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
   genInstrNoBoundary.setLvl2GPCntFuncs(
@@ -546,7 +546,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
   const SparseGrid resultNoBoundary(genInstrNoBoundary);
 
   // Generation instruction for boundaryIndexOffset = 1
-  FullSGGenInstr genInstrWithBoundary(maxLvl, dim);
+  CompleteSGGenInstr genInstrWithBoundary(maxLvl, dim);
   genInstrWithBoundary.setNodeGenFuncs(
       {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
   genInstrWithBoundary.setLvl2GPCntFuncs(
@@ -577,7 +577,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
 //   const size_t nDim = 2;
 //   const LvlType maxLevel = 2;
 
-//   FullSGGenInstr genInstr(maxLevel, nDim);
+//   CompleteSGGenInstr genInstr(maxLevel, nDim);
 
 //   // Explizit Node- / Lvl->GP-Funktionen setzen (sicherstellen, dass wir wissen, was verwendet
 //   wird) for (size_t d = 0; d < nDim; ++d) {
@@ -654,7 +654,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
 //   // kleinerer Test in 3D, maxLevel=1 (stresst andere D)
 //   const size_t nDim = 3;
 //   const LvlType maxLevel = 1;
-//   FullSGGenInstr genInstr(nDim, maxLevel);
+//   CompleteSGGenInstr genInstr(nDim, maxLevel);
 
 //   // Verwende Clenshaw-Curtis (alias genClenshawCurtisNodes) in Dim 0 und Equidistant in anderen
 //   genInstr.setNodeGenFuncForDim(&genClenshawCurtisNodes, 0);
@@ -715,7 +715,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
 //   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
 //     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(1000));
 
-//     const FullSGGenInstr instr(maxLvl, 1);
+//     const CompleteSGGenInstr instr(maxLvl, 1);
 //     const LvlMIVec result = instr.genMIVec();
 
 //     BOOST_CHECK_MESSAGE(result.nDim() == 1, "Seed: " << randGen.getSeed());

@@ -5,7 +5,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -33,7 +33,7 @@ double perform(const size_t nDim, const LvlType maxLvl, const DataVector& point)
   SourceFunc sourceFunc(cosFunction);
 
   /* === 2. Configure Sparse Grid Generation Instruction === */
-  FullSGGenInstr genInstr(maxLvl, nDim);
+  CompleteSGGenInstr genInstr(maxLvl, nDim);
 
   // Use Chebyshev nodes of the second kind
   genInstr.setNodeGenFunc(getSecondTypeChebyshevNodeGenFunc());

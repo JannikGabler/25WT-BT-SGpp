@@ -19,7 +19,7 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(zero_func_unit_cube) {
     const size_t nDim = randGen.getUniformIndexRN(5);
     const LvlType maxLvl = static_cast<LvlType>(4 + randGen.getUniformIndexRN(3));  // 4...6
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genContantSourceFunction(0);
 
     const SparseGrid sg(genInstr);
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_1D) {
     const LvlType maxLvl = 1;
     const double value = randGen.getUniformRN(-1, 1);
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genContantSourceFunction(value);
 
     const SparseGrid sg(genInstr);
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_nD) {
     const LvlType maxLvl = static_cast<LvlType>(5 + randGen.getUniformIndexRN(3));  // 5...7
     const double value = randGen.getUniformRN(-1, 1);
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genContantSourceFunction(value);
 
     const SparseGrid sg(genInstr);
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
     const LvlType maxLvl = static_cast<LvlType>(7 + randGen.getUniformIndexRN(3));
     const double value = randGen.getUniformRN(-2.0, 2.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
 
     double volume = 1.0;
     for (size_t d = 0; d < nDim; ++d) {
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
     const size_t nDim = 1;
     const LvlType maxLvl = static_cast<LvlType>(8 + randGen.getUniformIndexRN(3));  // 8...10
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genSinSourceFunction();
 
     const SparseGrid sg(genInstr);
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
     const double a = randGen.getUniformRN(-1.0, 0.0);
     const double b = randGen.getUniformRN(0.5, 2.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setBoundsForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genSinSourceFunction();
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D) {
     const size_t nDim = 2;
     const LvlType maxLvl = static_cast<LvlType>(8 + randGen.getUniformIndexRN(3));  // 8...10
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genSinSourceFunction();
 
     const SparseGrid sg(genInstr);
@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_3D) {
     const size_t nDim = 3;
     const LvlType maxLvl = static_cast<LvlType>(8 + randGen.getUniformIndexRN(3));  // 8..10
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genSinSourceFunction();
 
     const SparseGrid sg(genInstr);
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
     const size_t nDim = 3;
     const LvlType maxLvl = static_cast<LvlType>(9);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
 
     double expected = 1.0;
     for (size_t d = 0; d < nDim; ++d) {
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D) {
     const double a = randGen.getUniformRN(-2.0, 2.0);
     const double b = randGen.getUniformRN(-1.0, 1.0);
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genLinearSourceFunction(a, b);
 
     const SparseGrid sg(genInstr);
@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
     const double a = randGen.getUniformRN(-3.0, -0.5);
     const double b = randGen.getUniformRN(0.5, 3.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setBoundsForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_unit_cube_1D) {
     const size_t nDim = 1;
     const LvlType maxLvl = 10;
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genQuadraticSourceFunction(1, 0, 0);
 
     const SparseGrid sg(genInstr);
@@ -342,7 +342,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_random_interval_1D) {
     const double a = randGen.getUniformRN(-2.0, -0.5);
     const double b = randGen.getUniformRN(0.5, 2.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setBoundsForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genQuadraticSourceFunction(1, 0, 0);
@@ -370,7 +370,7 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
       exponents[i] = static_cast<int>(randGen.getUniformIndexRN(5));  // 0..4
     }
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc([exponents](const DataVector& point) {
       double v = 1.0;
       for (size_t i = 0; i < point.getSize(); ++i) {
@@ -408,7 +408,7 @@ BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
 
     double expected = 1.0;
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
 
     for (size_t d = 0; d < nDim; ++d) {
       exponents[d] = static_cast<int>(randGen.getUniformIndexRN(4));  // 0..3
@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE(random_polynomial_unit_cube_nD) {
       terms.push_back(term);
     }
 
-    const FullSGGenInstr genInstr(maxLvl, nDim);
+    const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc([terms](const DataVector& point) {
       double v = 0.0;
       for (const Term& term : terms) {
@@ -505,7 +505,7 @@ BOOST_AUTO_TEST_CASE(zero_func_unit_cube) {
     const size_t nDim = randGen.getUniformIndexRN(5);
     const LvlType maxLvl = static_cast<LvlType>(4 + randGen.getUniformIndexRN(3));  // 4...6
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genContantSourceFunction(0);
 
@@ -524,7 +524,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_1D) {
     const LvlType maxLvl = 1;
     const double value = randGen.getUniformRN(-1, 1);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genContantSourceFunction(value);
 
@@ -545,7 +545,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_nD) {
     const LvlType maxLvl = static_cast<LvlType>(4 + randGen.getUniformIndexRN(3));  // 4...6
     const double value = randGen.getUniformRN(-1, 1);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genContantSourceFunction(value);
 
@@ -566,7 +566,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
     const LvlType maxLvl = static_cast<LvlType>(6 + randGen.getUniformIndexRN(3));
     const double value = randGen.getUniformRN(-2.0, 2.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
 
     double volume = 1.0;
@@ -593,7 +593,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
     const size_t nDim = 1;
     const LvlType maxLvl = static_cast<LvlType>(10 + randGen.getUniformIndexRN(3));  // 10...12
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genSinSourceFunction();
 
@@ -616,7 +616,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
     const double a = randGen.getUniformRN(-1.0, 0.0);
     const double b = randGen.getUniformRN(0.5, 2.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     genInstr.setBoundsForDim({a, b}, 0);
 
@@ -637,7 +637,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D) {
     const size_t nDim = 2;
     const LvlType maxLvl = static_cast<LvlType>(10 + randGen.getUniformIndexRN(3));  // 10...12
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genSinSourceFunction();
 
@@ -658,7 +658,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_3D) {
     const size_t nDim = 3;
     const LvlType maxLvl = static_cast<LvlType>(10 + randGen.getUniformIndexRN(3));  // 10..12
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genSinSourceFunction();
 
@@ -679,7 +679,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
     const size_t nDim = 3;
     const LvlType maxLvl = static_cast<LvlType>(12);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
 
     double expected = 1.0;
@@ -709,7 +709,7 @@ BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D) {
     const double a = randGen.getUniformRN(-2.0, 2.0);
     const double b = randGen.getUniformRN(-1.0, 1.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genLinearSourceFunction(a, b);
 
@@ -734,7 +734,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
     const double a = randGen.getUniformRN(-3.0, -0.5);
     const double b = randGen.getUniformRN(0.5, 3.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     genInstr.setBoundsForDim({a, b}, 0);
 
@@ -757,7 +757,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_unit_cube_1D) {
     const size_t nDim = 1;
     const LvlType maxLvl = 12;
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genQuadraticSourceFunction(1, 0, 0);
 
@@ -779,7 +779,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_random_interval_1D) {
     const double a = randGen.getUniformRN(-2.0, -0.5);
     const double b = randGen.getUniformRN(0.5, 2.0);
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     genInstr.setBoundsForDim({a, b}, 0);
 
@@ -808,7 +808,7 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
       exponents[i] = static_cast<int>(randGen.getUniformIndexRN(5));  // 0..4
     }
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc([exponents](const DataVector& point) {
       double v = 1.0;
@@ -847,7 +847,7 @@ BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
 
     double expected = 1.0;
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
 
     for (size_t d = 0; d < nDim; ++d) {
@@ -900,7 +900,7 @@ BOOST_AUTO_TEST_CASE(random_polynomial_unit_cube_nD) {
       terms.push_back(term);
     }
 
-    FullSGGenInstr genInstr(maxLvl, nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc([terms](const DataVector& point) {
       double v = 0.0;

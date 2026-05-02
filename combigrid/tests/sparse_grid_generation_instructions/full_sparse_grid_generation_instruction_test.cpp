@@ -12,7 +12,7 @@
 #include <cassert>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/full_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -65,14 +65,14 @@ bool checkForDuplicates(const LvlMIVec& miVec) {
 
 }  // namespace
 
-BOOST_AUTO_TEST_SUITE(FullSGGenInstr_genCompleteMIVec)
+BOOST_AUTO_TEST_SUITE(CompleteSGGenInstr_genCompleteMIVec)
 
 BOOST_AUTO_TEST_CASE(Random1D) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(100));
 
-    const FullSGGenInstr instr(maxLvl, 1);
+    const CompleteSGGenInstr instr(maxLvl, 1);
     const LvlMIVec result = instr.genMIVec();
 
     BOOST_CHECK_MESSAGE(result.nDim() == 1, "Seed: " << randGen.getSeed());
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(RandomSerial) {
     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(10));
     const size_t nDim = randGen.getUniformIndexRN(6);
 
-    const FullSGGenInstr instr(maxLvl, nDim);
+    const CompleteSGGenInstr instr(maxLvl, nDim);
     const LvlMIVec result = instr.genMIVec();
 
     const size_t expectedMICnt = requiredNumberOfMIs(nDim, maxLvl);
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(RandomParallel) {
     const LvlType maxLvl = 12 + static_cast<LvlType>(randGen.getUniformIndexRN(3));
     const size_t nDim = 4 + randGen.getUniformIndexRN(3);
 
-    const FullSGGenInstr instr(maxLvl, nDim);
+    const CompleteSGGenInstr instr(maxLvl, nDim);
     const LvlMIVec result = instr.genMIVec();
 
     const size_t expectedMICnt = requiredNumberOfMIs(nDim, maxLvl);
