@@ -1,7 +1,7 @@
 #include <cassert>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/tools/operators/interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>

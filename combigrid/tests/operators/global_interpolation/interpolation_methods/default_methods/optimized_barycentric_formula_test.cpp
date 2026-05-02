@@ -14,8 +14,8 @@
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/getters/optimized_barycentric_formula_getter.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 

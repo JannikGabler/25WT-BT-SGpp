@@ -9,7 +9,7 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
-#include "sgpp/combigrid/type_defs.hpp"
+#include <sgpp/combigrid/type_defs.hpp>
 
 using namespace sgpp::combigrid;
 using DataVector = sgpp::base::DataVector;

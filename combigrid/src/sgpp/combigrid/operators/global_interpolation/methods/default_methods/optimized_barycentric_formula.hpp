@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 
 namespace sgpp {
 namespace combigrid {

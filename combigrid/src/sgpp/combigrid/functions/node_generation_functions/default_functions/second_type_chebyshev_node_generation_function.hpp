@@ -4,7 +4,7 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/getters/optimized_barycentric_formula_getter.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>

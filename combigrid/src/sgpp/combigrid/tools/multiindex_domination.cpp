@@ -2,8 +2,8 @@
 // #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 // #include <sgpp/combigrid/tools/multiindex_domination.hpp>
 // #include <vector>
-// // #include "sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp"
-// // #include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
+// // #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
+// // #include <sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp>
 
 // namespace sgpp {
 // namespace combigrid {

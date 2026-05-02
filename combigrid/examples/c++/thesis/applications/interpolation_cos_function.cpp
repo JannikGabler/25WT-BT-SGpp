@@ -2,15 +2,15 @@
 #include <ios>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
-#include "sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp"
-#include "sgpp/combigrid/operators/interpolation/interpolation.hpp"
 
 using namespace sgpp::combigrid;
 using DataVector = sgpp::base::DataVector;

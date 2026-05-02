@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include "sgpp/combigrid/type_defs.hpp"
+#include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
 namespace combigrid {

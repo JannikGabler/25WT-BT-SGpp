@@ -1,5 +1,5 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <vector>
 

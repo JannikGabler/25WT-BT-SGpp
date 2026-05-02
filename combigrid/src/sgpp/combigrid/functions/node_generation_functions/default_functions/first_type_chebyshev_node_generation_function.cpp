@@ -3,7 +3,7 @@
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/default_functions/first_type_chebyshev_node_generation_function.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/getters/barycentric_formula_getter.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 

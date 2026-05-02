@@ -2,8 +2,6 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
-#include "sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp"
-#include "sgpp/combigrid/tools/comparison/nearly_equal.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -20,6 +18,8 @@
 #include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 

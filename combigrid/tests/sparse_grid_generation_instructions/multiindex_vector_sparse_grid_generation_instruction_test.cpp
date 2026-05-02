@@ -1,4 +1,3 @@
-#include "sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/context.hpp>
@@ -12,6 +11,7 @@
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 

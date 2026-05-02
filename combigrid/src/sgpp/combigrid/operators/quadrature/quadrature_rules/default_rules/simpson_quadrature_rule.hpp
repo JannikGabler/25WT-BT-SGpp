@@ -5,8 +5,8 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <stdexcept>
-#include "sgpp/combigrid/type_defs.hpp"
 
 namespace sgpp {
 namespace combigrid {

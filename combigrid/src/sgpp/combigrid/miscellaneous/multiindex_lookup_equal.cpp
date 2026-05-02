@@ -1,4 +1,4 @@
-// #include "sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp"
+// #include <sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp>
 // #include <sgpp/combigrid/multiindices/multiindex.hpp>
 // #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 // #include <sgpp/combigrid/type_defs.hpp>

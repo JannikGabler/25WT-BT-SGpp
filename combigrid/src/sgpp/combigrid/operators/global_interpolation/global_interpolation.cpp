@@ -8,8 +8,8 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/type_defs.hpp>

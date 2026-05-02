@@ -1,7 +1,7 @@
 #include <cassert>
 #include <cstddef>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/default_methods/optimized_barycentric_formula.hpp>
-#include <sgpp/combigrid/operators/interpolation/interpolation_methods/interpolation_method.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 

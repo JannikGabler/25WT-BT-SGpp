@@ -1,5 +1,6 @@
 
 #include <cassert>
+#include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
@@ -7,7 +8,6 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
-#include "sgpp/base/datatypes/DataMatrix.hpp"
 
 namespace sgpp {
 namespace combigrid {
