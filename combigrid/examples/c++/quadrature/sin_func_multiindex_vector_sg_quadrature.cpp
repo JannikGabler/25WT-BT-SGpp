@@ -30,7 +30,7 @@ int main() {
   const LvlMIVec mis{{0, 5, 0}, {0, 4, 1}, {0, 3, 2}, {0, 2, 3}, {0, 1, 4}, {0, 0, 5}};
 
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setBounds({0, 1});
+  genInstr.setDomain({0, 1});
   genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(0);

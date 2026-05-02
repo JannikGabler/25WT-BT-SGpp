@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
     for (size_t d = 0; d < nDim; ++d) {
       double a = randGen.getUniformRN(-2.0, 0.0);
       double b = randGen.getUniformRN(0.5, 3.0);
-      genInstr.setBoundsForDim({a, b}, d);
+      genInstr.setDomainForDim({a, b}, d);
       volume *= (b - a);
     }
 
@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
     const double b = randGen.getUniformRN(0.5, 2.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setBoundsForDim({a, b}, 0);
+    genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genSinSourceFunction();
     const SparseGrid sg(genInstr);
@@ -252,7 +252,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
     for (size_t d = 0; d < nDim; ++d) {
       double a = randGen.getUniformRN(-1.0, 0.0);
       double b = randGen.getUniformRN(0.5, 2.0);
-      genInstr.setBoundsForDim({a, b}, d);
+      genInstr.setDomainForDim({a, b}, d);
 
       // ∫ sin(x) dx = cos(a) - cos(b)
       expected *= (std::cos(a) - std::cos(b));
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
     const double b = randGen.getUniformRN(0.5, 3.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setBoundsForDim({a, b}, 0);
+    genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
     const SparseGrid sg(genInstr);
@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_random_interval_1D) {
     const double b = randGen.getUniformRN(0.5, 2.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setBoundsForDim({a, b}, 0);
+    genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genQuadraticSourceFunction(1, 0, 0);
 
@@ -415,7 +415,7 @@ BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
       double a = randGen.getUniformRN(-1.0, 0.0);
       double b = randGen.getUniformRN(0.5, 2.0);
       bounds[d] = {a, b};
-      genInstr.setBoundsForDim(bounds[d], d);
+      genInstr.setDomainForDim(bounds[d], d);
 
       // ∫ x^k dx = (b^{k+1} - a^{k+1})/(k+1)
       expected *= (std::pow(b, exponents[d] + 1) - std::pow(a, exponents[d] + 1)) /
@@ -573,7 +573,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
     for (size_t d = 0; d < nDim; ++d) {
       double a = randGen.getUniformRN(-2.0, 0.0);
       double b = randGen.getUniformRN(0.5, 3.0);
-      genInstr.setBoundsForDim({a, b}, d);
+      genInstr.setDomainForDim({a, b}, d);
       volume *= (b - a);
     }
 
@@ -618,7 +618,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-    genInstr.setBoundsForDim({a, b}, 0);
+    genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genSinSourceFunction();
     const SparseGrid sg(genInstr);
@@ -686,7 +686,7 @@ BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
     for (size_t d = 0; d < nDim; ++d) {
       double a = randGen.getUniformRN(-1.0, 0.0);
       double b = randGen.getUniformRN(0.5, 2.0);
-      genInstr.setBoundsForDim({a, b}, d);
+      genInstr.setDomainForDim({a, b}, d);
 
       // ∫ sin(x) dx = cos(a) - cos(b)
       expected *= (std::cos(a) - std::cos(b));
@@ -736,7 +736,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-    genInstr.setBoundsForDim({a, b}, 0);
+    genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
     const SparseGrid sg(genInstr);
@@ -781,7 +781,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_random_interval_1D) {
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-    genInstr.setBoundsForDim({a, b}, 0);
+    genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genQuadraticSourceFunction(1, 0, 0);
 
@@ -855,7 +855,7 @@ BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
       double a = randGen.getUniformRN(-1.0, 0.0);
       double b = randGen.getUniformRN(0.5, 2.0);
       bounds[d] = {a, b};
-      genInstr.setBoundsForDim(bounds[d], d);
+      genInstr.setDomainForDim(bounds[d], d);
 
       // ∫ x^k dx = (b^{k+1} - a^{k+1})/(k+1)
       expected *= (std::pow(b, exponents[d] + 1) - std::pow(a, exponents[d] + 1)) /
@@ -943,7 +943,7 @@ BOOST_AUTO_TEST_CASE(multiindex_vector_sg_gen_instr) {
   const LvlMIVec mis{{5, 5, 0}, {0, 4, 1}, {5, 3, 2}, {0, 2, 3}, {0, 1, 4}, {0, 0, 5}};
   MIVecSGGenInstr genInstr(mis);
   genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-  genInstr.setBounds({0, 2 * M_PI});
+  genInstr.setDomain({0, 2 * M_PI});
 
   const SparseGrid sg(genInstr);
 

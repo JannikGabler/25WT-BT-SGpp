@@ -17,7 +17,7 @@ int main() {
   const SourceFunc sourceFunc(func);
 
   CompleteSGGenInstr genInstr(16, 2);
-  genInstr.setBounds({-1, 1});
+  genInstr.setDomain({-1, 1});
   genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
   genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(2);

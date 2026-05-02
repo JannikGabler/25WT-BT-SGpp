@@ -35,7 +35,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
               quadrature_operator::quadrature(sourceFunc, tgData.tensorGrid, *genInstr, scratch);
   }
 
-  return genInstr->getVolumeOfBounds() * result;
+  return genInstr->getVolumeOfDomain() * result;
 }
 
 namespace quadrature_operator {
@@ -51,7 +51,7 @@ double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGe
     return 0;
   }
 
-  const HyperCubeArea& bounds = genInstr.getBounds();
+  const HyperCubeArea& bounds = genInstr.getDomain();
   const GPMI& gpCntPerDim = tg.getGPCntPerDim();
   const std::vector<NodeGenFunc*>& nodeGenFuncs = genInstr.getNodeGenFuncs();
   const misc::DiscRectBB<GPCntType> iterationBB(GPMI(nDim), gpCntPerDim, false);

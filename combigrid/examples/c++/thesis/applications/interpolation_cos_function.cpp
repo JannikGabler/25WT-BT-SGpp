@@ -38,7 +38,7 @@ double perform(const size_t nDim, const LvlType maxLvl, const DataVector& point)
   // Use Chebyshev nodes of the second kind
   genInstr.setNodeGenFunc(getSecondTypeChebyshevNodeGenFunc());
   // Change the domain to [-2 * pi, 2 * pi]^d
-  genInstr.setBounds({-2 * M_PI, 2 * M_PI});
+  genInstr.setDomain({-2 * M_PI, 2 * M_PI});
 
   /* === 3. Generate Sparse Grid === */
   SparseGrid sg(genInstr);

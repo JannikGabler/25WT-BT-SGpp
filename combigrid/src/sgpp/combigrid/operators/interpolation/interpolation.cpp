@@ -23,7 +23,7 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
   assert(point.size() == sparseGrid.nDim());
 
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
-  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr->getBounds());
+  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr->getDomain());
   double result = 0;
 
 #pragma omp parallel for reduction(+ : result) schedule(guided)  // TODO: Scheduling
@@ -62,7 +62,7 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
 std::vector<double> interpolateFirstDim(const SourceFunc& sourceFunc, const double point,
                                         const TensorGridCTData& tgData, const SGGenInstr& genInstr,
                                         const size_t nInterpolations) {
-  const HyperCubeArea& bounds = genInstr.getBounds();
+  const HyperCubeArea& bounds = genInstr.getDomain();
   const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[0];
   const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(0);
   const bool addBoundary = tgData.mi[0] >= genInstr.getBoundaryLevelOffset();

@@ -29,8 +29,8 @@ class SGGenInstr {
 
   LvlType getBoundaryLevelOffset() const;
 
-  const HyperCubeArea& getBounds() const;
-  std::pair<double, double> getBoundsForDim(size_t dim) const;
+  const HyperCubeArea& getDomain() const;
+  std::pair<double, double> getDomainForDim(size_t dim) const;
 
   const std::vector<NodeGenFunc*>& getNodeGenFuncs() const;
   NodeGenFunc* getNodeGenFuncForDim(size_t dim) const;
@@ -43,9 +43,9 @@ class SGGenInstr {
   ******/
   void setBoundaryLevelOffset(LvlType boundaryLevelOffset);
 
-  void setBoundsForDim(std::pair<double, double> interval, size_t dim);
-  void setBounds(std::pair<double, double> interval);
-  void setBounds(const HyperCubeArea& bounds);
+  void setDomainForDim(std::pair<double, double> interval, size_t dim);
+  void setDomain(std::pair<double, double> interval);
+  void setDomain(const HyperCubeArea& domain);
 
   void setNodeGenFuncForDim(NodeGenFunc* nodeGenFunc, size_t dim);
   void setNodeGenFunc(NodeGenFunc* nodeGenFunc);
@@ -69,14 +69,14 @@ class SGGenInstr {
 
   void resize(size_t newDimCnt);
 
-  double getVolumeOfBounds() const;
+  double getVolumeOfDomain() const;
 
   std::vector<NodeGenFunc*> getUniqueNodeGenFuncs() const;
 
  private:
   LvlType boundaryLevelOffset;
 
-  HyperCubeArea bounds;
+  HyperCubeArea domain;
   std::vector<NodeGenFunc*> nodeGenFuncs;
   std::vector<Lvl2GPCntFunc> lvl2GPCntFuncs;
 };

@@ -16,7 +16,7 @@ Constructors
 
 SGGenInstr::SGGenInstr(const size_t nDim)
     : boundaryLevelOffset(0),
-      bounds(nDim, {0, 1}),
+      domain(nDim, {0, 1}),
       nodeGenFuncs(nDim, getEquidistantNodeGenFunc()),
       lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {}
 
@@ -24,14 +24,14 @@ SGGenInstr::SGGenInstr(const size_t nDim)
 Getters
 ******/
 
-size_t SGGenInstr::nDim() const { return this->bounds.size(); }
+size_t SGGenInstr::nDim() const { return this->domain.size(); }
 
 LvlType SGGenInstr::getBoundaryLevelOffset() const { return boundaryLevelOffset; }
 
-const HyperCubeArea& SGGenInstr::getBounds() const { return bounds; }
+const HyperCubeArea& SGGenInstr::getDomain() const { return domain; }
 
-std::pair<double, double> SGGenInstr::getBoundsForDim(const size_t dim) const {
-  return bounds[dim];
+std::pair<double, double> SGGenInstr::getDomainForDim(const size_t dim) const {
+  return domain[dim];
 }
 
 const std::vector<NodeGenFunc*>& SGGenInstr::getNodeGenFuncs() const { return nodeGenFuncs; }
@@ -52,17 +52,17 @@ void SGGenInstr::setBoundaryLevelOffset(const LvlType boundaryLevelOffset) {
   this->boundaryLevelOffset = boundaryLevelOffset;
 }
 
-void SGGenInstr::setBoundsForDim(const std::pair<double, double> interval, const size_t dim) {
-  bounds[dim] = interval;
+void SGGenInstr::setDomainForDim(const std::pair<double, double> interval, const size_t dim) {
+  domain[dim] = interval;
 }
 
-void SGGenInstr::setBounds(const std::pair<double, double> interval) {
-  std::fill(bounds.begin(), bounds.end(), interval);
+void SGGenInstr::setDomain(const std::pair<double, double> interval) {
+  std::fill(domain.begin(), domain.end(), interval);
 }
 
-void SGGenInstr::setBounds(const std::vector<std::pair<double, double>>& bounds) {
-  const size_t nElemsToCopy = std::min(this->bounds.size(), bounds.size());
-  std::copy_n(bounds.begin(), nElemsToCopy, this->bounds.begin());
+void SGGenInstr::setDomain(const std::vector<std::pair<double, double>>& domain) {
+  const size_t nElemsToCopy = std::min(this->domain.size(), domain.size());
+  std::copy_n(domain.begin(), nElemsToCopy, this->domain.begin());
 }
 
 void SGGenInstr::setNodeGenFuncForDim(NodeGenFunc* const nodeGenFunc, const size_t dim) {
@@ -95,19 +95,19 @@ void SGGenInstr::setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFu
 Helper operations
 ****************/
 void SGGenInstr::resize(const size_t newDimCnt) {
-  bounds.resize(newDimCnt);
+  domain.resize(newDimCnt);
   nodeGenFuncs.resize(newDimCnt);
   lvl2GPCntFuncs.resize(newDimCnt);
 }
 
-double SGGenInstr::getVolumeOfBounds() const {
+double SGGenInstr::getVolumeOfDomain() const {
   if (nDim() == 0) {
     return 0;
   }
 
   double volume = 1;
   for (size_t dim = 0; dim < nDim(); dim++) {
-    volume *= bounds[dim].second - bounds[dim].first;
+    volume *= domain[dim].second - domain[dim].first;
   }
 
   return volume;

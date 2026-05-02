@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD_interpolation) {
     for (size_t d = 0; d < nDim; ++d) {
       double a = randGen.getUniformRN(-2.0, 0.0);
       double b = randGen.getUniformRN(0.5, 3.0);
-      genInstr.setBoundsForDim({a, b}, d);
+      genInstr.setDomainForDim({a, b}, d);
       bounds[d] = {a, b};
     }
 
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_interpolation) {
     const double b = randGen.getUniformRN(0.5, 4.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setBoundsForDim({a, b}, 0);
+    genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
     const SparseGrid sg(genInstr);
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD_interpolation) {
     for (size_t d = 0; d < nDim; ++d) {
       double a = randGen.getUniformRN(-2.0, 0.0);
       double b = randGen.getUniformRN(0.5, 3.0);
-      genInstr.setBoundsForDim({a, b}, d);
+      genInstr.setDomainForDim({a, b}, d);
       bounds[d] = {a, b};
     }
 
@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_interpolation) {
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-    genInstr.setBoundsForDim({a, b}, 0);
+    genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
     const SparseGrid sg(genInstr);
