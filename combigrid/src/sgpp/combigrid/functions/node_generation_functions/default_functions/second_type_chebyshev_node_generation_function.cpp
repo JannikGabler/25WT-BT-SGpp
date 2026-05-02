@@ -24,8 +24,9 @@ SecondTypeChebyshevNodeGenFunc::SecondTypeChebyshevNodeGenFunc()
 Node generation
 **************/
 
-void SecondTypeChebyshevNodeGenFunc::genNodesInplace(const GPCntType nNodes, base::DataVector& out,
-                                                     size_t startIdx) const {
+void SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary(const GPCntType nNodes,
+                                                             base::DataVector& out,
+                                                             size_t startIdx) const {
   assert(out.size() - startIdx >= nNodes);
 
   const double f1 = M_PI / static_cast<double>(nNodes + 1);

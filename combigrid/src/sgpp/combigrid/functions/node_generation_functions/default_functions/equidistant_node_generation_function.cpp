@@ -28,9 +28,9 @@ EquidistantNodeGenFunc::EquidistantNodeGenFunc()
 Node generation
 **************/
 
-void EquidistantNodeGenFunc::genNodesInplace(const GPCntType nNodes, base::DataVector& out,
-                                             size_t startIdx) const {
-  assert(out.size() - startIdx >= nNodes);
+void EquidistantNodeGenFunc::genNodesWithoutBoundary(const GPCntType nNodes, base::DataVector& out,
+                                                     size_t startIdx) const {
+  assert(out.size() >= startIdx + nNodes);
 
   const double factor = 1.0 / static_cast<double>(nNodes + 1);
 

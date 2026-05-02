@@ -15,18 +15,37 @@ class NodeGenFunc {
   virtual ~NodeGenFunc() = default;
 
   /*
-  Should not be used in hot loops because it requires memory allocations (-> genNodesInplace).
+  In-place variant
+  */
+  void genNodes(GPCntType nNodes, base::DataVector& out, bool includeBoundary,
+                size_t startIdx = 0) const;
+
+  /*
+  Out-of-place variant
+  Should not be used in hot loops because it requires memory allocations.
   */
   base::DataVector genNodes(GPCntType nNodes, bool includeBoundary) const;
 
   /*
-  Without boundary
+  In-place variant
   */
-  virtual void genNodesInplace(GPCntType nNodes, base::DataVector& out,
-                               size_t startIdx = 0) const = 0;
+  void genNodesWithBoundary(GPCntType nNodes, base::DataVector& out, size_t startIdx = 0) const;
 
-  void genNodesInplace(GPCntType nNodes, base::DataVector& out, bool includeBoundary,
-                       size_t startIdx = 0) const;
+  /*
+  Out-of-place variant
+  */
+  base::DataVector genNodesWithBoundary(GPCntType nNodes) const;
+
+  /*
+  In-place variant
+  */
+  virtual void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
+                                       size_t startIdx = 0) const = 0;
+
+  /*
+  Out-of-place variant
+  */
+  base::DataVector genNodesWithoutBoundary(GPCntType nNodes) const;
 
   /******
   Getters

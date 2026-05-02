@@ -79,7 +79,6 @@ class TensorGrid {
 
   /*
   Out-of-place variant (might be inefficient)
-  Not optimized (TODO)
   */
   base::DataMatrix getGridPoints() const;
 

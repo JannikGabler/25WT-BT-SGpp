@@ -24,7 +24,8 @@ class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
   /**************
   Node generation
   **************/
-  void genNodesInplace(GPCntType nNodes, base::DataVector& out, size_t startIdx = 0) const override;
+  void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
+                               size_t startIdx = 0) const override;
 
   /***********
   SG Operators

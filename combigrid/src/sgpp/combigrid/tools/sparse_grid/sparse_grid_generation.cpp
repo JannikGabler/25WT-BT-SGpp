@@ -91,7 +91,7 @@ base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr
     const GPCntType nodeCnt = gpCntPerDim[dim];
     const bool includeBoundary = mi[dim] >= genInstr.getBoundaryLevelOffset();
 
-    nodeGenFunc->genNodesInplace(nodeCnt, nodesPerDim, includeBoundary, vecIdx);
+    nodeGenFunc->genNodes(nodeCnt, nodesPerDim, includeBoundary, vecIdx);
     vecIdx += nodeCnt;
 
     // TODO: Delete
