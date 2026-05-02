@@ -7,6 +7,7 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
+#include "sgpp/base/datatypes/DataMatrix.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -63,19 +64,11 @@ void TensorGrid::getGridPoint(size_t idx, base::DataVector& out) const {
   }
 }
 
-// base::DataVector TensorGrid::getGridPoint(const size_t idx) const {
-//   assert(idx < nGP_);
-
-//   const size_t nDim = this->nDim();
-//   base::DataVector gp(nDim);
-
-//   // for (size_t dim = 0; dim < nDim; dim++) {
-//   //   gp[dim] = gridPoints[nDim * idx + dim];
-//   // }
-//   std::copy_n(gridPoints.begin() + idx * nDim, nDim, gp.begin());
-
-//   return gp;
-// }
+base::DataVector TensorGrid::getGridPoint(const size_t idx) const {
+  base::DataVector result(nDim());
+  getGridPoint(idx, result);
+  return result;
+}
 
 void TensorGrid::getGridPoint(const GPMI& mi, base::DataVector& out) const {
   assert(mi.size() >= nDim() && out.size() >= nDim() && mi < nGPPerDim);
@@ -90,6 +83,12 @@ void TensorGrid::getGridPoint(const GPMI& mi, base::DataVector& out) const {
     out[dim] = nodesPerDim[vectorOffset + localIdx];
     vectorOffset += nGPInDim;
   }
+}
+
+base::DataVector TensorGrid::getGridPoint(const GPMI& mi) const {
+  base::DataVector result(nDim());
+  getGridPoint(mi, result);
+  return result;
 }
 
 void TensorGrid::getGridPointAndMI(size_t idx, base::DataVector& outGP, GPMI& outMI) const {
@@ -111,11 +110,46 @@ void TensorGrid::getGridPointAndMI(size_t idx, base::DataVector& outGP, GPMI& ou
   }
 }
 
-// base::DataVector TensorGrid::getGridPoint(const GPMI& mi) const {
-//   assert(mi.size() == nDim());
+std::pair<base::DataVector, GPMI> TensorGrid::getGridPointAndMI(const size_t idx) const {
+  const size_t nDim = this->nDim();
+  base::DataVector gp(nDim);
+  GPMI mi(nDim);
 
-//   return getGridPoint(mi.toLinearIndex(nGPPerDim));
-// }
+  getGridPointAndMI(idx, gp, mi);
+
+  return {gp, mi};
+}
+
+// TODO: Optimize
+void TensorGrid::getGridPoints(base::DataMatrix& out) const {
+  assert(out.getNrows() >= nGP_ && out.getNcols() >= nDim());
+
+  const size_t nGP = nGP_;
+  const size_t nDim = this->nDim();
+
+  for (size_t i = 0; i < nGP; i++) {
+    size_t idx = i;
+    size_t vectorOffset = 0;
+
+    for (size_t dim = 0; dim < nDim; dim++) {
+      const GPCntType nGPInDim = nGPPerDim[dim];
+
+      const size_t localIdx = idx % nGPInDim;
+      idx /= nGPInDim;
+
+      out(i, dim) = nodesPerDim[vectorOffset + localIdx];
+      vectorOffset += nGPInDim;
+    }
+  }
+}
+
+base::DataMatrix TensorGrid::getGridPoints() const {
+  base::DataMatrix result(nGP_, nDim());
+
+  getGridPoints(result);
+
+  return result;
+}
 
 /*****
 Setter

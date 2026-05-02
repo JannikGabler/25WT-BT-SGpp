@@ -1,6 +1,7 @@
 #ifndef COMBIGRID_TENSOR_GRID_HPP
 #define COMBIGRID_TENSOR_GRID_HPP
 
+#include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
@@ -40,18 +41,47 @@ class TensorGrid {
 
   const base::DataVector& getNodesPerDim() const;
 
+  /*
+  In-place variant
+  */
   void getGridPoint(size_t idx, base::DataVector& out) const;
 
   /*
-  Requires allocations
+  Out-of-place variant (might be inefficient)
   */
-  // base::DataVector getGridPoint(size_t idx) const;
+  base::DataVector getGridPoint(size_t idx) const;
 
+  /*
+  In-place variant
+  */
   void getGridPoint(const GPMI& mi, base::DataVector& out) const;
 
-  // base::DataVector getGridPoint(const GPMI& mi) const;
+  /*
+  Out-of-place variant (might be inefficient)
+  */
+  base::DataVector getGridPoint(const GPMI& mi) const;
 
+  /*
+  In-place variant
+  */
   void getGridPointAndMI(size_t idx, base::DataVector& outGP, GPMI& outMI) const;
+
+  /*
+  Out-of-place variant (might be inefficient)
+  */
+  std::pair<base::DataVector, GPMI> getGridPointAndMI(size_t idx) const;
+
+  /*
+  In-place variant
+  Not optimized (TODO)
+  */
+  void getGridPoints(base::DataMatrix& out) const;
+
+  /*
+  Out-of-place variant (might be inefficient)
+  Not optimized (TODO)
+  */
+  base::DataMatrix getGridPoints() const;
 
   /*****
   Setter
