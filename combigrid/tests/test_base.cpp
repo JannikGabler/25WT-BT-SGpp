@@ -3,6 +3,16 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
+/**
+ * @file test_base.cpp
+ * @brief Boost.Test entry point that defines the @c SGppCombigridModule
+ * test executable.
+ *
+ * Every test translation unit in @c combigrid/tests is linked into the
+ * same test driver; the driver itself lives here. Includes a workaround
+ * for a clang/Boost.Test compatibility issue.
+ */
+
 // #define BOOST_TEST_DYN_LINK
 // #include <boost/test/tools/old/interface.hpp>
 // #define BOOST_TEST_MODULE SGppCombigridModule

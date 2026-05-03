@@ -1,3 +1,11 @@
+/**
+ * @file persistent_cache.hpp
+ * @brief Reserved for a Linux-only persistent (mmap-backed) lookup cache.
+ *
+ * @note Currently disabled — the implementation below is kept commented
+ * out as a future extension point.
+ */
+
 // #pragma once
 
 // #include <fcntl.h>

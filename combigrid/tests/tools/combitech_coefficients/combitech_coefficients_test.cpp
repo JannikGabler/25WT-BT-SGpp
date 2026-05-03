@@ -2,6 +2,13 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file combitech_coefficients_test.cpp
+ * @brief Boost.Test cases for the combination-technique coefficient
+ * routines (@c tools::computeCTCoeffs and friends).
+ */
+
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>

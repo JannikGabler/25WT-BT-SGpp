@@ -1,3 +1,12 @@
+/**
+ * @file downwards_closedness.hpp
+ * @brief Tests and constructions related to the downwards-closedness of
+ * multi-index sets.
+ *
+ * The combination technique requires its level-multi-index set to be
+ * downwards closed (DWC): for every @f$\vec{\ell} \in I@f$ all
+ * @f$\vec{\ell}'\le\vec{\ell}@f$ must also belong to @f$I@f$.
+ */
 #ifndef COMBIGRID_TOOLS_DOWNWARDS_CLOSEDNESS_HPP
 #define COMBIGRID_TOOLS_DOWNWARDS_CLOSEDNESS_HPP
 
@@ -16,10 +25,23 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-/*
-Simple approach
-TODO: Optimize
-*/
+/**
+ * @brief Tests whether a multi-index set is downwards closed.
+ *
+ * For every multi-index @f$\vec{\ell}@f$ in @p miVec the function checks
+ * that all immediate predecessors @f$\vec{\ell} - \vec e_k@f$ (for the
+ * @f$d@f$ unit vectors that yield non-negative values) are also present.
+ * If a single predecessor is missing the parallel scan is cancelled and
+ * @c false is returned. Parallelized with OpenMP above the threshold
+ * @c constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY.
+ *
+ * @tparam T   Multi-index element type.
+ * @param miVec Source set.
+ * @return @c true iff @p miVec is downwards closed.
+ *
+ * @note Naive implementation; the unit-bounding-box iteration cost is
+ *       @f$O(2^d)@f$ per multi-index.
+ */
 template <typename T>
 bool isMIVecDownwardsClosed(const MIVec<T>& miVec) {
   const misc::DiscUnitBB<T> offsets(miVec.nDim());
@@ -44,6 +66,14 @@ bool isMIVecDownwardsClosed(const MIVec<T>& miVec) {
   return closed;
 }
 
+/**
+ * @brief Merges per-thread closure batches into a single @c MIVec.
+ *
+ * @tparam T              Multi-index element type.
+ * @param nDim            Multi-index dimensionality.
+ * @param localClosures   Per-thread closure entries.
+ * @return Combined closure as a single @c MIVec.
+ */
 template <typename T>
 MIVec<T> mergeLocalClosures(const size_t nDim,
                             const std::vector<std::vector<std::vector<T>>>& localClosures) {
@@ -64,9 +94,20 @@ MIVec<T> mergeLocalClosures(const size_t nDim,
   return closure;
 }
 
-/*
-Naive approach
-*/
+/**
+ * @brief Generates the downwards closure of a multi-index set.
+ *
+ * Iterates over every multi-index in the bounding box of @p miVec; a
+ * candidate is added to the closure iff at least one Pareto-maximal
+ * multi-index of @p miVec dominates it. The iteration is partitioned
+ * across OpenMP threads.
+ *
+ * @tparam T   Multi-index element type.
+ * @param miVec Source set.
+ * @return Downwards closure of @p miVec.
+ *
+ * @note Naive @f$O(\#\text{box} \cdot \#\text{Pareto})@f$ approach.
+ */
 template <typename T>
 MIVec<T> genMIVecDownwardsClosure(const MIVec<T>& miVec) {
   const std::shared_ptr<std::vector<size_t>> paretoMaxima = miVec.paretoMaxima();

@@ -2,6 +2,13 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file node_generation_functions_test.cpp
+ * @brief Boost.Test cases for the built-in node generators (equidistant,
+ * Chebyshev of the first / second kind, Clenshaw-Curtis).
+ */
+
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>

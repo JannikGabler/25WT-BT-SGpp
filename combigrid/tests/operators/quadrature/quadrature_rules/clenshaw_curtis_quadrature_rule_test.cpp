@@ -2,6 +2,12 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file clenshaw_curtis_quadrature_rule_test.cpp
+ * @brief Boost.Test cases for the Clenshaw-Curtis quadrature rule weights.
+ */
+
 #include <vector>
 #define BOOST_TEST_DYN_LINK
 

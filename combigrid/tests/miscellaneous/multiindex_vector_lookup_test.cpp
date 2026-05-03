@@ -2,6 +2,13 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file multiindex_vector_lookup_test.cpp
+ * @brief Boost.Test cases for the hash-based reverse lookup
+ * @c misc::MIVecLookup over an @c MIVec.
+ */
+
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>

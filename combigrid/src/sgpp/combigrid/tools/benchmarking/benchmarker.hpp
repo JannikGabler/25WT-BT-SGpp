@@ -1,3 +1,8 @@
+/**
+ * @file benchmarker.hpp
+ * @brief Lightweight benchmarking harness with checkpoint timings and
+ * accuracy tracking, used by the @c examples / @c tests programs.
+ */
 #pragma once
 
 #include <chrono>
@@ -21,21 +26,56 @@ namespace combigrid {
 
 namespace tools {
 
+/**
+ * @brief Repeated-run benchmark harness with named checkpoints.
+ *
+ * Drives a callable through a configurable number of warmup and measured
+ * runs, records per-run total time and per-checkpoint deltas, and
+ * reports mean/stddev (plus absolute and relative error against an
+ * analytical reference when available). Used by the example programs
+ * to compare configurations of the combination technique.
+ *
+ * @tparam R     Return type of the benchmarked callable.
+ * @tparam Args  Argument types forwarded to the callable.
+ */
 template <typename R, typename... Args>
 class Benchmarker {
  public:
-  // Context passed to the benchmarked function.
-  // The function calls context.mark_checkpoint("name") to record checkpoints.
+  /**
+   * @brief Per-run context handed to the benchmarked callable.
+   *
+   * The callable invokes @ref mark_checkpoint to record the elapsed
+   * time since the previous checkpoint (or the start of the run).
+   * Checkpoint names must have been registered up front via
+   * @ref add_checkpoint.
+   */
   class BenchmarkerContext {
    public:
+    /**
+     * @param parent                Owning benchmarker (for checkpoint name lookup).
+     * @param run_checkpoint_buffer Per-run buffer; entry @c k stores the
+     *                              elapsed time at the @c k-th checkpoint.
+     * @param record                Whether checkpoints actually contribute
+     *                              to the recorded statistics (warmup runs
+     *                              pass @c false).
+     */
     BenchmarkerContext(Benchmarker* parent, std::vector<double>* run_checkpoint_buffer, bool record)
         : parent_(parent),
           run_buffer_(run_checkpoint_buffer),
           record_(record),
           last_time_(std::chrono::steady_clock::now()) {}
 
-    // Marks a checkpoint with the given name.
-    // Thread-safe (guarded by mutex), measures time since last checkpoint in seconds.
+    /**
+     * @brief Records the elapsed time since the last checkpoint under
+     * the given name.
+     *
+     * Thread-safe (guarded by an internal mutex). Times are stored in
+     * seconds.
+     *
+     * @param name Identifier of the checkpoint (must have been added via
+     *             @ref Benchmarker::add_checkpoint).
+     * @throws std::runtime_error if @p name was never registered.
+     */
     void mark_checkpoint(const std::string& name) {
       using namespace std::chrono;
       auto now = steady_clock::now();
@@ -65,24 +105,37 @@ class Benchmarker {
     std::mutex mutex_;
   };
 
+  /// @brief Constructs a benchmarker with default 10 runs and 2 warmups.
   Benchmarker() : runs_(10), warmups_(2), show_progress_(false) {}
 
-  // Set number of measured runs (excluding warmups)
+  /// @brief Sets the number of measured runs (excluding warmups).
   void set_runs(size_t runs) { runs_ = runs; }
 
-  // Set number of warmup runs (not included in statistics)
+  /// @brief Sets the number of warmup runs (not included in statistics).
   void set_warmups(size_t warmups) { warmups_ = warmups; }
 
+  /**
+   * @brief Provides the analytical reference value used to compute the
+   * absolute and relative error per run.
+   * @param analyticalResult Reference value; pass @c NaN to skip error
+   * statistics.
+   */
   void setAnalyticalResult(const double analyticalResult) {
     this->analyticalResult = analyticalResult;
   }
 
-  // Enable/disable console progress output
+  /// @brief Enables or disables a textual progress indicator on stdout.
   void enable_progress(bool on) { show_progress_ = on; }
 
-  // Adds a checkpoint (name) in the desired order.
-  // Order is important: duration of a checkpoint is measured
-  // since the previous checkpoint (or start for the first).
+  /**
+   * @brief Registers a checkpoint name in the order in which it will be hit.
+   *
+   * The duration recorded at this checkpoint is the time between the
+   * previous checkpoint (or the run start) and this checkpoint. Calling
+   * the function with an already-registered name is a no-op.
+   *
+   * @param name Checkpoint identifier.
+   */
   void add_checkpoint(const std::string& name) {
     if (checkpoint_index_.count(name)) return;
     size_t idx = checkpoint_names_.size();
@@ -91,8 +144,18 @@ class Benchmarker {
     per_checkpoint_samples_.emplace_back();  // vector storing samples for this checkpoint
   }
 
-  // Executes the benchmark.
-  // func must have signature: R(Context&, Args...)
+  /**
+   * @brief Executes the benchmark.
+   *
+   * Runs @p func through the configured warmup and measured runs,
+   * collecting checkpoint timings, total run time, and (if a reference
+   * is configured) absolute / relative errors of the returned value.
+   *
+   * @param func Callable to benchmark. Must accept a @ref BenchmarkerContext
+   * reference followed by @p Args... and return a value comparable against
+   * @c analyticalResult.
+   * @param args Arguments forwarded to @p func on every run.
+   */
   void run(std::function<R(BenchmarkerContext&, Args...)> func, Args... args) {
     using namespace std::chrono;
 
@@ -162,7 +225,10 @@ class Benchmarker {
     }
   }
 
-  // Prints results to console (mean + standard deviation), units are seconds
+  /**
+   * @brief Pretty-prints aggregated results (mean / stddev / counts).
+   * @param os Output stream (defaults to @c std::cout).
+   */
   void print_results(std::ostream& os = std::cout) const {
     os << std::fixed << std::setprecision(6);
     os << "=== Benchmark Results ===\n";

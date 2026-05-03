@@ -1,3 +1,7 @@
+/**
+ * @file clenshaw_curtis_quadrature_rule.hpp
+ * @brief 1D Clenshaw-Curtis quadrature rule on Chebyshev-Lobatto nodes.
+ */
 #pragma once
 
 #include <cassert>
@@ -10,27 +14,51 @@
 namespace sgpp {
 namespace combigrid {
 
+/**
+ * @brief Concrete @c QuadRule implementations.
+ */
 namespace quadrature_rules {
 
+/**
+ * @brief Clenshaw-Curtis quadrature on Chebyshev-Lobatto nodes.
+ *
+ * Clenshaw-Curtis is the canonical quadrature for nested Chebyshev-type
+ * node families and is the default quadrature rule used together with the
+ * Clenshaw-Curtis node generator.
+ */
 class ClenshawCurtisQuadRule : public QuadRule {
  public:
+  /// @brief Constructs the rule with a deterministic id derived from its name.
   ClenshawCurtisQuadRule() : QuadRule(tools::fnv1aHash("Clenshaw Curtis Quadrature Rule")) {}
 
+  /// @copydoc QuadRule::getWeights
   base::DataVector getWeights(const GPCntType nNodes) const override;
 
+  /// @copydoc QuadRule::genWeightsInplace
   void genWeightsInplace(const GPCntType nNodes, base::DataVector& out,
                          size_t startIdx = 0) const override;
 
  private:
-  /*
-  Fallback if neither the Eigen nor the Armadillo library is available.
-  */
+  /**
+   * @brief Naive @f$O(n^2)@f$ weight computation.
+   *
+   * Used as a fallback when neither Eigen nor Armadillo is available at
+   * build time.
+   *
+   * @param nNodes Number of 1D nodes.
+   * @return Newly allocated weight vector.
+   */
   base::DataVector genWeightsNaive(const size_t nNodes) const;
 
-  /*
-  More efficient method by Waldvogel using the Inverse Fourier Transformation.
-  Requires Eigen or Armadillo.
-  */
+  /**
+   * @brief Waldvogel's FFT-based weight formula (requires Eigen or Armadillo).
+   *
+   * Faster (@f$O(n \log n)@f$) than @ref genWeightsNaive for large
+   * @p nNodes.
+   *
+   * @param nNodes Number of 1D nodes.
+   * @return Vector of @p nNodes weights.
+   */
   std::vector<double> clenshawCurtisWeightsFFT(const size_t nNodes);
 };
 

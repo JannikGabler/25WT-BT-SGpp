@@ -2,6 +2,13 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file source_function_cache_test.cpp
+ * @brief Boost.Test cases for @c misc::SourceFunctionCache (sharded
+ * thread-safe cache for source-function values).
+ */
+
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>

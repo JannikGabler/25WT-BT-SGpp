@@ -1,3 +1,9 @@
+/**
+ * @file multiindex_vector_sparse_grid_generation_instruction_test.cpp
+ * @brief Boost.Test cases for @c MIVecSGGenInstr (sparse-grid generation
+ * from a user-supplied multi-index set).
+ */
+
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/context.hpp>

@@ -2,6 +2,13 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file full_sparse_grid_generation_instruction_test.cpp
+ * @brief Boost.Test cases verifying that @c CompleteSGGenInstr produces
+ * the expected level multi-indices and combination coefficients.
+ */
+
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/context.hpp>

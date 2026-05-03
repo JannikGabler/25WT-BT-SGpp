@@ -1,3 +1,9 @@
+/**
+ * @file sparse_grid_generation_node_lookup_test.cpp
+ * @brief Reserved for tests of the (currently disabled) concurrent
+ * node-lookup builder; the body is commented out.
+ */
+
 // TODO: Not used at the moment
 
 // // Copyright (C) 2008-today The SG++ project

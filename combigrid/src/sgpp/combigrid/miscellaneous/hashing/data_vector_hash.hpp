@@ -1,3 +1,7 @@
+/**
+ * @file data_vector_hash.hpp
+ * @brief Hash functor for @c base::DataVector keys.
+ */
 #pragma once
 
 #include <cstddef>
@@ -8,7 +12,19 @@ namespace sgpp {
 namespace combigrid {
 namespace misc {
 
+/**
+ * @brief Hash functor that mixes the bit pattern of every entry of a
+ * @c base::DataVector.
+ *
+ * Used as the default hash for @c std::unordered_map keys of type
+ * @c base::DataVector (e.g. inside the source-function cache).
+ */
 struct DataVectorHash {
+  /**
+   * @brief Computes the hash of @p v.
+   * @param v Input vector.
+   * @return 64-bit hash value.
+   */
   size_t operator()(const base::DataVector& v) const noexcept {
     std::size_t h = 1469598103934665603ULL;  // arbitrary seed (FNV-ish)
 

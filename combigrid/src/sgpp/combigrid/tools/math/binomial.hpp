@@ -1,3 +1,7 @@
+/**
+ * @file binomial.hpp
+ * @brief Overflow-checked computation of binomial coefficients.
+ */
 #ifndef COMBIGRID_TOOLS_MATH_BINOMIAL_HPP
 #define COMBIGRID_TOOLS_MATH_BINOMIAL_HPP
 
@@ -8,6 +12,21 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
+/**
+ * @brief Computes the binomial coefficient @f$\binom{n}{k}@f$.
+ *
+ * Uses the symmetry @f$\binom{n}{k} = \binom{n}{n-k}@f$ to minimize the
+ * number of multiplications. Intermediate products are accumulated in
+ * @c __uint128_t and the result is checked for overflow against
+ * @c std::numeric_limits<T>::max().
+ *
+ * @tparam T Integral return / argument type.
+ * @param n  Upper argument.
+ * @param k  Lower argument.
+ * @return @f$\binom{n}{k}@f$, or @c 0 if @p n or @p k is negative or
+ *         @p k @c > @p n.
+ * @throws std::overflow_error if the value does not fit into @c T.
+ */
 template <typename T>
 T binomial(const T n, T k) {
   if (k < 0 || n < 0 || n < k) {

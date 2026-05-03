@@ -1,3 +1,7 @@
+/**
+ * @file second_type_chebyshev_node_generation_function.hpp
+ * @brief Chebyshev nodes of the second kind (Clenshaw-Curtis-style).
+ */
 #pragma once
 
 #include <cmath>
@@ -14,29 +18,41 @@ namespace combigrid {
 
 namespace node_gen_funcs {
 
+/**
+ * @brief Chebyshev nodes of the second kind on @f$[0,1]@f$ (also known as
+ * Chebyshev-Lobatto / extrema nodes).
+ *
+ * The matching 1D quadrature is Clenshaw-Curtis and the matching
+ * interpolation method is the optimized barycentric Lagrange formula.
+ */
 class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
  public:
   /***********
   Constructors
   ***********/
+  /// @brief Constructs the function with a deterministic id derived from its name.
   SecondTypeChebyshevNodeGenFunc();
 
   /**************
   Node generation
   **************/
+  /// @copydoc NodeGenFunc::genNodesWithoutBoundary
   void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
                                size_t startIdx = 0) const override;
 
   /***********
   SG Operators
   ***********/
+  /// @copydoc NodeGenFunc::getQuadRule
   QuadRule* getQuadRule(const GPCntType nNodes) const override;
 
+  /// @copydoc NodeGenFunc::getInterpolationMethod
   InterpolationMethod* getInterpolationMethod(const GPCntType nNodes) const override;
 
   /********
   Operators
   ********/
+  /// @copydoc NodeGenFunc::operator==(const NodeGenFunc&) const
   bool operator==(const NodeGenFunc& other) const override;
 };
 

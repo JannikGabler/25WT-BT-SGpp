@@ -1,3 +1,7 @@
+/**
+ * @file kway_unique_merge_sorted_collections.hpp
+ * @brief K-way merge of sorted ranges that removes duplicates on the fly.
+ */
 #include <functional>
 #include <iterator>
 #include <queue>
@@ -9,9 +13,22 @@ namespace combigrid {
 
 namespace tools {
 
-/*
-Merges k sorted collections into one without duplicates.
-*/
+/**
+ * @brief Merges @c k sorted iterator ranges into a single sorted output,
+ * de-duplicating equal consecutive values.
+ *
+ * Implemented with a binary min-heap (priority queue) of size @c k, so
+ * the total work is @f$O(N \log k)@f$ where @c N is the combined size of
+ * the input ranges.
+ *
+ * @tparam Iterator Forward-iterator type of the input ranges.
+ * @tparam Compare  Strict weak ordering matching the sorted input
+ *                  (defaults to @c std::less).
+ * @param ranges    Pairs of @c (begin, end) iterators describing each
+ *                  sorted input collection.
+ * @param comp      Comparator instance.
+ * @return Newly allocated vector with the merged, de-duplicated values.
+ */
 template <typename Iterator,
           typename Compare = std::less<typename std::iterator_traits<Iterator>::value_type>>
 std::vector<typename std::iterator_traits<Iterator>::value_type>

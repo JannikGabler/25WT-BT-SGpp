@@ -2,6 +2,14 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file sparse_grid_construction_test.cpp
+ * @brief Boost.Test cases verifying the construction of @c SparseGrid
+ * objects from a @c CompleteSGGenInstr instruction (number of tensor
+ * grids, level multi-indices, combination coefficients, node positions).
+ */
+
 #include <algorithm>
 #define BOOST_TEST_DYN_LINK
 

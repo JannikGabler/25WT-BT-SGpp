@@ -1,3 +1,7 @@
+/**
+ * @file simpson_quadrature_rule.hpp
+ * @brief 1D composite Simpson quadrature on @f$[0,1]@f$.
+ */
 #pragma once
 
 #include <cassert>
@@ -13,10 +17,19 @@ namespace combigrid {
 
 namespace quadrature_rules {
 
+/**
+ * @brief Composite Simpson quadrature on equidistant nodes in @f$[0,1]@f$.
+ *
+ * Requires an odd number of nodes (at least 3). The weight pattern is
+ * @f$h/3, 4h/3, 2h/3, 4h/3, \ldots, 2h/3, 4h/3, h/3@f$ with
+ * @f$h = 1/(\mathrm{nNodes}-1)@f$.
+ */
 class SimpsonQuadRule : public QuadRule {
  public:
+  /// @brief Constructs the rule with a deterministic id derived from its name.
   SimpsonQuadRule() : QuadRule(tools::fnv1aHash("Simpson Quadrature Rule")) {}
 
+  /// @copydoc QuadRule::getWeights
   base::DataVector getWeights(const GPCntType nNodes) const override {
     base::DataVector weights(nNodes);
 
@@ -25,6 +38,10 @@ class SimpsonQuadRule : public QuadRule {
     return weights;
   }
 
+  /**
+   * @copydoc QuadRule::genWeightsInplace
+   * @throws std::invalid_argument if @p nNodes is even.
+   */
   void genWeightsInplace(const GPCntType nNodes, base::DataVector& out,
                          size_t startIdx = 0) const override {
     assert(out.size() - startIdx >= nNodes);

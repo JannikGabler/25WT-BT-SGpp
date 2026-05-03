@@ -2,6 +2,13 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file multiindex_vector_is_downwards_closed_test.cpp
+ * @brief Boost.Test cases for the downwards-closedness predicate
+ * @c tools::isMIVecDownwardsClosed.
+ */
+
 #include <string>
 #define BOOST_TEST_DYN_LINK
 

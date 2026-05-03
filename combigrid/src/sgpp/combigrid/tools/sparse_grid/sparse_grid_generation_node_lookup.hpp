@@ -1,3 +1,11 @@
+/**
+ * @file sparse_grid_generation_node_lookup.hpp
+ * @brief Reserved for a future concurrent node-lookup builder used during
+ * sparse-grid generation.
+ *
+ * @note Currently unused — the implementation below is kept commented out.
+ */
+
 // TODO: Not used at the moment
 
 // #ifndef COMBIGRID_TOOLS_SPARSE_GRID_GENERATION_GRID_POINT_LOOKUP_HPP

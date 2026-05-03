@@ -2,6 +2,13 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file barycentric_formula_test.cpp
+ * @brief Boost.Test cases for the generic barycentric Lagrange
+ * interpolation method (with selectable node generator).
+ */
+
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>

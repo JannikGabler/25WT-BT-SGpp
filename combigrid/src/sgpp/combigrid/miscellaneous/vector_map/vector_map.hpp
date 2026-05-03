@@ -1,3 +1,7 @@
+/**
+ * @file vector_map.hpp
+ * @brief Linear-search associative container backed by @c std::vector.
+ */
 #ifndef COMBIGRID_MISC_VECTOR_MAP_HPP
 #define COMBIGRID_MISC_VECTOR_MAP_HPP
 
@@ -9,9 +13,18 @@ namespace sgpp {
 namespace combigrid {
 namespace misc {
 
-/*
-Only use for small number of keys.
-*/
+/**
+ * @brief Tiny associative container backed by a @c std::vector.
+ *
+ * Provides a subset of the @c std::map interface (lookup, insert,
+ * erase, iteration). All lookups are linear scans, so this map is only
+ * suitable for very few keys but offers cache-friendly iteration and
+ * negligible per-element overhead.
+ *
+ * @tparam KeyType   Key type (must be equality-comparable).
+ * @tparam ValueType Mapped type.
+ * @tparam Allocator Optional allocator for the underlying vector.
+ */
 template <typename KeyType, typename ValueType,
           class Allocator = std::allocator<std::pair<KeyType, ValueType>>>
 class VecMap {
@@ -28,10 +41,19 @@ class VecMap {
   /***********
   Constructors
   ***********/
+  /// @brief Constructs an empty map.
   VecMap() = default;
 
+  /**
+   * @brief Constructs an empty map with capacity reserved for
+   * @p reserve_n entries.
+   */
   explicit VecMap(size_type reserve_n) { data_.reserve(reserve_n); }
 
+  /**
+   * @brief Constructs a map from a brace-enclosed list of @c (key, value)
+   * pairs. Duplicate keys are ignored (first occurrence wins).
+   */
   VecMap(std::initializer_list<value_type> init) {
     data_.reserve(init.size());
     for (const auto& v : init) insert(v);
@@ -40,12 +62,16 @@ class VecMap {
   /****************
   Size and capacity
   ****************/
+  /// @brief Returns @c true iff the map is empty.
   bool empty() const noexcept { return data_.empty(); }
 
+  /// @brief Returns the number of stored key-value pairs.
   size_type size() const noexcept { return data_.size(); }
 
+  /// @brief Removes all stored entries.
   void clear() noexcept { data_.clear(); }
 
+  /// @brief Reserves capacity for at least @p n entries.
   void reserve(size_type n) { data_.reserve(n); }
 
   /*******
@@ -63,18 +89,27 @@ class VecMap {
   /*****
   Lookup
   *****/
+  /// @brief Finds @p key (linear search) and returns an iterator to it,
+  /// or @ref end() if not found.
   iterator find(const key_type& key) { return find_it(key); }
 
+  /// @copydoc find(const key_type&)
   const_iterator find(const key_type& key) const { return find_it(key); }
 
+  /// @brief Returns @c true iff @p key is present.
   bool contains(const key_type& key) const { return find_it(key) != data_.end(); }
 
+  /**
+   * @brief Returns a reference to the mapped value of @p key.
+   * @throws std::out_of_range if @p key is not present.
+   */
   mapped_type& at(const key_type& key) {
     auto it = find_it(key);
     if (it == data_.end()) throw std::out_of_range("VecMap::at: key not found");
     return it->second;
   }
 
+  /// @copydoc at(const key_type&)
   const mapped_type& at(const key_type& key) const {
     auto it = find_it(key);
     if (it == data_.end()) throw std::out_of_range("VecMap::at: key not found");
@@ -84,6 +119,11 @@ class VecMap {
   /*************
   Element access
   *************/
+  /**
+   * @brief Positional access to the underlying storage.
+   * @param idx Position into the underlying vector
+   * (insertion order).
+   */
   value_type& operator[](const size_t idx) {
     // auto it = find_it(key);
     // if (it != data_.end()) return it->second;
@@ -93,6 +133,7 @@ class VecMap {
     return data_[idx];
   }
 
+  /// @copydoc operator[](const size_t)
   const value_type& operator[](const size_t idx) const { return data_[idx]; }
 
   // mapped_type& operator[](key_type&& key) {
@@ -106,6 +147,11 @@ class VecMap {
   /********
   Modifiers
   ********/
+  /**
+   * @brief Inserts @p value if its key is not already present.
+   * @return Iterator to the (possibly existing) entry and a flag that
+   * is @c true iff a new entry was created.
+   */
   std::pair<iterator, bool> insert(const value_type& value) {
     auto it = find_it(value.first);
     if (it != data_.end()) return {it, false};

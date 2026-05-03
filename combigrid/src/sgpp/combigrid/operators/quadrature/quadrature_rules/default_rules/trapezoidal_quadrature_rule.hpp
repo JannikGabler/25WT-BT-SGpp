@@ -1,3 +1,7 @@
+/**
+ * @file trapezoidal_quadrature_rule.hpp
+ * @brief 1D composite trapezoidal quadrature on @f$[0,1]@f$.
+ */
 #pragma once
 
 #include <cassert>
@@ -12,10 +16,19 @@ namespace combigrid {
 
 namespace quadrature_rules {
 
+/**
+ * @brief Composite trapezoidal quadrature on equidistant nodes in @f$[0,1]@f$.
+ *
+ * For @c nNodes >= 2 the weights are
+ * @f$h/2, h, h, \ldots, h, h/2@f$ with @f$h = 1/(\mathrm{nNodes}-1)@f$.
+ * For a single node the weight is @c 1.0 (degenerate).
+ */
 class TrapezoidalQuadRule : public QuadRule {
  public:
+  /// @brief Constructs the rule with a deterministic id derived from its name.
   TrapezoidalQuadRule() : QuadRule(tools::fnv1aHash("Trapezoidal Quadrature Rule")) {}
 
+  /// @copydoc QuadRule::getWeights
   base::DataVector getWeights(const GPCntType nNodes) const override {
     base::DataVector weights(nNodes);
 
@@ -24,6 +37,7 @@ class TrapezoidalQuadRule : public QuadRule {
     return weights;
   }
 
+  /// @copydoc QuadRule::genWeightsInplace
   void genWeightsInplace(const GPCntType nNodes, base::DataVector& out,
                          const size_t startIdx = 0) const override {
     assert(out.size() - startIdx >= nNodes);

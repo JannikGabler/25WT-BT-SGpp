@@ -2,6 +2,14 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file full_sparse_grid_generation_test.cpp
+ * @brief Boost.Test cases for the full-SG generator helpers in
+ * @c tools::full_sg_gen (multi-index enumeration, combination
+ * coefficient computation).
+ */
+
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>

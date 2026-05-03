@@ -1,3 +1,7 @@
+/**
+ * @file multiindex_vector_component_wise_max.hpp
+ * @brief Component-wise maximum of every multi-index in an @c MIVec.
+ */
 #ifndef COMBIGRID_TOOLS_MULTIINDEX_VECTOR_COMPONENT_WISE_MAX_HPP
 #define COMBIGRID_TOOLS_MULTIINDEX_VECTOR_COMPONENT_WISE_MAX_HPP
 
@@ -15,6 +19,13 @@ class MIVec;  // Forward Declaration
 
 namespace tools {
 
+/**
+ * @brief Merges per-thread component-wise maxima into a single multi-index.
+ * @tparam T   Multi-index element type.
+ * @param nDim Multi-index dimensionality.
+ * @param localMax Per-thread maxima.
+ * @return Component-wise maximum across @p localMax.
+ */
 template <typename T>
 MI<T> mergeComponentWiseMax(const size_t nDim, const std::vector<MI<T>>& localMax) {
   MI<T> globalMax(nDim);
@@ -28,8 +39,18 @@ MI<T> mergeComponentWiseMax(const size_t nDim, const std::vector<MI<T>>& localMa
   return globalMax;
 }
 
-/*
-TODO: Optimize (used pareto Maxima if cached by the miVec)
+/**
+ * @brief Parallel component-wise maximum (OpenMP).
+ *
+ * Splits @p miVec into one chunk per thread, computes a local maximum
+ * per chunk, and merges the per-thread results.
+ *
+ * @tparam T   Multi-index element type.
+ * @param miVec Source set.
+ * @return Component-wise maximum across all multi-indices.
+ *
+ * @note Could be sped up if the cached Pareto maxima are already
+ * available on @p miVec (TODO).
  */
 template <typename T>
 MI<T> computeComponentWiseMaxParallel(const MIVec<T>& miVec) {
@@ -54,8 +75,12 @@ MI<T> computeComponentWiseMaxParallel(const MIVec<T>& miVec) {
   return mergeComponentWiseMax(miVec.nDim(), localMax);
 }
 
-/*
-TODO: Optimize (used pareto Maxima if cached by the miVec)
+/**
+ * @brief Serial component-wise maximum.
+ *
+ * @tparam T   Multi-index element type.
+ * @param miVec Source set.
+ * @return Component-wise maximum across all multi-indices.
  */
 template <typename T>
 MI<T> computeComponentWiseMaxSerial(const MIVec<T>& miVec) {
@@ -70,6 +95,14 @@ MI<T> computeComponentWiseMaxSerial(const MIVec<T>& miVec) {
   return max;
 }
 
+/**
+ * @brief Public entry point: dispatches to the serial or parallel
+ * implementation based on @c CWM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY.
+ *
+ * @tparam T   Multi-index element type.
+ * @param miVec Source set.
+ * @return Component-wise maximum across all multi-indices.
+ */
 template <typename T>
 MI<T> computeComponentWiseMax(const combigrid::MIVec<T>& miVec) {
   if (miVec.nMI() * miVec.nDim() < constants::mi_vec::CWM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
