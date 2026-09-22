@@ -49,18 +49,33 @@ bool isMIVecDownwardsClosed(const MIVec<T>& miVec) {
 
   bool closed = true;
 
-#pragma omp parallel for schedule(static) \
-    shared(closed) if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
-  for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
-    const MI<T> mi = miVec[miIdx];
-
-    for (const std::vector<T>& offset : offsets) {
-      if (offset <= mi && !lookup->contains(mi - offset)) {
-        closed = false;
-#pragma omp cancel for
+  // Separate parallel and for constructs: the loop of a combined 'parallel for' is implicitly
+  // nowait and must not be cancelled. Cancellation only takes effect with OMP_CANCELLATION=true,
+  // so the shared flag additionally lets all threads skip their remaining iterations early.
+#pragma omp parallel shared(closed) \
+    if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
+  {
+#pragma omp for schedule(static)
+    for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
+      bool stillClosed;
+#pragma omp atomic read
+      stillClosed = closed;
+      if (!stillClosed) {
+        continue;
       }
-    }
+
+      const MI<T> mi = miVec[miIdx];
+
+      for (const std::vector<T>& offset : offsets) {
+        if (offset <= mi && !lookup->contains(mi - offset)) {
+#pragma omp atomic write
+          closed = false;
+#pragma omp cancel for
+          break;
+        }
+      }
 #pragma omp cancellation point for
+    }
   }
 
   return closed;
