@@ -76,9 +76,9 @@ BOOST_AUTO_TEST_CASE(three_nodes_simpson) {
 }
 
 BOOST_AUTO_TEST_CASE(weights_sum_and_symmetry_various_n) {
-  const std::vector<size_t> Ns = {2u, 3u, 5u, 10u, 50u};
+  const std::vector<GPCntType> Ns = {2u, 3u, 5u, 10u, 50u};
 
-  for (size_t nNodes : Ns) {
+  for (GPCntType nNodes : Ns) {
     const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
     BOOST_REQUIRE(weights.size() == nNodes);
 
@@ -98,8 +98,8 @@ BOOST_AUTO_TEST_CASE(weights_sum_and_symmetry_various_n) {
 }
 
 BOOST_AUTO_TEST_CASE(positive_weights_up_to_large_n) {
-  const size_t maxN = 200;  // prüfe größere N auf numerische Stabilität
-  for (size_t nNodes = 1; nNodes <= maxN; ++nNodes) {
+  const GPCntType maxN = 200;  // prüfe größere N auf numerische Stabilität
+  for (GPCntType nNodes = 1; nNodes <= maxN; ++nNodes) {
     const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
     BOOST_REQUIRE(weights.size() == nNodes);
 
@@ -115,9 +115,9 @@ BOOST_AUTO_TEST_CASE(positive_weights_up_to_large_n) {
 BOOST_AUTO_TEST_CASE(integrates_linear_function) {
   // Prüfe, ob die Quadratur das Integral von f(x)=x korrekt approximiert.
   // Das exakte Integral von x über [0,1] ist 1/2.
-  const std::vector<size_t> Ns = {2u, 3u, 5u, 10u, 50u};
+  const std::vector<GPCntType> Ns = {2u, 3u, 5u, 10u, 50u};
 
-  for (size_t nNodes : Ns) {
+  for (GPCntType nNodes : Ns) {
     const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
     BOOST_REQUIRE(weights.size() == nNodes);
 
