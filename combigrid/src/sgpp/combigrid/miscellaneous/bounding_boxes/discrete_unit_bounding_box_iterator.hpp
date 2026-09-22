@@ -33,7 +33,7 @@ class DiscUnitBBIterator {
    * @param finished   Whether to construct the past-the-end iterator.
    */
   DiscUnitBBIterator(const DiscUnitBB<T>& discUnitBB, const bool finished = false)
-      : discUnitBB(discUnitBB), finished(finished), curPos(finished ? 0 : discUnitBB.nDim, 0) {}
+      : discUnitBB(discUnitBB), curPos(finished ? 0 : discUnitBB.nDim, 0), finished(finished) {}
 
   /// @brief Read-only access to the current corner.
   const std::vector<T>& operator*() const { return curPos; }
