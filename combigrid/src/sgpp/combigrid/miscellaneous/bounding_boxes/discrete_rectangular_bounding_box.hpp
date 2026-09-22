@@ -140,7 +140,7 @@ struct DiscRectBB {
       idx %= nIdx;
     }
 
-    return pos;
+    return MI<T>(pos);
   }
 };
 

@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -46,7 +47,9 @@ class TestSourceFunction {
 
  private:
   // --- Storage ---
-  using Storage = typename std::aligned_storage<64>::type;
+  struct Storage {
+    alignas(std::max_align_t) unsigned char data[64];
+  };
 
   Storage storage_;
 
