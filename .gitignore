@@ -130,3 +130,7 @@ GTAGS
 custom.py
 gmon.out
 /buildVars.out
+
+# Claude
+claude/
+CLAUDE.md
