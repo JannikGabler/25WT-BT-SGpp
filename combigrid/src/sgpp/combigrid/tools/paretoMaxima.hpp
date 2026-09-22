@@ -206,18 +206,21 @@ std::vector<size_t> computeParetoMaxSerialNotDWC(const combigrid::MIVec<T>& miVe
  */
 template <typename T>
 std::vector<size_t> computeParetoMaxParallelDWC(const combigrid::MIVec<T>& miVec) {
-  const size_t nThreads = static_cast<size_t>(omp_get_max_threads());
+  const std::vector<size_t> partitioning = tools::partitionRangeForConcurrency(miVec.nMI(), 0, 1);
+  const size_t nPartitions = partitioning.size() - 1;
   const misc::MIVecLookup<T> lookup(miVec);
 
-  std::vector<std::vector<size_t>> localParetoMaxima(nThreads);
+  std::vector<std::vector<size_t>> localParetoMaxima(nPartitions);
 
-#pragma omp parallel
-  {
-    const int threadId = omp_get_thread_num();
+  // Results are stored per partition (not per thread ID), so the concatenation below is ordered
+  // and independent of the team size.
+#pragma omp parallel for schedule(static)
+  for (size_t partIdx = 0; partIdx < nPartitions; partIdx++) {
+    const size_t startIdx = partitioning[partIdx];
+    const size_t endIdx = partitioning[partIdx + 1];
 
-#pragma omp for schedule(static)
-    for (size_t candidateIdx = 0; candidateIdx < miVec.nMI(); candidateIdx++) {
-      updateParetoMaximaDWC<T>(miVec, lookup, localParetoMaxima[threadId], candidateIdx);
+    for (size_t candidateIdx = startIdx; candidateIdx < endIdx; candidateIdx++) {
+      updateParetoMaximaDWC<T>(miVec, lookup, localParetoMaxima[partIdx], candidateIdx);
     }
   }
 
@@ -242,14 +245,15 @@ std::vector<size_t> computeParetoMaxParallelNonDWC(const combigrid::MIVec<T>& mi
       (constants::mi_vec::PM_MIN_MIVEC_BATCH_LENGTH_PER_THREAD + miVec.nDim() - 1) / miVec.nDim();
 
   const std::vector<size_t> partitioning = tools::partitionRange(miVec.nMI(), minBatchSize);
-  std::vector<std::vector<size_t>> localParetoMaxima(partitioning.size() - 1);
+  const size_t nPartitions = partitioning.size() - 1;
+  std::vector<std::vector<size_t>> localParetoMaxima(nPartitions);
 
-#pragma omp parallel num_threads(partitioning.size() - 1)
-  {
-    const int threadId = omp_get_thread_num();
-
-    localParetoMaxima[threadId] =
-        computeParetoMaxSerialNotDWC(miVec, partitioning[threadId], partitioning[threadId + 1] - 1);
+  // num_threads is only a request: the team may be smaller. Distributing the partitions with a
+  // worksharing loop (instead of one partition per thread ID) guarantees all are processed.
+#pragma omp parallel for num_threads(nPartitions) schedule(static)
+  for (size_t partIdx = 0; partIdx < nPartitions; partIdx++) {
+    localParetoMaxima[partIdx] =
+        computeParetoMaxSerialNotDWC(miVec, partitioning[partIdx], partitioning[partIdx + 1] - 1);
   }
 
   return mergeParetoMax(miVec, localParetoMaxima);

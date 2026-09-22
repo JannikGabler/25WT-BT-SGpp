@@ -54,20 +54,21 @@ MI<T> mergeComponentWiseMax(const size_t nDim, const std::vector<MI<T>>& localMa
  */
 template <typename T>
 MI<T> computeComponentWiseMaxParallel(const MIVec<T>& miVec) {
-  const std::vector<size_t> partitioning =
-      tools::partitionRange(miVec.nMI(), 1, omp_get_max_threads());
+  const std::vector<size_t> partitioning = tools::partitionRangeForConcurrency(miVec.nMI(), 0, 1);
+  const size_t nPartitions = partitioning.size() - 1;
 
-  std::vector<MI<T>> localMax(partitioning.size() - 1, MI<T>(miVec.nDim()));
+  std::vector<MI<T>> localMax(nPartitions, MI<T>(miVec.nDim()));
 
-#pragma omp parallel
-  {
-    const size_t threadId = static_cast<size_t>(omp_get_thread_num());
-    const size_t startIdx = partitioning[threadId];
-    const size_t endIdx = partitioning[threadId + 1] - 1;
+  // Partitions are distributed by a worksharing loop (not mapped to thread IDs), so every
+  // partition is processed even if the team has fewer threads than partitions.
+#pragma omp parallel for schedule(static)
+  for (size_t partIdx = 0; partIdx < nPartitions; partIdx++) {
+    const size_t startIdx = partitioning[partIdx];
+    const size_t endIdx = partitioning[partIdx + 1];
 
-    for (size_t miIdx = startIdx; miIdx <= endIdx; miIdx++) {
+    for (size_t miIdx = startIdx; miIdx < endIdx; miIdx++) {
       for (size_t dim = 0; dim < miVec.nDim(); dim++) {
-        localMax[threadId][dim] = std::max(localMax[threadId][dim], miVec(miIdx, dim));
+        localMax[partIdx][dim] = std::max(localMax[partIdx][dim], miVec(miIdx, dim));
       }
     }
   }

@@ -114,20 +114,23 @@ MIVec<T> genMIVecDownwardsClosure(const MIVec<T>& miVec) {
   const misc::DiscRectBB<T> boundingBox = genRectMIBoundingBox(miVec);
   const auto part = partitionRangeForConcurrency(boundingBox.size(), 1, 1);  // TODO
 
-  std::vector<std::vector<std::vector<T>>> localClosures(part.size() - 1);
+  const size_t nPartitions = part.size() - 1;
 
-#pragma omp parallel num_threads(part.size() - 1)
-  {
-    const size_t threadId = static_cast<size_t>(omp_get_thread_num());
-    const size_t startIdx = part[threadId];
-    const size_t endIdx = part[threadId + 1];
+  std::vector<std::vector<std::vector<T>>> localClosures(nPartitions);
+
+  // num_threads is only a request: the team may be smaller. Distributing the partitions with a
+  // worksharing loop (instead of one partition per thread ID) guarantees all are processed.
+#pragma omp parallel for num_threads(nPartitions) schedule(static)
+  for (size_t partIdx = 0; partIdx < nPartitions; partIdx++) {
+    const size_t startIdx = part[partIdx];
+    const size_t endIdx = part[partIdx + 1];
     auto iter = boundingBox.begin(startIdx);
 
     for (size_t i = startIdx; i < endIdx; i++) {
       const std::vector<T> mi = *iter;
 
       if (miVecDominatesMI(miVec, *paretoMaxima, mi)) {
-        localClosures[threadId].emplace_back(mi);
+        localClosures[partIdx].emplace_back(mi);
       }
 
       ++iter;
