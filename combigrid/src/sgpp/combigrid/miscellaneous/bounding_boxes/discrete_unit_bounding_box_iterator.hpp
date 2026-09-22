@@ -29,11 +29,11 @@ class DiscUnitBBIterator {
  public:
   /**
    * @brief Constructs the begin or end iterator.
-   * @param discUnitBB Owning unit hypercube.
-   * @param finished   Whether to construct the past-the-end iterator.
+   * @param unitBB Owning unit hypercube.
+   * @param atEnd  Whether to construct the past-the-end iterator.
    */
-  DiscUnitBBIterator(const DiscUnitBB<T>& discUnitBB, const bool finished = false)
-      : discUnitBB(discUnitBB), curPos(finished ? 0 : discUnitBB.nDim, 0), finished(finished) {}
+  DiscUnitBBIterator(const DiscUnitBB<T>& unitBB, const bool atEnd = false)
+      : discUnitBB(unitBB), curPos(atEnd ? 0 : unitBB.nDim, 0), finished(atEnd) {}
 
   /// @brief Read-only access to the current corner.
   const std::vector<T>& operator*() const { return curPos; }

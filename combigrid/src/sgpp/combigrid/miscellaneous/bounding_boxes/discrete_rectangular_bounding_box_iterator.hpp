@@ -31,23 +31,21 @@ class DiscRectBBIterator {
  public:
   /**
    * @brief Constructs an iterator pointing at the lower corner of the box
-   * (or at @c end if @p finished is @c true).
-   * @param rectDiscBB Box to iterate.
-   * @param finished   Whether to construct the past-the-end iterator.
+   * (or at @c end if @p atEnd is @c true).
+   * @param box   Box to iterate.
+   * @param atEnd Whether to construct the past-the-end iterator.
    */
-  DiscRectBBIterator(const DiscRectBB<T>& rectDiscBB, const bool finished = false)
-      : rectDiscBB(rectDiscBB),
-        curPos(finished ? MI<T>{} : rectDiscBB.lowerBound),
-        finished(finished) {}
+  DiscRectBBIterator(const DiscRectBB<T>& box, const bool atEnd = false)
+      : rectDiscBB(box), curPos(atEnd ? MI<T>{} : box.lowerBound), finished(atEnd) {}
 
   /**
-   * @brief Constructs an iterator pointing at @p startPos inside @p rectDiscBB.
-   * @param rectDiscBB Box to iterate.
-   * @param startPos   Starting multi-index (must lie inside the box).
+   * @brief Constructs an iterator pointing at @p startPos inside @p box.
+   * @param box      Box to iterate.
+   * @param startPos Starting multi-index (must lie inside the box).
    */
-  DiscRectBBIterator(const DiscRectBB<T>& rectDiscBB, const MI<T>& startPos)
-      : rectDiscBB(rectDiscBB), curPos(startPos), finished(false) {
-    assert(startPos.size() == rectDiscBB.nDim());
+  DiscRectBBIterator(const DiscRectBB<T>& box, const MI<T>& startPos)
+      : rectDiscBB(box), curPos(startPos), finished(false) {
+    assert(startPos.size() == box.nDim());
   }
 
   const MI<T>& operator*() const { return curPos; }

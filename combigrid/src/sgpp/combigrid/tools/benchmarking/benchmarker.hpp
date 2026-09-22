@@ -117,12 +117,10 @@ class Benchmarker {
   /**
    * @brief Provides the analytical reference value used to compute the
    * absolute and relative error per run.
-   * @param analyticalResult Reference value; pass @c NaN to skip error
+   * @param value Reference value; pass @c NaN to skip error
    * statistics.
    */
-  void setAnalyticalResult(const double analyticalResult) {
-    this->analyticalResult = analyticalResult;
-  }
+  void setAnalyticalResult(const double value) { analyticalResult = value; }
 
   /// @brief Enables or disables a textual progress indicator on stdout.
   void enable_progress(bool on) { show_progress_ = on; }

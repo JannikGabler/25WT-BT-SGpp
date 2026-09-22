@@ -26,10 +26,10 @@ namespace misc {
 template <typename T>
 struct DiscUnitBB {
   /**
-   * @brief Constructs the unit hypercube of dimension @p nDim.
-   * @param nDim Spatial dimensionality.
+   * @brief Constructs the unit hypercube of dimension @p dimCnt.
+   * @param dimCnt Spatial dimensionality.
    */
-  DiscUnitBB(const size_t nDim) : nDim(nDim) {}
+  DiscUnitBB(const size_t dimCnt) : nDim(dimCnt) {}
 
  public:
   const size_t nDim;  ///< Dimensionality of the hypercube.
