@@ -34,7 +34,7 @@ std::vector<size_t> partitionRange(size_t length, size_t minPartitionLength,
 
 /**
  * @brief Convenience wrapper around @ref partitionRange that uses the
- * OpenMP thread count as the partition cap.
+ * OpenMP max thread count as the partition cap.
  *
  * Falls back to a single partition if the range is shorter than
  * @p minLengthForConcurrency, avoiding the overhead of spawning threads

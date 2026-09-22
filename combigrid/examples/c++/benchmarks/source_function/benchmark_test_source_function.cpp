@@ -152,9 +152,9 @@ void benchmarkFunction(const std::string& label, const TestSourceFunction& f,
   for (double s : runTimesSec) totalTime += s;
   double avgTime = totalTime / static_cast<double>(runTimesSec.size());
 
-  std::uint64_t totalEvaluations = static_cast<std::uint64_t>(points.size()) *
-                                   static_cast<std::uint64_t>(evalsPerPoint) *
-                                   static_cast<std::uint64_t>(measureRuns);
+  // std::uint64_t totalEvaluations = static_cast<std::uint64_t>(points.size()) *
+  //                                  static_cast<std::uint64_t>(evalsPerPoint) *
+  //                                  static_cast<std::uint64_t>(measureRuns);
 
   // Durchschnitt pro einzelne evaluate()-Aufruf (aus allen Messungen gemittelt)
   double avgPerEvalSec =

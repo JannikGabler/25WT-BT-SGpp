@@ -7,8 +7,7 @@
  * downwards closed (DWC): for every @f$\vec{\ell} \in I@f$ all
  * @f$\vec{\ell}'\le\vec{\ell}@f$ must also belong to @f$I@f$.
  */
-#ifndef COMBIGRID_TOOLS_DOWNWARDS_CLOSEDNESS_HPP
-#define COMBIGRID_TOOLS_DOWNWARDS_CLOSEDNESS_HPP
+#pragma once
 
 #include <omp.h>
 #include <cstddef>
@@ -52,8 +51,8 @@ bool isMIVecDownwardsClosed(const MIVec<T>& miVec) {
   // Separate parallel and for constructs: the loop of a combined 'parallel for' is implicitly
   // nowait and must not be cancelled. Cancellation only takes effect with OMP_CANCELLATION=true,
   // so the shared flag additionally lets all threads skip their remaining iterations early.
-#pragma omp parallel shared(closed) \
-    if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
+#pragma omp parallel shared(closed) if (miVec.nMI() >= \
+                                            constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
   {
 #pragma omp for schedule(static)
     for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
@@ -158,5 +157,3 @@ MIVec<T> genMIVecDownwardsClosure(const MIVec<T>& miVec) {
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif
