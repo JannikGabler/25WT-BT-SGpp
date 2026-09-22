@@ -1,5 +1,3 @@
-#pragma once
-
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
