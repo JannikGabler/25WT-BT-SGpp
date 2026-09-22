@@ -52,7 +52,7 @@ class TrapezoidalQuadRule : public QuadRule {
     const double nodeDistance = 1 / static_cast<double>(nNodes - 1);
 
     out[startIdx] = nodeDistance / 2;
-    std::fill_n(out.begin() + startIdx + 1, nNodes - 2, nodeDistance);
+    std::fill_n(out.data() + startIdx + 1, nNodes - 2, nodeDistance);
     out[startIdx + nNodes - 1] = nodeDistance / 2;
   }
 };

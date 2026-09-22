@@ -101,7 +101,7 @@ void interpolateLaterDim(const size_t dim, const double point, const TensorGridC
   std::vector<double> inputValues(nNodes);
 
   for (size_t i = 0; i < nInterpolations; i++) {
-    std::copy_n(interpolationResults.begin() + i * nNodes, nNodes, inputValues.begin());
+    std::copy_n(interpolationResults.data() + i * nNodes, nNodes, inputValues.begin());
 
     interpolationResults[i] = method->interpolate(point, nodes, inputValues);
   }

@@ -50,7 +50,7 @@ sgpp::base::DataVector prod2DGPs(const sgpp::base::DataVector& nodes1,
   sgpp::base::DataVector result(nodes1.size() + nodes2.size());
 
   std::copy(nodes1.begin(), nodes1.end(), result.begin());
-  std::copy(nodes2.begin(), nodes2.end(), result.begin() + nodes1.size());
+  std::copy(nodes2.begin(), nodes2.end(), result.data() + nodes1.size());
 
   return result;
 }
@@ -61,8 +61,8 @@ sgpp::base::DataVector prod3DGPs(const sgpp::base::DataVector& nodes1,
   sgpp::base::DataVector result(nodes1.size() + nodes2.size() + nodes3.size());
 
   std::copy(nodes1.begin(), nodes1.end(), result.begin());
-  std::copy(nodes2.begin(), nodes2.end(), result.begin() + nodes1.size());
-  std::copy(nodes3.begin(), nodes3.end(), result.begin() + nodes1.size() + nodes2.size());
+  std::copy(nodes2.begin(), nodes2.end(), result.data() + nodes1.size());
+  std::copy(nodes3.begin(), nodes3.end(), result.data() + nodes1.size() + nodes2.size());
 
   return result;
 }

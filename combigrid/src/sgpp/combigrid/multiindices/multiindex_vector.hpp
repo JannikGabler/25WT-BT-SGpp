@@ -171,7 +171,7 @@ class MIVec {
     // for (size_t dim = 0; dim < nDim_; dim++) {
     //   data_[idx * nDim_ + dim] = mi[dim];
     // }
-    std::copy_n(mi.begin(), mi.size(), data_.begin() + idx * nDim_);
+    std::copy_n(mi.begin(), mi.size(), data_.data() + idx * nDim_);
   }
 
   /**
@@ -187,7 +187,7 @@ class MIVec {
     // for (size_t dim = 0; dim < nDim_; dim++) {
     //   data_[idx * nDim_ + dim] = mi[dim];
     // }
-    std::copy_n(mi.begin(), mi.size(), data_.begin() + idx * nDim_);
+    std::copy_n(mi.begin(), mi.size(), data_.data() + idx * nDim_);
   }
 
   /**
