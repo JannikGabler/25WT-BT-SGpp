@@ -135,7 +135,8 @@ struct DiscRectBB {
 
     for (size_t dim = nDim - 1; dim != std::numeric_limits<size_t>::max(); dim--) {
       const size_t nIdx = idxCntUntilDimChange[dim];
-      pos[dim] = idx / nIdx;
+      // Fits in T: the result is at most upperBound[dim].
+      pos[dim] = static_cast<T>(lowerBound[dim] + idx / nIdx);
       idx %= nIdx;
     }
 
