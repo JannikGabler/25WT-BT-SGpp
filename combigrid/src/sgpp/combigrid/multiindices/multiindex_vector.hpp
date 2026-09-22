@@ -52,7 +52,7 @@ class MIVec {
    * @param nDim Number of dimensions of every stored multi-index.
    * @param nMI  Number of multi-indices to store.
    */
-  MIVec<T>(const size_t nDim, const size_t nMI)
+  MIVec(const size_t nDim, const size_t nMI)
       : nDim_(nDim), nMI_(nMI), data_(nMI * nDim), cacheCleared(true) {}
 
   /**
@@ -63,7 +63,7 @@ class MIVec {
    *
    * @param mi Source vector of multi-indices.
    */
-  MIVec<T>(const std::vector<MI<T>>& mi)
+  MIVec(const std::vector<MI<T>>& mi)
       : nDim_(mi.size() == 0 ? 0 : mi[0].nDim()),
         nMI_(mi.size()),
         data_(nMI_ * nDim_),
@@ -81,7 +81,7 @@ class MIVec {
    *
    * @param mi Source vector of raw multi-indices.
    */
-  MIVec<T>(const std::vector<std::vector<T>>& mi)
+  MIVec(const std::vector<std::vector<T>>& mi)
       : nDim_(mi.size() == 0 ? 0 : mi[0].size()),
         nMI_(mi.size()),
         data_(nMI_ * nDim_),
@@ -95,7 +95,7 @@ class MIVec {
    * @brief Constructs an @c MIVec from a brace-enclosed list of multi-indices.
    * @param initList Initializer list of multi-indices.
    */
-  MIVec<T>(const std::initializer_list<MI<T>> initList)
+  MIVec(const std::initializer_list<MI<T>> initList)
       : nDim_(initList.size() == 0 ? 0 : initList.begin()->nDim()),
         nMI_(initList.size()),
         data_(nMI_ * nDim_),

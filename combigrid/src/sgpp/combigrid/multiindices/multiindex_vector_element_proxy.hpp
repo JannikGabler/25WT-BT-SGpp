@@ -29,7 +29,7 @@ class MIVecElemProxy {
    * @param parent Owning @c MIVec used for cache invalidation on writes.
    * @param cell   Reference to the storage cell this proxy targets.
    */
-  MIVecElemProxy<T>(const MIVec<T>& parent, T& cell) : miVec(parent), ref(cell) {}
+  MIVecElemProxy(const MIVec<T>& parent, T& cell) : miVec(parent), ref(cell) {}
 
   /**
    * @brief Writes @p value into the referenced cell and invalidates the

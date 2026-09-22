@@ -41,7 +41,7 @@ class MIVecLookup {
    * @brief Builds the lookup from @p indexedMIVec.
    * @param indexedMIVec Source vector.
    */
-  MIVecLookup<T>(const MIVec<T>& indexedMIVec)
+  MIVecLookup(const MIVec<T>& indexedMIVec)
       : miVec((indexedMIVec)),
         map(indexedMIVec.nMI(), MIVecLookupHash<T>(indexedMIVec.nDim()),
             MIVecLookupEqual<T>(indexedMIVec.nDim())) {

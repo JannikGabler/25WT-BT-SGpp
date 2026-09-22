@@ -27,7 +27,7 @@ struct MIVecLookupHash {
    * @brief Constructs the functor for multi-indices of dimension @p dimCnt.
    * @param dimCnt Multi-index dimensionality.
    */
-  MIVecLookupHash<T>(const size_t dimCnt) : nDim(dimCnt) {}
+  MIVecLookupHash(const size_t dimCnt) : nDim(dimCnt) {}
 
   /**
    * @brief Hashes the multi-index pointed to by @p dataPtr.
