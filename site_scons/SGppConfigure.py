@@ -116,7 +116,7 @@ def doConfigure(env, moduleFolders, languageWrapperFolders):
   # detour compiler output
   config.env["PRINT_CMD_LINE_FUNC"] = Helper.printCommand
 
-  checkCpp11(config)
+  checkCppStandard(config)
   if "doxygen" in SCons.Script.BUILD_TARGETS:
     checkDoxygen(config)
     checkDot(config)
@@ -139,7 +139,7 @@ def doConfigure(env, moduleFolders, languageWrapperFolders):
     # flagsToForward = [flag for flag in config.env["CPPFLAGS"] if flag not in ['-Wmissing-format-attribute', '']]
     # flagsToForward = " -Xcompiler " + (" -Xcompiler ".join(flagsToForward))
     # ensure same flags for host code
-    config.env['NVCCFLAGS'] = "-ccbin " + config.env["CXX"] + " -std=c++11 -Xcompiler -fpic,-Wall "# + flagsToForward
+    config.env['NVCCFLAGS'] = "-ccbin " + config.env["CXX"] + " -std=c++" + config.env["CPP_STD"] + " -Xcompiler -fpic,-Wall "# + flagsToForward
     # config.env.AppendUnique(LIBPATH=['/usr/local.nfs/sw/cuda/cuda-7.5/'])
 
   if config.env["USE_HPX"]:
@@ -182,20 +182,65 @@ def doConfigure(env, moduleFolders, languageWrapperFolders):
   print("Configuration done.")
   print("")
 
-def checkCpp11(config):
-  # check C++11 support
-  if not config.env['USE_HPX']:
-    if not config.CheckFlag("-std=c++11"):
-      Helper.printErrorAndExit("The compiler doesn't seem to support the C++11 standard. Abort!")
-      Exit(1)
+# Oldest compiler versions that offer a language mode for the given C++ standard (possibly only
+# under its draft name). Older compilers are rejected with a clear message instead of failing
+# later with obscure errors. The -std flag check below is the authoritative test; compilers not
+# listed here (e.g., Intel) rely on it alone.
+CPP_STD_MIN_COMPILER_VERSIONS = {
+  "gnu": {"17": (7, 0, 0), "20": (10, 0, 0), "23": (11, 0, 0)},
+  "clang": {"17": (5, 0, 0), "20": (10, 0, 0), "23": (12, 0, 0)},
+}
 
-    config.env.AppendUnique(CPPFLAGS="-std=c++11")
-  else:
-    if not config.CheckFlag("-std=c++14"):
-      Helper.printErrorAndExit("HPX requires a compiler that supports the C++14 standard. Abort!")
-      Exit(1)
+# draft names of the standards, for compilers that predate the final name
+CPP_STD_DRAFT_NAMES = {"17": "c++1z", "20": "c++2a", "23": "c++2b"}
 
-    config.env.AppendUnique(CPPFLAGS="-std=c++14")
+def parseVersion(versionString):
+  numbers = [int(x) for x in re.findall(r"[0-9]+", versionString)[:3]]
+  if len(numbers) == 0: return None
+  return tuple(numbers + [0] * (3 - len(numbers)))
+
+def getCompilerFamilyAndVersion(config):
+  # returns ("gnu" or "clang", version tuple) or None if unknown
+  if config.env["COMPILER"] in ("gnu", "openmpi", "mpich"):
+    versionString = getOutput([config.env["CXX"], "-dumpversion"])
+    if "." not in versionString:
+      versionString = getOutput([config.env["CXX"], "-dumpfullversion"])
+    version = parseVersion(versionString)
+    return None if version is None else ("gnu", version)
+  elif config.env["COMPILER"] == "clang":
+    versionString = getOutput([config.env["CXX"], "--version"])
+    # Apple Clang uses its own version numbering, rely on the flag check only
+    match = re.search(r"clang version ([0-9.]+)", versionString)
+    if ("Apple" in versionString) or (match is None): return None
+    version = parseVersion(match.group(1))
+    return None if version is None else ("clang", version)
+  return None
+
+def checkCppStandard(config):
+  # set the C++ standard selected via CPP_STD, after checking that the compiler supports it
+  cppStd = config.env["CPP_STD"]
+  if config.env["USE_HPX"] and (int(cppStd) < 14):
+    Helper.printErrorAndExit("HPX requires at least the C++14 standard (CPP_STD=14 or higher).",
+                             "Abort!")
+
+  compilerFamilyAndVersion = getCompilerFamilyAndVersion(config)
+  if compilerFamilyAndVersion is not None:
+    family, version = compilerFamilyAndVersion
+    minVersion = CPP_STD_MIN_COMPILER_VERSIONS[family].get(cppStd)
+    if (minVersion is not None) and (version < minVersion):
+      Helper.printErrorAndExit(
+          "C++{} (CPP_STD={}) requires {} {} or newer, but version {} was found. Abort!".format(
+              cppStd, cppStd, {"gnu": "GCC", "clang": "Clang"}[family],
+              ".".join(str(x) for x in minVersion), ".".join(str(x) for x in version)))
+
+  for stdName in ["c++" + cppStd, CPP_STD_DRAFT_NAMES.get(cppStd)]:
+    if (stdName is not None) and config.CheckFlag("-std=" + stdName):
+      config.env.AppendUnique(CPPFLAGS="-std=" + stdName)
+      return
+
+  Helper.printErrorAndExit(
+      "The compiler doesn't seem to support the C++{} standard (CPP_STD={}). Abort!".format(
+          cppStd, cppStd))
 
 def checkDoxygen(config):
   # check whether Doxygen installed
