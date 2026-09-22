@@ -38,6 +38,8 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   return genInstr->getVolumeOfDomain() * result;
 }
 
+double quadratureFast(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
+
 namespace quadrature_operator {
 
 double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGenInstr& genInstr,

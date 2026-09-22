@@ -1,13 +1,14 @@
 #include <omp.h>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <limits>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation_instructions/complete_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <stdexcept>
 #include <vector>
@@ -16,49 +17,57 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-LvlMIVec genMIVecForFullSG(const LvlType maxLvl, const size_t nDim) {
+LvlMIVec genFullMIVecForCompleteSG(const LvlType maxLvl, const size_t nDim) {
+  if (nDim == 0) {
+    return {0, 0};
+  }
+
+  const std::vector<size_t> nMIs = complete_sg_gen::getMICnts(0, maxLvl, nDim);
+
+  LvlMIVec miVec(nDim, nMIs[nMIs.size() - 1]);
+  complete_sg_gen::populateMIVec(miVec, 0, maxLvl, nMIs);
+
+  return miVec;
+}
+
+LvlMIVec genReducedMIVecForCompleteSG(const LvlType maxLvl, const size_t nDim) {
   if (nDim == 0) {
     return {0, 0};
   } else if (nDim == 1) {
     return {{maxLvl}};
   }
 
-  const LvlType minSum = full_sg_gen::getMinComponentSum(maxLvl, nDim);
-  const std::vector<size_t> nMIs = full_sg_gen::nMICntPerComponentSum(minSum, maxLvl, nDim);
+  const LvlType minSum = complete_sg_gen::getMinComponentSum(maxLvl, nDim);
+  const std::vector<size_t> nMIs = complete_sg_gen::getMICnts(minSum, maxLvl, nDim);
 
   LvlMIVec miVec(nDim, nMIs[nMIs.size() - 1]);
-  full_sg_gen::populateMIVec(miVec, minSum, maxLvl, nMIs);
+  complete_sg_gen::populateMIVec(miVec, minSum, maxLvl, nMIs);
   return miVec;
 }
 
-std::vector<CTCoeffType> genCoeffForFullSG(const LvlType maxLvl, const size_t nDim) {
+std::vector<CTCoeffType> genFullCoeffForCompleteSG(const LvlType maxLvl, const size_t nDim) {
+  if (nDim == 0) {
+    return {};
+  }
+
+  return complete_sg_gen::internalGenCoeffsForForCompleteSG(0, maxLvl, nDim);
+}
+
+std::vector<CTCoeffType> genReducedCoeffForCompleteSG(const LvlType maxLvl, const size_t nDim) {
   if (nDim == 0) {
     return {};
   } else if (nDim == 1) {
     return {1};
   }
 
-  const LvlType minSum = tools::full_sg_gen::getMinComponentSum(maxLvl, nDim);
-  const std::vector<size_t> nMIs = tools::full_sg_gen::nMICntPerComponentSum(minSum, maxLvl, nDim);
-  const std::vector<CTCoeffType> binomials =
-      full_sg_gen::getBinomialsForCTCoeffs(minSum, maxLvl, nDim);
-
-  std::vector<CTCoeffType> coeff(nMIs[nMIs.size() - 1]);
-
-  for (LvlType sumIdx = 0; sumIdx <= maxLvl - minSum; sumIdx++) {
-    const size_t startIdx = sumIdx == 0 ? 0 : nMIs[sumIdx - 1];
-    const size_t endIdx = sumIdx == maxLvl - minSum ? coeff.size() : nMIs[sumIdx];
-
-    std::fill(coeff.begin() + startIdx, coeff.begin() + endIdx, binomials[sumIdx]);
-  }
-
-  return coeff;
+  const LvlType minSum = tools::complete_sg_gen::getMinComponentSum(maxLvl, nDim);
+  return complete_sg_gen::internalGenCoeffsForForCompleteSG(minSum, maxLvl, nDim);
 }
 
 /******************
 Internal operations
 ******************/
-namespace full_sg_gen {
+namespace complete_sg_gen {
 
 LvlType getMinComponentSum(const LvlType maxSum, const size_t nDim) {
   assert(nDim >= 1);
@@ -71,8 +80,7 @@ LvlType getMinComponentSum(const LvlType maxSum, const size_t nDim) {
   return maxSum - static_cast<LvlType>(nDim - 1);
 }
 
-std::vector<size_t> nMICntPerComponentSum(const LvlType minSum, const LvlType maxSum,
-                                          const size_t nDim) {
+std::vector<size_t> getMICnts(const LvlType minSum, const LvlType maxSum, const size_t nDim) {
   assert(maxSum >= minSum);
   std::vector<size_t> nMIs(maxSum - minSum + 1);
 
@@ -214,6 +222,25 @@ void populateMIVec(LvlMIVec& miVec, const LvlType minSum, const LvlType maxSum,
   }
 }
 
+std::vector<CTCoeffType> internalGenCoeffsForForCompleteSG(const LvlType minSum,
+                                                           const LvlType maxSum,
+                                                           const size_t nDim) {
+  const std::vector<size_t> miCnts = tools::complete_sg_gen::getMICnts(minSum, maxSum, nDim);
+  const std::vector<CTCoeffType> binomials =
+      complete_sg_gen::getBinomialsForCTCoeffs(minSum, maxSum, nDim);
+
+  std::vector<CTCoeffType> coeffs(miCnts[miCnts.size() - 1]);
+
+  for (LvlType sumIdx = 0; sumIdx <= maxSum - minSum; sumIdx++) {
+    const size_t startIdx = (sumIdx == 0) ? 0 : miCnts[sumIdx - 1];
+    const size_t endIdx = (sumIdx == maxSum - minSum) ? coeffs.size() : miCnts[sumIdx];
+
+    std::fill(coeffs.begin() + startIdx, coeffs.end() + endIdx, binomials[sumIdx]);
+  }
+
+  return coeffs;
+}
+
 std::vector<CTCoeffType> getBinomialsForCTCoeffs(const LvlType minSum, const LvlType maxSum,
                                                  const size_t nDim) {
   std::vector<CTCoeffType> binomials(maxSum - minSum + 1);
@@ -231,7 +258,7 @@ std::vector<CTCoeffType> getBinomialsForCTCoeffs(const LvlType minSum, const Lvl
   return binomials;
 }
 
-}  // namespace full_sg_gen
+}  // namespace complete_sg_gen
 
 }  // namespace tools
 }  // namespace combigrid

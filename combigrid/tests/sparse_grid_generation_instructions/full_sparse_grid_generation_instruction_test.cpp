@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(Random1D) {
     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(100));
 
     const CompleteSGGenInstr instr(maxLvl, 1);
-    const LvlMIVec result = instr.genMIVec();
+    const LvlMIVec result = instr.genReducedMIVec();
 
     BOOST_CHECK_MESSAGE(result.nDim() == 1, "Seed: " << randGen.getSeed());
     BOOST_CHECK_MESSAGE(result.nMI() == 1, "Seed: " << randGen.getSeed());
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(RandomSerial) {
     const size_t nDim = randGen.getUniformIndexRN(6);
 
     const CompleteSGGenInstr instr(maxLvl, nDim);
-    const LvlMIVec result = instr.genMIVec();
+    const LvlMIVec result = instr.genReducedMIVec();
 
     const size_t expectedMICnt = requiredNumberOfMIs(nDim, maxLvl);
 
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(RandomParallel) {
     const size_t nDim = 4 + randGen.getUniformIndexRN(3);
 
     const CompleteSGGenInstr instr(maxLvl, nDim);
-    const LvlMIVec result = instr.genMIVec();
+    const LvlMIVec result = instr.genReducedMIVec();
 
     const size_t expectedMICnt = requiredNumberOfMIs(nDim, maxLvl);
 

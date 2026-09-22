@@ -17,6 +17,8 @@ module.buildLibrary()
 module.generatePythonDocstrings()
 module.buildExamples(recursive=True)
 module.runExamples()
+# Python examples live in a subfolder (runExamples does not recurse); run with RUN_PYTHON_EXAMPLES=1.
+module.runExamples(exampleFolder="examples/python", language="python")
 module.buildBoostTests()
 module.runBoostTests()
 module.checkStyle()

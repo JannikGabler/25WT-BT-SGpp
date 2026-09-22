@@ -25,8 +25,8 @@ namespace combigrid {
  * generators.
  *
  * Concrete subclasses (e.g. @c CompleteSGGenInstr,
- * @c MIVecSGGenInstr) implement @ref genMIVec and
- * @ref genMIVecWithCoeff to produce the level multi-indices and the
+ * @c MIVecSGGenInstr) implement @ref genReducedMIVec and
+ * @ref genReducedMIVecWithCoeffs to produce the level multi-indices and the
  * matching combination coefficients of a specific combination scheme.
  */
 class SGGenInstr {
@@ -113,18 +113,29 @@ class SGGenInstr {
   Sparse grid generation
   *********************/
   /**
-   * @brief Generates the level multi-indices participating in the
-   * combination.
-   * @return Level-multi-index vector.
+   * TODO: Document
+   * Includes all multi-indices (even those with a CT coefficient of 0).
    */
-  virtual LvlMIVec genMIVec() const = 0;
+  virtual LvlMIVec genFullMIVec() const = 0;
 
   /**
-   * @brief Generates the level multi-indices and their combination
-   * coefficients in one pass.
-   * @return Pair @c (multi-indices, coefficients) aligned by index.
+   * TODO: Document
+   * Differs from genFullMIVec by only including multi-indices with a CT coefficient unequal to 0.
    */
-  virtual std::pair<LvlMIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const = 0;
+  virtual LvlMIVec genReducedMIVec() const = 0;
+
+  /**
+   * TODO: Document
+   * Includes all multi-indices (even those with a CT coefficient of 0).
+   */
+  virtual std::pair<LvlMIVec, std::vector<CTCoeffType>> genFullMIVecWithCoeffs() const = 0;
+
+  /**
+   * TODO: Document
+   * Differs from genFullMIVecWithCoeffs by only including multi-indices with a CT coefficient
+   * unequal to 0.
+   */
+  virtual std::pair<LvlMIVec, std::vector<CTCoeffType>> genReducedMIVecWithCoeffs() const = 0;
 
   /****************
   Helper operations
@@ -155,9 +166,9 @@ class SGGenInstr {
  private:
   LvlType boundaryLevelOffset;  ///< See @ref getBoundaryLevelOffset.
 
-  HyperCubeArea domain;                          ///< Per-dimension @c (min, max) intervals.
-  std::vector<NodeGenFunc*> nodeGenFuncs;        ///< Per-dimension node generators (non-owning).
-  std::vector<Lvl2GPCntFunc> lvl2GPCntFuncs;     ///< Per-dimension growth functions.
+  HyperCubeArea domain;                       ///< Per-dimension @c (min, max) intervals.
+  std::vector<NodeGenFunc*> nodeGenFuncs;     ///< Per-dimension node generators (non-owning).
+  std::vector<Lvl2GPCntFunc> lvl2GPCntFuncs;  ///< Per-dimension growth functions.
 };
 
 }  // namespace combigrid

@@ -3,10 +3,8 @@
  * @brief Combination-technique sparse grid: a collection of tensor grids
  * with associated combination coefficients.
  */
-#ifndef COMBIGRID_SPARSE_GRID_HPP
-#define COMBIGRID_SPARSE_GRID_HPP
+#pragma once
 
-#include <memory>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -210,16 +208,17 @@ class SparseGrid {
    */
   bool operator==(const SparseGrid& other) const;
 
- private:
-  const size_t nDim_;                          ///< Spatial dimensionality (fixed at construction).
-  std::vector<TensorGridCTData> tensorGridData;  ///< Tensor grids and their combination coefficients.
-  std::shared_ptr<const SGGenInstr> genInstr;  ///< Optional generation instruction that produced this SG.
+ protected:
+  const size_t nDim_;  ///< Spatial dimensionality (fixed at construction).
+  std::vector<TensorGridCTData>
+      tensorGridData;  ///< Tensor grids and their combination coefficients.
+  std::shared_ptr<const SGGenInstr>
+      genInstr;  ///< Optional generation instruction that produced this SG.
 
-  size_t maxTGGPCnt;                  ///< Cached maximum @c nGP() across contained tensor grids.
-  size_t maxTGSumOverGPCntsPerDim;    ///< Cached maximum @f$\sum_k n_k@f$ across contained tensor grids.
+  size_t maxTGGPCnt;  ///< Cached maximum @c nGP() across contained tensor grids.
+  size_t
+      maxTGSumOverGPCntsPerDim;  ///< Cached maximum @f$\sum_k n_k@f$ across contained tensor grids.
 };
 
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

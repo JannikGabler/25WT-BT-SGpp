@@ -35,11 +35,17 @@ class CompleteSGGenInstr : public SGGenInstr {
   /// @brief Updates the maximum @f$\ell_1@f$ level.
   void setMaxLvl(LvlType maxLvl);
 
-  /// @copydoc SGGenInstr::genMIVec
-  LvlMIVec genMIVec() const override;
+  /// @copydoc SGGenInstr::genFullMIVec
+  LvlMIVec genFullMIVec() const override;
 
-  /// @copydoc SGGenInstr::genMIVecWithCoeff
-  std::pair<LvlMIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
+  /// @copydoc SGGenInstr::genReducedMIVec
+  LvlMIVec genReducedMIVec() const override;
+
+  /// @copydoc SGGenInstr::genFullMIVecWithCoeffs
+  std::pair<LvlMIVec, std::vector<CTCoeffType>> genFullMIVecWithCoeffs() const override;
+
+  /// @copydoc SGGenInstr::genReducedMIVecWithCoeffs
+  std::pair<LvlMIVec, std::vector<CTCoeffType>> genReducedMIVecWithCoeffs() const override;
 
   /// @copydoc SGGenInstr::clone
   std::shared_ptr<SGGenInstr> clone() const override;

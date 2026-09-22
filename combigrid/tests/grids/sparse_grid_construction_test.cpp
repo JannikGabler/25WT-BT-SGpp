@@ -598,7 +598,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
 
 //   // Hole erwartete Multiindizes + Koeffizienten direkt aus der Instruktion
 //   const std::pair<LvlMIVec, std::vector<CTCoeffType>> genWithCoeff =
-//   genInstr.genMIVecWithCoeff(); const LvlMIVec& expectedMIVec = genWithCoeff.first; const
+//   genInstr.genReducedMIVecWithCoeffs(); const LvlMIVec& expectedMIVec = genWithCoeff.first; const
 //   std::vector<CTCoeffType>& expectedCoeffs = genWithCoeff.second;
 
 //   // Grundprüfungen
@@ -610,9 +610,9 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
 //   for (size_t tgIdx = 0; tgIdx < sg.nTG(); ++tgIdx) {
 //     const TensorGridCTData& tg = sg.getTensorGrid(tgIdx);
 
-//     // Multiindex und Koeffizient sollten exakt mit genInstr.genMIVecWithCoeff übereinstimmen
-//     BOOST_CHECK(tg.mi == expectedMIVec[tgIdx]);
-//     BOOST_CHECK_EQUAL(tg.coefficient, expectedCoeffs[tgIdx]);
+//     // Multiindex und Koeffizient sollten exakt mit genInstr.genReducedMIVecWithCoeffs
+//     übereinstimmen BOOST_CHECK(tg.mi == expectedMIVec[tgIdx]); BOOST_CHECK_EQUAL(tg.coefficient,
+//     expectedCoeffs[tgIdx]);
 
 //     // getTensorGrid(LvlMI) muss dieselben Daten liefern
 //     const auto tg_by_mi = sg.getTensorGrid(tg.mi);
@@ -675,7 +675,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
 //   }
 
 //   SparseGrid sg(genInstr);
-//   auto [expectedMIVec, expectedCoeffs] = genInstr.genMIVecWithCoeff();
+//   auto [expectedMIVec, expectedCoeffs] = genInstr.genReducedMIVecWithCoeffs();
 
 //   BOOST_REQUIRE_EQUAL(sg.nDim(), nDim);
 //   BOOST_REQUIRE_EQUAL(sg.nTG(), expectedMIVec.nMI());
@@ -724,7 +724,7 @@ BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
 //     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(1000));
 
 //     const CompleteSGGenInstr instr(maxLvl, 1);
-//     const LvlMIVec result = instr.genMIVec();
+//     const LvlMIVec result = instr.genReducedMIVec();
 
 //     BOOST_CHECK_MESSAGE(result.nDim() == 1, "Seed: " << randGen.getSeed());
 //     BOOST_CHECK_MESSAGE(result.nMI() == 1, "Seed: " << randGen.getSeed());

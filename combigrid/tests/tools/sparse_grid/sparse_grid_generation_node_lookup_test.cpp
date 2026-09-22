@@ -45,7 +45,8 @@
 
 // BOOST_AUTO_TEST_CASE(ZeroDims) {
 //   const CompleteSGGenInstr instr(3, 0);
-//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff =
+//   instr.genReducedMIVecWithCoeffs();
 
 //   const SGGenNodeLookup result =
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -59,7 +60,8 @@
 
 // BOOST_AUTO_TEST_CASE(Simple1D) {
 //   const CompleteSGGenInstr instr(2, 1);
-//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff =
+//   instr.genReducedMIVecWithCoeffs();
 
 //   const SGGenNodeLookup result =
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -74,7 +76,8 @@
 
 // BOOST_AUTO_TEST_CASE(Simple2D) {
 //   const CompleteSGGenInstr instr(3, 2);
-//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff =
+//   instr.genReducedMIVecWithCoeffs();
 
 //   const SGGenNodeLookup result =
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -93,7 +96,8 @@
 //   instr.setNodeGenFuncForDim(firstTypeChebyshevNodeGenFunc, 1);
 //   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 1);
 
-//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff =
+//   instr.genReducedMIVecWithCoeffs();
 
 //   const SGGenNodeLookup result =
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
@@ -120,7 +124,8 @@
 //   instr.setNodeGenFuncForDim(secondTypeChebyshevNodeGenFunc, 3);
 //   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 3);
 
-//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff = instr.genMIVecWithCoeff();
+//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff =
+//   instr.genReducedMIVecWithCoeffs();
 
 //   const SGGenNodeLookup result =
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);

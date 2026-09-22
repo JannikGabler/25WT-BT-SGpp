@@ -95,10 +95,10 @@ BOOST_AUTO_TEST_CASE(FullInputIsFixedPoint) {
     const size_t nDim = 1 + randGen.getUniformIndexRN(5);
 
     const CompleteSGGenInstr fsg(maxLvl, nDim);
-    const LvlMIVec input = fsg.genMIVec();
+    const LvlMIVec input = fsg.genReducedMIVec();
 
     MIVecSGGenInstr instr(input);
-    const LvlMIVec result = instr.genMIVec();
+    const LvlMIVec result = instr.genReducedMIVec();
 
     BOOST_CHECK(result.nDim() == input.nDim());
     BOOST_CHECK(result.nMI() == input.nMI());
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(RandomInputMatchesBruteforceFiltered) {
 
     const MIVecSGGenInstr instr(inputMIVec);
 
-    const auto pairWithCoeff = instr.genMIVecWithCoeff();
+    const auto pairWithCoeff = instr.genReducedMIVecWithCoeffs();
     const LvlMIVec resultMiVec = pairWithCoeff.first;
     const std::vector<CTCoeffType> resultCoeff = pairWithCoeff.second;
 
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE(Deterministic1D_singleMI) {
   const LvlMIVec input({{3}});
 
   const MIVecSGGenInstr instr(input);
-  const auto pairWithCoeff = instr.genMIVecWithCoeff();
+  const auto pairWithCoeff = instr.genReducedMIVecWithCoeffs();
   const LvlMIVec resultMiVec = pairWithCoeff.first;
   const std::vector<CTCoeffType> resultCoeff = pairWithCoeff.second;
 
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(Deterministic2D_twoMIs) {
   const LvlMIVec input({{1, 1}, {2, 0}});
 
   const MIVecSGGenInstr instr(input);
-  const auto pairWithCoeff = instr.genMIVecWithCoeff();
+  const auto pairWithCoeff = instr.genReducedMIVecWithCoeffs();
   const LvlMIVec resultMiVec = pairWithCoeff.first;
   const std::vector<CTCoeffType> resultCoeff = pairWithCoeff.second;
 
@@ -240,7 +240,7 @@ BOOST_AUTO_TEST_CASE(Deterministic3D_smallExample) {
   const LvlMIVec input({{1, 0, 1}, {0, 2, 0}});
 
   const MIVecSGGenInstr instr(input);
-  const auto pairWithCoeff = instr.genMIVecWithCoeff();
+  const auto pairWithCoeff = instr.genReducedMIVecWithCoeffs();
   const LvlMIVec resultMiVec = pairWithCoeff.first;
   const std::vector<CTCoeffType> resultCoeff = pairWithCoeff.second;
 

@@ -29,7 +29,7 @@ SparseGrid::SparseGrid(const size_t nDim, const size_t nTG)
 
 SparseGrid::SparseGrid(const SGGenInstr& genInstr)
     : nDim_(genInstr.nDim()), genInstr(genInstr.clone()) {
-  const std::pair<LvlMIVec, std::vector<CTCoeffType>> p = genInstr.genMIVecWithCoeff();
+  const std::pair<LvlMIVec, std::vector<CTCoeffType>> p = genInstr.genReducedMIVecWithCoeffs();
 
   tensorGridData.resize(p.first.nMI());
   tools::populateSG(genInstr, p.first, p.second, *this);

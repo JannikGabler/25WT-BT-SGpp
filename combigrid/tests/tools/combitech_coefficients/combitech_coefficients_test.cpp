@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(RandomParallelExample) {
         constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY + (LvlType)randGen.getUniformIndexRN(5);
     const size_t nDim = 2 + randGen.getUniformIndexRN(1);
 
-    const LvlMIVec miVec = tools::genMIVecForFullSG(maxLvl, nDim);
+    const LvlMIVec miVec = tools::genMIVecForCompleteSG(maxLvl, nDim);
 
     const std::vector<int> result1 = tools::computeCTCoeffsNaive(miVec);
     const std::vector<int> result2 = tools::computeCTCoeffs(miVec);

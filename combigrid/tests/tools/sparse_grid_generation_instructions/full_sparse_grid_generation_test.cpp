@@ -119,8 +119,8 @@ BOOST_AUTO_TEST_CASE(RandomTest) {
     const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(14);
     const size_t nDim = randGen.getUniformIndexRN(4);  // nDim has to be at least 2
 
-    const LvlMIVec miVec = tools::genMIVecForFullSG(maxLvl, nDim);
-    const std::vector<CTCoeffType> coeff = tools::genCoeffForFullSG(maxLvl, nDim);
+    const LvlMIVec miVec = tools::genMIVecForCompleteSG(maxLvl, nDim);
+    const std::vector<CTCoeffType> coeff = tools::genCoeffForCompleteSG(maxLvl, nDim);
     const std::vector<CTCoeffType> expectedCoeff1 = tools::computeCTCoeffs(miVec);
 
     BOOST_CHECK_MESSAGE(miVec.nMI() == coeff.size(), "The number of mis differs between '"

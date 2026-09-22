@@ -31,16 +31,25 @@ class MIVecSGGenInstr : public SGGenInstr {
    */
   MIVecSGGenInstr(const LvlMIVec& miVec);
 
-  /// @copydoc SGGenInstr::genMIVec
-  LvlMIVec genMIVec() const override;
+  /// @copydoc SGGenInstr::genFullMIVec
+  LvlMIVec genFullMIVec() const override;
 
-  /// @copydoc SGGenInstr::genMIVecWithCoeff
-  std::pair<LvlMIVec, std::vector<CTCoeffType>> genMIVecWithCoeff() const override;
+  /// @copydoc SGGenInstr::genReducedMIVec
+  LvlMIVec genReducedMIVec() const override;
+
+  /// @copydoc SGGenInstr::genFullMIVecWithCoeffs
+  std::pair<LvlMIVec, std::vector<CTCoeffType>> genFullMIVecWithCoeffs() const override;
+
+  /// @copydoc SGGenInstr::genReducedMIVecWithCoeffs
+  std::pair<LvlMIVec, std::vector<CTCoeffType>> genReducedMIVecWithCoeffs() const override;
 
   /// @copydoc SGGenInstr::clone
   std::shared_ptr<SGGenInstr> clone() const override;
 
  private:
+  std::pair<LvlMIVec, std::vector<CTCoeffType>> internalGenMIVecWithCoeffs(
+      bool includeMIsWithZeroCoeff) const;
+
   const LvlMIVec& miVecRef;  ///< Externally owned level multi-indices.
 };
 

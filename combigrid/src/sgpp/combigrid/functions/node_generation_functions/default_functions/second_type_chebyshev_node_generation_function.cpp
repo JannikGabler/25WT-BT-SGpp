@@ -1,6 +1,5 @@
 #include <cmath>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/default_functions/second_type_chebyshev_node_generation_function.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>

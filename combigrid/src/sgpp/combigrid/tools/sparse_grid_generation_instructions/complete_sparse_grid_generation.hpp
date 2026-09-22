@@ -1,16 +1,15 @@
 /**
- * @file full_sparse_grid_generation.hpp
+ * @file complete_sparse_grid_generation.hpp
  * @brief Helpers that build the level-multi-index set and the combination
- * coefficients for a "full" combination-technique sparse grid.
+ * coefficients for a "complete" combination-technique sparse grid.
  *
- * A full combination-technique sparse grid in @f$d@f$ dimensions with
+ * A complete combination-technique sparse grid in @f$d@f$ dimensions with
  * level @f$L@f$ contains all level multi-indices @f$\vec\ell@f$ with
  * @f$\|\vec\ell\|_1 \le L@f$. The combination coefficients are the
  * standard
  * @f$c_{\vec\ell} = (-1)^{L - \|\vec\ell\|_1}\,\binom{d-1}{L - \|\vec\ell\|_1}@f$.
  */
-#ifndef COMBIGRID_TOOLS_FULL_SPARSE_GRID_GENERATION_HPP
-#define COMBIGRID_TOOLS_FULL_SPARSE_GRID_GENERATION_HPP
+#pragma once
 
 #include <sgpp/combigrid/type_defs.hpp>
 
@@ -19,7 +18,13 @@ namespace combigrid {
 namespace tools {
 
 /**
- * @brief Generates the level multi-indices of the full sparse grid.
+ * TODO: Document
+ */
+LvlMIVec genFullMIVecForCompleteSG(LvlType maxLvl, size_t nDim);
+
+/**
+ * TODO: Document (update documentation to match new function name)
+ * @brief Generates the level multi-indices for a complete sparse grid.
  *
  * Contains every multi-index @f$\vec\ell\in\mathbb{N}^d@f$ with
  * @f$\|\vec\ell\|_1 \le \mathrm{maxLvl}@f$ (those that contribute a
@@ -29,26 +34,32 @@ namespace tools {
  * @param nDim   Spatial dimensionality.
  * @return Level-multi-index vector.
  */
-LvlMIVec genMIVecForFullSG(LvlType maxLvl, size_t nDim);
+LvlMIVec genReducedMIVecForCompleteSG(LvlType maxLvl, size_t nDim);
 
 /**
- * @brief Generates the combination coefficients matching @ref genMIVecForFullSG.
+ TODO: Document
+ */
+std::vector<CTCoeffType> genFullCoeffForCompleteSG(LvlType maxLvl, size_t nDim);
+
+/**
+ * TODO: Document (update to match the new name of the function)
+ * @brief Generates the combination coefficients matching @ref genReducedMIVecForCompleteSG.
  *
  * Coefficient @c i corresponds to the multi-index returned at position
- * @c i by @ref genMIVecForFullSG (same @p maxLvl and @p nDim).
+ * @c i by @ref genReducedMIVecForCompleteSG (same @p maxLvl and @p nDim).
  *
  * @param maxLvl Largest @f$\ell_1@f$ norm of any included multi-index.
  * @param nDim   Spatial dimensionality.
  * @return Vector of integer combination coefficients.
  */
-std::vector<CTCoeffType> genCoeffForFullSG(LvlType maxLvl, size_t nDim);
+std::vector<CTCoeffType> genReducedCoeffForCompleteSG(LvlType maxLvl, size_t nDim);
 
 /******************
 Internal operations
 ******************/
 
 /**
- * @brief Implementation details of the full sparse-grid generator.
+ * @brief Implementation details of the complete sparse-grid generator.
  *
  * The generator enumerates multi-indices grouped by their @f$\ell_1@f$
  * sum: for a fixed sum @c s, every multi-index of @f$\mathbb N^d@f$ with
@@ -57,7 +68,7 @@ Internal operations
  * sub-namespace implement that bijection together with bookkeeping for
  * efficient parallel enumeration.
  */
-namespace full_sg_gen {
+namespace complete_sg_gen {
 
 /**
  * @brief Smallest @f$\ell_1@f$ norm whose multi-indices have a non-zero
@@ -71,6 +82,7 @@ namespace full_sg_gen {
 LvlType getMinComponentSum(LvlType maxSum, size_t nDim);
 
 /**
+ * TODO: Document (update to be more precise -> Accumulation of counts)
  * @brief Number of multi-indices with each fixed @f$\ell_1@f$ norm in
  * the range @c [minSum, maxSum].
  *
@@ -81,7 +93,7 @@ LvlType getMinComponentSum(LvlType maxSum, size_t nDim);
  * @param maxSum Largest considered sum.
  * @param nDim   Spatial dimensionality.
  */
-std::vector<size_t> nMICntPerComponentSum(LvlType minSum, LvlType maxSum, size_t nDim);
+std::vector<size_t> getMICnts(LvlType minSum, LvlType maxSum, size_t nDim);
 
 /**
  * @brief Translates a stars-and-bars bar position into the corresponding
@@ -150,7 +162,21 @@ void populateMIVec(LvlMIVec& miVec, LvlType minSum, LvlType maxSum,
                    const std::vector<size_t>& nMIs);
 
 /**
- * @brief Precomputes the binomials needed for full-SG combination coefficients.
+ * TODO: Document
+ */
+std::vector<CTCoeffType> internalGenCoeffsForForCompleteSG(const LvlType minSum,
+                                                           const LvlType maxSum, const size_t nDim);
+
+/**
+ * TODO: Document
+ */
+// void fillNonZeroCoeffsForCompleteSG(const LvlType minSum, const LvlType maxSum, const size_t
+// nDim,
+//                                     const std::vector<size_t>& miCntPerComponentSum,
+//                                     CTCoeffType* writeBuffer);
+
+/**
+ * @brief Precomputes the binomials needed for complete SG combination coefficients.
  *
  * Returns a vector containing @f$\binom{d-1}{k}@f$ for the values of
  * @f$k@f$ that appear in the active sum range.
@@ -161,10 +187,8 @@ void populateMIVec(LvlMIVec& miVec, LvlType minSum, LvlType maxSum,
  */
 std::vector<CTCoeffType> getBinomialsForCTCoeffs(LvlType minSum, LvlType maxSum, size_t nDim);
 
-}  // namespace full_sg_gen
+}  // namespace complete_sg_gen
 
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

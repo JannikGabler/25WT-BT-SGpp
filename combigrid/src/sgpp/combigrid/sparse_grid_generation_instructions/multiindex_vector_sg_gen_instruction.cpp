@@ -9,22 +9,36 @@
 #include <vector>
 
 namespace sgpp {
-
 namespace combigrid {
 
 MIVecSGGenInstr::MIVecSGGenInstr(const LvlMIVec& miVec)
     : SGGenInstr(miVec.nDim()), miVecRef(miVec) {}
 
-LvlMIVec MIVecSGGenInstr::genMIVec() const { return genMIVecWithCoeff().first; }
+LvlMIVec MIVecSGGenInstr::genFullMIVec() const { return genFullMIVecWithCoeffs().first; }
 
-std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::genMIVecWithCoeff() const {
+LvlMIVec MIVecSGGenInstr::genReducedMIVec() const { return genReducedMIVecWithCoeffs().first; }
+
+std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::genFullMIVecWithCoeffs() const {
+  return internalGenMIVecWithCoeffs(true);
+}
+
+std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::genReducedMIVecWithCoeffs() const {
+  return internalGenMIVecWithCoeffs(false);
+}
+
+std::shared_ptr<SGGenInstr> MIVecSGGenInstr::clone() const {
+  return std::make_shared<MIVecSGGenInstr>(*this);
+}
+
+std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::internalGenMIVecWithCoeffs(
+    const bool includeMIsWithZeroCoeff) const {
   LvlMIVec miVec = miVecRef.downwardsClosure();
   std::vector<CTCoeffType> coeffs = tools::computeCTCoeffs(miVec);
   const size_t nMI = miVec.nMI();
 
   size_t writeIdx = 0;
   for (size_t readIdx = 0; readIdx < nMI; readIdx++) {
-    if (coeffs[readIdx] != 0) {
+    if (includeMIsWithZeroCoeff || coeffs[readIdx] != 0) {
       miVec.moveMI(writeIdx, readIdx);
       coeffs[writeIdx] = std::move(coeffs[readIdx]);
       writeIdx++;
@@ -39,10 +53,5 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::genMIVecWithCoeff
   return {miVec, coeffs};
 }
 
-std::shared_ptr<SGGenInstr> MIVecSGGenInstr::clone() const {
-  return std::make_shared<MIVecSGGenInstr>(*this);
-}
-
 }  // namespace combigrid
-
 }  // namespace sgpp
