@@ -291,7 +291,7 @@ There is **no pre-commit hook** in the repo. All style/lint enforcement is via t
 
 ## 7. Conventions
 
-- **C++ standard**: C++23 by default, selected with the SCons variable `CPP_STD` (`11`, `14`, `17`, `20`, `23`) in [SConstruct](SConstruct) and applied by `checkCppStandard()` in [site_scons/SGppConfigure.py](site_scons/SGppConfigure.py) (HPX needs at least `14`). Combigrid uses features up to C++11 (lambdas, `override`, `std::shared_ptr`, `std::unordered_map`, structured bindings **not** allowed).
+- **C++ standard**: C++23 by default, selected with the SCons variable `CPP_STD` (`11`, `14`, `17`, `20`, `23`) in [SConstruct](SConstruct) and applied by `checkCppStandard()` in [site_scons/SGppConfigure.py](site_scons/SGppConfigure.py) (HPX needs at least `14`).
 - **Namespaces**: `sgpp::combigrid` is the primary; nested `tools`, `misc`, `constants`, plus per-operator inline namespaces (`global_interpolation`, `quadrature_operator`, `linear_interpolation`) used to scope internal helpers. Full path spelled out — no `using namespace` in headers.
 - **Header guards**: Use `#pragma once`
 - **File header**: every `.cpp`/`.hpp` must start with the exact 4-line SG++ copyright banner:
