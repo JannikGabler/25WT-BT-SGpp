@@ -108,7 +108,7 @@ std::vector<DataVector> randomPoints(const size_t n, const size_t nDim) {
 
 void benchmarkFunction(const std::string& label, const TestSourceFunction& f,
                        const std::vector<DataVector>& points, int warmupLoops = 3,
-                       int measureRuns = 5, int evalsPerPoint = 10) {
+                       size_t measureRuns = 5, int evalsPerPoint = 10) {
   std::cout << "Benchmark: " << label << "\n";
   std::cout << " points: " << points.size() << ", warmupLoops: " << warmupLoops
             << ", measureRuns: " << measureRuns << ", evalsPerPoint: " << evalsPerPoint << "\n";
@@ -131,7 +131,7 @@ void benchmarkFunction(const std::string& label, const TestSourceFunction& f,
   volatile double resultSink =
       0.0;  // Akkumuliere Ergebnisse, damit der Compiler nicht alles weglässt
 
-  for (int run = 0; run < measureRuns; ++run) {
+  for (size_t run = 0; run < measureRuns; ++run) {
     auto t0 = std::chrono::high_resolution_clock::now();
     // innerer Loop: evalsPerPoint mal pro Punkt ausführen
     for (int r = 0; r < evalsPerPoint; ++r) {
