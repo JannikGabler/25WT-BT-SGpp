@@ -45,7 +45,7 @@ void ClenshawCurtisQuadRule::genWeightsInplace(const GPCntType nNodes, base::Dat
   assert(out.size() - startIdx >= nNodes);
 
   const base::DataVector weights = getWeights(nNodes);
-  std::copy(weights.begin(), weights.end(), out.begin() + startIdx);
+  std::copy(weights.begin(), weights.end(), out.data() + startIdx);
 }
 
 /*

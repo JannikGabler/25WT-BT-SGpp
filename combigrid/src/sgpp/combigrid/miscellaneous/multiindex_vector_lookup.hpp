@@ -38,17 +38,18 @@ template <typename T>
 class MIVecLookup {
  public:
   /**
-   * @brief Builds the lookup from @p miVec.
-   * @param miVec Source vector.
+   * @brief Builds the lookup from @p indexedMIVec.
+   * @param indexedMIVec Source vector.
    */
-  MIVecLookup<T>(const MIVec<T>& miVec)
-      : miVec((miVec)),
-        map(miVec.nMI(), MIVecLookupHash<T>(miVec.nDim()), MIVecLookupEqual<T>(miVec.nDim())) {
-    const T* dataPtr = miVec.data();
+  MIVecLookup(const MIVec<T>& indexedMIVec)
+      : miVec((indexedMIVec)),
+        map(indexedMIVec.nMI(), MIVecLookupHash<T>(indexedMIVec.nDim()),
+            MIVecLookupEqual<T>(indexedMIVec.nDim())) {
+    const T* dataPtr = indexedMIVec.data();
 
-    for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
+    for (size_t miIdx = 0; miIdx < indexedMIVec.nMI(); miIdx++) {
       map.emplace(dataPtr, miIdx);
-      dataPtr += miVec.nDim();
+      dataPtr += indexedMIVec.nDim();
     }
   }
 

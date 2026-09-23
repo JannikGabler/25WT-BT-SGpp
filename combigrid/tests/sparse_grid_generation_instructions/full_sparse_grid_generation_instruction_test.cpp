@@ -53,18 +53,33 @@ size_t requiredNumberOfMIs(const size_t nDim, const LvlType maxLvl) {
 bool checkForDuplicates(const LvlMIVec& miVec) {
   bool foundDuplicate = false;
 
-#pragma omp parallel for shared(foundDuplicate) schedule(guided)
-  for (size_t i = 0; i < miVec.nMI(); i++) {
-    for (size_t j = i + 1; j < miVec.nMI(); j++) {
-      if (miVec[i] == miVec[j]) {
-        const LvlMI mi1 = miVec[i];
-        const LvlMI mi2 = miVec[j];
-
-        foundDuplicate = true;
-#pragma omp cancel for
+  // Separate parallel and for constructs: the loop of a combined 'parallel for' is implicitly
+  // nowait and must not be cancelled. Cancellation only takes effect with OMP_CANCELLATION=true,
+  // so the shared flag additionally lets all threads skip their remaining iterations early.
+#pragma omp parallel shared(foundDuplicate)
+  {
+#pragma omp for schedule(guided)
+    for (size_t i = 0; i < miVec.nMI(); i++) {
+      bool alreadyFound;
+#pragma omp atomic read
+      alreadyFound = foundDuplicate;
+      if (alreadyFound) {
+        continue;
       }
-    }
+
+      for (size_t j = i + 1; j < miVec.nMI(); j++) {
+        if (miVec[i] == miVec[j]) {
+          const LvlMI mi1 = miVec[i];
+          const LvlMI mi2 = miVec[j];
+
+#pragma omp atomic write
+          foundDuplicate = true;
+#pragma omp cancel for
+          break;
+        }
+      }
 #pragma omp cancellation point for
+    }
   }
 
   return foundDuplicate;

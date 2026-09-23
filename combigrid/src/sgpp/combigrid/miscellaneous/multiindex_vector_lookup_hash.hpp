@@ -24,10 +24,10 @@ template <typename T>
 struct MIVecLookupHash {
  public:
   /**
-   * @brief Constructs the functor for multi-indices of dimension @p nDim.
-   * @param nDim Multi-index dimensionality.
+   * @brief Constructs the functor for multi-indices of dimension @p dimCnt.
+   * @param dimCnt Multi-index dimensionality.
    */
-  MIVecLookupHash<T>(const size_t nDim) : nDim(nDim) {}
+  MIVecLookupHash(const size_t dimCnt) : nDim(dimCnt) {}
 
   /**
    * @brief Hashes the multi-index pointed to by @p dataPtr.

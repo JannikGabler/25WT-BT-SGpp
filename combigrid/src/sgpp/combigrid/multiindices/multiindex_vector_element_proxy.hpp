@@ -24,12 +24,12 @@ template <typename T>
 class MIVecElemProxy {
  public:
   /**
-   * @brief Constructs a proxy referring to @p ref inside @p miVec.
+   * @brief Constructs a proxy referring to @p cell inside @p parent.
    *
-   * @param miVec Owning @c MIVec used for cache invalidation on writes.
-   * @param ref   Reference to the storage cell this proxy targets.
+   * @param parent Owning @c MIVec used for cache invalidation on writes.
+   * @param cell   Reference to the storage cell this proxy targets.
    */
-  MIVecElemProxy<T>(const MIVec<T>& miVec, T& ref) : miVec(miVec), ref(ref) {}
+  MIVecElemProxy(const MIVec<T>& parent, T& cell) : miVec(parent), ref(cell) {}
 
   /**
    * @brief Writes @p value into the referenced cell and invalidates the

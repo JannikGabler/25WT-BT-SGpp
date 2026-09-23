@@ -29,9 +29,9 @@ namespace misc {
 template <typename T>
 struct DiscRectBB {
  public:
-  const MI<T> lowerBound;       ///< Inclusive lower corner of the box (per dimension).
-  const MI<T> upperBound;       ///< Upper corner; inclusive iff @ref includeUpperBound is @c true.
-  const bool includeUpperBound; ///< Whether the upper corner is part of the box.
+  const MI<T> lowerBound;        ///< Inclusive lower corner of the box (per dimension).
+  const MI<T> upperBound;        ///< Upper corner; inclusive iff @ref includeUpperBound is @c true.
+  const bool includeUpperBound;  ///< Whether the upper corner is part of the box.
 
   /**
    * @brief Constructs a bounding box.
@@ -44,7 +44,7 @@ struct DiscRectBB {
       : lowerBound(std::move(lowerBound)),
         upperBound(std::move(upperBound)),
         includeUpperBound(includeUpperBound) {
-    assert(lowerBound.size() == upperBound.size());
+    assert(this->lowerBound.size() == this->upperBound.size());
   }
 
   /**
@@ -135,11 +135,12 @@ struct DiscRectBB {
 
     for (size_t dim = nDim - 1; dim != std::numeric_limits<size_t>::max(); dim--) {
       const size_t nIdx = idxCntUntilDimChange[dim];
-      pos[dim] = idx / nIdx;
+      // Fits in T: the result is at most upperBound[dim].
+      pos[dim] = static_cast<T>(lowerBound[dim] + idx / nIdx);
       idx %= nIdx;
     }
 
-    return pos;
+    return MI<T>(pos);
   }
 };
 

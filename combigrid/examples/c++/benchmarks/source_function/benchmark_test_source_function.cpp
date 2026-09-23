@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -46,7 +47,9 @@ class TestSourceFunction {
 
  private:
   // --- Storage ---
-  using Storage = typename std::aligned_storage<64>::type;
+  struct Storage {
+    alignas(std::max_align_t) unsigned char data[64];
+  };
 
   Storage storage_;
 
@@ -108,7 +111,7 @@ std::vector<DataVector> randomPoints(const size_t n, const size_t nDim) {
 
 void benchmarkFunction(const std::string& label, const TestSourceFunction& f,
                        const std::vector<DataVector>& points, int warmupLoops = 3,
-                       int measureRuns = 5, int evalsPerPoint = 10) {
+                       size_t measureRuns = 5, int evalsPerPoint = 10) {
   std::cout << "Benchmark: " << label << "\n";
   std::cout << " points: " << points.size() << ", warmupLoops: " << warmupLoops
             << ", measureRuns: " << measureRuns << ", evalsPerPoint: " << evalsPerPoint << "\n";
@@ -131,7 +134,7 @@ void benchmarkFunction(const std::string& label, const TestSourceFunction& f,
   volatile double resultSink =
       0.0;  // Akkumuliere Ergebnisse, damit der Compiler nicht alles weglässt
 
-  for (int run = 0; run < measureRuns; ++run) {
+  for (size_t run = 0; run < measureRuns; ++run) {
     auto t0 = std::chrono::high_resolution_clock::now();
     // innerer Loop: evalsPerPoint mal pro Punkt ausführen
     for (int r = 0; r < evalsPerPoint; ++r) {
@@ -152,9 +155,9 @@ void benchmarkFunction(const std::string& label, const TestSourceFunction& f,
   for (double s : runTimesSec) totalTime += s;
   double avgTime = totalTime / static_cast<double>(runTimesSec.size());
 
-  std::uint64_t totalEvaluations = static_cast<std::uint64_t>(points.size()) *
-                                   static_cast<std::uint64_t>(evalsPerPoint) *
-                                   static_cast<std::uint64_t>(measureRuns);
+  // std::uint64_t totalEvaluations = static_cast<std::uint64_t>(points.size()) *
+  //                                  static_cast<std::uint64_t>(evalsPerPoint) *
+  //                                  static_cast<std::uint64_t>(measureRuns);
 
   // Durchschnitt pro einzelne evaluate()-Aufruf (aus allen Messungen gemittelt)
   double avgPerEvalSec =

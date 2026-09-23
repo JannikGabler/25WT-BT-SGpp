@@ -1,5 +1,3 @@
-#pragma once
-
 #include <cstring>
 #include <mutex>
 #include <sgpp/base/datatypes/DataVector.hpp>

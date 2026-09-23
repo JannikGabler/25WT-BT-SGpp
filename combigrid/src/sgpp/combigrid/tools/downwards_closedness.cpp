@@ -24,7 +24,7 @@
 
 //   bool closed = true;
 
-// #pragma omp parallel for schedule(static) \
+// #pragma omp parallel for schedule(static)
 //     shared(closed) if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
 //   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
 //     const MI mi = miVec[miIdx];

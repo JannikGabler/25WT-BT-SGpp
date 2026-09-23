@@ -7,8 +7,7 @@
  * downwards closed (DWC): for every @f$\vec{\ell} \in I@f$ all
  * @f$\vec{\ell}'\le\vec{\ell}@f$ must also belong to @f$I@f$.
  */
-#ifndef COMBIGRID_TOOLS_DOWNWARDS_CLOSEDNESS_HPP
-#define COMBIGRID_TOOLS_DOWNWARDS_CLOSEDNESS_HPP
+#pragma once
 
 #include <omp.h>
 #include <cstddef>
@@ -49,18 +48,33 @@ bool isMIVecDownwardsClosed(const MIVec<T>& miVec) {
 
   bool closed = true;
 
-#pragma omp parallel for schedule(static) \
-    shared(closed) if (miVec.nMI() >= constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
-  for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
-    const MI<T> mi = miVec[miIdx];
-
-    for (const std::vector<T>& offset : offsets) {
-      if (offset <= mi && !lookup->contains(mi - offset)) {
-        closed = false;
-#pragma omp cancel for
+  // Separate parallel and for constructs: the loop of a combined 'parallel for' is implicitly
+  // nowait and must not be cancelled. Cancellation only takes effect with OMP_CANCELLATION=true,
+  // so the shared flag additionally lets all threads skip their remaining iterations early.
+#pragma omp parallel shared(closed) if (miVec.nMI() >= \
+                                            constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
+  {
+#pragma omp for schedule(static)
+    for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
+      bool stillClosed;
+#pragma omp atomic read
+      stillClosed = closed;
+      if (!stillClosed) {
+        continue;
       }
-    }
+
+      const MI<T> mi = miVec[miIdx];
+
+      for (const std::vector<T>& offset : offsets) {
+        if (offset <= mi && !lookup->contains(mi - offset)) {
+#pragma omp atomic write
+          closed = false;
+#pragma omp cancel for
+          break;
+        }
+      }
 #pragma omp cancellation point for
+    }
   }
 
   return closed;
@@ -114,20 +128,23 @@ MIVec<T> genMIVecDownwardsClosure(const MIVec<T>& miVec) {
   const misc::DiscRectBB<T> boundingBox = genRectMIBoundingBox(miVec);
   const auto part = partitionRangeForConcurrency(boundingBox.size(), 1, 1);  // TODO
 
-  std::vector<std::vector<std::vector<T>>> localClosures(part.size() - 1);
+  const size_t nPartitions = part.size() - 1;
 
-#pragma omp parallel num_threads(part.size() - 1)
-  {
-    const size_t threadId = static_cast<size_t>(omp_get_thread_num());
-    const size_t startIdx = part[threadId];
-    const size_t endIdx = part[threadId + 1];
+  std::vector<std::vector<std::vector<T>>> localClosures(nPartitions);
+
+  // num_threads is only a request: the team may be smaller. Distributing the partitions with a
+  // worksharing loop (instead of one partition per thread ID) guarantees all are processed.
+#pragma omp parallel for num_threads(nPartitions) schedule(static)
+  for (size_t partIdx = 0; partIdx < nPartitions; partIdx++) {
+    const size_t startIdx = part[partIdx];
+    const size_t endIdx = part[partIdx + 1];
     auto iter = boundingBox.begin(startIdx);
 
     for (size_t i = startIdx; i < endIdx; i++) {
       const std::vector<T> mi = *iter;
 
       if (miVecDominatesMI(miVec, *paretoMaxima, mi)) {
-        localClosures[threadId].emplace_back(mi);
+        localClosures[partIdx].emplace_back(mi);
       }
 
       ++iter;
@@ -140,5 +157,3 @@ MIVec<T> genMIVecDownwardsClosure(const MIVec<T>& miVec) {
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

@@ -25,9 +25,9 @@ namespace misc {
 template <typename T>
 struct MIVecLookupEqual {
   /**
-   * @brief Constructs the functor for multi-indices of dimension @p nDim.
+   * @brief Constructs the functor for multi-indices of dimension @p dimCnt.
    */
-  MIVecLookupEqual<T>(const size_t nDim) : nDim(nDim) {}
+  MIVecLookupEqual(const size_t dimCnt) : nDim(dimCnt) {}
 
   /**
    * @brief Returns @c true iff the multi-indices pointed to by @p a and

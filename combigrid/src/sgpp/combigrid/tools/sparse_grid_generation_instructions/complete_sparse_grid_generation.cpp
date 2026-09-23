@@ -235,7 +235,7 @@ std::vector<CTCoeffType> internalGenCoeffsForForCompleteSG(const LvlType minSum,
     const size_t startIdx = (sumIdx == 0) ? 0 : miCnts[sumIdx - 1];
     const size_t endIdx = (sumIdx == maxSum - minSum) ? coeffs.size() : miCnts[sumIdx];
 
-    std::fill(coeffs.begin() + startIdx, coeffs.end() + endIdx, binomials[sumIdx]);
+    std::fill(coeffs.data() + startIdx, coeffs.data() + endIdx, binomials[sumIdx]);
   }
 
   return coeffs;

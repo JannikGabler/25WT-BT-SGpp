@@ -51,14 +51,6 @@ SourceFunc genLinearSourceFunction(const double a, const double b) {
 }
 
 /*
- f(x) = a * x0^2 + b * x1 + c (2D example)
-*/
-SourceFunc genQuadraticSourceFunction(const double a, const double b, const double c) {
-  return SourceFunc(
-      ([a, b, c](const DataVector& point) { return a * point[0] * point[0] + b * point[1] + c; }));
-}
-
-/*
  f(x) = prod_i sin(x_i)
 */
 SourceFunc genSinSourceFunction() {
