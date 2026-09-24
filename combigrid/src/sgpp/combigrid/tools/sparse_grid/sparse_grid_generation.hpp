@@ -18,21 +18,10 @@ namespace combigrid {
 namespace tools {
 
 /**
- * @brief Populates a sparse grid from a level multi-index vector and
- * matching combination coefficients.
- *
- * Builds one tensor grid per multi-index in @p miVec (sharing per-dim
- * node lookups across tensor grids) and stores the result in @p out.
- *
- * @param genInstr Generation instruction (provides node generators, growth
- *                 functions, domain, and boundary handling).
- * @param miVec    Level multi-indices of the participating tensor grids.
- * @param coeffs   Combination coefficients aligned with @p miVec.
- * @param out      Output sparse grid; expected to already be sized to
- *                 @c miVec.nMI().
+ * TODO: Document
  */
-void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                const std::vector<CTCoeffType>& coeffs, SparseGrid& out);
+void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
+                const std::vector<CTCoeffType>& coeffs);
 
 /**
  * @brief Constructs a single tensor grid for the given level multi-index.

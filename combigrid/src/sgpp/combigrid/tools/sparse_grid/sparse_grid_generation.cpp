@@ -3,6 +3,7 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
@@ -14,29 +15,23 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                const std::vector<CTCoeffType>& coeffs, SparseGrid& out) {
-  assert(out.nTG() >= miVec.nMI());
+void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
+                const std::vector<CTCoeffType>& coeffs) {
+  assert(sg.nDim() == genInstr.nDim() && sg.nDim() == miVec.nDim());
+  assert(miVec.nMI() == coeffs.size());
 
-  // const SGGenNodeLookup lookup = genSGNodeLookup(genInstr, miVec, coeffs);
-  size_t maxGPCnt = 0;
-  size_t maxSumOverGPCntsPerDim = 0;
+  std::vector<TensorGridCTData> tgData(miVec.nMI());
 
-#pragma omp parallel for reduction(max : maxGPCnt, maxSumOverGPCntsPerDim) \
-    schedule(guided)  // TODO: Schedule (benchmark)
+#pragma omp parallel for schedule(guided)  // TODO: Schedule (benchmark)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
-    const LvlMI mi = miVec[miIdx];
-    const CTCoeffType coeff = coeffs[miIdx];
+    LvlMI mi = miVec[miIdx];
 
-    const TensorGrid tg = genTGForMI(mi, genInstr);
-    out.setTensorGrid(miIdx, {mi, coeff, std::move(tg)});
+    TensorGrid tg = genTGForMI(mi, genInstr);
 
-    maxGPCnt = std::max(maxGPCnt, tg.nGP());
-    maxSumOverGPCntsPerDim = std::max(maxSumOverGPCntsPerDim, tg.getNodesPerDim().size());
+    tgData[miIdx] = {std::move(mi), coeffs[miIdx], std::move(tg)};
   }
 
-  out.setMaxTGGPCnt(maxGPCnt);
-  out.setMaxTGSumOverGPCntsPerDim(maxSumOverGPCntsPerDim);
+  sg.setTensorGrids(std::move(tgData));
 }
 
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr) {
