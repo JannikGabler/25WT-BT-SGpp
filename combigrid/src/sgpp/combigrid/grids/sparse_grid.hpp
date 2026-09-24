@@ -33,12 +33,12 @@ namespace combigrid {
  * instruction that produced them.
  */
 class SparseGrid {
+ public:
   using iterator = std::vector<TensorGridCTData>::iterator;
   using const_iterator = std::vector<TensorGridCTData>::const_iterator;
   using reverse_iterator = std::vector<TensorGridCTData>::reverse_iterator;
   using const_reverse_iterator = std::vector<TensorGridCTData>::const_reverse_iterator;
 
- public:
   /**********
   Constructor
   **********/
@@ -210,14 +210,17 @@ class SparseGrid {
 
  protected:
   const size_t nDim_;  ///< Spatial dimensionality (fixed at construction).
+
+  size_t tensorGridDataStartIdx = 0;  ///< Range of valid tensor-grid slots in @c tensorGridData.
   std::vector<TensorGridCTData>
       tensorGridData;  ///< Tensor grids and their combination coefficients.
-  std::shared_ptr<const SGGenInstr>
-      genInstr;  ///< Optional generation instruction that produced this SG.
 
-  size_t maxTGGPCnt;  ///< Cached maximum @c nGP() across contained tensor grids.
-  size_t
-      maxTGSumOverGPCntsPerDim;  ///< Cached maximum @f$\sum_k n_k@f$ across contained tensor grids.
+  std::shared_ptr<const SGGenInstr> genInstr =
+      nullptr;  ///< Optional generation instruction that produced this SG.
+
+  size_t maxTGGPCnt = 0;  ///< Cached maximum @c nGP() across contained tensor grids.
+  size_t maxTGSumOverGPCntsPerDim =
+      0;  ///< Cached maximum @f$\sum_k n_k@f$ across contained tensor grids.
 };
 
 }  // namespace combigrid
