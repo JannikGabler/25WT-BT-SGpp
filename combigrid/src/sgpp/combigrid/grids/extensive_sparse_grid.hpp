@@ -1,15 +1,17 @@
 /**
- * @file extensive_sparse_grid.hpp
- * @brief Sparse grid that additionally keeps the tensor grids with
- * combination coefficient 0.
+ * TODO: Document
  */
 #pragma once
 
+#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-
-#include <cassert>
-#include <cstddef>
+#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <span>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -18,96 +20,178 @@ namespace combigrid {
  * TODO: Document
  */
 class ExtensiveSparseGrid : public SparseGrid {
+  using iterator = std::vector<TensorGridCTData>::iterator;
+  using const_iterator = std::vector<TensorGridCTData>::const_iterator;
+  using reverse_iterator = std::vector<TensorGridCTData>::reverse_iterator;
+  using const_reverse_iterator = std::vector<TensorGridCTData>::const_reverse_iterator;
+
  public:
   /**********
   Constructor
   **********/
-  ExtensiveSparseGrid(const SGGenInstr& genInstr);
+  //   /**
+  //    * @brief Constructs an empty sparse grid in the given dimension.
+  //    * @param nDim Spatial dimensionality.
+  //    */
+  //   ExtensiveSparseGrid(size_t nDim);
+
+  //   /**
+  //    * @brief Constructs a sparse grid with @p nTG default-constructed tensor-grid slots.
+  //    * @param nDim Spatial dimensionality.
+  //    * @param nTG  Number of tensor-grid slots to preallocate.
+  //    */
+  //   ExtensiveSparseGrid(size_t nDim, size_t nTG);
+
+  /**
+   * TODO: Document
+   */
+  ExtensiveSparseGrid(const SGGenInstr& genInstruction);
 
   /*****
   Getter
   *****/
-  /// @brief Returns the number of all tensor grids (including those with a CT coefficient of 0).
-  size_t nTGIncludingZeroCoeffs() const;
+  /// @brief Returns the number of tensor grids in the combination.
+  size_t nTGWithCoeffZero() const noexcept;
 
   /**
-   * @brief Returns the @p idx -th tensor grid of the complete storage.
-   * @param idx Index into all tensor grids, must satisfy @c idx < nTGAll().
+   * TODO: Document (see SparseGrid::getTensorGrid)
    */
-  const TensorGridCTData& getTensorGridIncludingZeroCoeffs(size_t idx) const;
+  const TensorGridCTData& getTensorGridWithCoeffZero(size_t idx) const noexcept;
 
   /**
-   * @brief Searches all tensor grids (including c == 0) for level multi-index @p mi.
-   * @return Iterator to the matching tensor grid, or @c endAll() if not found.
-   * @note Linear search (@c O(nTGAll)); avoid in hot loops.
+   * TODO: Document (see SparseGrid::getTensorGrid)
    */
-  const_iterator findTensorGridIncludingZeroCoeffs(const LvlMI& mi) const;
+  const_iterator getTensorGridWithCoeffZero(const LvlMI& mi) const noexcept;
 
-  /// @brief Contiguous view on all tensor grids, e.g. for range-based for loops.
-  std::span<TensorGridCTData> getTensorGridsIncludingZeroCoeffs();
-  std::span<const TensorGridCTData> getTensorGridsIncludingZeroCoeffs() const;
-
-  /// @brief Contiguous view on the tensor grids with c == 0.
-  std::span<TensorGridCTData> getTensorGridsWithCoeffZero() noexcept;
+  /**
+   * TODO: Document (see SparseGrid::getTensorGrids)
+   */
   std::span<const TensorGridCTData> getTensorGridsWithCoeffZero() const noexcept;
+
+  /**
+   * TODO: Document (see SparseGrid::getMaxTGGPCnt)
+   */
+  size_t getMaxTGWithCoeffZeroGPCnt() const noexcept;
+
+  /**
+   * TODO: Document
+   */
+  size_t getMaxTGWithCoeffZeroSumOverGPCntsPerDim() const noexcept;
 
   /*****
   Setter
-  */
+  *****/
+  /**
+   * TODO: Document
+   */
+  void setTensorGridsWithCoeffZero(std::vector<TensorGridCTData>&& tgs);
 
   /**
-   * @brief Appends a tensor grid (copy).
-   * @param tg Tensor grid combination-technique data to add.
+   * TODO: Document (see SparseGrid::addTensorGrid)
    */
-  void addTensorGrid(const TensorGridCTData& tg);
+  void addTensorGridWithCoeffZero(const TensorGridCTData& tg);
 
   /**
-   * @brief Appends a tensor grid (move).
-   * @param tg Tensor grid combination-technique data to move from.
+   * TODO: Document (see SparseGrid::addTensorGrid)
    */
-  void addTensorGrid(TensorGridCTData&& tg);
+  void addTensorGridWithCoeffZero(TensorGridCTData&& tg);
 
-  // *****/
-  //     /**
-  //      * @brief Inserts a tensor grid with c == 0 into the inactive partition.
-  //      * @note O(nTG()) because the active range is shifted by one element.
-  //      * Existing active indices, iterators and spans are invalidated.
-  //      */
-  //     void addInactiveTensorGrid(const TensorGridCTData& tg);
-  // void addInactiveTensorGrid(TensorGridCTData&& tg);
+  /**
+   * TODO: Document (see SparseGrid::setTensorGrid)
+   */
+  void setTensorGridWithCoeffZero(size_t idx, const TensorGridCTData& tg);
+
+  /**
+   * TODO: Document (see SparseGrid::setTensorGrid)
+   */
+  void setTensorGridWithCoeffZero(size_t idx, TensorGridCTData&& tg);
+
+  /**
+   * TODO: Document (see SparseGrid::setMaxTGGPCnt)
+   */
+  void setMaxTGWithCoeffZeroGPCnt(size_t maximum);
+
+  /**
+   * TODO: Document (see SparseGrid::setMaxTGSumOverGPCntsPerDim)
+   */
+  void setMaxTGWithCoeffZeroSumOverGPCntsPerDim(size_t maximum);
+
+  /*****
+  Helper
+  *****/
+  /**
+   * TODO: Document (see SparseGrid::resize)
+   */
+  void resize(size_t nTGWithCoeffNonZero, size_t nTGWithCoeffZero);
+
+  /**
+   * TODO: Document (see SparseGrid::reserve)
+   */
+  void reserve(size_t nCoeffNonZero, size_t nCoeffZero);
 
   /*******
   Iterator
   *******/
-  /// @name Iterators over all tensor grids (including c == 0).
+  /// @name Iterators over the contained tensor grids.
   /// @{
-  iterator beginIncludingZeroCoeffs() noexcept;
-  iterator endIncludingZeroCoeffs() noexcept;
-  const_iterator beginIncludingZeroCoeffs() const noexcept;
-  const_iterator endIncludingZeroCoeffs() const noexcept;
-  const_iterator cbeginIncludingZeroCoeffs() const noexcept;
-  const_iterator cendIncludingZeroCoeffs() const noexcept;
+  iterator begin() noexcept;
+  iterator end() noexcept;
+  const_iterator begin() const noexcept;
+  const_iterator end() const noexcept;
+  const_iterator cbegin() const noexcept;
+  const_iterator cend() const noexcept;
 
-  reverse_iterator rbeginIncludingZeroCoeffs() noexcept;
-  reverse_iterator rendIncludingZeroCoeffs() noexcept;
-  const_reverse_iterator rbeginIncludingZeroCoeffs() const noexcept;
-  const_reverse_iterator rendIncludingZeroCoeffs() const noexcept;
-  const_reverse_iterator crbeginIncludingZeroCoeffs() const noexcept;
-  const_reverse_iterator crendIncludingZeroCoeffs() const noexcept;
+  reverse_iterator rbegin() noexcept;
+  reverse_iterator rend() noexcept;
+  const_reverse_iterator rbegin() const noexcept;
+  const_reverse_iterator rend() const noexcept;
+  const_reverse_iterator crbegin() const noexcept;
+  const_reverse_iterator crend() const noexcept;
   /// @}
 
   /*******
   Operator
   *******/
+
   /**
-   * @brief Order-insensitive equality of active @e and inactive tensor grids.
+   * @brief Order-insensitive content equality.
    *
-   * Comparing with a plain SparseGrid (sg == esg) uses
-   * SparseGrid::operator== and therefore only the active tensor grids.
+   * Two sparse grids are considered equal if they have the same dimension,
+   * the same number of tensor grids, and every tensor grid in @c *this is
+   * also present in @p other.
    *
-   * @note @c O(nTGAll^2).
+   * @param other Sparse grid to compare against.
+   * @return @c true if equal.
+   * @note This operation is @c O(nTG^2) and should be used carefully.
    */
   bool operator==(const ExtensiveSparseGrid& other) const;
+
+ protected:
+  /*********
+  Attributes
+  *********/
+  std::vector<TensorGridCTData> tensorGridWithCoeffZeroData;  ///< TODO: Document
+
+  size_t maxTGWithCoeffZeroGPCnt = 0;                ///< TODO: Document
+  size_t maxTGWithCoeffZeroSumOverGPCntsPerDim = 0;  ///< TODO: Document
+
+  /*****
+  Helper
+  *****/
+  /**
+   * TODO: Document
+   */
+  void recomputeMetaValues();
+
+  /**
+   * TODO: Document
+   */
+  void updateMetaValuesAfterInsertion(const TensorGridCTData& tg);
+
+  /**
+   * TODO: Document
+   */
+  void updateMetaValuesBeforeSwap(const TensorGridCTData& oldTG, const TensorGridCTData& newTG);
 };
 
 }  // namespace combigrid

@@ -5,7 +5,6 @@
  */
 #pragma once
 
-#include <memory>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -73,16 +72,16 @@ class SparseGrid {
   Getter
   *****/
   /// @brief Returns the spatial dimensionality.
-  size_t nDim() const;
+  size_t nDim() const noexcept;
 
   /// @brief Returns the number of tensor grids in the combination.
-  size_t nTG() const;
+  size_t nTG() const noexcept;
 
   /**
    * @brief Returns the @p idx -th tensor grid (with its level multi-index
    * and combination coefficient).
    */
-  const TensorGridCTData& getTensorGrid(size_t idx) const;
+  const TensorGridCTData& getTensorGrid(size_t idx) const noexcept;
 
   /**
    * @brief Returns an iterator to the tensor grid with level multi-index @p mi.
@@ -91,13 +90,13 @@ class SparseGrid {
    * @return Iterator to the matching tensor grid, or @c end() if not found.
    * @note Linear search (@c O(nTG)); avoid in hot loops.
    */
-  const_iterator getTensorGrid(const LvlMI& mi) const;
+  const_iterator getTensorGrid(const LvlMI& mi) const noexcept;
 
   /// @brief Returns the underlying tensor grids.
-  std::span<const TensorGridCTData> getTensorGrids() const;
+  std::span<const TensorGridCTData> getTensorGrids() const noexcept;
 
   /// @brief Returns the (shared) generation instruction or @c nullptr if none was attached.
-  const std::shared_ptr<const SGGenInstr> getGenInstr() const;
+  const std::shared_ptr<const SGGenInstr> getGenInstr() const noexcept;
 
   /**
    * @brief Returns the cached maximum number of grid points across all
@@ -106,7 +105,7 @@ class SparseGrid {
    * The value must be set explicitly via @ref setMaxTGGPCnt; it is not
    * recomputed automatically when tensor grids are added or modified.
    */
-  size_t getMaxTGGPCnt() const;
+  size_t getMaxTGGPCnt() const noexcept;
 
   /**
    * @brief Returns the cached maximum of @f$\sum_k n_k@f$ across all
@@ -116,7 +115,7 @@ class SparseGrid {
    * The value must be set explicitly via @ref setMaxTGSumOverGPCntsPerDim;
    * it is not recomputed automatically.
    */
-  size_t getMaxTGSumOverGPCntsPerDim() const;
+  size_t getMaxTGSumOverGPCntsPerDim() const noexcept;
 
   /*****
   Setter

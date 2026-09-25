@@ -12,6 +12,7 @@
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include "sgpp/combigrid/grids/extensive_sparse_grid.hpp"
 
 namespace sgpp {
 namespace combigrid {
@@ -22,6 +23,21 @@ namespace tools {
  */
 void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
                 const std::vector<CTCoeffType>& coeffs);
+
+/**
+ * TODO: Document
+ * Important requirement: The tensor grids represented through miVec and coeffs must be ordered such
+ * that all tensor grids with a CT coeff of zero are at the front of the vector.
+ */
+void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
+                         const std::vector<CTCoeffType>& coeffs);
+
+/**
+ * TODO: Document
+ */
+std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr,
+                                        const std::span<const LvlMI> mis,
+                                        const std::span<const CTCoeffType> coeffs);
 
 /**
  * @brief Constructs a single tensor grid for the given level multi-index.
@@ -73,6 +89,17 @@ misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim);
  */
 base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
                                      const GPMI& gpCntPerDim);
+
+/**
+ * TODO: Document
+ */
+bool areTGsCorrectlyOrderedForExtensiveSG(const std::vector<CTCoeffType>& coeffs);
+
+}  // namespace sg_gen
+
+}  // namespace tools
+}  // namespace combigrid
+}  // namespace sgpp
 
 }  // namespace sg_gen
 

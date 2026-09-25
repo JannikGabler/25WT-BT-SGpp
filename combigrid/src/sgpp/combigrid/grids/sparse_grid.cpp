@@ -30,7 +30,6 @@ SparseGrid::SparseGrid(const SGGenInstr& genInstr)
     : nDim_(genInstr.nDim()), genInstr(genInstr.clone()) {
   const auto [miVec, coeffs] = genInstr.genReducedMIVecWithCoeffs();
 
-  // tensorGridData.resize(miVec.nMI());
   tools::populateSG(*this, genInstr, miVec, coeffs);
 }
 
@@ -38,46 +37,63 @@ SparseGrid::SparseGrid(const SGGenInstr& genInstr)
 Public Getter
 ************/
 
-size_t SparseGrid::nDim() const { return nDim_; }
+size_t SparseGrid::nDim() const noexcept { return nDim_; }
 
-size_t SparseGrid::nTG() const { return tensorGridData.size(); }
+size_t SparseGrid::nTG() const noexcept { return tensorGridData.size(); }
 
-const TensorGridCTData& SparseGrid::getTensorGrid(size_t idx) const { return tensorGridData[idx]; }
+const TensorGridCTData& SparseGrid::getTensorGrid(size_t idx) const noexcept {
+  assert(idx >= 0 && idx < tensorGridData.size());
 
-const_iterator SparseGrid::getTensorGrid(const LvlMI& mi) const {
+  return tensorGridData[idx];
+}
+
+const_iterator SparseGrid::getTensorGrid(const LvlMI& mi) const noexcept {
   return std::find_if(tensorGridData.begin(), tensorGridData.end(),
                       [&mi](const TensorGridCTData& data) { return data.mi == mi; });
 }
 
-std::span<const TensorGridCTData> SparseGrid::getTensorGrids() const { return tensorGridData; }
+std::span<const TensorGridCTData> SparseGrid::getTensorGrids() const noexcept {
+  return tensorGridData;
+}
 
-const std::shared_ptr<const SGGenInstr> SparseGrid::getGenInstr() const { return genInstr; }
+const std::shared_ptr<const SGGenInstr> SparseGrid::getGenInstr() const noexcept {
+  return genInstr;
+}
 
-size_t SparseGrid::getMaxTGGPCnt() const { return maxTGGPCnt; }
+size_t SparseGrid::getMaxTGGPCnt() const noexcept { return maxTGGPCnt; }
 
-size_t SparseGrid::getMaxTGSumOverGPCntsPerDim() const { return maxTGSumOverGPCntsPerDim; }
+size_t SparseGrid::getMaxTGSumOverGPCntsPerDim() const noexcept { return maxTGSumOverGPCntsPerDim; }
 
 /************
 Public Setter
 ************/
 
 void SparseGrid::setTensorGrids(std::vector<TensorGridCTData>&& tgs) {
+  assert(std::all_of(tgs.begin(), tgs.end(), [this](const TensorGridCTData& tg) {
+    return tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_;
+  }));
+
   tensorGridData = std::move(tgs);
   recomputeMetaValues();
 }
 
 void SparseGrid::addTensorGrid(const TensorGridCTData& tg) {
+  assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
+
   tensorGridData.push_back(tg);
   updateMetaValuesAfterInsertion(tg);
 }
 
 void SparseGrid::addTensorGrid(TensorGridCTData&& tg) {
+  assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
+
   tensorGridData.push_back(std::move(tg));
   updateMetaValuesAfterInsertion(tensorGridData.back());
 }
 
 void SparseGrid::setTensorGrid(const size_t idx, const TensorGridCTData& tg) {
   assert(idx >= 0 && idx < tensorGridData.size());
+  assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
 
   updateMetaValuesBeforeSwap(tensorGridData[idx], tg);
   tensorGridData[idx] = TensorGridCTData(tg);
@@ -85,6 +101,7 @@ void SparseGrid::setTensorGrid(const size_t idx, const TensorGridCTData& tg) {
 
 void SparseGrid::setTensorGrid(const size_t idx, TensorGridCTData&& tg) {
   assert(idx >= 0 && idx < tensorGridData.size());
+  assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
 
   updateMetaValuesBeforeSwap(tensorGridData[idx], tg);
   tensorGridData[idx] = std::move(tg);

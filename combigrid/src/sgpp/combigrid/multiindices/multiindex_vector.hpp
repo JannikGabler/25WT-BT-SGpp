@@ -233,9 +233,9 @@ class MIVec {
   /// @brief Releases unused capacity from the underlying storage.
   void shrink_to_fit() { data_.shrink_to_fit(); }
 
-  /*****************
-  Utility operations
-  *****************/
+  /*****
+  Helper
+  *****/
   /**
    * @brief Tests whether the stored set of multi-indices is downwards closed.
    *
@@ -329,7 +329,7 @@ class MIVec {
   std::vector<T> data_;  // AoS: [idx][dim]
 
   mutable bool cacheCleared;  ///< @c true iff all cached pointers are currently null.
-  mutable std::shared_ptr<MI<T>> componentWiseMax_;            ///< Cache for @ref componentWiseMax().
+  mutable std::shared_ptr<MI<T>> componentWiseMax_;  ///< Cache for @ref componentWiseMax().
   mutable std::shared_ptr<std::vector<size_t>> paretoMaxima_;  ///< Cache for @ref paretoMaxima().
   mutable std::shared_ptr<misc::MIVecLookup<T>> lookup_;       ///< Cache for @ref lookup().
 
