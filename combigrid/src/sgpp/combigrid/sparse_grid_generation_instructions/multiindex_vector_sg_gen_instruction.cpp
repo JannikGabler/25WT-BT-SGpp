@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
@@ -49,6 +50,9 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::internalGenMIVecW
   miVec.shrink_to_fit();
   coeffs.resize(writeIdx);
   coeffs.shrink_to_fit();
+
+  // std::partition(miVec.begin(), miVec.end(),
+  //                [&](const LvlMI& mi) { return coeffs[miVec.getIdxOfMI(mi)] == 0; });
 
   return {miVec, coeffs};
 }

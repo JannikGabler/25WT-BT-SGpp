@@ -3,8 +3,7 @@
  * @brief Defines the @c MIVec container template that stores a sequence of
  * fixed-dimension multi-indices in a contiguous, cache-friendly layout.
  */
-#ifndef COMBIGRID_MULTIINDEX_VECTOR_HPP
-#define COMBIGRID_MULTIINDEX_VECTOR_HPP
+#pragma once
 
 #include <algorithm>
 #include <cassert>
@@ -349,5 +348,3 @@ class MIVec {
 
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

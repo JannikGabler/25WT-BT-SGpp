@@ -55,7 +55,7 @@ namespace source_func {
 /// disable to avoid hashing overhead when caching is not beneficial.
 constexpr bool USE_CACHE = false;
 
-}
+}  // namespace source_func
 
 /**
  * @brief Constants controlling sparse-grid generation instructions.
@@ -65,7 +65,7 @@ namespace sg_gen_instr {
 // Full sg gen instruction
 /// Minimum number of generated multi-indices to trigger parallel generation
 /// in the full sparse-grid generator.
-constexpr size_t FSG_MIN_MI_FOR_CONCURRENCY = 1000;
+constexpr size_t CSG_MIN_MI_FOR_CONCURRENCY = 1000;
 /// Minimum batch size per thread during parallel full sparse-grid
 /// generation.
 constexpr size_t FSG_MIN_MI_PER_THREAD = 500;
@@ -82,7 +82,7 @@ namespace ct_coefficients {
 /// computation.
 constexpr size_t MIN_MIS_FOR_CONCURRENCY = 1000;
 
-}
+}  // namespace ct_coefficients
 
 /**
  * @brief Constants controlling sparse-grid node lookup population.
@@ -93,7 +93,7 @@ namespace sg_gen_node_lookup {
 /// the shared node lookup table during sparse-grid generation.
 constexpr size_t FOR_ITERATIONS_TO_TASK_QUEUE_PUSH = 100;
 
-}
+}  // namespace sg_gen_node_lookup
 
 }  // namespace constants
 

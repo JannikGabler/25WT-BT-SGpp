@@ -187,6 +187,23 @@ std::vector<size_t> getBarPosOfMIIdx(const size_t miIdx, const std::vector<size_
   return barPos;
 }
 
+/*
+Based on the mathematical stars and bars concept
+*/
+void populateMIVec(LvlMIVec& miVec, const LvlType minSum, const LvlType maxSum,
+                   const std::vector<size_t>& nMIs) {
+  const size_t totalNumberOfMIs = nMIs[nMIs.size() - 1];
+  const std::vector<size_t> part = tools::partitionRangeForConcurrency(
+      totalNumberOfMIs, constants::sg_gen_instr::CSG_MIN_MI_FOR_CONCURRENCY,
+      constants::sg_gen_instr::FSG_MIN_MI_PER_THREAD);
+
+#pragma omp parallel num_threads(part.size() - 1) if (part.size() > 2)
+  {
+    const size_t threadId = (size_t)omp_get_thread_num();
+    populateMIVecSerial(miVec, part[threadId], part[threadId + 1] - 1, minSum, nMIs);
+  }
+}
+
 void populateMIVecSerial(LvlMIVec& miVec, const size_t startIdx, const size_t endIdx,
                          const LvlType minSum, const std::vector<size_t>& nMIs) {
   size_t sumIdx = getSumIdxOfMIIdx(startIdx, nMIs);
@@ -202,23 +219,6 @@ void populateMIVecSerial(LvlMIVec& miVec, const size_t startIdx, const size_t en
 
     addBarPosAsMI(miVec, miIdx, barPos, maxBarPos);
     incrementBarPos(barPos, maxBarPos);
-  }
-}
-
-/*
-Based on the mathematical stars and bars concept
-*/
-void populateMIVec(LvlMIVec& miVec, const LvlType minSum, const LvlType maxSum,
-                   const std::vector<size_t>& nMIs) {
-  const size_t totalNumberOfMIs = nMIs[nMIs.size() - 1];
-  const std::vector<size_t> part = tools::partitionRangeForConcurrency(
-      totalNumberOfMIs, constants::sg_gen_instr::FSG_MIN_MI_FOR_CONCURRENCY,
-      constants::sg_gen_instr::FSG_MIN_MI_PER_THREAD);
-
-#pragma omp parallel num_threads(part.size() - 1) if (part.size() > 2)
-  {
-    const size_t threadId = (size_t)omp_get_thread_num();
-    populateMIVecSerial(miVec, part[threadId], part[threadId + 1] - 1, minSum, nMIs);
   }
 }
 

@@ -161,6 +161,9 @@ std::vector<size_t> getBarPosOfMIIdx(size_t miIdx, const std::vector<size_t>& nM
 void populateMIVec(LvlMIVec& miVec, LvlType minSum, LvlType maxSum,
                    const std::vector<size_t>& nMIs);
 
+void populateMIVecSerial(LvlMIVec& miVec, const size_t startIdx, const size_t endIdx,
+                         const LvlType minSum, const std::vector<size_t>& nMIs);
+
 /**
  * TODO: Document
  */
