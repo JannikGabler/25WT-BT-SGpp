@@ -198,7 +198,7 @@ std::vector<size_t> naivParetoMaximum(const LvlMIVec& input) {
             dominated = true;
             break;
           }
-        } else if (tools::miDominatesMI(input, miIdx2, miIdx1)) {
+        } else if (input[miIdx2] >= input[miIdx1]) {  // Does input[miIdx2] dominate input[miIdx1]?
           dominated = true;
           break;
         }
