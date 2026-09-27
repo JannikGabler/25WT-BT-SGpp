@@ -36,7 +36,7 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::genMIVecWithCoeff
   coeffs.resize(writeIdx);
   coeffs.shrink_to_fit();
 
-  return {miVec, coeffs};
+  return {std::move(miVec), std::move(coeffs)};
 }
 
 std::shared_ptr<SGGenInstr> MIVecSGGenInstr::clone() const {

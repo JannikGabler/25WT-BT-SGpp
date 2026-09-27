@@ -3,8 +3,7 @@
  * @brief Computation of the combination-technique coefficients
  * @f$c_{\vec{\ell}}@f$ for a downwards-closed level multi-index set.
  */
-#ifndef COMBIGRID_TOOLS_COMBITECH_COEFFICIENTS_HPP
-#define COMBIGRID_TOOLS_COMBITECH_COEFFICIENTS_HPP
+#pragma once
 
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -59,8 +58,19 @@ std::vector<CTCoeffType> computeCTCoeffsNaive(const LvlMIVec& miVec);
  */
 CTCoeffType computeCTCoeffSingle(const LvlMI& mi, const LvlMIVec& miVec);
 
+/******************
+Internal operations
+******************/
+namespace ct_coeff_calc {
+
+CTCoeffType internalComputeCTCoeffSingle(const MIView<LvlType> mi, const LvlMIVec& miVec,
+                                         const misc::MIVecLookup<LvlType>& lookup,
+                                         const misc::DiscUnitBB<LvlType>& offsets, LvlMI& succMI);
+
+CTCoeffType computeParityOfMI(const std::vector<LvlType>& mi);
+
+}  // namespace ct_coeff_calc
+
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

@@ -15,6 +15,8 @@
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_unit_bounding_box.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <sgpp/combigrid/multiindices/multiindex_view.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
 #include <sgpp/combigrid/tools/multiindex_bounding_box_generation.hpp>
 #include <sgpp/combigrid/tools/multiindex_domination.hpp>
@@ -54,6 +56,10 @@ bool isMIVecDownwardsClosed(const MIVec<T>& miVec) {
 #pragma omp parallel shared(closed) if (miVec.nMI() >= \
                                             constants::mi_vec::DWC_MIN_MI_FOR_CONCURRENCY)
   {
+    // Per-thread scratch multi-indices, reused for every candidate (no allocation per iteration).
+    MI<T> mi(miVec.nDim());
+    MI<T> predecessor(miVec.nDim());
+
 #pragma omp for schedule(static)
     for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
       bool stillClosed;
@@ -63,10 +69,17 @@ bool isMIVecDownwardsClosed(const MIVec<T>& miVec) {
         continue;
       }
 
-      const MI<T> mi = miVec[miIdx];
+      mi = miVec[miIdx];
 
       for (const std::vector<T>& offset : offsets) {
-        if (offset <= mi && !lookup->contains(mi - offset)) {
+        if (!(offset <= mi)) {
+          continue;
+        }
+
+        predecessor = mi;
+        predecessor -= offset;
+
+        if (!lookup->contains(predecessor)) {
 #pragma omp atomic write
           closed = false;
 #pragma omp cancel for
@@ -85,24 +98,23 @@ bool isMIVecDownwardsClosed(const MIVec<T>& miVec) {
  *
  * @tparam T              Multi-index element type.
  * @param nDim            Multi-index dimensionality.
- * @param localClosures   Per-thread closure entries.
+ * @param localClosures   Per-thread closure entries (concatenated in order).
  * @return Combined closure as a single @c MIVec.
  */
 template <typename T>
-MIVec<T> mergeLocalClosures(const size_t nDim,
-                            const std::vector<std::vector<std::vector<T>>>& localClosures) {
+MIVec<T> mergeLocalClosures(const size_t nDim, const std::vector<MIVec<T>>& localClosures) {
   size_t miCnt = 0;
 
-  for (size_t i = 0; i < localClosures.size(); i++) {
-    miCnt += localClosures[i].size();
+  for (const MIVec<T>& localClosure : localClosures) {
+    miCnt += localClosure.nMI();
   }
 
-  MIVec<T> closure(nDim, miCnt);
-  size_t miIdx = 0;
+  MIVec<T> closure(nDim, 0);
+  closure.reserve(miCnt);
 
-  for (const std::vector<std::vector<T>>& localClosure : localClosures) {
-    for (const std::vector<T>& mi : localClosure) {
-      closure.setMI(miIdx++, mi);
+  for (const MIVec<T>& localClosure : localClosures) {
+    for (const MIView<T> mi : localClosure) {
+      closure.push_back(mi);
     }
   }
   return closure;
@@ -130,7 +142,7 @@ MIVec<T> genMIVecDownwardsClosure(const MIVec<T>& miVec) {
 
   const size_t nPartitions = part.size() - 1;
 
-  std::vector<std::vector<std::vector<T>>> localClosures(nPartitions);
+  std::vector<MIVec<T>> localClosures(nPartitions, MIVec<T>(miVec.nDim(), 0));
 
   // num_threads is only a request: the team may be smaller. Distributing the partitions with a
   // worksharing loop (instead of one partition per thread ID) guarantees all are processed.
@@ -141,10 +153,10 @@ MIVec<T> genMIVecDownwardsClosure(const MIVec<T>& miVec) {
     auto iter = boundingBox.begin(startIdx);
 
     for (size_t i = startIdx; i < endIdx; i++) {
-      const std::vector<T> mi = *iter;
+      const MI<T>& mi = *iter;
 
       if (miVecDominatesMI(miVec, *paretoMaxima, mi)) {
-        localClosures[partIdx].emplace_back(mi);
+        localClosures[partIdx].push_back(mi);
       }
 
       ++iter;

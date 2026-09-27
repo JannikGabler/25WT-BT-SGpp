@@ -25,11 +25,11 @@ void populateSG(const SGGenInstr& genInstr, const LvlMIVec& miVec,
 #pragma omp parallel for reduction(max : maxGPCnt, maxSumOverGPCntsPerDim) \
     schedule(guided)  // TODO: Schedule (benchmark)
   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
-    const LvlMI mi = miVec[miIdx];
+    LvlMI mi = miVec[miIdx];  // Owning copy, moved into the tensor grid data below.
     const CTCoeffType coeff = coeffs[miIdx];
 
     const TensorGrid tg = genTGForMI(mi, genInstr);
-    out.setTensorGrid(miIdx, {mi, coeff, std::move(tg)});
+    out.setTensorGrid(miIdx, {std::move(mi), coeff, std::move(tg)});
 
     maxGPCnt = std::max(maxGPCnt, tg.nGP());
     maxSumOverGPCntsPerDim = std::max(maxSumOverGPCntsPerDim, tg.getNodesPerDim().size());
