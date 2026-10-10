@@ -7,8 +7,7 @@
  * one per dimension. Depending on context, the entries denote refinement
  * levels (@c LvlType) or per-dimension grid-point indices (@c GPCntType).
  */
-#ifndef COMBIGRID_MULTIINDEX_HPP
-#define COMBIGRID_MULTIINDEX_HPP
+#pragma once
 
 #include <cassert>
 #include <cstddef>
@@ -16,6 +15,8 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -88,6 +89,32 @@ class MI {
   template <class InputIt>
   MI(InputIt first, InputIt last) : data_(first, last) {}
 
+#ifndef SWIG
+  /**
+   * @brief Replaces the entries by those of a contiguous range of @c value_type
+   * (e.g. an @c MIView or @c MIRef).
+   *
+   * Reuses the existing storage if its capacity suffices. Without this
+   * overload, assigning a view would first materialize a temporary @c MI;
+   * algorithms that move elements of an @c MIVec into a buffer of @c MI
+   * (e.g. @c std::stable_sort, @c std::stable_partition) would then allocate
+   * once per moved element.
+   *
+   * @tparam R Type providing @c value_type, @c data() and @c size().
+   * @param range Entries to copy.
+   * @return Reference to this multi-index.
+   */
+  template <typename R, typename = typename std::enable_if<
+                            !std::is_same<typename std::decay<R>::type, MI>::value &&
+                            std::is_same<typename R::value_type, value_type>::value &&
+                            std::is_convertible<decltype(std::declval<const R&>().data()),
+                                                const value_type*>::value>::type>
+  MI& operator=(const R& range) {
+    data_.assign(range.data(), range.data() + range.size());
+    return *this;
+  }
+#endif
+
   /* =========================
    Implicit convertion
    ========================= */
@@ -97,9 +124,9 @@ class MI {
   /// @brief Implicit conversion to a read-only underlying @c std::vector.
   operator const std::vector<value_type>&() const noexcept { return data_; }
 
-  /* =========================
+  /******************
    Additional methods
-   ========================= */
+  ******************/
   // size_t toLinearIndex() const {
   //   const size_t nDim = this->size();
   //   size_t idx = 0;
@@ -541,5 +568,3 @@ class MI {
 
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

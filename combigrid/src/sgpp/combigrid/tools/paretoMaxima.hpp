@@ -22,8 +22,8 @@
 #include <omp.h>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/tools/concurrency.hpp>
-// #include <sgpp/combigrid/tools/multiindex_domination.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -51,11 +51,14 @@ namespace tools {
  * @param lookup      Hash lookup over @p miVec.
  * @param paretoMaxima In/out: list of Pareto-maximal indices found so far.
  * @param candidateIdx Index of the candidate inside @p miVec.
+ * @param candidate    Scratch buffer with @c miVec.nDim() entries, reused across
+ *                     calls to avoid an allocation per candidate.
  */
 template <typename T>
 void updateParetoMaximaDWC(const combigrid::MIVec<T>& miVec, const misc::MIVecLookup<T>& lookup,
-                           std::vector<size_t>& paretoMaxima, const size_t candidateIdx) {
-  MI<T> candidate = miVec[candidateIdx];
+                           std::vector<size_t>& paretoMaxima, const size_t candidateIdx,
+                           MI<T>& candidate) {
+  candidate = miVec[candidateIdx];
 
   for (size_t dim = 0; dim < miVec.nDim(); dim++) {
     if (dim > 0) {
@@ -84,16 +87,16 @@ void updateParetoMaximaDWC(const combigrid::MIVec<T>& miVec, const misc::MIVecLo
  * @param candidateIdx Index of the candidate inside @p miVec.
  */
 template <typename T>
-void updateParetoMaximaNonDWC(const combigrid::MIVec<T>& miVec, std::vector<size_t>& paretoMaxima,
+void updateParetoMaximaNonDWC(const MIVec<T>& miVec, std::vector<size_t>& paretoMaxima,
                               const size_t candidateIdx) {
   bool dominated = false;
 
   for (auto iter = paretoMaxima.begin(); iter != paretoMaxima.end(); iter++) {
-    if (miDominatesMI(miVec, *iter, candidateIdx)) {
+    if (miVec[*iter] >= miVec[candidateIdx]) {  // Does miVec[*iter] dominate miVec[candidateIdx]?
       dominated = true;
       break;
     }
-    if (miDominatesMI(miVec, candidateIdx, *iter)) {
+    if (miVec[candidateIdx] >= miVec[*iter]) {  // Does miVec[candidateIdx] dominate miVec[*iter]?
       iter = paretoMaxima.erase(iter) - 1;
     }
   }
@@ -155,46 +158,6 @@ inline std::vector<size_t> zipParetoMax(std::vector<std::vector<size_t>>& localP
 }
 
 /**
- * @brief Serial DWC Pareto-maxima computation.
- * @tparam T   Multi-index element type.
- * @param miVec Downwards-closed source set.
- * @return Indices of Pareto-maximal multi-indices.
- */
-template <typename T>
-std::vector<size_t> computeParetoMaxSerialDWC(const combigrid::MIVec<T>& miVec) {
-  std::vector<size_t> paretoMaxima;
-
-  const misc::MIVecLookup<T> lookup(miVec);
-
-  for (size_t candidateIdx = 0; candidateIdx < miVec.nMI(); candidateIdx++) {
-    updateParetoMaximaDWC(miVec, lookup, paretoMaxima, candidateIdx);
-  }
-
-  return paretoMaxima;
-}
-
-/**
- * @brief Serial non-DWC Pareto-maxima computation on the index sub-range
- * @c [startIdx, endIdx].
- * @tparam T      Multi-index element type.
- * @param miVec    Source set.
- * @param startIdx Inclusive start index.
- * @param endIdx   Inclusive end index.
- * @return Indices of locally Pareto-maximal multi-indices in that range.
- */
-template <typename T>
-std::vector<size_t> computeParetoMaxSerialNotDWC(const combigrid::MIVec<T>& miVec,
-                                                 const size_t startIdx, const size_t endIdx) {
-  std::vector<size_t> paretoMaxima;
-
-  for (size_t candidateIdx = startIdx; candidateIdx <= endIdx; candidateIdx++) {
-    updateParetoMaximaNonDWC(miVec, paretoMaxima, candidateIdx);
-  }
-
-  return paretoMaxima;
-}
-
-/**
  * @brief Parallel DWC Pareto-maxima computation (OpenMP).
  *
  * Each thread processes a static slice of @p miVec; per-thread results
@@ -205,8 +168,9 @@ std::vector<size_t> computeParetoMaxSerialNotDWC(const combigrid::MIVec<T>& miVe
  * @return Indices of Pareto-maximal multi-indices.
  */
 template <typename T>
-std::vector<size_t> computeParetoMaxParallelDWC(const combigrid::MIVec<T>& miVec) {
-  const std::vector<size_t> partitioning = tools::partitionRangeForConcurrency(miVec.nMI(), 0, 1);
+std::vector<size_t> computeParetoMaxDWC(const combigrid::MIVec<T>& miVec) {
+  const std::vector<size_t> partitioning = tools::partitionRangeForConcurrency(
+      miVec.nMI(), constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY, 1);
   const size_t nPartitions = partitioning.size() - 1;
   const misc::MIVecLookup<T> lookup(miVec);
 
@@ -214,13 +178,14 @@ std::vector<size_t> computeParetoMaxParallelDWC(const combigrid::MIVec<T>& miVec
 
   // Results are stored per partition (not per thread ID), so the concatenation below is ordered
   // and independent of the team size.
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for num_threads(nPartitions) schedule(static) if (nPartitions > 1)
   for (size_t partIdx = 0; partIdx < nPartitions; partIdx++) {
     const size_t startIdx = partitioning[partIdx];
     const size_t endIdx = partitioning[partIdx + 1];
+    MI<T> candidate(miVec.nDim());
 
     for (size_t candidateIdx = startIdx; candidateIdx < endIdx; candidateIdx++) {
-      updateParetoMaximaDWC<T>(miVec, lookup, localParetoMaxima[partIdx], candidateIdx);
+      updateParetoMaximaDWC<T>(miVec, lookup, localParetoMaxima[partIdx], candidateIdx, candidate);
     }
   }
 
@@ -239,8 +204,7 @@ std::vector<size_t> computeParetoMaxParallelDWC(const combigrid::MIVec<T>& miVec
  * @return Indices of Pareto-maximal multi-indices.
  */
 template <typename T>
-std::vector<size_t> computeParetoMaxParallelNonDWC(const combigrid::MIVec<T>& miVec) {
-  // const size_t length = miVec.nMI() * miVec.nDim();
+std::vector<size_t> computeParetoMaxNonDWC(const combigrid::MIVec<T>& miVec) {
   const size_t minBatchSize =
       (constants::mi_vec::PM_MIN_MIVEC_BATCH_LENGTH_PER_THREAD + miVec.nDim() - 1) / miVec.nDim();
 
@@ -250,10 +214,16 @@ std::vector<size_t> computeParetoMaxParallelNonDWC(const combigrid::MIVec<T>& mi
 
   // num_threads is only a request: the team may be smaller. Distributing the partitions with a
   // worksharing loop (instead of one partition per thread ID) guarantees all are processed.
-#pragma omp parallel for num_threads(nPartitions) schedule(static)
+#pragma omp parallel for num_threads(nPartitions) schedule(static) if (nPartitions > 1)
   for (size_t partIdx = 0; partIdx < nPartitions; partIdx++) {
-    localParetoMaxima[partIdx] =
-        computeParetoMaxSerialNotDWC(miVec, partitioning[partIdx], partitioning[partIdx + 1] - 1);
+    const size_t startIdx = partitioning[partIdx];
+    const size_t endIdx = partitioning[partIdx + 1];
+
+    std::vector<size_t>& paretoMaxima = localParetoMaxima[partIdx];
+
+    for (size_t candidateIdx = startIdx; candidateIdx < endIdx; candidateIdx++) {
+      updateParetoMaximaNonDWC(miVec, paretoMaxima, candidateIdx);
+    }
   }
 
   return mergeParetoMax(miVec, localParetoMaxima);
@@ -278,19 +248,62 @@ std::vector<size_t> computeParetoMaxima(const combigrid::MIVec<T>& miVec,
   }
 
   if (isDownwardsClosed) {
-    if (length < constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
-      return computeParetoMaxSerialDWC<T>(miVec);
-    } else {
-      return computeParetoMaxParallelDWC<T>(miVec);
-    }
+    return computeParetoMaxDWC<T>(miVec);
+    // if (length < constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
+    //   return computeParetoMaxSerialDWC<T>(miVec);
+    // } else {
+
+    // }
   } else {
-    if (length < constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
-      return computeParetoMaxSerialNotDWC<T>(miVec, 0, miVec.nMI() - 1);
-    } else {
-      return computeParetoMaxParallelNonDWC<T>(miVec);
-    }
+    return computeParetoMaxNonDWC<T>(miVec);
+    // if (length < constants::mi_vec::PM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY) {
+    //   return computeParetoMaxSerialNotDWC<T>(miVec, 0, miVec.nMI() - 1);
+    // } else {
+
+    // }
   }
 }
+
+// /**
+//  * @brief Serial DWC Pareto-maxima computation.
+//  * @tparam T   Multi-index element type.
+//  * @param miVec Downwards-closed source set.
+//  * @return Indices of Pareto-maximal multi-indices.
+//  */
+// template <typename T>
+// std::vector<size_t> computeParetoMaxSerialDWC(const combigrid::MIVec<T>& miVec) {
+//   std::vector<size_t> paretoMaxima;
+
+//   const misc::MIVecLookup<T> lookup(miVec);
+//   MI<T> candidate(miVec.nDim());
+
+//   for (size_t candidateIdx = 0; candidateIdx < miVec.nMI(); candidateIdx++) {
+//     updateParetoMaximaDWC(miVec, lookup, paretoMaxima, candidateIdx, candidate);
+//   }
+
+//   return paretoMaxima;
+// }
+
+// /**
+//  * @brief Serial non-DWC Pareto-maxima computation on the index sub-range
+//  * @c [startIdx, endIdx].
+//  * @tparam T      Multi-index element type.
+//  * @param miVec    Source set.
+//  * @param startIdx Inclusive start index.
+//  * @param endIdx   Inclusive end index.
+//  * @return Indices of locally Pareto-maximal multi-indices in that range.
+//  */
+// template <typename T>
+// std::vector<size_t> computeParetoMaxSerialNotDWC(const combigrid::MIVec<T>& miVec,
+//                                                  const size_t startIdx, const size_t endIdx) {
+//   std::vector<size_t> paretoMaxima;
+
+//   for (size_t candidateIdx = startIdx; candidateIdx <= endIdx; candidateIdx++) {
+//     updateParetoMaximaNonDWC(miVec, paretoMaxima, candidateIdx);
+//   }
+
+//   return paretoMaxima;
+// }
 
 }  // namespace tools
 }  // namespace combigrid

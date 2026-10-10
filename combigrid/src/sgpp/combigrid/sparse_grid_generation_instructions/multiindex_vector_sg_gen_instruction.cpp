@@ -51,10 +51,13 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::internalGenMIVecW
   coeffs.resize(writeIdx);
   coeffs.shrink_to_fit();
 
-  // std::partition(miVec.begin(), miVec.end(),
-  //                [&](const LvlMI& mi) { return coeffs[miVec.getIdxOfMI(mi)] == 0; });
+  // TODO: Partition
 
-  return {miVec, coeffs};
+  return {std::move(miVec), std::move(coeffs)};
+}
+
+std::shared_ptr<SGGenInstr> MIVecSGGenInstr::clone() const {
+  return std::make_shared<MIVecSGGenInstr>(*this);
 }
 
 }  // namespace combigrid

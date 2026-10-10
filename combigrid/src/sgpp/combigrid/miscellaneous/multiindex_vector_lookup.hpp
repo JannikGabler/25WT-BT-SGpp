@@ -9,6 +9,7 @@
 #include <sgpp/combigrid/miscellaneous/multiindex_lookup_equal.hpp>
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup_hash.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <sgpp/combigrid/multiindices/multiindex_view.hpp>
 // #include <sgpp/combigrid/type_defs.hpp>
 #include <unordered_map>
 
@@ -55,15 +56,15 @@ class MIVecLookup {
 
   /**
    * @brief Returns @c true iff @p mi is contained in the underlying @c MIVec.
-   * @param mi Multi-index to query.
+   * @param mi Multi-index to query (an @c MI, @c MIView or @c MIRef).
    */
-  bool contains(const MI<T>& mi) const { return find(mi) < miVec.nMI(); }
+  bool contains(const MIView<T> mi) const { return find(mi) < miVec.nMI(); }
 
   /**
    * @brief Returns the slot index of @p mi, or @c miVec.nMI() if not present.
-   * @param mi Multi-index to query.
+   * @param mi Multi-index to query (an @c MI, @c MIView or @c MIRef).
    */
-  size_t find(const MI<T>& mi) const {
+  size_t find(const MIView<T> mi) const {
     if (mi.size() != miVec.nDim()) {
       return miVec.nMI();
     }

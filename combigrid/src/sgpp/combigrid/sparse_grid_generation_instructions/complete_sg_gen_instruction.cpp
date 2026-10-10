@@ -4,6 +4,7 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation_instructions/complete_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -23,9 +24,9 @@ LvlMIVec CompleteSGGenInstr::genReducedMIVec() const {
 }
 
 std::pair<LvlMIVec, std::vector<CTCoeffType>> CompleteSGGenInstr::genFullMIVecWithCoeffs() const {
-  const LvlMIVec miVec = genFullMIVec();
-  const std::vector<CTCoeffType> coeff = tools::genFullCoeffForCompleteSG(maxLvl, nDim());
-  return {miVec, coeff};
+  LvlMIVec miVec = genFullMIVec();
+  std::vector<CTCoeffType> coeff = tools::genFullCoeffForCompleteSG(maxLvl, nDim());
+  return {std::move(miVec), std::move(coeff)};
 }
 
 std::pair<LvlMIVec, std::vector<CTCoeffType>> CompleteSGGenInstr::genReducedMIVecWithCoeffs()
