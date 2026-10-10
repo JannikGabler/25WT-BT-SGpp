@@ -16,6 +16,7 @@
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/multiindices/multiindex_vector_view.hpp>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -49,6 +50,12 @@ using LvlMI = MI<LvlType>;
  * that participate in a combination-technique sparse grid.
  */
 using LvlMIVec = MIVec<LvlType>;
+
+/**
+ * @brief Read-only, non-owning view of a contiguous range of the level
+ * multi-indices stored in an LvlMIVec (see @c MIVec::getView()).
+ */
+using LvlMIVecView = MIVecView<LvlType>;
 
 /**
  * @brief Hash-based lookup structure mapping level multi-indices to their

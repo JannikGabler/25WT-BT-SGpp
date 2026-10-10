@@ -14,6 +14,7 @@
 #include <sgpp/combigrid/miscellaneous/multiindex_vector_lookup.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector_iterator.hpp>
+#include <sgpp/combigrid/multiindices/multiindex_vector_view.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_lexicographic_less.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_reference.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_view.hpp>
@@ -54,7 +55,12 @@ namespace combigrid {
  * component-wise partial order: ordering algorithms need a strict weak
  * ordering such as @ref MILexLess.
  *
- * <b>Invalidation.</b> Iterators and proxies follow the rules of
+ * <b>Views of ranges.</b> @ref getView returns an @c MIVecView<T>, the
+ * read-only counterpart of a @c std::span over the stored multi-indices. It
+ * is sliced in constant time (@c first, @c last, @c subview) and passed by
+ * value, e.g. @c vec.getView().first(n) for the first @c n multi-indices.
+ *
+ * <b>Invalidation.</b> Iterators, proxies and views follow the rules of
  * @c std::vector: operations that may reallocate (@ref push_back beyond the
  * capacity, @ref reserve, @ref resize, @ref shrink_to_fit) invalidate all of
  * them; @ref erase and @ref pop_back invalidate those at or after the point
@@ -220,6 +226,8 @@ class MIVec {
   MIRef<T> front() noexcept { return (*this)[0]; }
   MIView<T> back() const noexcept { return (*this)[nMI_ - 1]; }
   MIRef<T> back() noexcept { return (*this)[nMI_ - 1]; }
+
+  MIVecView<T> getView() const noexcept { return MIVecView<T>(data_.data(), nDim_, nMI_); }
 
   /*******
   Iterator
