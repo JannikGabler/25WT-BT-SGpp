@@ -1,9 +1,9 @@
-#include <algorithm>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
+#include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
 #include <utility>
@@ -51,13 +51,10 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::internalGenMIVecW
   coeffs.resize(writeIdx);
   coeffs.shrink_to_fit();
 
-  // TODO: Partition
+  // Partition the tensor grids such that all tensor grids with a CT coeff of zero are at the front.
+  tools::sg_gen::partitionForExtensiveSG(miVec, coeffs);
 
   return {std::move(miVec), std::move(coeffs)};
-}
-
-std::shared_ptr<SGGenInstr> MIVecSGGenInstr::clone() const {
-  return std::make_shared<MIVecSGGenInstr>(*this);
 }
 
 }  // namespace combigrid

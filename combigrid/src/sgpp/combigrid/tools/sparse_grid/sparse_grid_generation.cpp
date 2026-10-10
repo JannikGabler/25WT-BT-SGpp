@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
@@ -34,7 +35,7 @@ void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVe
   //     tgData[miIdx] = {std::move(mi), coeffs[miIdx], std::move(tg)};
   //   }
 
-  std::vector<TensorGridCTData> tgData = genTGData(genInstr, miVec.getSpan(), coeffs);
+  std::vector<TensorGridCTData> tgData = genTGData(genInstr, miVec.getView(), coeffs);
 
   sg.setTensorGrids(std::move(tgData));
 }
@@ -43,7 +44,7 @@ void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, co
                          const std::vector<CTCoeffType>& coeffs) {
   assert(sg.nDim() == genInstr.nDim() && sg.nDim() == miVec.nDim());
   assert(miVec.nMI() == coeffs.size());
-  assert(sg_gen::areTGsCorrectlyOrderedForExtensiveSG(coeffs));
+  assert(sg_gen::areTGsCorrectlyPartitionedForExtensiveSG(coeffs));
 
   const size_t nTG = miVec.nMI();
 
@@ -52,20 +53,21 @@ void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, co
   const size_t nTGWithCoeffZero =
       static_cast<size_t>(std::distance(coeffs.begin(), partitionPoint));
 
-  std::vector<TensorGridCTData> nonZeroCoeffTGData =
-      genTGData(genInstr, miVec.getSpan().first(nTGWithCoeffZero),
-                std::span<const CTCoeffType>(coeffs).first(nTGWithCoeffZero));
   std::vector<TensorGridCTData> zeroCoeffTGData =
-      genTGData(genInstr, miVec.getSpan().last(nTG - nTGWithCoeffZero),
+      genTGData(genInstr, miVec.getView().first(nTGWithCoeffZero),
+                std::span<const CTCoeffType>(coeffs).first(nTGWithCoeffZero));
+  std::vector<TensorGridCTData> nonZeroCoeffTGData =
+      genTGData(genInstr, miVec.getView().last(nTG - nTGWithCoeffZero),
                 std::span<const CTCoeffType>(coeffs).last(nTG - nTGWithCoeffZero));
 
   sg.setTensorGrids(std::move(nonZeroCoeffTGData));
   sg.setTensorGridsWithCoeffZero(std::move(zeroCoeffTGData));
 }
 
-std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr,
-                                        const std::span<const LvlMI> mis,
+std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr, const LvlMIVecView mis,
                                         const std::span<const CTCoeffType> coeffs) {
+  assert(mis.size() == coeffs.size());
+
   std::vector<TensorGridCTData> tgData(mis.size());
 
 #pragma omp parallel for schedule(guided)  // TODO: Schedule (benchmark)
@@ -82,21 +84,8 @@ std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr,
 
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr) {
   GPMI gpCntPerDim = sg_gen::getGPCntPerDim(mi, genInstr);
-  // const misc::DiscRectBB<GPCntType> iterationBB(std::vector<GPCntType>(genInstr.nDim()),
-  //                                               gpCntPerDim, false);
+
   base::DataVector nodesPerDimForTG = sg_gen::getNodesPerDimForTG(mi, genInstr, gpCntPerDim);
-
-  // TODO: Delete
-  // TensorGrid tg(gpCntPerDim);
-  // size_t idx = 0;
-
-  // for (const std::vector<GPCntType>& it : iterationBB) {
-  //   for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-  //     const base::DataVector& nodes = nodesPerDimForTG[dim];
-  //     tg(idx, dim) = nodes[it[dim]];
-  //   }
-  //   idx++;
-  // }
 
   return TensorGrid(std::move(gpCntPerDim), std::move(nodesPerDimForTG));
 }
@@ -152,7 +141,33 @@ base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr
   return nodesPerDim;
 }
 
-bool areTGsCorrectlyOrderedForExtensiveSG(const std::vector<CTCoeffType>& coeffs) {
+size_t partitionForExtensiveSG(LvlMIVec& miVec, std::vector<CTCoeffType>& coeffs) {
+  assert(miVec.nMI() == coeffs.size());
+
+  size_t writeIdx = 0;
+  LvlMIVec tmpMIVec(miVec.nDim(), 0);
+  std::vector<CTCoeffType> tmpCoeffs;
+
+  for (size_t i = 0; i < miVec.nMI(); i++) {
+    if (coeffs[i] == 0) {
+      miVec.moveMI(writeIdx, i);  // case writeIdx == i is already covered in MIVec::moveMI
+      writeIdx++;
+    } else {
+      tmpMIVec.push_back(miVec[i]);
+      tmpCoeffs.push_back(coeffs[i]);
+    }
+  }
+
+  std::fill(coeffs.begin(), coeffs.begin() + static_cast<std::ptrdiff_t>(writeIdx), 0);
+  std::move(tmpMIVec.begin(), tmpMIVec.end(),
+            miVec.begin() + static_cast<std::ptrdiff_t>(writeIdx));
+  std::copy(tmpCoeffs.begin(), tmpCoeffs.end(),
+            coeffs.begin() + static_cast<std::ptrdiff_t>(writeIdx));
+
+  return writeIdx;
+}
+
+bool areTGsCorrectlyPartitionedForExtensiveSG(const std::vector<CTCoeffType>& coeffs) {
   bool hasSeenNonZeroCoeff = false;
 
   for (size_t i = 0; i < coeffs.size(); i++) {
