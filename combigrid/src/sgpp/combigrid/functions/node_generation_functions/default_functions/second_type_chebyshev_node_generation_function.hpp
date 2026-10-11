@@ -49,6 +49,9 @@ class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
   /// @copydoc NodeGenFunc::getInterpolationMethod
   InterpolationMethod* getInterpolationMethod(const GPCntType nNodes) const override;
 
+  /// @copydoc NodeGenFunc::isNested
+  bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const override;
+
   /********
   Operators
   ********/

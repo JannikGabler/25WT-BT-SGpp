@@ -31,7 +31,7 @@ class NodeGenFunc {
    * @brief Constructs the node-generation function with a unique numeric id.
    * @param id Identifier used for caching and equality.
    */
-  NodeGenFunc(const uint64_t id, const bool isNested) : id_(id), isNested_(isNested) {}
+  NodeGenFunc(const uint64_t id) : id_(id) {}
 
   virtual ~NodeGenFunc() = default;
 
@@ -101,8 +101,9 @@ class NodeGenFunc {
   /**
    * TODO: Document
    */
-  virtual GPCntType mapNodeIndexToDifferentLvl(const GPCntType nodeIndex, const LvlType currentLvl,
-                                               const LvlType targetLvl) const = 0;
+  virtual GPCntType mapNodeIdxFromDeltaTGLevel(GPCntType nodeIdxInDeltaTG, LvlType deltaTGLvl,
+                                               LvlType targetLvl,
+                                               Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
 
   /******
   Getters
@@ -128,7 +129,7 @@ class NodeGenFunc {
   /**
    * TODO: Document
    */
-  bool isNested() const { return isNested_; }
+  virtual bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
 
   /********
   Operators
@@ -141,8 +142,7 @@ class NodeGenFunc {
   virtual bool operator==(const NodeGenFunc& other) const = 0;
 
  private:
-  const uint64_t id_;    ///< Unique identifier (used for caching).
-  const bool isNested_;  ///< TODO: Document
+  const uint64_t id_;  ///< Unique identifier (used for caching).
 };
 
 }  // namespace combigrid

@@ -56,8 +56,8 @@ namespace quadrature_operator {
  * @return Quadrature estimate on the unit hypercube
  *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
  */
-double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGenInstr& genInstr,
-                  tools::QuadScratch& scratch);
+double processTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& tg,
+                         const SGGenInstr& genInstr, tools::QuadScratch& scratch);
 
 /**
  * @brief Populates @p scratch.weights with the 1D quadrature weights for

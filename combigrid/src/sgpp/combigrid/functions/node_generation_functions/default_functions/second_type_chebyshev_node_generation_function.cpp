@@ -1,5 +1,6 @@
 #include <cmath>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/default_functions/second_type_chebyshev_node_generation_function.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
@@ -48,6 +49,17 @@ QuadRule* SecondTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes) co
 InterpolationMethod* SecondTypeChebyshevNodeGenFunc::getInterpolationMethod(
     const GPCntType nNodes) const {
   return getOptBarycentricFormula();
+}
+
+bool SecondTypeChebyshevNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  if (lvl2GPCntFunc == linearLvl2GPCntFunction) {
+    return false;
+  } else if (lvl2GPCntFunc == doublingLvl2GPCntFunction) {
+    return true;
+  } else {
+    throw base::not_implemented_exception(
+        "SecondTypeChebyshevNodeGenFunc::isNested: Unknown level-to-grid-point-count function.");
+  }
 }
 
 /********

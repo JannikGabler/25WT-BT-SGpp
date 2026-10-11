@@ -1,6 +1,7 @@
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
+#include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/default_functions/equidistant_node_generation_function.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
@@ -51,6 +52,17 @@ QuadRule* EquidistantNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
 
 InterpolationMethod* EquidistantNodeGenFunc::getInterpolationMethod(const GPCntType nNodes) const {
   return getBarycentricFormula(this);
+}
+
+bool EquidistantNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  if (lvl2GPCntFunc == linearLvl2GPCntFunction) {
+    return false;
+  } else if (lvl2GPCntFunc == doublingLvl2GPCntFunction) {
+    return true;
+  } else {
+    throw base::not_implemented_exception(
+        "EquidistantNodeGenFunc::isNested: Unknown level-to-grid-point-count function.");
+  }
 }
 
 /********

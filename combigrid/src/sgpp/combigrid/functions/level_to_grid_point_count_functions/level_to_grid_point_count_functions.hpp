@@ -7,8 +7,7 @@
  * of growth function controls the trade-off between accuracy and the size
  * of the resulting tensor / sparse grid.
  */
-#ifndef COMBIGRID_LEVEL_TO_GRID_POINTS_COUNT_FUNCTIONS_HPP
-#define COMBIGRID_LEVEL_TO_GRID_POINTS_COUNT_FUNCTIONS_HPP
+#pragma once
 
 #include <sgpp/combigrid/type_defs.hpp>
 
@@ -32,5 +31,3 @@ GPCntType doublingLvl2GPCntFunction(LvlType lvl);
 
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

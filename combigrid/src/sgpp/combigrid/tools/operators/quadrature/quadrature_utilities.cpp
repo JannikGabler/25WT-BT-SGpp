@@ -16,11 +16,13 @@ namespace tools {
 bool areNodesOfAllDimsNested(const SparseGrid& sparseGrid) {
   assert(sparseGrid.getGenInstr() != nullptr);
 
+  const size_t nDim = sparseGrid.nDim();
   const std::shared_ptr<const SGGenInstr> sgGenInstr = sparseGrid.getGenInstr();
   const std::vector<NodeGenFunc*>& nodeGenFuncs = sgGenInstr->getNodeGenFuncs();
+  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sgGenInstr->getLvl2GPCntFuncs();
 
-  for (const NodeGenFunc* nodeGenFunc : nodeGenFuncs) {
-    if (!nodeGenFunc->isNested()) {
+  for (size_t dim = 0; dim < nDim; dim++) {
+    if (!nodeGenFuncs[dim]->isNested(lvl2GPCntFuncs[dim])) {
       return false;
     }
   }

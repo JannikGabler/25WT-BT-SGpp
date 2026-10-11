@@ -31,8 +31,8 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   for (const TensorGridCTData& tgData : sparseGrid) {
     tools::QuadScratch& scratch = scratches[static_cast<size_t>(omp_get_thread_num())];
 
-    result += tgData.coefficient *
-              quadrature_operator::quadrature(sourceFunc, tgData.tensorGrid, *genInstr, scratch);
+    result += tgData.coefficient * quadrature_operator::processTensorGrid(
+                                       sourceFunc, tgData.tensorGrid, *genInstr, scratch);
   }
 
   return genInstr->getVolumeOfDomain() * result;
@@ -42,8 +42,8 @@ double quadratureFast(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid
 
 namespace quadrature_operator {
 
-double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGenInstr& genInstr,
-                  tools::QuadScratch& scratch) {
+double processTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& tg,
+                         const SGGenInstr& genInstr, tools::QuadScratch& scratch) {
   assert(genInstr.nDim() == tg.nDim());
 
   const size_t nGP = tg.nGP();

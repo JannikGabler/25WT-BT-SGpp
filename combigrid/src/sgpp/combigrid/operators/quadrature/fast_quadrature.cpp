@@ -1,6 +1,8 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/grids/extensive_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/fast_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_utilities.hpp>
@@ -10,18 +12,38 @@
 namespace sgpp {
 namespace combigrid {
 
-double quadratureFast(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
+double quadratureFast(const SourceFunc& sourceFunc, const ExtensiveSparseGrid& sparseGrid) {
   if (!tools::areNodesOfAllDimsNested(sparseGrid)) {
-    throw std::invalid_argument(
-        "The operator 'quadratureFast' requires a sparse grid with nested nodes.");
+    throw std::invalid_argument("quadratureFast: A sparse grid with nested nodes is required.");
   }
 
   double result = 0.0;
 
+  const std::span<const TensorGridCTData> gridsWithCoeffZero =
+      sparseGrid.getTensorGridsWithCoeffZero();
+  const std::span<const TensorGridCTData> gridsWithCoeffNonZero = sparseGrid.getTensorGrids();
+  const std::size_t nGridsWithCoeffZero = gridsWithCoeffZero.size();
+  const std::size_t nTotal = nGridsWithCoeffZero + gridsWithCoeffNonZero.size();
+
 #pragma omp parallel for reduction(+ : result) schedule(guided)
-  for (const TensorGridCTData& tgData :) {
+  for (std::size_t i = 0; i < nTotal; ++i) {
+    const TensorGridCTData& tgData = (i < nGridsWithCoeffZero)
+                                         ? gridsWithCoeffZero[i]
+                                         : gridsWithCoeffNonZero[i - nGridsWithCoeffZero];
     result += fast_quadrature_operator::processTensorGrid(sourceFunc, sparseGrid, tgData);
   }
+
+  // #pragma omp parallel
+  //   {
+  // #pragma omp for reduction(+ : result) schedule(guided)
+  //     for (const TensorGridCTData& tgData : sparseGrid.getTen()) {
+  //       result += fast_quadrature_operator::processTensorGrid(sourceFunc, sparseGrid, tgData);
+  //     }
+  // #pragma omp for reduction(+ : result) schedule(guided)
+  //     for (const TensorGridCTData& tgData : sparseGrid.getTensorGridsWithCoeffZero()) {
+  //       result += fast_quadrature_operator::processTensorGrid(sourceFunc, sparseGrid, tgData);
+  //     }
+  //   }
 
   return sparseGrid.getGenInstr()->getVolumeOfDomain() * result;
 }

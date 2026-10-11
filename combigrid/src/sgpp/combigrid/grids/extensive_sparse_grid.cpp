@@ -28,7 +28,7 @@ SparseGrid::SparseGrid(const size_t nDim, const size_t nTG) : nDim_(nDim), tenso
 ExtensiveSparseGrid::ExtensiveSparseGrid(const SGGenInstr& genInstr) : SparseGrid(genInstr.nDim()) {
   const auto [miVec, coeffs] = genInstr.genFullMIVecWithCoeffs();
 
-  tools::populateSG(*this, genInstr, miVec, coeffs);
+  tools::populateExtensiveSG(*this, genInstr, miVec, coeffs);
 }
 
 /************
