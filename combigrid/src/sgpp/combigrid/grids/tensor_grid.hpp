@@ -7,8 +7,10 @@
 #define COMBIGRID_TENSOR_GRID_HPP
 
 #include <cassert>
+#include <iterator>
 #include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_iterator.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -154,6 +156,72 @@ class TensorGrid {
    * @note Allocates memory; avoid in hot loops.
    */
   base::DataMatrix getGridPoints() const;
+
+#ifndef SWIG
+  /*******
+  Iterator
+  *******/
+  /// @brief Read-only input iterator over the grid points, see @ref begin().
+  using const_iterator = TensorGridConstIterator;
+  /// @brief Same as @ref const_iterator: iterating a tensor grid never modifies it.
+  using iterator = const_iterator;
+  /// @brief Input iterator of the range returned by @ref mutableGridPoints().
+  using mutable_iterator = TensorGridMutableIterator;
+
+  /**
+   * @brief Returns an iterator to the first grid point.
+   *
+   * Makes the tensor grid a range of its grid points. Each one is yielded
+   * together with its multi-index as a @c TensorGridPoint, in the order of the
+   * linear grid-point index:
+   * @code
+   * // const GPMI& mi, const base::DataVector& gp
+   * for (const auto& [mi, gp] : tensorGrid) { ... }
+   * // point.mi, point.gp
+   * for (const TensorGridPoint& point : tensorGrid) { ... }
+   * @endcode
+   * The grid points are assembled on the fly in storage owned by the
+   * iterator. That storage is allocated here, once per loop; advancing does
+   * not allocate and only updates the entries that changed. Bind the element
+   * by reference: binding it by value copies both containers in every
+   * iteration.
+   *
+   * The element is read-only. Use @ref mutableGridPoints() if the loop body
+   * needs to modify the multi-index or the coordinates.
+   *
+   * The end is marked by a sentinel (see @ref end()), so the @c std::ranges
+   * algorithms apply, e.g. <tt>std::ranges::for_each(tensorGrid, f)</tt>.
+   */
+  const_iterator begin() const { return const_iterator(nGPPerDim, nodesPerDim, nGP_); }
+  /// @brief Returns the sentinel that marks the end of the grid points.
+  std::default_sentinel_t end() const noexcept { return std::default_sentinel; }
+  /// @copydoc begin()
+  const_iterator cbegin() const { return begin(); }
+  /// @copydoc end()
+  std::default_sentinel_t cend() const noexcept { return end(); }
+
+  /**
+   * @brief Returns a range of the grid points whose elements may be modified.
+   *
+   * Like iterating the tensor grid directly, but every element is a working
+   * copy whose entries the loop body may overwrite, e.g. to transform the
+   * coordinates in place:
+   * @code
+   * // GPMI& mi, base::DataVector& gp
+   * for (auto& [mi, gp] : tensorGrid.mutableGridPoints()) { ... }
+   * @endcode
+   * The tensor grid itself is not modified, which is why this is available
+   * for const tensor grids. Since the iterator has to assume that every entry
+   * was altered, advancing rewrites all of them instead of only the changed
+   * ones; prefer iterating the tensor grid directly for read-only access.
+   *
+   * The loop body must not change the number of entries of @c mi or @c gp
+   * (see @c TensorGridMutableIterator).
+   */
+  TensorGridMutableRange mutableGridPoints() const noexcept {
+    return TensorGridMutableRange(nGPPerDim, nodesPerDim, nGP_);
+  }
+#endif
 
   /*****
   Setter
