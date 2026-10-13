@@ -36,7 +36,7 @@
 #include <utility>
 #include <vector>
 
-using sgpp::combigrid::misc::TensorGridInmutableRange;
+using sgpp::combigrid::misc::TensorGridImmutableRange;
 using sgpp::combigrid::misc::TensorGridIteratorElement;
 using sgpp::combigrid::misc::TensorGridMutableRange;
 using namespace sgpp::combigrid;
@@ -94,7 +94,7 @@ void checkPoint(const TensorGrid& tg, const size_t idx,
 void checkConstIteration(const TensorGrid& tg) {
   BOOST_TEST_CONTEXT(describe(tg)) {
     size_t idx = 0;
-    for (const TensorGridIteratorElement& point : tg.gridPointsInmutable()) {
+    for (const TensorGridIteratorElement& point : tg.gridPointsImmutable()) {
       checkPoint(tg, idx, point);
       idx++;
     }
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(Handwritten_2D_Grid) {
                                                        {0.9, 0.5}, {0.1, 0.7}, {0.9, 0.7}};
 
   size_t idx = 0;
-  for (const TensorGridIteratorElement& point : tg.gridPointsInmutable()) {
+  for (const TensorGridIteratorElement& point : tg.gridPointsImmutable()) {
     BOOST_REQUIRE_LT(idx, expectedMI.size());
     BOOST_CHECK(point.mi == expectedMI[idx]);
     BOOST_CHECK(static_cast<const std::vector<double>&>(point.gp) == expectedGP[idx]);
@@ -202,9 +202,9 @@ BOOST_AUTO_TEST_CASE(Edge_Case_Grids) {
 BOOST_AUTO_TEST_CASE(Empty_Grids) {
   for (const TensorGrid& tg : emptyGrids()) {
     BOOST_TEST_CONTEXT(describe(tg)) {
-      BOOST_CHECK(tg.gridPointsInmutable().begin() == tg.gridPointsInmutable().end());
-      // BOOST_CHECK(tg.gridPointsInmutable().cbegin() == tg.gridPointsInmutable().cend());
-      BOOST_CHECK(tg.gridPointsInmutable().begin() == std::default_sentinel);
+      BOOST_CHECK(tg.gridPointsImmutable().begin() == tg.gridPointsImmutable().end());
+      // BOOST_CHECK(tg.gridPointsImmutable().cbegin() == tg.gridPointsImmutable().cend());
+      BOOST_CHECK(tg.gridPointsImmutable().begin() == std::default_sentinel);
       checkConstIteration(tg);
     }
   }
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(Tensor_Grids_Of_A_Sparse_Grid) {
       const sgpp::base::DataMatrix expected = tg.getGridPoints();
 
       size_t idx = 0;
-      for (const TensorGridIteratorElement& point : tg.gridPointsInmutable()) {
+      for (const TensorGridIteratorElement& point : tg.gridPointsImmutable()) {
         BOOST_REQUIRE_LT(idx, expected.getNrows());
         for (size_t dim = 0; dim < tg.nDim(); dim++) {
           BOOST_CHECK_EQUAL(point.gp[dim], expected(idx, dim));
@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(Storage_Is_Reused) {
     const TensorGridIteratorElement* firstPoint = nullptr;
     const GPCntType* firstMIData = nullptr;
     const double* firstGPData = nullptr;
-    for (const TensorGridIteratorElement& point : tg.gridPointsInmutable()) {
+    for (const TensorGridIteratorElement& point : tg.gridPointsImmutable()) {
       if (firstPoint == nullptr) {
         firstPoint = &point;
         firstMIData = point.mi.data();
@@ -264,9 +264,9 @@ BOOST_AUTO_TEST_CASE(Nested_Loops_Are_Independent) {
     const TensorGrid tg = randomTensorGrid(GPMI{3, 2, 2});
 
     size_t outerIdx = 0;
-    for (const TensorGridIteratorElement& outer : tg.gridPointsInmutable()) {
+    for (const TensorGridIteratorElement& outer : tg.gridPointsImmutable()) {
       size_t innerIdx = 0;
-      for (const TensorGridIteratorElement& inner : tg.gridPointsInmutable()) {
+      for (const TensorGridIteratorElement& inner : tg.gridPointsImmutable()) {
         checkPoint(tg, innerIdx, inner);
         checkPoint(tg, outerIdx, outer);
         innerIdx++;
@@ -285,7 +285,7 @@ BOOST_AUTO_TEST_CASE(Structured_Bindings) {
     TensorGrid nonConstGrid = randomTensorGrid(4, 5);
 
     size_t idx = 0;
-    for (const auto& [mi, gp] : constGrid.gridPointsInmutable()) {
+    for (const auto& [mi, gp] : constGrid.gridPointsImmutable()) {
       static_assert(std::is_same<decltype(mi), const GPMI>::value, "mi must be a const GPMI");
       static_assert(std::is_same<decltype(gp), const DataVector>::value,
                     "gp must be a const base::DataVector");
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE(Structured_Bindings) {
     // Iterating a tensor grid directly is read-only even if the grid is not const and the
     // element is bound with auto&.
     idx = 0;
-    for (auto& [mi, gp] : nonConstGrid.gridPointsInmutable()) {
+    for (auto& [mi, gp] : nonConstGrid.gridPointsImmutable()) {
       static_assert(std::is_same<decltype(mi), const GPMI>::value, "mi must be a const GPMI");
       static_assert(std::is_same<decltype(gp), const DataVector>::value,
                     "gp must be a const base::DataVector");
@@ -486,7 +486,7 @@ BOOST_AUTO_TEST_SUITE(TensorGrid_iterator_interface)
 
 // static_assert(std::ranges::input_range<TensorGrid>);
 // static_assert(std::ranges::input_range<const TensorGrid>);
-static_assert(std::ranges::input_range<TensorGridInmutableRange>);
+static_assert(std::ranges::input_range<TensorGridImmutableRange>);
 static_assert(std::ranges::input_range<TensorGridMutableRange>);
 // static_assert(
 //     std::same_as<std::ranges::range_reference_t<TensorGrid>, const TensorGridIteratorElement&>,
@@ -508,7 +508,7 @@ BOOST_AUTO_TEST_CASE(Explicit_Iterator_Loop) {
     const TensorGrid tg = randomTensorGrid(4, 5);
 
     size_t idx = 0;
-    for (auto it = tg.gridPointsInmutable().begin(); it != tg.gridPointsInmutable().end(); ++it) {
+    for (auto it = tg.gridPointsImmutable().begin(); it != tg.gridPointsImmutable().end(); ++it) {
       checkPoint(tg, idx, *it);
       BOOST_CHECK_EQUAL(&it->mi, &(*it).mi);
       BOOST_CHECK(!(it == std::default_sentinel));
@@ -534,7 +534,7 @@ BOOST_AUTO_TEST_CASE(Reaching_The_End) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const TensorGrid tg = randomTensorGrid(GPMI{2, 3});
 
-    auto it = tg.gridPointsInmutable().begin();
+    auto it = tg.gridPointsImmutable().begin();
     for (size_t i = 0; i < tg.nGP(); i++) {
       BOOST_CHECK(it != std::default_sentinel);
       ++it;
@@ -557,7 +557,7 @@ BOOST_AUTO_TEST_CASE(Copies_Advance_Independently) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const TensorGrid tg = randomTensorGrid(GPMI{3, 2, 4});
 
-    auto it = tg.gridPointsInmutable().begin();
+    auto it = tg.gridPointsImmutable().begin();
     ++it;
     ++it;
     ++it;
@@ -596,14 +596,14 @@ BOOST_AUTO_TEST_CASE(Ranges_Algorithms_And_Views) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const TensorGrid tg = randomTensorGrid(GPMI{3, 4, 2});
 
-    BOOST_CHECK_EQUAL(static_cast<size_t>(std::ranges::distance(tg.gridPointsInmutable())),
+    BOOST_CHECK_EQUAL(static_cast<size_t>(std::ranges::distance(tg.gridPointsImmutable())),
                       tg.nGP());
     BOOST_CHECK_EQUAL(static_cast<size_t>(std::ranges::count_if(
-                          tg.gridPointsInmutable(),
+                          tg.gridPointsImmutable(),
                           [](const TensorGridIteratorElement& point) { return point.mi[1] == 2; })),
                       tg.nGP() / 4);
     BOOST_CHECK_EQUAL(
-        std::ranges::fold_left(tg.gridPointsInmutable(), size_t{0},
+        std::ranges::fold_left(tg.gridPointsImmutable(), size_t{0},
                                [](const size_t sum, const TensorGridIteratorElement& point) {
                                  return sum + point.mi[0];
                                }),
@@ -611,7 +611,7 @@ BOOST_AUTO_TEST_CASE(Ranges_Algorithms_And_Views) {
 
     size_t idx = 0;
     std::ranges::for_each(
-        tg.gridPointsInmutable(),
+        tg.gridPointsImmutable(),
         [&tg, &idx](const TensorGridIteratorElement& point) { checkPoint(tg, idx++, point); });
     BOOST_CHECK_EQUAL(idx, tg.nGP());
 
@@ -632,14 +632,14 @@ BOOST_AUTO_TEST_CASE(Ranges_Algorithms_And_Views) {
     // Grid points whose node index in the last dimension is 1: the linear indices 12, ..., 23.
     idx = 12;
     for (const TensorGridIteratorElement& point :
-         tg.gridPointsInmutable() |
+         tg.gridPointsImmutable() |
              std::views::filter([](const TensorGridIteratorElement& p) { return p.mi[2] == 1; })) {
       checkPoint(tg, idx++, point);
     }
     BOOST_CHECK_EQUAL(idx, 24u);
 
     idx = 0;
-    for (const TensorGridIteratorElement& point : tg.gridPointsInmutable() | std::views::take(5)) {
+    for (const TensorGridIteratorElement& point : tg.gridPointsImmutable() | std::views::take(5)) {
       checkPoint(tg, idx++, point);
     }
     BOOST_CHECK_EQUAL(idx, 5u);
@@ -652,7 +652,7 @@ BOOST_AUTO_TEST_CASE(Classic_Algorithms_Via_Common_View) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const TensorGrid tg = randomTensorGrid(4, 5);
 
-    auto common = tg.gridPointsInmutable() | std::views::common;
+    auto common = tg.gridPointsImmutable() | std::views::common;
     size_t idx = 0;
     std::for_each(
         common.begin(), common.end(),

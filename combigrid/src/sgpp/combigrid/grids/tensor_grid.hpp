@@ -225,8 +225,8 @@ class TensorGrid {
   /**
    * TODO: Document
    */
-  misc::TensorGridInmutableRange gridPointsInmutable() const noexcept {
-    return misc::TensorGridInmutableRange(nGPPerDim, nodesPerDim, nGP_);
+  misc::TensorGridImmutableRange gridPointsImmutable() const noexcept {
+    return misc::TensorGridImmutableRange(nGPPerDim, nodesPerDim, nGP_);
   }
 #endif
 

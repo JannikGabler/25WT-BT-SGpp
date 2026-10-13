@@ -362,12 +362,12 @@ class TensorGridMutableIterator {
 
 /**
  * @brief Range over the grid points of a tensor grid that yields unmodifiable
- * working copies; returned by @c TensorGrid::gridPointsInmutable().
+ * working copies; returned by @c TensorGrid::gridPointsImmutable().
  *
  * The range and its iterators refer to the tensor grid, which must outlive
  * them. The iterators do not refer to the range object.
  */
-class TensorGridInmutableRange {
+class TensorGridImmutableRange {
  public:
   using iterator = TensorGridConstIterator;
 
@@ -376,7 +376,7 @@ class TensorGridInmutableRange {
    * @param nodesPerDim Concatenated per-dimension node lists of the tensor grid.
    * @param nGP         Total number of grid points of the tensor grid.
    */
-  TensorGridInmutableRange(const GPMI& nGPPerDim, const base::DataVector& nodesPerDim,
+  TensorGridImmutableRange(const GPMI& nGPPerDim, const base::DataVector& nodesPerDim,
                            const size_t nGP) noexcept
       : nGPPerDim_(&nGPPerDim), nodesPerDim_(&nodesPerDim), nGP_(nGP) {}
 
