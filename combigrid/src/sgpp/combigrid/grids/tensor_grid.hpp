@@ -3,14 +3,12 @@
  * @brief Anisotropic tensor-product grid used as a building block of the
  * combination technique.
  */
-#ifndef COMBIGRID_TENSOR_GRID_HPP
-#define COMBIGRID_TENSOR_GRID_HPP
+#pragma once
 
 #include <cassert>
-#include <iterator>
 #include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/grids/tensor_grid_iterator.hpp>
+#include <sgpp/combigrid/miscellaneous/iterators/tensor_grid_iterator.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -69,13 +67,13 @@ class TensorGrid {
   Getter
   *****/
   /// @brief Returns the dimensionality of the grid.
-  size_t nDim() const;
+  size_t nDim() const noexcept;
 
   /// @brief Returns the total number of grid points (the product of per-dimension counts).
-  size_t nGP() const;
+  size_t nGP() const noexcept;
 
   /// @brief Returns the per-dimension grid-point counts.
-  const GPMI& getGPCntPerDim() const;
+  const GPMI& getGPCntPerDim() const noexcept;
 
   /**
    * @brief Returns the flat list of node positions, concatenated across
@@ -85,7 +83,7 @@ class TensorGrid {
    * @c nGPPerDim[0] entries belong to dimension @c 0, the next
    * @c nGPPerDim[1] entries to dimension @c 1, and so on.
    */
-  const base::DataVector& getNodesPerDim() const;
+  const base::DataVector& getNodesPerDim() const noexcept;
 
   /**
    * @brief Writes the grid point at linear index @p idx into @p out.
@@ -161,13 +159,15 @@ class TensorGrid {
   /*******
   Iterator
   *******/
-  /// @brief Read-only input iterator over the grid points, see @ref begin().
-  using const_iterator = TensorGridConstIterator;
-  /// @brief Same as @ref const_iterator: iterating a tensor grid never modifies it.
-  using iterator = const_iterator;
-  /// @brief Input iterator of the range returned by @ref mutableGridPoints().
-  using mutable_iterator = TensorGridMutableIterator;
+  // TODO: Delete
+  // /// @brief Read-only input iterator over the grid points, see @ref begin().
+  // using const_iterator = TensorGridConstIterator;
+  // /// @brief Same as @ref const_iterator: iterating a tensor grid never modifies it.
+  // using iterator = const_iterator;
+  // /// @brief Input iterator of the range returned by @ref mutableGridPoints().
+  // using mutable_iterator = TensorGridMutableIterator;
 
+  // TODO: Delete
   /**
    * @brief Returns an iterator to the first grid point.
    *
@@ -192,13 +192,13 @@ class TensorGrid {
    * The end is marked by a sentinel (see @ref end()), so the @c std::ranges
    * algorithms apply, e.g. <tt>std::ranges::for_each(tensorGrid, f)</tt>.
    */
-  const_iterator begin() const { return const_iterator(nGPPerDim, nodesPerDim, nGP_); }
-  /// @brief Returns the sentinel that marks the end of the grid points.
-  std::default_sentinel_t end() const noexcept { return std::default_sentinel; }
-  /// @copydoc begin()
-  const_iterator cbegin() const { return begin(); }
-  /// @copydoc end()
-  std::default_sentinel_t cend() const noexcept { return end(); }
+  // const_iterator begin() const { return const_iterator(nGPPerDim, nodesPerDim, nGP_); }
+  // /// @brief Returns the sentinel that marks the end of the grid points.
+  // std::default_sentinel_t end() const noexcept { return std::default_sentinel; }
+  // /// @copydoc begin()
+  // const_iterator cbegin() const { return begin(); }
+  // /// @copydoc end()
+  // std::default_sentinel_t cend() const noexcept { return end(); }
 
   /**
    * @brief Returns a range of the grid points whose elements may be modified.
@@ -218,8 +218,15 @@ class TensorGrid {
    * The loop body must not change the number of entries of @c mi or @c gp
    * (see @c TensorGridMutableIterator).
    */
-  TensorGridMutableRange mutableGridPoints() const noexcept {
-    return TensorGridMutableRange(nGPPerDim, nodesPerDim, nGP_);
+  misc::TensorGridMutableRange gridPointsMutable() const noexcept {
+    return misc::TensorGridMutableRange(nGPPerDim, nodesPerDim, nGP_);
+  }
+
+  /**
+   * TODO: Document
+   */
+  misc::TensorGridInmutableRange gridPointsInmutable() const noexcept {
+    return misc::TensorGridInmutableRange(nGPPerDim, nodesPerDim, nGP_);
   }
 #endif
 
@@ -281,7 +288,8 @@ class TensorGrid {
 
   /**
    * @brief Out-of-place variant of
-   * @ref getNeighborsForLinInterpolation(const base::DataVector&, std::vector<std::pair<double,double>>&) const.
+   * @ref getNeighborsForLinInterpolation(const base::DataVector&,
+   * std::vector<std::pair<double,double>>&) const.
    * @param point Query point.
    * @return Newly allocated vector of @c (lower, upper) pairs.
    */
@@ -289,14 +297,12 @@ class TensorGrid {
       const base::DataVector& point);
 
  private:
-  size_t nGP_;     ///< Total number of grid points (product of @c nGPPerDim).
-                   ///< Not const so that the implicitly-declared copy
-                   ///< assignment operator is not deleted.
-  GPMI nGPPerDim;  ///< Per-dimension grid-point counts. Same comment as @c nGP_.
+  size_t nGP_;                   ///< Total number of grid points (product of @c nGPPerDim).
+                                 ///< Not const so that the implicitly-declared copy
+                                 ///< assignment operator is not deleted.
+  GPMI nGPPerDim;                ///< Per-dimension grid-point counts. Same comment as @c nGP_.
   base::DataVector nodesPerDim;  ///< Flattened concatenation of per-dimension node lists.
 };
 
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

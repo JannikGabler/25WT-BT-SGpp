@@ -5,7 +5,6 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
@@ -21,18 +20,18 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   assert(sparseGrid.getGenInstr() != nullptr);
 
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
-  std::vector<tools::QuadScratch> scratches(
-      static_cast<size_t>(omp_get_max_threads()),
-      tools::QuadScratch(genInstr->nDim(), sparseGrid.getMaxTGSumOverGPCntsPerDim()));
-
+  const size_t nDim = genInstr->nDim();
   double result = 0;
 
-#pragma omp parallel for reduction(+ : result) schedule(guided)
-  for (const TensorGridCTData& tgData : sparseGrid) {
-    tools::QuadScratch& scratch = scratches[static_cast<size_t>(omp_get_thread_num())];
+#pragma omp parallel reduction(+ : result)
+  {
+    tools::QuadScratch scratch(nDim, sparseGrid.getMaxTGSumOverGPCntsPerDim());
 
-    result += tgData.coefficient *
-              quadrature_operator::quadrature(sourceFunc, tgData.tensorGrid, *genInstr, scratch);
+#pragma omp for schedule(guided) nowait
+    for (const TensorGridCTData& tgData : sparseGrid) {
+      result += tgData.coefficient *
+                quadrature_operator::quadrature(sourceFunc, tgData.tensorGrid, *genInstr, scratch);
+    }
   }
 
   return genInstr->getVolumeOfDomain() * result;
@@ -44,53 +43,22 @@ double quadrature(const SourceFunc& sourceFunc, const TensorGrid& tg, const SGGe
                   tools::QuadScratch& scratch) {
   assert(genInstr.nDim() == tg.nDim());
 
-  const size_t nGP = tg.nGP();
-  const size_t nDim = tg.nDim();
-
-  if (nGP == 0) {
+  if (tg.nGP() == 0) {
     return 0;
   }
 
   const HyperCubeArea& bounds = genInstr.getDomain();
   const GPMI& gpCntPerDim = tg.getGPCntPerDim();
   const std::vector<NodeGenFunc*>& nodeGenFuncs = genInstr.getNodeGenFuncs();
-  const misc::DiscRectBB<GPCntType> iterationBB(GPMI(nDim), gpCntPerDim, false);
   quadrature_operator::getWeights(tg, nodeGenFuncs, scratch);
 
   double result = 0;
-  // GPMI gpMI(nDim);
-  // base::DataVector gp(nDim);
 
-  // TODO: Delete
-  // size_t gpIdx = 0;
-  // for (const std::vector<GPCntType>& gpMI : iterationBB) {
-  //   const double weight = quadrature_operator::getWeightForGP(gpMI, weights);
-  //   const base::DataVector gp = tg[gpIdx++];
-  //   const double funcValue = sourceFunc.evaluateNormalized(gp, bounds);
-  //   result += weight * funcValue;
-  // }
-
-  for (const GPMI& gpMI : iterationBB) {
-    tg.getGridPoint(gpMI, scratch.gp);
+  for (auto& [gpMI, gp] : tg.gridPointsMutable()) {
     const double weight = quadrature_operator::getWeightForGP(gpMI, gpCntPerDim, scratch);
-    const double funcValue = sourceFunc.evaluateNormalizedInPlace(scratch.gp, bounds);
+    const double funcValue = sourceFunc.evaluateNormalizedInPlace(gp, bounds);
     result += weight * funcValue;
   }
-
-  // for (size_t i = 0; i < nGP; i++) {
-  //   const double weight = quadrature_operator::getWeightForGP(gpMI, weights);
-  //   const double funcValue = sourceFunc.evaluateNormalizedInPlace(gp, bounds);
-  //   result += weight * funcValue;
-
-  //   tg.getGridPointAndIncr(gpMI, gp);
-  // }
-
-  // for (size_t i = 0; i < nGP; i++) {
-  //   tg.getGridPointAndMI(i, gp, gpMI);
-  //   const double weight = quadrature_operator::getWeightForGP(gpMI, weights);
-  //   const double funcValue = sourceFunc.evaluateNormalizedInPlace(gp, bounds);
-  //   result += weight * funcValue;
-  // }
 
   return result;
 }

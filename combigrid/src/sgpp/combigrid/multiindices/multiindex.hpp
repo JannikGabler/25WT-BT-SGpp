@@ -127,15 +127,6 @@ class MI {
   /******************
    Additional methods
   ******************/
-  // size_t toLinearIndex() const {
-  //   const size_t nDim = this->size();
-  //   size_t idx = 0;
-  //   for (size_t dim = 0; dim < nDim; dim++) {
-  //     idx *= nDim;
-  //     idx += static_cast<size_t>((*this)[dim]);
-  //   }
-  //   return idx;
-  // }
 
   /**
    * @brief Maps the multi-index to a linear index using row-major (last-dim-fastest)
@@ -149,6 +140,7 @@ class MI {
    * @return Linear index into a flattened tensor of shape @c nPerDim.
    */
   size_t toLinearIndex(const MI<T>& nPerDim) const {
+    // TODO: Check if this method works as intended and is implemented correctly
     if (nDim() == 0) {
       return 0;
     }

@@ -28,11 +28,11 @@ struct QuadScratch {
    *                              once to avoid reallocations.
    */
   QuadScratch(const size_t nDim, const size_t maxTGSumOfGPCntsPerDim)
-      : gp(nDim), weights(maxTGSumOfGPCntsPerDim), quadRules(nDim) {}
+      : weights(maxTGSumOfGPCntsPerDim), quadRules(nDim) {}
 
  public:
-  /// @brief Reusable buffer for the current grid-point coordinates.
-  base::DataVector gp;
+  // /// @brief Reusable buffer for the current grid-point coordinates.
+  // base::DataVector gp;
   /// @brief Concatenated 1D quadrature weights (per-dimension blocks back-to-back).
   base::DataVector weights;
   /// @brief Per-dimension quadrature-rule pointers; non-owning.

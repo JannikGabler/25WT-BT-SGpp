@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <cassert>
 #include <sgpp/base/datatypes/DataMatrix.hpp>
@@ -40,13 +39,13 @@ TensorGrid::TensorGrid(GPMI&& nGPPerDim, base::DataVector&& nodesPerDim) noexcep
 Getter
 *****/
 
-size_t TensorGrid::nDim() const { return this->nGPPerDim.size(); }
+size_t TensorGrid::nDim() const noexcept { return this->nGPPerDim.size(); }
 
-size_t TensorGrid::nGP() const { return nGP_; }
+size_t TensorGrid::nGP() const noexcept { return nGP_; }
 
-const GPMI& TensorGrid::getGPCntPerDim() const { return nGPPerDim; }
+const GPMI& TensorGrid::getGPCntPerDim() const noexcept { return nGPPerDim; }
 
-const base::DataVector& TensorGrid::getNodesPerDim() const { return nodesPerDim; }
+const base::DataVector& TensorGrid::getNodesPerDim() const noexcept { return nodesPerDim; }
 
 void TensorGrid::getGridPoint(size_t idx, base::DataVector& out) const {
   assert(idx < nGP_ && out.size() >= nDim());
@@ -156,6 +155,7 @@ base::DataMatrix TensorGrid::getGridPoints() const {
 Setter
 *****/
 
+// TODO: Delete
 // void TensorGrid::setGridPoint(const size_t idx, const base::DataVector& gp) {
 //   assert(idx < nGP_);
 //   assert(gp.size() == nDim());

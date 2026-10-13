@@ -64,6 +64,7 @@ namespace sg_gen {
  */
 GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr);
 
+// TODO: Delete (?)
 /**
  * @brief Returns the discrete bounding box used to iterate over all grid
  * points of a tensor grid with the given per-dim counts.

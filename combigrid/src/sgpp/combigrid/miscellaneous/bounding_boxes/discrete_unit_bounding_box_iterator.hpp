@@ -2,14 +2,14 @@
  * @file discrete_unit_bounding_box_iterator.hpp
  * @brief Forward iterator over the @f$2^d@f$ corners of a @c DiscUnitBB.
  */
-#ifndef COMBIGRID_MISC_DISCRETE_UNIT_BOUNDING_BOX_ITERATOR_HPP
-#define COMBIGRID_MISC_DISCRETE_UNIT_BOUNDING_BOX_ITERATOR_HPP
+#pragma once
 
 #include <cstddef>
 #include <vector>
 
 namespace sgpp {
 namespace combigrid {
+
 namespace misc {
 
 template <typename T>
@@ -67,7 +67,6 @@ class DiscUnitBBIterator {
 };
 
 }  // namespace misc
+
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif

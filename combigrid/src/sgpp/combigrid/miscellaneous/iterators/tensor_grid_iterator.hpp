@@ -55,6 +55,8 @@
 namespace sgpp {
 namespace combigrid {
 
+namespace misc {
+
 /**
  * @brief One grid point of a tensor grid, as yielded by iterating a
  * @c TensorGrid.
@@ -62,7 +64,7 @@ namespace combigrid {
  * Supports structured bindings:
  * <tt>for (const auto& [mi, gp] : tensorGrid)</tt>.
  */
-struct TensorGridPoint {
+struct TensorGridIteratorElement {
   GPMI mi;              ///< Per-dimension node indices of the grid point.
   base::DataVector gp;  ///< Coordinates of the grid point.
 };
@@ -80,9 +82,10 @@ struct TensorGridPoint {
  */
 class TensorGridConstIterator {
  public:
-  using value_type = TensorGridPoint;
-  using reference = const TensorGridPoint&;  ///< Refers to the element owned by the iterator.
-  using pointer = const TensorGridPoint*;
+  using value_type = TensorGridIteratorElement;
+  using reference =
+      const TensorGridIteratorElement&;  ///< Refers to the element owned by the iterator.
+  using pointer = const TensorGridIteratorElement*;
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::input_iterator_tag;
   using iterator_concept = std::input_iterator_tag;
@@ -97,8 +100,7 @@ class TensorGridConstIterator {
    */
   TensorGridConstIterator(const GPMI& nGPPerDim, const base::DataVector& nodesPerDim,
                           const size_t nGP)
-      : TensorGridConstIterator(nGPPerDim, nodesPerDim, nGP,
-                                base::DataVector(nGPPerDim.size())) {}
+      : TensorGridConstIterator(nGPPerDim, nodesPerDim, nGP, base::DataVector(nGPPerDim.size())) {}
 
   /// @brief Returns the current grid point; valid until the iterator is incremented.
   reference operator*() const noexcept {
@@ -146,7 +148,7 @@ class TensorGridConstIterator {
   GPCntType idx0_;
   GPCntType nGP0_;  ///< Grid-point count of dimension 0 (@c 0 for a zero-dimensional grid).
 
-  TensorGridPoint current_;  ///< The element; @c current_.mi doubles as the position.
+  TensorGridIteratorElement current_;  ///< The element; @c current_.mi doubles as the position.
 
   /// @brief Does the work of the public constructor. @p gp provides the storage of the
   /// coordinates (@c nDim entries); see the implementation note in the file description.
@@ -226,9 +228,9 @@ class TensorGridConstIterator {
  */
 class TensorGridMutableIterator {
  public:
-  using value_type = TensorGridPoint;
-  using reference = TensorGridPoint&;  ///< Refers to the element owned by the iterator.
-  using pointer = TensorGridPoint*;
+  using value_type = TensorGridIteratorElement;
+  using reference = TensorGridIteratorElement&;  ///< Refers to the element owned by the iterator.
+  using pointer = TensorGridIteratorElement*;
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::input_iterator_tag;
   using iterator_concept = std::input_iterator_tag;
@@ -243,8 +245,8 @@ class TensorGridMutableIterator {
    */
   TensorGridMutableIterator(const GPMI& nGPPerDim, const base::DataVector& nodesPerDim,
                             const size_t nGP)
-      : TensorGridMutableIterator(nGPPerDim, nodesPerDim, nGP,
-                                  base::DataVector(nGPPerDim.size())) {}
+      : TensorGridMutableIterator(nGPPerDim, nodesPerDim, nGP, base::DataVector(nGPPerDim.size())) {
+  }
 
   /// @brief Returns the working copy of the current grid point; valid until the iterator
   /// is incremented.
@@ -313,7 +315,7 @@ class TensorGridMutableIterator {
 
   /// @brief The element. @c mutable because dereferencing is a const operation that hands
   /// out a non-const reference to it.
-  mutable TensorGridPoint current_;
+  mutable TensorGridIteratorElement current_;
 
   /// @brief Does the work of the public constructor. @p gp provides the storage of the
   /// coordinates (@c nDim entries); see the implementation note in the file description.
@@ -359,6 +361,37 @@ class TensorGridMutableIterator {
 };
 
 /**
+ * @brief Range over the grid points of a tensor grid that yields unmodifiable
+ * working copies; returned by @c TensorGrid::gridPointsInmutable().
+ *
+ * The range and its iterators refer to the tensor grid, which must outlive
+ * them. The iterators do not refer to the range object.
+ */
+class TensorGridInmutableRange {
+ public:
+  using iterator = TensorGridConstIterator;
+
+  /**
+   * @param nGPPerDim   Per-dimension grid-point counts of the tensor grid.
+   * @param nodesPerDim Concatenated per-dimension node lists of the tensor grid.
+   * @param nGP         Total number of grid points of the tensor grid.
+   */
+  TensorGridInmutableRange(const GPMI& nGPPerDim, const base::DataVector& nodesPerDim,
+                           const size_t nGP) noexcept
+      : nGPPerDim_(&nGPPerDim), nodesPerDim_(&nodesPerDim), nGP_(nGP) {}
+
+  /// @brief Returns an iterator to the first grid point. Allocates the element once.
+  iterator begin() const { return iterator(*nGPPerDim_, *nodesPerDim_, nGP_); }
+  /// @brief Returns the sentinel that marks the end of the grid points.
+  std::default_sentinel_t end() const noexcept { return std::default_sentinel; }
+
+ private:
+  const GPMI* nGPPerDim_;                ///< Per-dimension grid-point counts.
+  const base::DataVector* nodesPerDim_;  ///< Concatenated per-dimension node lists.
+  size_t nGP_;                           ///< Total number of grid points.
+};
+
+/**
  * @brief Range over the grid points of a tensor grid that yields modifiable
  * working copies; returned by @c TensorGrid::mutableGridPoints().
  *
@@ -397,13 +430,17 @@ static_assert(std::input_iterator<TensorGridConstIterator>);
 static_assert(std::input_iterator<TensorGridMutableIterator>);
 static_assert(std::sentinel_for<std::default_sentinel_t, TensorGridConstIterator>);
 static_assert(std::sentinel_for<std::default_sentinel_t, TensorGridMutableIterator>);
-static_assert(std::same_as<std::iter_reference_t<TensorGridConstIterator>, const TensorGridPoint&>,
-              "Iterating a tensor grid must not hand out write access by default");
-static_assert(std::same_as<std::iter_reference_t<TensorGridMutableIterator>, TensorGridPoint&>,
-              "The mutable iterator must hand out write access to its working copy");
+static_assert(
+    std::same_as<std::iter_reference_t<TensorGridConstIterator>, const TensorGridIteratorElement&>,
+    "Iterating a tensor grid must not hand out write access by default");
+static_assert(
+    std::same_as<std::iter_reference_t<TensorGridMutableIterator>, TensorGridIteratorElement&>,
+    "The mutable iterator must hand out write access to its working copy");
 // Stashing iterators cannot be forward iterators: a reference dies with the next increment.
 static_assert(!std::forward_iterator<TensorGridConstIterator>);
 static_assert(!std::forward_iterator<TensorGridMutableIterator>);
+
+}  // namespace misc
 
 }  // namespace combigrid
 }  // namespace sgpp
@@ -412,4 +449,4 @@ static_assert(!std::forward_iterator<TensorGridMutableIterator>);
 /// destroyed, so algorithms may return them for temporary ranges.
 template <>
 inline constexpr bool
-    std::ranges::enable_borrowed_range<sgpp::combigrid::TensorGridMutableRange> = true;
+    std::ranges::enable_borrowed_range<sgpp::combigrid::misc::TensorGridMutableRange> = true;
