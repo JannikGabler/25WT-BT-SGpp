@@ -155,6 +155,7 @@ base::DataMatrix TensorGrid::getGridPoints() const {
 Setter
 *****/
 
+// TODO: Delete
 // void TensorGrid::setGridPoint(const size_t idx, const base::DataVector& gp) {
 //   assert(idx < nGP_);
 //   assert(gp.size() == nDim());

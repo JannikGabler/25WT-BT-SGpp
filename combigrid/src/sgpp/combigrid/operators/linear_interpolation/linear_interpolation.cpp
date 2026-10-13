@@ -27,19 +27,21 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
   assert(point.size() == sparseGrid.nDim());
 
   const size_t nDim = sparseGrid.nDim();
-  const size_t maxThreads = static_cast<size_t>(omp_get_max_threads());
 
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
   const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr->getDomain());
-  std::vector<LinInterpScratch> scratch(maxThreads, LinInterpScratch(nDim));
+
   double result = 0;
 
-#pragma omp parallel for reduction(+ : result) schedule(static)
-  for (const TensorGridCTData& tgData : sparseGrid) {
-    const size_t threadId = static_cast<size_t>(omp_get_thread_num());
-    const double v = linear_interpolation::interpolate(sourceFunc, normPoint, tgData, *genInstr,
-                                                       scratch[threadId]);
-    result += tgData.coefficient * v;
+#pragma omp parallel reduction(+ : result)
+  {
+    LinInterpScratch scratch(nDim);
+
+#pragma omp for schedule(static) nowait
+    for (const TensorGridCTData& tgData : sparseGrid) {
+      result += tgData.coefficient * linear_interpolation::interpolate(sourceFunc, normPoint,
+                                                                       tgData, *genInstr, scratch);
+    }
   }
 
   return result;

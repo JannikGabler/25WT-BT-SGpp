@@ -41,7 +41,7 @@ def doConfigure(env, moduleFolders, languageWrapperFolders):
   # as they can make the checks invalid, e.g., by setting "-Werror"
 
   if env["OPT"] == True:
-    config.env.Append(CPPFLAGS=["-O3"])
+    config.env.Append(CPPFLAGS=["-O3", "-DNDEBUG"]) # -DNDEBUG disables assert statements
   else:
     config.env.Append(CPPFLAGS=["-O0"])
 
