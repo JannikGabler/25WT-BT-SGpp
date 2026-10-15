@@ -5,6 +5,11 @@
 
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
+
+using sgpp::combigrid::misc::DeltaQuadratureContext;
+using sgpp::combigrid::misc::FlatNestedVec;
 
 namespace sgpp {
 namespace combigrid {
@@ -28,30 +33,31 @@ namespace delta_quadrature_operator {
 /**
  * TODO: Document
  */
-double processDeltaTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& deltaTG,
-                              const SGGenInstr& genInstr, tools::QuadScratch& scratch);
+size_t comp1DWeightsSize(const SparseGrid& sparseGrid);
 
 /**
  * TODO: Document
  */
-double compGlobalWeightForGP(const SparseGrid& sparseGrid, const GPMI& gpMIInDeltaTG,
-                             const LvlMI& deltaTGMI,
-                             const std::vector<std::vector<base::DataVector>>& weights1D,
-                             const LvlMI& targetTGMI, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                             const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs);
+FlatNestedVec<double, 3> comp1DWeights(const SparseGrid& sparseGrid);
 
 /**
  * TODO: Document
  */
-double compLocalWeightForGP(const GPMI& gpMIInDeltaTG, const LvlMI& deltaTGMI,
-                            const LvlMI& targetTGMI, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                            const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs,
-                            const std::vector<base::DataVector>& weights1D);
+double processDeltaTensorGrid(const DeltaQuadratureContext& context,
+                              const TensorGridCTData& deltaTGCTData);
 
 /**
  * TODO: Document
  */
-void getQuadRules(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs);
+double compGlobalWeightForGP(const DeltaQuadratureContext& context,
+                             const TensorGridCTData& deltaTGCTData, const GPMI& gpMIInDeltaTG);
+
+/**
+ * TODO: Document
+ */
+double compLocalWeightForGP(const DeltaQuadratureContext& context,
+                            const TensorGridCTData& deltaTGCTData, const GPMI& gpMIInDeltaTG,
+                            const LvlMI& targetTGMI, const size_t targetTGIdx);
 
 }  // namespace delta_quadrature_operator
 
