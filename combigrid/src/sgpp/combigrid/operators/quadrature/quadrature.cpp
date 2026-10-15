@@ -5,13 +5,16 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/operators/quadrature/quadrature_scratch.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
+#include "sgpp/combigrid/tools/operators/quadrature/quadrature_utilities.cpp"
+
+using sgpp::combigrid::misc::QuadratureScratch;
 
 namespace sgpp {
 namespace combigrid {
@@ -25,12 +28,12 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
 
 #pragma omp parallel reduction(+ : result)
   {
-    tools::QuadScratch scratch(nDim, sparseGrid.getMaxTGSumOverGPCntsPerDim());
+    QuadratureScratch scratch(nDim, sparseGrid.getMaxTGSumOverGPCntsPerDim());
 
 #pragma omp for schedule(guided) nowait
     for (const TensorGridCTData& tgData : sparseGrid) {
-      result += tgData.coefficient *
-                quadrature_operator::processTensorGrid(sourceFunc, tgData.tensorGrid, *genInstr, scratch);
+      result += tgData.coefficient * quadrature_operator::processTensorGrid(
+                                         sourceFunc, tgData.tensorGrid, *genInstr, scratch);
     }
   }
 
@@ -39,8 +42,9 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
 
 namespace quadrature_operator {
 
+// TODO: Change argument structure (see delta quadrature)
 double processTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& tg,
-                         const SGGenInstr& genInstr, tools::QuadScratch& scratch) {
+                         const SGGenInstr& genInstr, QuadratureScratch& scratch) {
   assert(genInstr.nDim() == tg.nDim());
 
   if (tg.nGP() == 0) {
@@ -64,11 +68,11 @@ double processTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& tg,
 }
 
 void getWeights(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                tools::QuadScratch& scratch) {
+                QuadratureScratch& scratch) {
   const GPMI& gpCntPerDim = tg.getGPCntPerDim();
   scratch.weights.resize(gpCntPerDim.sumOfElems<size_t>());
-  getQuadRules(tg, nodeGenFuncs, scratch);
-  // std::vector<base::DataVector> weights(tg.nDim());
+  tools::getQuadRulesForTensorGrid(tg, nodeGenFuncs, scratch.quadRules);
+
   size_t vecOffset = 0;
 
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
@@ -81,7 +85,7 @@ void getWeights(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFu
 }
 
 double getWeightForGP(const std::vector<GPCntType>& gpMI, const GPMI& gpCntPerDim,
-                      const tools::QuadScratch& scratch) {
+                      const QuadratureScratch& scratch) {
   double weight = 1;
   size_t vecOffset = 0;
 
@@ -93,17 +97,17 @@ double getWeightForGP(const std::vector<GPCntType>& gpMI, const GPMI& gpCntPerDi
   return weight;
 }
 
-void getQuadRules(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                  tools::QuadScratch& scratch) {
-  assert(scratch.quadRules.size() == tg.nDim());
+// void getQuadRules(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
+//                   QuadratureScratch& scratch) {
+//   assert(scratch.quadRules.size() == tg.nDim());
 
-  const size_t nDim = tg.nDim();
-  const GPMI& gpCntPerDim = tg.getGPCntPerDim();
+//   const size_t nDim = tg.nDim();
+//   const GPMI& gpCntPerDim = tg.getGPCntPerDim();
 
-  for (size_t dim = 0; dim < nDim; dim++) {
-    scratch.quadRules[dim] = nodeGenFuncs[dim]->getQuadRule(gpCntPerDim[dim]);
-  }
-}
+//   for (size_t dim = 0; dim < nDim; dim++) {
+//     scratch.quadRules[dim] = nodeGenFuncs[dim]->getQuadRule(gpCntPerDim[dim]);
+//   }
+// }
 
 }  // namespace quadrature_operator
 

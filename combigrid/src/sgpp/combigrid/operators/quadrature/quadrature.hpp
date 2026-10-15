@@ -12,7 +12,9 @@
 
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/tools/operators/quadrature/quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/scratches/quadrature_scratch.hpp>
+
+using sgpp::combigrid::misc::QuadratureScratch;
 
 namespace sgpp {
 namespace combigrid {
@@ -57,7 +59,7 @@ namespace quadrature_operator {
  *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
  */
 double processTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& tg,
-                         const SGGenInstr& genInstr, tools::QuadScratch& scratch);
+                         const SGGenInstr& genInstr, QuadratureScratch& scratch);
 
 /**
  * @brief Populates @p scratch.weights with the 1D quadrature weights for
@@ -69,7 +71,7 @@ double processTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& tg,
  * @param scratch       Scratch space; @c weights and @c quadRules are filled in.
  */
 void getWeights(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                tools::QuadScratch& scratch);
+                QuadratureScratch& scratch);
 
 /**
  * @brief Computes the tensor-product weight at multi-index @p gpMI from
@@ -82,20 +84,20 @@ void getWeights(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFu
  * @return Tensor-product quadrature weight at @p gpMI.
  */
 double getWeightForGP(const std::vector<GPCntType>& gpMI, const GPMI& gpCntPerDim,
-                      const tools::QuadScratch& scratch);
+                      const QuadratureScratch& scratch);
 
-/**
- * @brief Selects the per-dimension 1D quadrature rule for @p tg.
- *
- * Stores pointers into @p scratch.quadRules; the rules themselves are
- * provided by the dimension's node-generation function.
- *
- * @param tg            Tensor grid.
- * @param nodeGenFuncs  Per-dimension node-generation functions.
- * @param scratch       Scratch space with size-@c nDim @c quadRules vector.
- */
-void getQuadRules(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                  tools::QuadScratch& scratch);
+// /**
+//  * @brief Selects the per-dimension 1D quadrature rule for @p tg.
+//  *
+//  * Stores pointers into @p scratch.quadRules; the rules themselves are
+//  * provided by the dimension's node-generation function.
+//  *
+//  * @param tg            Tensor grid.
+//  * @param nodeGenFuncs  Per-dimension node-generation functions.
+//  * @param scratch       Scratch space with size-@c nDim @c quadRules vector.
+//  */
+// void getQuadRules(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
+//                   QuadratureScratch& scratch);
 
 }  // namespace quadrature_operator
 
