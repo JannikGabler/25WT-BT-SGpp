@@ -31,10 +31,13 @@ class NodeGenFunc {
    * @brief Constructs the node-generation function with a unique numeric id.
    * @param id Identifier used for caching and equality.
    */
-  NodeGenFunc(const uint64_t id) : id_(id) {}
+  NodeGenFunc(const uint64_t id) noexcept : id_(id) {}
 
   virtual ~NodeGenFunc() = default;
 
+  /**************
+  Node generation
+  **************/
   /**
    * @brief Generates @p nNodes nodes (with or without boundary nodes).
    *
@@ -95,16 +98,6 @@ class NodeGenFunc {
    */
   base::DataVector genNodesWithoutBoundary(GPCntType nNodes) const;
 
-  /*****
-  Helper
-  *****/
-  /**
-   * TODO: Document
-   */
-  virtual GPCntType mapNodeIdxFromDeltaTGLevel(GPCntType nodeIdxInDeltaTG, LvlType deltaTGLvl,
-                                               LvlType targetLvl,
-                                               Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
-
   /******
   Getters
   ******/
@@ -124,12 +117,29 @@ class NodeGenFunc {
   virtual InterpolationMethod* getInterpolationMethod(GPCntType nNodes) const = 0;
 
   /// @brief Returns the unique identifier.
-  uint64_t id() const { return id_; }
+  uint64_t id() const noexcept { return id_; }
 
   /**
    * TODO: Document
    */
   virtual bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
+
+  /********
+  Utilities
+  ********/
+  /**
+   * TODO: Document
+   */
+  virtual SomeFunctionType getNodeIdxMapBetweenLvls(GPCntType nodeIdx, LvlType originLvl,
+                                                    LvlType targetLvl,
+                                                    Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
+
+  /**
+   * TODO: Document
+   */
+  virtual SomeFunctionType getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+      GPCntType nodeIdxInDeltaTG, LvlType deltaTGLvl, LvlType targetLvl,
+      Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
 
   /********
   Operators

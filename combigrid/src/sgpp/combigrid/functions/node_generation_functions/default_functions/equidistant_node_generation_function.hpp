@@ -44,9 +44,9 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
   void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
                                size_t startIdx = 0) const override;
 
-  /***********
-  SG Operators
-  ***********/
+  /******
+  Getters
+  ******/
   /// @copydoc NodeGenFunc::getQuadRule
   QuadRule* getQuadRule(GPCntType nNodes) const override;
 
@@ -55,6 +55,20 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
 
   /// @copydoc NodeGenFunc::isNested
   bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const override;
+
+  /********
+  Utilities
+  ********/
+  /**
+   * TODO: Document
+   */
+  SomeFunctionType getNodeIdxMapBetweenLvls(Lvl2GPCntFunc lvl2GPCntFunc) const override;
+
+  /**
+   * TODO: Document
+   */
+  SomeFunctionType getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+      Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
   /********
   Operators

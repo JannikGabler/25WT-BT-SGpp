@@ -8,8 +8,15 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/simpson_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/trapezoidal_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
+#include <sgpp/combigrid/tools/functions/node_generation_functions/equidistant_node_generation_function_utilities.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <stdexcept>
+
+using sgpp::combigrid::tools::equidistant_node_gen_function::
+    mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction;
+using sgpp::combigrid::tools::equidistant_node_gen_function::
+    mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction;
 
 namespace sgpp {
 namespace combigrid {
@@ -38,9 +45,9 @@ void EquidistantNodeGenFunc::genNodesWithoutBoundary(const GPCntType nNodes, bas
   }
 }
 
-/***********
-SG Operators
-***********/
+/******
+Getters
+******/
 
 QuadRule* EquidistantNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
   if (nNodes & 1) {  // nNodes is odd
@@ -59,9 +66,47 @@ bool EquidistantNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) const {
     return false;
   } else if (lvl2GPCntFunc == doublingLvl2GPCntFunction) {
     return true;
-  } else {
+  } else [[unlikely]] {
     throw base::not_implemented_exception(
-        "EquidistantNodeGenFunc::isNested: Unknown level-to-grid-point-count function.");
+        "EquidistantNodeGenFunc::isNested: Unknown Lvl2GPCntFunc function.");
+  }
+}
+
+/********
+Utilities
+********/
+
+SomeFunctionType EquidistantNodeGenFunc::getNodeIdxMapBetweenLvls(
+    const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  if (lvl2GPCntFunc == doublingLvl2GPCntFunction) [[likely]] {
+    return mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction;
+  } else {
+    if (isNested(lvl2GPCntFunc)) {
+      throw base::not_implemented_exception(
+          "EquidistantNodeGenFunc::mapNodeIdxFromDeltaTGLevel: Unknown level-to-grid-point-count "
+          "function.");
+    } else {
+      throw std::invalid_argument(
+          "EquidistantNodeGenFunc::mapNodeIdxFromDeltaTGLevel: Equidistant nodes are not be nested "
+          "w.r.t. the provided level-to-grid-point-count function.");
+    }
+  }
+}
+
+SomeFunctionType EquidistantNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+    const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  if (lvl2GPCntFunc == doublingLvl2GPCntFunction) [[likely]] {
+    return mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction;
+  } else {
+    if (isNested(lvl2GPCntFunc)) {
+      throw base::not_implemented_exception(
+          "EquidistantNodeGenFunc::mapNodeIdxFromDeltaTGLevel: Unknown level-to-grid-point-count "
+          "function.");
+    } else {
+      throw std::invalid_argument(
+          "EquidistantNodeGenFunc::mapNodeIdxFromDeltaTGLevel: Equidistant nodes are not be nested "
+          "w.r.t. the provided level-to-grid-point-count function.");
+    }
   }
 }
 
