@@ -79,7 +79,7 @@ void getWeights(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFu
     assert(scratch.weights.size() >= vecOffset + gpCntPerDim[dim]);  // TODO: Delete
 
     const GPCntType nNodes = gpCntPerDim[dim];
-    scratch.quadRules[dim]->genWeightsInplace(nNodes, scratch.weights, vecOffset);
+    scratch.quadRules[dim]->genWeightsInplace(scratch.weights);
     vecOffset += nNodes;
   }
 }

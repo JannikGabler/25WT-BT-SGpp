@@ -38,7 +38,7 @@ class QuadRule {
    * @param nNodes Number of 1D nodes.
    * @return Newly allocated vector of @p nNodes weights.
    */
-  virtual base::DataVector getWeights(GPCntType nNodes) const = 0;
+  virtual base::DataVector genWeights(GPCntType nNodes) const = 0;
 
   /**
    * @brief Writes the quadrature weights for @p nNodes nodes into @p out.
@@ -50,8 +50,7 @@ class QuadRule {
    * @param out      Output vector.
    * @param startIdx Offset at which to start writing (default @c 0).
    */
-  virtual void genWeightsInplace(GPCntType nNodes, base::DataVector& out,
-                                 size_t startIdx = 0) const = 0;
+  virtual void genWeightsInplace(std::span<double> out) const = 0;
 
   /// @brief Returns the unique identifier of this quadrature rule.
   uint64_t id() const { return id_; }

@@ -9,6 +9,7 @@
 
 namespace sgpp {
 namespace combigrid {
+
 namespace tools {
 
 /**
@@ -21,6 +22,12 @@ TODO: Document
 */
 void mapGPMIToDifferentLevel(const GPMI& originalGPMI, const LvlMI& currentLvlMI,
                              const LvlMI& targetLvlMI, GPMI& out);
+
+/**
+ * TODO: Document
+ */
+std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
+                                                 const std::vector<NodeGenFunc*>& nodeGenFuncs);
 
 /**
 TODO: Document
@@ -36,5 +43,6 @@ double genQuadratureWeightOfSingleGP(const TensorGrid& tg, const GPMI& gpMI,
                                      const std::vector<NodeGenFunc*>& nodeGenFuncs);
 
 }  // namespace tools
+
 }  // namespace combigrid
 }  // namespace sgpp

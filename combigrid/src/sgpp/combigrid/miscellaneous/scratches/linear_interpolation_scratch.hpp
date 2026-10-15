@@ -12,7 +12,7 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace tools {
+namespace misc {
 
 /**
  * @brief Pre-allocated workspace for the linear interpolation operator.
@@ -34,7 +34,7 @@ struct LinInterpScratch {
   std::vector<std::pair<double, double>> neighborsPerDim;
 };
 
-}  // namespace tools
+}  // namespace misc
 
 }  // namespace combigrid
 }  // namespace sgpp

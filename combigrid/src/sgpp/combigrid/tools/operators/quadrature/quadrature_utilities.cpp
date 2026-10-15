@@ -6,6 +6,7 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/quadrature_utilities.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -43,6 +44,15 @@ void mapGPMIToDifferentLevel(const GPMI& originalGPMI, const LvlMI& currentLvlMI
     out[dim] = nodeGenFunc->mapNodeIndexToDifferentLvl(originalGPMI[dim], currentLvlMI[dim],
                                                        targetLvlMI[dim]);
   }
+}
+
+std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
+                                                 const std::vector<NodeGenFunc*>& nodeGenFuncs) {
+  std::vector<QuadRule*> result(tg.nDim());
+
+  getQuadRulesForTensorGrid(tg, nodeGenFuncs, result);
+
+  return result;
 }
 
 void getQuadRulesForTensorGrid(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,

@@ -20,7 +20,8 @@ namespace sgpp {
 namespace combigrid {
 namespace quadrature_rules {
 
-base::DataVector ClenshawCurtisQuadRule::getWeights(const GPCntType nNodes) const {
+// TODO: Optimize
+base::DataVector ClenshawCurtisQuadRule::genWeights(const GPCntType nNodes) const {
   if (nNodes == 0) {
     return base::DataVector();
   } else if (nNodes == 1) {
@@ -40,12 +41,11 @@ base::DataVector ClenshawCurtisQuadRule::getWeights(const GPCntType nNodes) cons
 }
 
 // TODO: Optimize
-void ClenshawCurtisQuadRule::genWeightsInplace(const GPCntType nNodes, base::DataVector& out,
-                                               size_t startIdx) const {
-  assert(out.size() - startIdx >= nNodes);
+void ClenshawCurtisQuadRule::genWeightsInplace(const std::span<double> out) const {
+  const GPCntType nNodes = static_cast<GPCntType>(out.size());
 
-  const base::DataVector weights = getWeights(nNodes);
-  std::copy(weights.begin(), weights.end(), out.data() + startIdx);
+  const base::DataVector weights = genWeights(nNodes);
+  std::ranges::copy(weights, out.begin());
 }
 
 /*
