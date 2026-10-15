@@ -12,14 +12,17 @@
 
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/scratches/quadrature_scratch.hpp>
 
+using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;
 
 namespace sgpp {
 namespace combigrid {
 
 /**
+ * TODO: Document (update)
  * @brief Approximates @f$\int_\Omega f(\vec{x})\,\mathrm{d}\vec{x}@f$ on
  * the domain attached to @p sparseGrid using its combination-technique
  * structure.
@@ -45,6 +48,7 @@ Internal operations
 namespace quadrature_operator {
 
 /**
+ * TODO: Document (update)
  * @brief Tensor-product quadrature on a single tensor grid.
  *
  * Iterates over all grid points, multiplies the per-dimension 1D weights,
@@ -58,10 +62,11 @@ namespace quadrature_operator {
  * @return Quadrature estimate on the unit hypercube
  *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
  */
-double processTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& tg,
-                         const SGGenInstr& genInstr, QuadratureScratch& scratch);
+double processTensorGrid(const QuadratureContext& context, const TensorGrid& tg,
+                         QuadratureScratch& scratch);
 
 /**
+ * TODO: Document (update)
  * @brief Populates @p scratch.weights with the 1D quadrature weights for
  * every dimension of @p tg, concatenated dimension by dimension.
  *
@@ -70,10 +75,10 @@ double processTensorGrid(const SourceFunc& sourceFunc, const TensorGrid& tg,
  *                      provides the matching quadrature rule).
  * @param scratch       Scratch space; @c weights and @c quadRules are filled in.
  */
-void getWeights(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                QuadratureScratch& scratch);
+void getWeights(const QuadratureContext& context, const TensorGrid& tg, QuadratureScratch& scratch);
 
 /**
+ * TODO: Document (update)
  * @brief Computes the tensor-product weight at multi-index @p gpMI from
  * the per-dimension weights stored in @p scratch.
  *
@@ -85,19 +90,6 @@ void getWeights(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFu
  */
 double getWeightForGP(const std::vector<GPCntType>& gpMI, const GPMI& gpCntPerDim,
                       const QuadratureScratch& scratch);
-
-// /**
-//  * @brief Selects the per-dimension 1D quadrature rule for @p tg.
-//  *
-//  * Stores pointers into @p scratch.quadRules; the rules themselves are
-//  * provided by the dimension's node-generation function.
-//  *
-//  * @param tg            Tensor grid.
-//  * @param nodeGenFuncs  Per-dimension node-generation functions.
-//  * @param scratch       Scratch space with size-@c nDim @c quadRules vector.
-//  */
-// void getQuadRules(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-//                   QuadratureScratch& scratch);
 
 }  // namespace quadrature_operator
 

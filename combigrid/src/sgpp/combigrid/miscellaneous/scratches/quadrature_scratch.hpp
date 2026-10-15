@@ -28,11 +28,11 @@ struct QuadratureScratch {
    *                              once to avoid reallocations.
    */
   QuadratureScratch(const size_t nDim, const size_t maxTGSumOfGPCntsPerDim)
-      : weights(maxTGSumOfGPCntsPerDim), quadRules(nDim) {}
+      : weights1D(maxTGSumOfGPCntsPerDim), quadRules(nDim) {}
 
  public:
   /// @brief Concatenated 1D quadrature weights (per-dimension blocks back-to-back).
-  base::DataVector weights;
+  base::DataVector weights1D;
   /// @brief Per-dimension quadrature-rule pointers; non-owning.
   std::vector<QuadRule*> quadRules;
 };
