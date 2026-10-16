@@ -12,7 +12,6 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_utilities.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <stdexcept>
 #include <vector>
 
 using sgpp::combigrid::misc::DeltaQuadratureContext;
@@ -22,19 +21,16 @@ namespace sgpp {
 namespace combigrid {
 
 double quadratureDelta(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
-  if (!tools::areNodesOfAllDimsNested(sparseGrid)) {  // TODO: Remove
-    throw std::invalid_argument("quadratureDelta: A sparse grid with nested nodes is required.");
-  }
-
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
   const FlatNestedVec<double, 3> weights1D = delta_quadrature_operator::comp1DWeights(sparseGrid);
+  const std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs =
+      delta_quadrature_operator::compNodeIdxLvlMapFuncs(sparseGrid);
 
   const DeltaQuadratureContext context{.sparseGrid = sparseGrid,
                                        .sourceFunc = sourceFunc,
-                                       .weights1D = weights1D,
                                        .domain = genInstr->getDomain(),
-                                       .nodeGenFuncs = genInstr->getNodeGenFuncs(),
-                                       .lvl2GPCntFuncs = genInstr->getLvl2GPCntFuncs()};
+                                       .weights1D = weights1D,
+                                       .nodeIdxLvlMapFuncs = nodeIdxLvlMapFuncs};
 
   double result = 0.0;
 
@@ -102,6 +98,21 @@ FlatNestedVec<double, 3> comp1DWeights(const SparseGrid& sparseGrid) {
   return weights;
 }
 
+std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const SparseGrid& sparseGrid) {
+  const size_t nDim = sparseGrid.nDim();
+  const std::vector<NodeGenFunc*>& nodeGenFuncs = sparseGrid.getGenInstr()->getNodeGenFuncs();
+  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr()->getLvl2GPCntFuncs();
+
+  std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs(nDim);
+
+  for (size_t dim = 0; dim < nDim; dim++) {
+    nodeIdxLvlMapFuncs[dim] =
+        nodeGenFuncs[dim]->getNodeIdxMapFromDeltaTGLvlToRegularLvl(lvl2GPCntFuncs[dim]);
+  }
+
+  return nodeIdxLvlMapFuncs;
+}
+
 double processDeltaTensorGrid(const DeltaQuadratureContext& context,
                               const TensorGridCTData& deltaTGCTData) {
   const TensorGrid& deltaTG = deltaTGCTData.tensorGrid;
@@ -155,13 +166,10 @@ double compLocalWeightForGP(const DeltaQuadratureContext& context,
   double result = 1.0;
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    const NodeGenFunc* nodeGenFunc = context.nodeGenFuncs[dim];
-    const Lvl2GPCntFunc& lvl2GPCntFunc = context.lvl2GPCntFuncs[dim];
+    const GPCntType mappedNodeIdx =
+        context.nodeIdxLvlMapFuncs[dim](gpMIInDeltaTG[dim], deltaTGMI[dim], targetTGMI[dim]);
 
-    const GPCntType transformedNodeIdx = nodeGenFunc->mapNodeIdxFromDeltaTGLevel(
-        gpMIInDeltaTG[dim], deltaTGMI[dim], targetTGMI[dim], lvl2GPCntFunc);
-
-    const double weight1D = weights1DForTargetTG[dim][transformedNodeIdx];
+    const double weight1D = weights1DForTargetTG[dim][mappedNodeIdx];
     result *= weight1D;
   }
 

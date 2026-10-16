@@ -1,3 +1,4 @@
+#include <limits>
 #include <sgpp/combigrid/tools/functions/node_generation_functions/equidistant_node_generation_function_utilities.hpp>
 #include <sgpp/combigrid/tools/math/power.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -12,6 +13,7 @@ GPCntType mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction(const GPCntType node
                                                             const LvlType originLvl,
                                                             const LvlType targetLvl) {
   assert(targetLvl >= originLvl);  // TODO: Maybe support deltaTGLvl < targetLvl?
+  assert(targetLvl - originLvl < std::numeric_limits<GPCntType>::digits);  // Checks for overflow
 
   const GPCntType pow = GPCntType{1} << (targetLvl - originLvl);  // 2^{target-Lvl - originLvl}
   return pow * nodeIdx + pow - 1;

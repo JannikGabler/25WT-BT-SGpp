@@ -18,13 +18,16 @@ namespace misc {
  * @brief Read-only data of one delta-quadrature call, shared by all functions and threads.
  */
 struct DeltaQuadratureContext {
+  // Top-level arguments
   const SparseGrid& sparseGrid;
   const SourceFunc& sourceFunc;
-  const FlatNestedVec<double, 3>& weights1D;  ///< weights1D[tgIdx][dim][nodeIdx]
-
   const HyperCubeArea& domain;
-  const std::vector<NodeGenFunc*>& nodeGenFuncs;
-  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs;
+  // const std::vector<NodeGenFunc*>& nodeGenFuncs;
+  // const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs;
+
+  // Precomputed values
+  const FlatNestedVec<double, 3>& weights1D;  ///< weights1D[tgIdx][dim][nodeIdx]
+  const std::vector<NodeIdxLvlMapFunc>& nodeIdxLvlMapFuncs;
 };
 
 }  // namespace misc

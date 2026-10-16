@@ -75,6 +75,7 @@ Utilities
 NodeIdxLvlMapFunc SecondTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls(
     const Lvl2GPCntFunc lvl2GPCntFunc) const {
   if (lvl2GPCntFunc == doublingLvl2GPCntFunction) [[likely]] {
+    // Intentionally returns the same as EquidistantNodeGenFunc
     return mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction;
   } else {
     if (isNested(lvl2GPCntFunc)) {
@@ -92,6 +93,7 @@ NodeIdxLvlMapFunc SecondTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls(
 NodeIdxLvlMapFunc SecondTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl(
     const Lvl2GPCntFunc lvl2GPCntFunc) const {
   if (lvl2GPCntFunc == doublingLvl2GPCntFunction) [[likely]] {
+    // Intentionally returns the same as EquidistantNodeGenFunc
     return mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction;
   } else {
     if (isNested(lvl2GPCntFunc)) {

@@ -43,6 +43,11 @@ FlatNestedVec<double, 3> comp1DWeights(const SparseGrid& sparseGrid);
 /**
  * TODO: Document
  */
+std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const SparseGrid& sparseGrid);
+
+/**
+ * TODO: Document
+ */
 double processDeltaTensorGrid(const DeltaQuadratureContext& context,
                               const TensorGridCTData& deltaTGCTData);
 

@@ -2,10 +2,10 @@
  * @file power.hpp
  * @brief Integer exponentiation by squaring and a power-of-two predicate.
  */
-#ifndef COMBIGRID_TOOLS_MATH_POWER_HPP
-#define COMBIGRID_TOOLS_MATH_POWER_HPP
+#pragma once
 
 #include <type_traits>
+
 namespace sgpp {
 namespace combigrid {
 namespace tools {
@@ -80,5 +80,3 @@ inline typename std::enable_if<std::is_integral<T>::value, bool>::type isPowerOf
 }  // namespace tools
 }  // namespace combigrid
 }  // namespace sgpp
-
-#endif
