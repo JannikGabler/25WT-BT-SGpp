@@ -1,0 +1,240 @@
+/**
+ * TODO: Document
+ */
+#pragma once
+
+#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
+#include <span>
+#include <vector>
+
+namespace sgpp {
+namespace combigrid {
+
+/**
+ * TODO: Document
+ */
+class SparseGridBase {
+ public:
+  using iterator = std::vector<TensorGridCTData>::iterator;
+  using const_iterator = std::vector<TensorGridCTData>::const_iterator;
+  using reverse_iterator = std::vector<TensorGridCTData>::reverse_iterator;
+  using const_reverse_iterator = std::vector<TensorGridCTData>::const_reverse_iterator;
+
+  /// @name Destructors
+  /// @{
+
+  //   virtual ~SparseGridBase() = default;
+
+  /// @}
+
+  /// @name Getters
+  /// @{
+
+  /// @brief Returns the spatial dimensionality.
+  size_t nDim() const noexcept;
+
+  /// @brief Returns the number of tensor grids in the combination.
+  size_t nTG() const noexcept;
+
+  /**
+   * @brief Returns the @p idx -th tensor grid (with its level multi-index
+   * and combination coefficient).
+   */
+  const TensorGridCTData& getTensorGrid(size_t idx) const noexcept;
+
+  /**
+   * @brief Returns an iterator to the tensor grid with level multi-index @p mi.
+   *
+   * @param mi Level multi-index to search for.
+   * @return Iterator to the matching tensor grid, or @c end() if not found.
+   * @note Linear search (@c O(nTG)); avoid in hot loops.
+   */
+  const_iterator getTensorGrid(const LvlMI& mi) const noexcept;
+
+  /// @brief Returns the underlying tensor grids.
+  std::span<const TensorGridCTData> getTensorGrids() const noexcept;
+
+  /**
+   * @brief Returns the cached maximum number of grid points across all
+   * contained tensor grids.
+   *
+   * The value must be set explicitly via @ref setMaxTGGPCnt; it is not
+   * recomputed automatically when tensor grids are added or modified.
+   */
+  size_t getMaxTGGPCnt() const noexcept;
+
+  /**
+   * @brief Returns the cached maximum of @f$\sum_k n_k@f$ across all
+   * contained tensor grids, where @f$n_k@f$ is the per-dimension grid-point
+   * count.
+   *
+   * The value must be set explicitly via @ref setMaxTGSumOverGPCntsPerDim;
+   * it is not recomputed automatically.
+   */
+  size_t getMaxTGSumOverGPCntsPerDim() const noexcept;
+
+  /// @}
+
+  /// @name Setters
+  /// @{
+
+  /**
+   * TODO: Document
+   * Intended method to fill the complete sparse grid
+   */
+  void setTensorGrids(std::vector<TensorGridCTData>&& tgs);
+
+  /**
+   * TODO: Document (warn about the performance penalty that a vector reallocation can cause)
+   * @brief Appends a tensor grid (copy).
+   * @param tg Tensor grid combination-technique data to add.
+   */
+  void addTensorGrid(const TensorGridCTData& tg);
+
+  /**
+   * TODO: Document (warn about the performance penalty that a vector reallocation can cause)
+   * @brief Appends a tensor grid (move).
+   * @param tg Tensor grid combination-technique data to move from.
+   */
+  void addTensorGrid(TensorGridCTData&& tg);
+
+  /**
+   * @brief Replaces the @p idx -th tensor grid (copy).
+   * @param idx Slot index, must satisfy @c idx < nTG().
+   * @param tg  New tensor grid data.
+   */
+  void setTensorGrid(size_t idx, const TensorGridCTData& tg);
+
+  /**
+   * @brief Replaces the @p idx -th tensor grid (move).
+   * @param idx Slot index, must satisfy @c idx < nTG().
+   * @param tg  New tensor grid data (moved-from).
+   */
+  void setTensorGrid(size_t idx, TensorGridCTData&& tg);
+
+  //   /**
+  //    * @brief Stores a copy of @p genInstr as the attached generation instruction.
+  //    * @param genInstr Generation instruction. Its dimension must match @ref nDim().
+  //    */
+  //   void setGenInstr(const SGGenInstr& genInstr);
+
+  //   /**
+  //    * @brief Adopts an existing shared generation instruction.
+  //    * @param genInstr Shared pointer to a generation instruction (moved-from).
+  //    */
+  //   void setGenInstr(std::shared_ptr<const SGGenInstr>&& genInstr);
+
+  /// @}
+
+  /// @name Helpers
+  /// @{
+
+  /**
+   * @brief Resizes the internal vector of tensor grids.
+   * @param nTG New size for the vector.
+   */
+  void resize(size_t nTG);
+
+  /**
+   * @brief Preallocates space for @p n tensor grids.
+   * @param n Number of tensor grids to reserve space for.
+   */
+  void reserve(size_t n);
+
+  /// @}
+
+  /// @name Iterators
+  /// @{
+
+  iterator begin() noexcept;
+  iterator end() noexcept;
+  const_iterator begin() const noexcept;
+  const_iterator end() const noexcept;
+  const_iterator cbegin() const noexcept;
+  const_iterator cend() const noexcept;
+
+  reverse_iterator rbegin() noexcept;
+  reverse_iterator rend() noexcept;
+  const_reverse_iterator rbegin() const noexcept;
+  const_reverse_iterator rend() const noexcept;
+  const_reverse_iterator crbegin() const noexcept;
+  const_reverse_iterator crend() const noexcept;
+  /// @}
+
+  /// @name Operators
+  /// @{
+
+  /**
+   * @brief Order-insensitive content equality.
+   *
+   * Two sparse grids are considered equal if they have the same dimension,
+   * the same number of tensor grids, and every tensor grid in @c *this is
+   * also present in @p other.
+   *
+   * @param other Sparse grid to compare against.
+   * @return @c true if equal.
+   * @note This operation is @c O(nTG^2) and should be used carefully.
+   */
+  bool operator==(const SparseGridBase& other) const;
+
+  /// @}
+
+ protected:
+  /// @name Constructors
+  /// @{
+
+  /**
+   * @brief Constructs an empty sparse grid with the given number of dimensions.
+   * @param nDim Number of spatial dimensions.
+   */
+  SparseGridBase(size_t nDim);
+
+  /**
+   * @brief Constructs a sparse grid with @p nTG default-constructed tensor-grid slots.
+   * @param nDim Number of spatial dimensions.
+   * @param nTG  Number of tensor-grid slots to preallocate.
+   */
+  SparseGridBase(size_t nDim, size_t nTG);
+
+  /// @}
+
+  /// @name Attributes
+  /// @{
+
+  const size_t nDim_;  ///< Spatial dimensionality (fixed at construction).
+  std::vector<TensorGridCTData>
+      tensorGridData;  ///< Tensor grids and their combination coefficients.
+
+  size_t maxTGGPCnt = 0;  ///< Cached maximum @c nGP() across contained tensor grids.
+  size_t maxTGSumOverGPCntsPerDim =
+      0;  ///< Cached maximum @f$\sum_k n_k@f$ across contained tensor grids.
+
+  /// @}
+
+  /*****
+  Helper
+  *****/
+
+  /**
+   * TODO: Document
+   */
+  void recomputeMetaValues();
+
+  /**
+   * TODO: Document
+   */
+  void updateMetaValuesAfterInsertion(const TensorGridCTData& tg);
+
+  /**
+   * TODO: Document
+   */
+  void updateMetaValuesBeforeSwap(const TensorGridCTData& oldTG, const TensorGridCTData& newTG);
+};
+
+}  // namespace combigrid
+}  // namespace sgpp
