@@ -117,18 +117,6 @@ class SparseGridBase {
    */
   void setTensorGrid(size_t idx, TensorGridCTData&& tg);
 
-  //   /**
-  //    * @brief Stores a copy of @p genInstr as the attached generation instruction.
-  //    * @param genInstr Generation instruction. Its dimension must match @ref nDim().
-  //    */
-  //   void setGenInstr(const SGGenInstr& genInstr);
-
-  //   /**
-  //    * @brief Adopts an existing shared generation instruction.
-  //    * @param genInstr Shared pointer to a generation instruction (moved-from).
-  //    */
-  //   void setGenInstr(std::shared_ptr<const SGGenInstr>&& genInstr);
-
   /// @}
 
   /// @name Helpers
