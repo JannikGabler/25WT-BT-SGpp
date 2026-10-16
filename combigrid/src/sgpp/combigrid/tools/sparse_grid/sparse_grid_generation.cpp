@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
@@ -14,8 +13,11 @@
 #include <utility>
 #include <vector>
 
+using namespace sgpp::combigrid::tools::sparse_grid_generation;
+
 namespace sgpp {
 namespace combigrid {
+
 namespace tools {
 
 void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
@@ -23,46 +25,13 @@ void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVe
   assert(sg.nDim() == genInstr.nDim() && sg.nDim() == miVec.nDim());
   assert(miVec.nMI() == coeffs.size());
 
-  // Old implementation
-  //   std::vector<TensorGridCTData> tgData(miVec.nMI());
-
-  // #pragma omp parallel for schedule(guided)  // TODO: Schedule (benchmark)
-  //   for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
-  //     LvlMI mi = miVec[miIdx];
-
-  //     TensorGrid tg = genTGForMI(mi, genInstr);
-
-  //     tgData[miIdx] = {std::move(mi), coeffs[miIdx], std::move(tg)};
-  //   }
-
   std::vector<TensorGridCTData> tgData = genTGData(genInstr, miVec.getView(), coeffs);
 
   sg.setTensorGrids(std::move(tgData));
 }
 
-void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                         const std::vector<CTCoeffType>& coeffs) {
-  assert(sg.nDim() == genInstr.nDim() && sg.nDim() == miVec.nDim());
-  assert(miVec.nMI() == coeffs.size());
-  assert(sg_gen::areTGsCorrectlyPartitionedForExtensiveSG(coeffs));
-
-  const size_t nTG = miVec.nMI();
-
-  const auto partitionPoint = std::partition_point(
-      coeffs.begin(), coeffs.end(), [](const CTCoeffType& coeff) { return coeff == 0; });
-  const size_t nTGWithCoeffZero =
-      static_cast<size_t>(std::distance(coeffs.begin(), partitionPoint));
-
-  std::vector<TensorGridCTData> zeroCoeffTGData =
-      genTGData(genInstr, miVec.getView().first(nTGWithCoeffZero),
-                std::span<const CTCoeffType>(coeffs).first(nTGWithCoeffZero));
-  std::vector<TensorGridCTData> nonZeroCoeffTGData =
-      genTGData(genInstr, miVec.getView().last(nTG - nTGWithCoeffZero),
-                std::span<const CTCoeffType>(coeffs).last(nTG - nTGWithCoeffZero));
-
-  sg.setTensorGrids(std::move(nonZeroCoeffTGData));
-  sg.setTensorGridsWithCoeffZero(std::move(zeroCoeffTGData));
-}
+/// @brief Internal implementation details of the sparse-grid generation.
+namespace sparse_grid_generation {
 
 std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr, const LvlMIVecView mis,
                                         const std::span<const CTCoeffType> coeffs) {
@@ -83,18 +52,14 @@ std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr, const LvlMIV
 }
 
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr) {
-  GPMI gpCntPerDim = sg_gen::getGPCntPerDim(mi, genInstr);
+  GPMI gpCntPerDim = getGPCntPerDim(mi, genInstr);
 
-  base::DataVector nodesPerDimForTG = sg_gen::getNodesPerDimForTG(mi, genInstr, gpCntPerDim);
+  base::DataVector nodesPerDimForTG = getNodesPerDimForTG(mi, genInstr, gpCntPerDim);
 
   return TensorGrid(std::move(gpCntPerDim), std::move(nodesPerDimForTG));
 }
 
-namespace sg_gen {
-
-/*
-Does include the grid points on the boundary
-*/
+// Does include the grid points on the boundary
 GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
   GPMI gpCntPerDim(genInstr.nDim());
 
@@ -123,66 +88,14 @@ base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr
 
     nodeGenFunc->genNodes(nodeCnt, nodesPerDim, includeBoundary, vecIdx);
     vecIdx += nodeCnt;
-
-    // TODO: Delete
-    // if (mi[dim] < genInstr.getBoundaryLevelOffset()) {  // Should the boundary be included?
-    //   const size_t innerNodeCnt = gpCntPerDim[dim];
-    //   nodeGenFunc nodesPerDim[dim] = lookup.find({nodeGenFunc, innerNodeCnt})->second;
-    // } else {
-    //   const size_t innerNodeCnt = gpCntPerDim[dim] - 2;
-    //   const base::DataVector& cachedNodes = lookup.find({nodeGenFunc, innerNodeCnt})->second;
-
-    //   nodesPerDim[dim] = base::DataVector(gpCntPerDim[dim]);
-    //   std::copy(cachedNodes.begin(), cachedNodes.end(), nodesPerDim[dim].begin() + 1);
-    //   nodesPerDim[dim][gpCntPerDim[dim] - 1] = static_cast<double>(1);
-    // }
   }
 
   return nodesPerDim;
 }
 
-size_t partitionForExtensiveSG(LvlMIVec& miVec, std::vector<CTCoeffType>& coeffs) {
-  assert(miVec.nMI() == coeffs.size());
-
-  size_t writeIdx = 0;
-  LvlMIVec tmpMIVec(miVec.nDim(), 0);
-  std::vector<CTCoeffType> tmpCoeffs;
-
-  for (size_t i = 0; i < miVec.nMI(); i++) {
-    if (coeffs[i] == 0) {
-      miVec.moveMI(writeIdx, i);  // case writeIdx == i is already covered in MIVec::moveMI
-      writeIdx++;
-    } else {
-      tmpMIVec.push_back(miVec[i]);
-      tmpCoeffs.push_back(coeffs[i]);
-    }
-  }
-
-  std::fill(coeffs.begin(), coeffs.begin() + static_cast<std::ptrdiff_t>(writeIdx), 0);
-  std::move(tmpMIVec.begin(), tmpMIVec.end(),
-            miVec.begin() + static_cast<std::ptrdiff_t>(writeIdx));
-  std::copy(tmpCoeffs.begin(), tmpCoeffs.end(),
-            coeffs.begin() + static_cast<std::ptrdiff_t>(writeIdx));
-
-  return writeIdx;
-}
-
-bool areTGsCorrectlyPartitionedForExtensiveSG(const std::vector<CTCoeffType>& coeffs) {
-  bool hasSeenNonZeroCoeff = false;
-
-  for (size_t i = 0; i < coeffs.size(); i++) {
-    if (coeffs[i] != 0) {
-      hasSeenNonZeroCoeff = true;
-    } else if (hasSeenNonZeroCoeff) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-}  // namespace sg_gen
+}  // namespace sparse_grid_generation
 
 }  // namespace tools
+
 }  // namespace combigrid
 }  // namespace sgpp

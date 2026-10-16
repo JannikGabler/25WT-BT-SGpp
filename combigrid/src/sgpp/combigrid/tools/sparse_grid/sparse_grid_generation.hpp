@@ -6,6 +6,7 @@
 #pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/extensive_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
@@ -24,13 +25,8 @@ namespace tools {
 void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
                 const std::vector<CTCoeffType>& coeffs);
 
-/**
- * TODO: Document
- * Important requirement: The tensor grids represented through miVec and coeffs must be ordered such
- * that all tensor grids with a CT coeff of zero are at the front of the vector.
- */
-void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                         const std::vector<CTCoeffType>& coeffs);
+/// @brief Internal implementation details of the sparse-grid generation.
+namespace sparse_grid_generation {
 
 /**
  * TODO: Document
@@ -46,15 +42,6 @@ std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr, const LvlMIV
  * @return Tensor grid with the proper per-dim node counts and node positions.
  */
 TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr);
-
-/******************
-Internal operations
-******************/
-
-/**
- * @brief Implementation details of the sparse-grid populator.
- */
-namespace sg_gen {
 
 /**
  * @brief Translates a level multi-index into the per-dimension grid-point
@@ -90,17 +77,7 @@ misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim);
 base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
                                      const GPMI& gpCntPerDim);
 
-/**
- * TODO: Document
- */
-size_t partitionForExtensiveSG(LvlMIVec& miVec, std::vector<CTCoeffType>& coeffs);
-
-/**
- * TODO: Document
- */
-bool areTGsCorrectlyPartitionedForExtensiveSG(const std::vector<CTCoeffType>& coeffs);
-
-}  // namespace sg_gen
+}  // namespace sparse_grid_generation
 
 }  // namespace tools
 }  // namespace combigrid
