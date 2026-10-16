@@ -31,12 +31,11 @@ class ClenshawCurtisQuadRule : public QuadRule {
   /// @brief Constructs the rule with a deterministic id derived from its name.
   ClenshawCurtisQuadRule() : QuadRule(tools::fnv1aHash("Clenshaw Curtis Quadrature Rule")) {}
 
-  /// @copydoc QuadRule::getWeights
-  base::DataVector getWeights(const GPCntType nNodes) const override;
+  /// @copydoc QuadRule::genWeights
+  base::DataVector genWeights(const GPCntType nNodes) const override;
 
   /// @copydoc QuadRule::genWeightsInplace
-  void genWeightsInplace(const GPCntType nNodes, base::DataVector& out,
-                         size_t startIdx = 0) const override;
+  void genWeightsInplace(std::span<double> out) const override;
 
  private:
   /**

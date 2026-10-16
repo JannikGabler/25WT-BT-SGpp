@@ -10,16 +10,16 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace tools {
+namespace misc {
 
 /**
  * @brief Pre-allocated workspace for the quadrature operator.
  *
- * Holds the buffers needed to integrate one tensor grid: a grid-point
- * coordinate buffer, the concatenated 1D weight vector for every
- * dimension, and the per-dimension quadrature-rule pointers.
+ * Holds the buffers needed to integrate one tensor grid: the
+ * concatenated 1D weight vector for every dimension, and the
+ * per-dimension quadrature-rule pointers.
  */
-struct QuadScratch {
+struct QuadratureScratch {
   /**
    * @brief Allocates the buffers.
    * @param nDim                  Spatial dimension.
@@ -27,19 +27,17 @@ struct QuadScratch {
    *                              tensor grids that will be integrated; sized
    *                              once to avoid reallocations.
    */
-  QuadScratch(const size_t nDim, const size_t maxTGSumOfGPCntsPerDim)
-      : weights(maxTGSumOfGPCntsPerDim), quadRules(nDim) {}
+  QuadratureScratch(const size_t nDim, const size_t maxTGSumOfGPCntsPerDim)
+      : weights1D(maxTGSumOfGPCntsPerDim), quadRules(nDim) {}
 
  public:
-  // /// @brief Reusable buffer for the current grid-point coordinates.
-  // base::DataVector gp;
   /// @brief Concatenated 1D quadrature weights (per-dimension blocks back-to-back).
-  base::DataVector weights;
+  base::DataVector weights1D;
   /// @brief Per-dimension quadrature-rule pointers; non-owning.
   std::vector<QuadRule*> quadRules;
 };
 
-}  // namespace tools
+}  // namespace misc
 
 }  // namespace combigrid
 }  // namespace sgpp

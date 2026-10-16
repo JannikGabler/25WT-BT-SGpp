@@ -9,11 +9,11 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
-#include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -53,7 +53,7 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
                    const TensorGridCTData& tgData, const SGGenInstr& genInstr,
                    LinInterpScratch& scratch) {
   const size_t nDim = tgData.tensorGrid.nDim();
-  const size_t nNeighbors = tools::pow(static_cast<size_t>(2), nDim);
+  const size_t nNeighbors = size_t{1} << nDim;  // 2^ndim
   const HyperCubeArea& domain = genInstr.getDomain();
 
   if (nDim == 0) {

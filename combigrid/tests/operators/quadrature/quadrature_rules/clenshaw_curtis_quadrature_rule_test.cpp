@@ -40,14 +40,14 @@ namespace {}  // namespace
 
 BOOST_AUTO_TEST_CASE(zero_nodes) {
   const size_t nNodes = 0;
-  const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
+  const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
 
   BOOST_CHECK(weights.size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(one_node) {
   const size_t nNodes = 1;
-  const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
+  const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
 
   BOOST_REQUIRE(weights.size() == 1);
   BOOST_CHECK_CLOSE(weights[0], static_cast<double>(1.0), 1e-12);
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(one_node) {
 
 BOOST_AUTO_TEST_CASE(two_nodes_trapezoid) {
   const size_t nNodes = 2;
-  const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
+  const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
 
   BOOST_REQUIRE(weights.size() == 2);
   // trapezoidal rule on [0,1]
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(two_nodes_trapezoid) {
 
 BOOST_AUTO_TEST_CASE(three_nodes_simpson) {
   const size_t nNodes = 3;
-  const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
+  const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
 
   BOOST_REQUIRE(weights.size() == 3);
   // 3 point Clenshaw-Surtis equals the Simpson rule
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(weights_sum_and_symmetry_various_n) {
   const std::vector<GPCntType> Ns = {2u, 3u, 5u, 10u, 50u};
 
   for (GPCntType nNodes : Ns) {
-    const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
+    const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
     BOOST_REQUIRE(weights.size() == nNodes);
 
     // Sum der Gewichte muss 1 ergeben (Integral von f(x)=1 über [0,1]).
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(weights_sum_and_symmetry_various_n) {
 BOOST_AUTO_TEST_CASE(positive_weights_up_to_large_n) {
   const GPCntType maxN = 200;  // prüfe größere N auf numerische Stabilität
   for (GPCntType nNodes = 1; nNodes <= maxN; ++nNodes) {
-    const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
+    const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
     BOOST_REQUIRE(weights.size() == nNodes);
 
     // numerische Rundungsfehler können sehr kleine negative Werte erzeugen;
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(integrates_linear_function) {
   const std::vector<GPCntType> Ns = {2u, 3u, 5u, 10u, 50u};
 
   for (GPCntType nNodes : Ns) {
-    const DataVector weights = clenshawCurtisQuadRule->getWeights(nNodes);
+    const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
     BOOST_REQUIRE(weights.size() == nNodes);
 
     double integralApprox = 0.0;

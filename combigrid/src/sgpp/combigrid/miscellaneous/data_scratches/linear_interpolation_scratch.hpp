@@ -4,10 +4,8 @@
  */
 #pragma once
 
-#include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/tools/math/power.hpp>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {

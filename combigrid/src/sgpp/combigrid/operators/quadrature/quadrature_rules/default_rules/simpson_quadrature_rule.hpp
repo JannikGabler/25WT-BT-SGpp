@@ -27,50 +27,16 @@ namespace quadrature_rules {
 class SimpsonQuadRule : public QuadRule {
  public:
   /// @brief Constructs the rule with a deterministic id derived from its name.
-  SimpsonQuadRule() : QuadRule(tools::fnv1aHash("Simpson Quadrature Rule")) {}
+  SimpsonQuadRule();
 
-  /// @copydoc QuadRule::getWeights
-  base::DataVector getWeights(const GPCntType nNodes) const override {
-    base::DataVector weights(nNodes);
-
-    genWeightsInplace(nNodes, weights);
-
-    return weights;
-  }
+  /// @copydoc QuadRule::genWeights
+  base::DataVector genWeights(const GPCntType nNodes) const override;
 
   /**
    * @copydoc QuadRule::genWeightsInplace
    * @throws std::invalid_argument if @p nNodes is even.
    */
-  void genWeightsInplace(const GPCntType nNodes, base::DataVector& out,
-                         size_t startIdx = 0) const override {
-    assert(out.size() - startIdx >= nNodes);
-
-    if ((nNodes & 1) == 0) {  // Is nNodes even?
-      throw std::invalid_argument("The argument 'nNodes' has to be odd.");
-    } else if (nNodes == 1) {
-      out[startIdx] = 1.0;
-      return;
-    }
-
-    const double w1 = 1 / (3 * static_cast<double>(nNodes - 1));
-    const double w2 = 4 * w1;
-    const double w3 = 2 * w1;
-
-    // out[startIdx++] = w1;
-    // for (size_t i = 1; i < nNodes - 1; i += 2) {  // i is always odd
-    //   out[startIdx++] = w2;
-    //   out[startIdx++] = w3;
-    // }
-    // out[startIdx + nNodes - 1] = w1;
-    out[startIdx++] = w1;
-    for (size_t i = 0; i < (nNodes - 3) / 2; i++) {
-      out[startIdx++] = w2;
-      out[startIdx++] = w3;
-    }
-    out[startIdx++] = w2;
-    out[startIdx] = w1;
-  }
+  void genWeightsInplace(const std::span<double> out) const override;
 };
 
 }  // namespace quadrature_rules
