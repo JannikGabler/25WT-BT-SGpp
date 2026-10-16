@@ -130,15 +130,12 @@ class NodeGenFunc {
   /**
    * TODO: Document
    */
-  virtual SomeFunctionType getNodeIdxMapBetweenLvls(GPCntType nodeIdx, LvlType originLvl,
-                                                    LvlType targetLvl,
-                                                    Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
+  virtual NodeIdxLvlMapFunc getNodeIdxMapBetweenLvls(Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
 
   /**
    * TODO: Document
    */
-  virtual SomeFunctionType getNodeIdxMapFromDeltaTGLvlToRegularLvl(
-      GPCntType nodeIdxInDeltaTG, LvlType deltaTGLvl, LvlType targetLvl,
+  virtual NodeIdxLvlMapFunc getNodeIdxMapFromDeltaTGLvlToRegularLvl(
       Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
 
   /********

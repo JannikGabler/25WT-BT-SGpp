@@ -62,12 +62,12 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
   /**
    * TODO: Document
    */
-  SomeFunctionType getNodeIdxMapBetweenLvls(Lvl2GPCntFunc lvl2GPCntFunc) const override;
+  NodeIdxLvlMapFunc getNodeIdxMapBetweenLvls(Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
   /**
    * TODO: Document
    */
-  SomeFunctionType getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+  NodeIdxLvlMapFunc getNodeIdxMapFromDeltaTGLvlToRegularLvl(
       Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
   /********

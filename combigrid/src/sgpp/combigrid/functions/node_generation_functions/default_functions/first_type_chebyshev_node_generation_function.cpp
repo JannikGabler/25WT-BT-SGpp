@@ -38,9 +38,9 @@ void FirstTypeChebyshevNodeGenFunc::genNodesWithoutBoundary(const GPCntType nNod
   }
 }
 
-/***********
-SG Operators
-***********/
+/******
+Getters
+******/
 
 QuadRule* FirstTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
   // TODO
@@ -60,6 +60,36 @@ bool FirstTypeChebyshevNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) 
   } else {
     throw base::not_implemented_exception(
         "FirstTypeChebyshevNodeGenFunc::isNested: Unknown level-to-grid-point-count function.");
+  }
+}
+
+/********
+Utilities
+********/
+
+NodeIdxLvlMapFunc FirstTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls(
+    const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  if (isNested(lvl2GPCntFunc)) {
+    throw base::not_implemented_exception(
+        "FirstTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls: Unknown "
+        "level-to-grid-point-count function.");
+  } else {
+    throw std::invalid_argument(
+        "FirstTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls: Chebyshev nodes of the first "
+        "type are not nested w.r.t. the provided level-to-grid-point-count function.");
+  }
+}
+
+NodeIdxLvlMapFunc FirstTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+    const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  if (isNested(lvl2GPCntFunc)) {
+    throw base::not_implemented_exception(
+        "FirstTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl: Unknown "
+        "level-to-grid-point-count function.");
+  } else {
+    throw std::invalid_argument(
+        "FirstTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl: Chebyshev nodes "
+        "of the first type are not nested w.r.t. the provided level-to-grid-point-count function.");
   }
 }
 

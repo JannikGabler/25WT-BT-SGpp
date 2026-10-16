@@ -5,8 +5,14 @@
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
+#include <sgpp/combigrid/tools/functions/node_generation_functions/equidistant_node_generation_function_utilities.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+
+using sgpp::combigrid::tools::equidistant_node_gen_function::
+    mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction;
+using sgpp::combigrid::tools::equidistant_node_gen_function::
+    mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction;
 
 namespace sgpp {
 namespace combigrid {
@@ -38,9 +44,9 @@ void SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary(const GPCntType nNo
   }
 }
 
-/***********
-SG Operators
-***********/
+/******
+Getters
+******/
 
 QuadRule* SecondTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
   return getClenshawCurtisQuadRule();
@@ -59,6 +65,45 @@ bool SecondTypeChebyshevNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc)
   } else {
     throw base::not_implemented_exception(
         "SecondTypeChebyshevNodeGenFunc::isNested: Unknown level-to-grid-point-count function.");
+  }
+}
+
+/********
+Utilities
+********/
+
+NodeIdxLvlMapFunc SecondTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls(
+    const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  if (lvl2GPCntFunc == doublingLvl2GPCntFunction) [[likely]] {
+    return mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction;
+  } else {
+    if (isNested(lvl2GPCntFunc)) {
+      throw base::not_implemented_exception(
+          "SecondTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls: Unknown "
+          "level-to-grid-point-count function.");
+    } else {
+      throw std::invalid_argument(
+          "SecondTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls: Chebyshev nodes of the second "
+          "type are not nested w.r.t. the provided level-to-grid-point-count function.");
+    }
+  }
+}
+
+NodeIdxLvlMapFunc SecondTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+    const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  if (lvl2GPCntFunc == doublingLvl2GPCntFunction) [[likely]] {
+    return mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction;
+  } else {
+    if (isNested(lvl2GPCntFunc)) {
+      throw base::not_implemented_exception(
+          "SecondTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl: Unknown "
+          "level-to-grid-point-count function.");
+    } else {
+      throw std::invalid_argument(
+          "SecondTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl: Chebyshev "
+          "nodes of the second type are not nested w.r.t. the provided level-to-grid-point-count "
+          "function.");
+    }
   }
 }
 

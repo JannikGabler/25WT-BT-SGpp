@@ -76,36 +76,36 @@ bool EquidistantNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) const {
 Utilities
 ********/
 
-SomeFunctionType EquidistantNodeGenFunc::getNodeIdxMapBetweenLvls(
+NodeIdxLvlMapFunc EquidistantNodeGenFunc::getNodeIdxMapBetweenLvls(
     const Lvl2GPCntFunc lvl2GPCntFunc) const {
   if (lvl2GPCntFunc == doublingLvl2GPCntFunction) [[likely]] {
-    return mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction;
+    return mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction;
   } else {
     if (isNested(lvl2GPCntFunc)) {
       throw base::not_implemented_exception(
-          "EquidistantNodeGenFunc::mapNodeIdxFromDeltaTGLevel: Unknown level-to-grid-point-count "
+          "EquidistantNodeGenFunc::getNodeIdxMapBetweenLvls: Unknown level-to-grid-point-count "
           "function.");
     } else {
       throw std::invalid_argument(
-          "EquidistantNodeGenFunc::mapNodeIdxFromDeltaTGLevel: Equidistant nodes are not be nested "
+          "EquidistantNodeGenFunc::getNodeIdxMapBetweenLvls: Equidistant nodes are not nested "
           "w.r.t. the provided level-to-grid-point-count function.");
     }
   }
 }
 
-SomeFunctionType EquidistantNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+NodeIdxLvlMapFunc EquidistantNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl(
     const Lvl2GPCntFunc lvl2GPCntFunc) const {
   if (lvl2GPCntFunc == doublingLvl2GPCntFunction) [[likely]] {
     return mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction;
   } else {
     if (isNested(lvl2GPCntFunc)) {
       throw base::not_implemented_exception(
-          "EquidistantNodeGenFunc::mapNodeIdxFromDeltaTGLevel: Unknown level-to-grid-point-count "
-          "function.");
+          "EquidistantNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl: Unknown "
+          "level-to-grid-point-count function.");
     } else {
       throw std::invalid_argument(
-          "EquidistantNodeGenFunc::mapNodeIdxFromDeltaTGLevel: Equidistant nodes are not be nested "
-          "w.r.t. the provided level-to-grid-point-count function.");
+          "EquidistantNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl: Equidistant nodes are "
+          "not nested w.r.t. the provided level-to-grid-point-count function.");
     }
   }
 }

@@ -34,9 +34,9 @@ class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
   void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
                                size_t startIdx = 0) const override;
 
-  /***********
-  SG Operators
-  ***********/
+  /******
+  Getters
+  ******/
   /// @copydoc NodeGenFunc::getQuadRule
   QuadRule* getQuadRule(const GPCntType nNodes) const override;
 
@@ -45,6 +45,20 @@ class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
 
   /// @copydoc NodeGenFunc::isNested
   bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const override;
+
+  /********
+  Utilities
+  ********/
+  /**
+   * TODO: Document
+   */
+  NodeIdxLvlMapFunc getNodeIdxMapBetweenLvls(Lvl2GPCntFunc lvl2GPCntFunc) const override;
+
+  /**
+   * TODO: Document
+   */
+  NodeIdxLvlMapFunc getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+      Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
   /********
   Operators

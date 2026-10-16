@@ -13,8 +13,7 @@ GPCntType mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction(const GPCntType node
                                                             const LvlType targetLvl) {
   assert(targetLvl >= originLvl);  // TODO: Maybe support deltaTGLvl < targetLvl?
 
-  const GPCntType pow =
-      tools::pow(static_cast<GPCntType>(2), static_cast<GPCntType>(targetLvl - originLvl));
+  const GPCntType pow = GPCntType{1} << (targetLvl - originLvl);  // 2^{target-Lvl - originLvl}
   return pow * nodeIdx + pow - 1;
 }
 
