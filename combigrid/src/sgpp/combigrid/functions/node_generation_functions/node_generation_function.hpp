@@ -35,9 +35,9 @@ class NodeGenFunc {
 
   virtual ~NodeGenFunc() = default;
 
-  /**************
-  Node generation
-  **************/
+  /// @name Node generation
+  /// @{
+
   /**
    * @brief Generates @p nNodes nodes (with or without boundary nodes).
    *
@@ -98,9 +98,45 @@ class NodeGenFunc {
    */
   base::DataVector genNodesWithoutBoundary(GPCntType nNodes) const;
 
-  /******
-  Getters
-  ******/
+  /**
+   * TODO: Document
+   */
+  void genDeltaNodes(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc, std::span<double> out,
+                     bool includeBoundary) const;
+
+  /**
+   * TODO: Document
+   */
+  base::DataVector genDeltaNodes(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc,
+                                 bool includeBoundary) const;
+
+  /**
+   * TODO: Document
+   */
+  void genDeltaNodesWithBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc,
+                                 std::span<double> out) const;
+
+  /**
+   * TODO: Document
+   */
+  base::DataVector genDeltaNodesWithBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc) const;
+
+  /**
+   * TODO: Document
+   */
+  virtual void genDeltaNodesWithoutBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc,
+                                            std::span<double> out) const = 0;
+
+  /**
+   * TODO: Document
+   */
+  base::DataVector genDeltaNodesWithoutBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc) const;
+
+  /// @}
+
+  /// @name Getters
+  /// @{
+
   /**
    * @brief Returns the matching 1D quadrature rule for this node family.
    * @param nNodes Number of nodes for which the rule will be used (some
@@ -124,9 +160,11 @@ class NodeGenFunc {
    */
   virtual bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
 
-  /********
-  Utilities
-  ********/
+  /// @}
+
+  /// @name Utilities
+  /// @{
+
   /**
    * TODO: Document
    */
@@ -138,9 +176,11 @@ class NodeGenFunc {
   virtual NodeIdxLvlMapFunc getNodeIdxMapFromDeltaTGLvlToRegularLvl(
       Lvl2GPCntFunc lvl2GPCntFunc) const = 0;
 
-  /********
-  Operators
-  ********/
+  /// @}
+
+  /// @name Operators
+  /// @{
+
   /**
    * @brief Type-safe equality between node-generation functions.
    * @param other Other instance.
@@ -148,8 +188,15 @@ class NodeGenFunc {
    */
   virtual bool operator==(const NodeGenFunc& other) const = 0;
 
+  /// @}
+
  private:
+  /// @name Attributes
+  /// @{
+
   const uint64_t id_;  ///< Unique identifier (used for caching).
+
+  /// @}
 };
 
 }  // namespace combigrid

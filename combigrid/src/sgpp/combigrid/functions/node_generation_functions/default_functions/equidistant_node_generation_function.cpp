@@ -12,6 +12,7 @@
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <stdexcept>
+#include "sgpp/combigrid/tools/sparse_grid/deltas_sparse_grid_generation.hpp"
 
 using sgpp::combigrid::tools::equidistant_node_gen_function::
     mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction;
@@ -42,6 +43,32 @@ void EquidistantNodeGenFunc::genNodesWithoutBoundary(const GPCntType nNodes, bas
 
   for (GPCntType i = 1; i <= nNodes; i++) {
     out[startIdx++] = static_cast<double>(i) * factor;
+  }
+}
+
+void EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary(const LvlType lvl,
+                                                          const Lvl2GPCntFunc lvl2GPCntFunc,
+                                                          const std::span<double> out) const {
+  assert(out.size() == tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, false));
+
+  if (lvl2GPCntFunc == doublingLvl2GPCntFunction) {
+    const GPCntType nNodesOnLvl = lvl2GPCntFunc(lvl);
+    const double factor = 1.0 / static_cast<double>(nNodesOnLvl + 1);
+
+    for (GPCntType i = 1; i <= (nNodesOnLvl + 1) / 2; i++) {
+      // Generate every second f(i) = 1 + 2 * (i-1)
+      out[i - 1] = static_cast<double>(2 * i - 1) * factor;
+    }
+  } else [[unlikely]] {
+    if (isNested(lvl2GPCntFunc)) {
+      throw base::not_implemented_exception(
+          "EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary: Unknown "
+          "level-to-grid-point-count function.");
+    } else {
+      throw std::invalid_argument(
+          "EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary: Equidistant nodes of the are not "
+          "nested w.r.t. the provided level-to-grid-point-count function.");
+    }
   }
 }
 

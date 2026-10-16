@@ -1,6 +1,7 @@
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/tools/sparse_grid/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -53,18 +54,63 @@ base::DataVector NodeGenFunc::genNodesWithoutBoundary(const GPCntType nNodes) co
   return result;
 }
 
-// void NodeGenFunc::genNodesInplace(const GPCntType nNodes, base::DataVector& out,
-//                                   const bool includeBoundary, const size_t startIdx) const {
-//   assert((!includeBoundary || nNodes >= 2) && (out.size() - startIdx >= nNodes));
+void NodeGenFunc::genDeltaNodes(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
+                                std::span<double> out, const bool includeBoundary) const {
+  assert(out.size() == tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, includeBoundary));
 
-//   if (includeBoundary) {
-//     out[startIdx] = 0.0;
-//     genNodesInplace(nNodes - 2, out, startIdx + 1);
-//     out[startIdx + nNodes - 1] = 1.0;
-//   } else {
-//     genNodesInplace(nNodes, out, startIdx);
-//   }
-// }
+  if (includeBoundary) {
+    genDeltaNodesWithBoundary(lvl, lvl2GPCntFunc, out);
+  } else {
+    genDeltaNodesWithoutBoundary(lvl, lvl2GPCntFunc, out);
+  }
+}
+
+base::DataVector NodeGenFunc::genDeltaNodes(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
+                                            const bool includeBoundary) const {
+  const GPCntType nNodes = tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, includeBoundary);
+
+  base::DataVector result(nNodes);
+  genDeltaNodes(lvl, lvl2GPCntFunc, result, includeBoundary);
+  return result;
+}
+
+void NodeGenFunc::genDeltaNodesWithBoundary(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
+                                            std::span<double> out) const {
+  const GPCntType nNodes = tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, true);
+
+  assert(out.size() == nNodes);
+
+  if (nNodes <= 2) {
+    if (nNodes == 1) {
+      out[0] = 0.5;
+    } else if (nNodes == 2) {
+      out[0] = 0.0;
+      out[nNodes - 1] = 1.0;
+    }
+  } else {  // nNodes >= 3
+    genDeltaNodesWithoutBoundary(lvl, lvl2GPCntFunc, out.subspan(1, nNodes - 2));
+    out[0] = 0.0;
+    out[nNodes - 1] = 1.0;
+  }
+}
+
+base::DataVector NodeGenFunc::genDeltaNodesWithBoundary(const LvlType lvl,
+                                                        const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  const GPCntType nNodes = tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, true);
+
+  base::DataVector result(nNodes);
+  genDeltaNodesWithBoundary(lvl, lvl2GPCntFunc, result);
+  return result;
+}
+
+base::DataVector NodeGenFunc::genDeltaNodesWithoutBoundary(
+    const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc) const {
+  const GPCntType nNodes = tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, false);
+
+  base::DataVector result(nNodes);
+  genDeltaNodesWithoutBoundary(lvl, lvl2GPCntFunc, result);
+  return result;
+}
 
 }  // namespace combigrid
 }  // namespace sgpp

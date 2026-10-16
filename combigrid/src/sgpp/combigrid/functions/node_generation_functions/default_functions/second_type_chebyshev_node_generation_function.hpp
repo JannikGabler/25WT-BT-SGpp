@@ -33,16 +33,22 @@ class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
   /// @brief Constructs the function with a deterministic id derived from its name.
   SecondTypeChebyshevNodeGenFunc();
 
-  /**************
-  Node generation
-  **************/
+  /// @name Node generation
+  /// @{
+
   /// @copydoc NodeGenFunc::genNodesWithoutBoundary
   void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
                                size_t startIdx = 0) const override;
 
-  /******
-  Getters
-  ******/
+  /// @copydoc NodeGenFunc::genDeltaNodesWithoutBoundary
+  void genDeltaNodesWithoutBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc,
+                                    std::span<double> out) const override;
+
+  /// @}
+
+  /// @name Getters
+  /// @{
+
   /// @copydoc NodeGenFunc::getQuadRule
   QuadRule* getQuadRule(const GPCntType nNodes) const override;
 
@@ -52,9 +58,11 @@ class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
   /// @copydoc NodeGenFunc::isNested
   bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
-  /********
-  Utilities
-  ********/
+  /// @}
+
+  /// @name Utilities
+  /// @{
+
   /**
    * TODO: Document
    */
@@ -66,11 +74,15 @@ class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
   NodeIdxLvlMapFunc getNodeIdxMapFromDeltaTGLvlToRegularLvl(
       Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
-  /********
-  Operators
-  ********/
+  /// @}
+
+  /// @name Operators
+  /// @{
+
   /// @copydoc NodeGenFunc::operator==(const NodeGenFunc&) const
   bool operator==(const NodeGenFunc& other) const override;
+
+  /// @}
 };
 
 }  // namespace node_gen_funcs

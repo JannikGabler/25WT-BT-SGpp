@@ -44,6 +44,10 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
   void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
                                size_t startIdx = 0) const override;
 
+  /// @copydoc NodeGenFunc::genDeltaNodesWithoutBoundary
+  void genDeltaNodesWithoutBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc,
+                                    std::span<double> out) const override;
+
   /******
   Getters
   ******/
