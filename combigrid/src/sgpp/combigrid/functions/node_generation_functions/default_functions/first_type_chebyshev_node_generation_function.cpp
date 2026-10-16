@@ -56,7 +56,7 @@ bool FirstTypeChebyshevNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) 
   if (lvl2GPCntFunc == linearLvl2GPCntFunction) {
     return false;
   } else if (lvl2GPCntFunc == doublingLvl2GPCntFunction) {
-    return true;
+    return false;
   } else {
     throw base::not_implemented_exception(
         "FirstTypeChebyshevNodeGenFunc::isNested: Unknown level-to-grid-point-count function.");
