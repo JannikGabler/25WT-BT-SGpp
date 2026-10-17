@@ -7,8 +7,8 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/tools/functions/node_generation_functions/equidistant_node_generation_function_utilities.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include "sgpp/combigrid/tools/sparse_grid/deltas_sparse_grid_generation.hpp"
 
 using sgpp::combigrid::tools::equidistant_node_gen_function::
     mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction;

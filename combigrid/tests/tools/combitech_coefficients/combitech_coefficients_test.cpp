@@ -19,7 +19,7 @@
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation_instructions/complete_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(RandomParallelExample) {
         constants::ct_coefficients::MIN_MIS_FOR_CONCURRENCY + (LvlType)randGen.getUniformIndexRN(5);
     const size_t nDim = 2 + randGen.getUniformIndexRN(1);
 
-    const LvlMIVec miVec = tools::genMIVecForCompleteSG(maxLvl, nDim);
+    const LvlMIVec miVec = tools::genReducedMIVecForCompleteSG(maxLvl, nDim);
 
     const std::vector<int> result1 = tools::computeCTCoeffsNaive(miVec);
     const std::vector<int> result2 = tools::computeCTCoeffs(miVec);

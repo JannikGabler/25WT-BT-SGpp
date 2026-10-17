@@ -1,7 +1,7 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -22,9 +22,7 @@ SparseGrid::SparseGrid(const SGGenInstr& genInstr)
 /// @name Getters
 /// @{
 
-const std::shared_ptr<const SGGenInstr> SparseGrid::getGenInstr() const noexcept {
-  return genInstr;
-}
+const SGGenInstr& SparseGrid::getGenInstr() const noexcept { return *genInstr; }
 
 /// @}
 

@@ -33,7 +33,7 @@ size_t SparseGridBase::nDim() const noexcept { return nDim_; }
 size_t SparseGridBase::nTG() const noexcept { return tensorGridData.size(); }
 
 const TensorGridCTData& SparseGridBase::getTensorGrid(size_t idx) const noexcept {
-  assert(idx >= 0 && idx < tensorGridData.size());
+  assert(idx < tensorGridData.size());
 
   return tensorGridData[idx];
 }
@@ -82,7 +82,7 @@ void SparseGridBase::addTensorGrid(TensorGridCTData&& tg) {
 }
 
 void SparseGridBase::setTensorGrid(const size_t idx, const TensorGridCTData& tg) {
-  assert(idx >= 0 && idx < tensorGridData.size());
+  assert(idx < tensorGridData.size());
   assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
 
   updateMetaValuesBeforeSwap(tensorGridData[idx], tg);
@@ -90,7 +90,7 @@ void SparseGridBase::setTensorGrid(const size_t idx, const TensorGridCTData& tg)
 }
 
 void SparseGridBase::setTensorGrid(const size_t idx, TensorGridCTData&& tg) {
-  assert(idx >= 0 && idx < tensorGridData.size());
+  assert(idx < tensorGridData.size());
   assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
 
   updateMetaValuesBeforeSwap(tensorGridData[idx], tg);

@@ -44,7 +44,7 @@ class MIVecSGGenInstr : public SGGenInstr {
   std::pair<LvlMIVec, std::vector<CTCoeffType>> genReducedMIVecWithCoeffs() const override;
 
   /// @copydoc SGGenInstr::clone
-  std::shared_ptr<SGGenInstr> clone() const override;
+  std::unique_ptr<SGGenInstr> clone() const override;
 
  private:
   std::pair<LvlMIVec, std::vector<CTCoeffType>> internalGenMIVecWithCoeffs(

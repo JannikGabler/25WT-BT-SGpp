@@ -141,10 +141,9 @@ class SGGenInstr {
   Helper operations
   ****************/
   /**
-   * @brief Polymorphic copy.
-   * @return Independent shared-pointer copy of this instruction.
+   * TODO: Document
    */
-  virtual std::shared_ptr<SGGenInstr> clone() const = 0;
+  virtual std::unique_ptr<SGGenInstr> clone() const = 0;
 
   /**
    * @brief Resizes the instruction to a different dimensionality.

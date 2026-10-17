@@ -21,7 +21,7 @@ namespace sgpp {
 namespace combigrid {
 
 double quadratureDelta(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
-  const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   // TODO: Consider boundary!!!
   const FlatNestedVec<double, 3> weights1D = delta_quadrature_operator::comp1DWeights(sparseGrid);
   const std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs =
@@ -29,7 +29,7 @@ double quadratureDelta(const SourceFunc& sourceFunc, const SparseGrid& sparseGri
 
   const DeltaQuadratureContext context{.sparseGrid = sparseGrid,
                                        .sourceFunc = sourceFunc,
-                                       .domain = genInstr->getDomain(),
+                                       .domain = genInstr.getDomain(),
                                        .weights1D = weights1D,
                                        .nodeIdxLvlMapFuncs = nodeIdxLvlMapFuncs};
 
@@ -40,7 +40,7 @@ double quadratureDelta(const SourceFunc& sourceFunc, const SparseGrid& sparseGri
     result += delta_quadrature_operator::processDeltaTensorGrid(context, tgData);
   }
 
-  return genInstr->getVolumeOfDomain() * result;
+  return genInstr.getVolumeOfDomain() * result;
 }
 
 /******************
@@ -49,9 +49,10 @@ Internal operations
 
 namespace delta_quadrature_operator {
 
+// TODO: Parallelize
 size_t comp1DWeightsSize(const SparseGrid& sparseGrid) {
   const size_t nDim = sparseGrid.nDim();
-  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr()->getLvl2GPCntFuncs();
+  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr().getLvl2GPCntFuncs();
 
   size_t totalSize = 0;
 
@@ -66,12 +67,13 @@ size_t comp1DWeightsSize(const SparseGrid& sparseGrid) {
   return totalSize;
 }
 
+// TODO: Parallelize
 FlatNestedVec<double, 3> comp1DWeights(const SparseGrid& sparseGrid) {
   const size_t nDim = sparseGrid.nDim();
   const size_t nTG = sparseGrid.nTG();
 
-  const std::vector<NodeGenFunc*>& nodeGenFuncs = sparseGrid.getGenInstr()->getNodeGenFuncs();
-  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr()->getLvl2GPCntFuncs();
+  const std::vector<NodeGenFunc*>& nodeGenFuncs = sparseGrid.getGenInstr().getNodeGenFuncs();
+  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr().getLvl2GPCntFuncs();
 
   std::vector<QuadRule*> quadRules(nDim);
 
@@ -101,8 +103,8 @@ FlatNestedVec<double, 3> comp1DWeights(const SparseGrid& sparseGrid) {
 
 std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const SparseGrid& sparseGrid) {
   const size_t nDim = sparseGrid.nDim();
-  const std::vector<NodeGenFunc*>& nodeGenFuncs = sparseGrid.getGenInstr()->getNodeGenFuncs();
-  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr()->getLvl2GPCntFuncs();
+  const std::vector<NodeGenFunc*>& nodeGenFuncs = sparseGrid.getGenInstr().getNodeGenFuncs();
+  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr().getLvl2GPCntFuncs();
 
   std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs(nDim);
 
@@ -176,6 +178,28 @@ double compLocalWeightForGP(const DeltaQuadratureContext& context,
 
   return result;
 }
+
+// double compLocalWeightForNonBoundaryGP(const DeltaQuadratureContext& context,
+//                             const TensorGridCTData& deltaTGCTData, const GPMI& gpMIInDeltaTG,
+//                             const LvlMI& targetTGMI, const size_t targetTGIdx) {
+//   const size_t nDim = context.sparseGrid.nDim();
+//   const LvlMI& deltaTGMI = deltaTGCTData.mi;
+
+//   const FlatNestedVec<double, 3>::const_entry_type weights1DForTargetTG =
+//       context.weights1D[targetTGIdx];
+
+//   double result = 1.0;
+
+//   for (size_t dim = 0; dim < nDim; dim++) {
+//     const GPCntType mappedNodeIdx =
+//         context.nodeIdxLvlMapFuncs[dim](gpMIInDeltaTG[dim], deltaTGMI[dim], targetTGMI[dim]);
+
+//     const double weight1D = weights1DForTargetTG[dim][mappedNodeIdx];
+//     result *= weight1D;
+//   }
+
+//   return result;
+// }
 
 }  // namespace delta_quadrature_operator
 

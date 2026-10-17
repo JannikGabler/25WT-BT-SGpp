@@ -9,7 +9,7 @@
 // #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 // #include <sgpp/combigrid/tools/collections/kway_unique_merge_sorted_collections.hpp>
 // #include <sgpp/combigrid/tools/math/ceil.hpp>
-// #include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
+// #include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation_node_lookup.hpp>
 // #include <sgpp/combigrid/type_defs.hpp>
 // #include <stdexcept>
 // #include <thread>

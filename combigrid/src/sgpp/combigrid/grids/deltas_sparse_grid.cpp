@@ -1,7 +1,7 @@
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/sparse_grid/deltas_sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -21,9 +21,7 @@ DeltasSparseGrid::DeltasSparseGrid(const SGGenInstr& genInstr)
 /// @name Getters
 /// @{
 
-const std::shared_ptr<const SGGenInstr> SparseGrid::getGenInstr() const noexcept {
-  return genInstr;
-}
+const SGGenInstr& DeltasSparseGrid::getGenInstr() const noexcept { return *genInstr; }
 
 /// @}
 

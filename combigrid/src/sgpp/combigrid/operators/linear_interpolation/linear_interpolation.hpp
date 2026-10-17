@@ -8,7 +8,7 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -63,7 +63,7 @@ namespace linear_interpolation {
  */
 double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
                    const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                   tools::LinInterpScratch& scratch);
+                   misc::LinInterpScratch& scratch);
 
 /**
  * @brief Computes one corner of the surrounding cell and its associated

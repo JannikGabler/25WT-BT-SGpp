@@ -492,7 +492,8 @@ BOOST_AUTO_TEST_CASE(generated_mivec_has_valid_lookup) {
   // MIVec whose cached lookup referred to the destroyed local.
   const LvlMIVec input{{0, 0}};
   const MIVecSGGenInstr genInstr(input);
-  const std::pair<LvlMIVec, std::vector<CTCoeffType>> generated = genInstr.genMIVecWithCoeff();
+  const std::pair<LvlMIVec, std::vector<CTCoeffType>> generated =
+      genInstr.genReducedMIVecWithCoeffs();
 
   BOOST_TEST(generated.first.nMI() == 1u);
   BOOST_TEST(generated.first.isDownwardsClosed());

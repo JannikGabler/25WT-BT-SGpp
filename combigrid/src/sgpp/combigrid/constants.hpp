@@ -62,9 +62,9 @@ constexpr bool USE_CACHE = false;
  */
 namespace sg_gen_instr {
 
-// Full sg gen instruction
+// Complete sg gen instruction
 /// Minimum number of generated multi-indices to trigger parallel generation
-/// in the full sparse-grid generator.
+/// in the complete sparse-grid generator.
 constexpr size_t CSG_MIN_MI_FOR_CONCURRENCY = 1000;
 /// Minimum batch size per thread during parallel full sparse-grid
 /// generation.

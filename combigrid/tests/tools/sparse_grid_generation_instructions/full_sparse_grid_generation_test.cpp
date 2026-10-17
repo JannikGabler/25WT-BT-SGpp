@@ -6,7 +6,7 @@
 /**
  * @file full_sparse_grid_generation_test.cpp
  * @brief Boost.Test cases for the full-SG generator helpers in
- * @c tools::full_sg_gen (multi-index enumeration, combination
+ * @c tools::complete_sg_gen (multi-index enumeration, combination
  * coefficient computation).
  */
 
@@ -20,7 +20,7 @@
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation_instructions/full_sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation_instructions/complete_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -35,45 +35,45 @@ BOOST_AUTO_TEST_CASE(Simple3DTest) {
   const std::vector<size_t> nMIs{1, 1 + 3, 1 + 3 + 6};
 
   // Sum = 0 (SumIdx = 0)
-  std::vector<size_t> barPos = tools::full_sg_gen::getBarPosOfMIIdx(0, nMIs, 0, 1, 3);
+  std::vector<size_t> barPos = tools::complete_sg_gen::getBarPosOfMIIdx(0, nMIs, 0, 1, 3);
   std::vector<size_t> expected{0, 1};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
   // Sum = 1 (SumIdx = 1)
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(1, nMIs, 1, 2, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(1, nMIs, 1, 2, 3);
   expected = {0, 1};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(2, nMIs, 1, 2, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(2, nMIs, 1, 2, 3);
   expected = {0, 2};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(3, nMIs, 1, 2, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(3, nMIs, 1, 2, 3);
   expected = {1, 2};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
   // Sum = 2 (SumIdx = 2)
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(4, nMIs, 2, 3, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(4, nMIs, 2, 3, 3);
   expected = {0, 1};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(5, nMIs, 2, 3, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(5, nMIs, 2, 3, 3);
   expected = {0, 2};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(6, nMIs, 2, 3, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(6, nMIs, 2, 3, 3);
   expected = {0, 3};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(7, nMIs, 2, 3, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(7, nMIs, 2, 3, 3);
   expected = {1, 2};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(8, nMIs, 2, 3, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(8, nMIs, 2, 3, 3);
   expected = {1, 3};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 
-  barPos = tools::full_sg_gen::getBarPosOfMIIdx(9, nMIs, 2, 3, 3);
+  barPos = tools::complete_sg_gen::getBarPosOfMIIdx(9, nMIs, 2, 3, 3);
   expected = {2, 3};
   BOOST_CHECK_EQUAL_COLLECTIONS(barPos.begin(), barPos.end(), expected.begin(), expected.end());
 }
@@ -84,25 +84,24 @@ BOOST_AUTO_TEST_CASE(RandomTest) {
     const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(10);
     const size_t nDim = 2 + randGen.getUniformIndexRN(3);  // nDim has to be at least 2
 
-    const LvlType minSum = tools::full_sg_gen::getMinComponentSum(maxLvl, nDim);
-    const std::vector<size_t>& nMIs =
-        tools::full_sg_gen::nMICntPerComponentSum(minSum, maxLvl, nDim);
+    const LvlType minSum = tools::complete_sg_gen::getMinComponentSum(maxLvl, nDim);
+    const std::vector<size_t>& nMIs = tools::complete_sg_gen::getMICnts(minSum, maxLvl, nDim);
 
     size_t miIdx = 0;
     for (LvlType sum = minSum; sum <= maxLvl; sum++) {
       const size_t nMIWithSum = tools::numberOfMIWithComponentSum(nDim, sum);
-      const size_t maxBarPos = tools::full_sg_gen::getMaxBarPos(sum, nDim);
+      const size_t maxBarPos = tools::complete_sg_gen::getMaxBarPos(sum, nDim);
 
-      std::vector<size_t> iteratedBarPos = tools::full_sg_gen::initBarPos(nDim);
+      std::vector<size_t> iteratedBarPos = tools::complete_sg_gen::initBarPos(nDim);
 
       for (size_t i = 0; i < nMIWithSum; i++) {
         const std::vector<size_t> resolvedBarPos =
-            tools::full_sg_gen::getBarPosOfMIIdx(miIdx, nMIs, sum - minSum, maxBarPos, nDim);
+            tools::complete_sg_gen::getBarPosOfMIIdx(miIdx, nMIs, sum - minSum, maxBarPos, nDim);
 
         BOOST_CHECK_EQUAL_COLLECTIONS(iteratedBarPos.begin(), iteratedBarPos.end(),
                                       resolvedBarPos.begin(), resolvedBarPos.end());
 
-        tools::full_sg_gen::incrementBarPos(iteratedBarPos, maxBarPos);
+        tools::complete_sg_gen::incrementBarPos(iteratedBarPos, maxBarPos);
         miIdx++;
       }
     }
@@ -119,8 +118,8 @@ BOOST_AUTO_TEST_CASE(RandomTest) {
     const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(14);
     const size_t nDim = randGen.getUniformIndexRN(4);  // nDim has to be at least 2
 
-    const LvlMIVec miVec = tools::genMIVecForCompleteSG(maxLvl, nDim);
-    const std::vector<CTCoeffType> coeff = tools::genCoeffForCompleteSG(maxLvl, nDim);
+    const LvlMIVec miVec = tools::genReducedMIVecForCompleteSG(maxLvl, nDim);
+    const std::vector<CTCoeffType> coeff = tools::genReducedCoeffForCompleteSG(maxLvl, nDim);
     const std::vector<CTCoeffType> expectedCoeff1 = tools::computeCTCoeffs(miVec);
 
     BOOST_CHECK_MESSAGE(miVec.nMI() == coeff.size(), "The number of mis differs between '"

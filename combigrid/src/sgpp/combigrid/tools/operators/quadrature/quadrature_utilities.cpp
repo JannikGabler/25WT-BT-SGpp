@@ -15,12 +15,10 @@ namespace combigrid {
 namespace tools {
 
 bool areNodesOfAllDimsNested(const SparseGrid& sparseGrid) {
-  assert(sparseGrid.getGenInstr() != nullptr);
-
   const size_t nDim = sparseGrid.nDim();
-  const std::shared_ptr<const SGGenInstr> sgGenInstr = sparseGrid.getGenInstr();
-  const std::vector<NodeGenFunc*>& nodeGenFuncs = sgGenInstr->getNodeGenFuncs();
-  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sgGenInstr->getLvl2GPCntFuncs();
+  const SGGenInstr& sgGenInstr = sparseGrid.getGenInstr();
+  const std::vector<NodeGenFunc*>& nodeGenFuncs = sgGenInstr.getNodeGenFuncs();
+  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sgGenInstr.getLvl2GPCntFuncs();
 
   for (size_t dim = 0; dim < nDim; dim++) {
     if (!nodeGenFuncs[dim]->isNested(lvl2GPCntFuncs[dim])) {
@@ -31,20 +29,24 @@ bool areNodesOfAllDimsNested(const SparseGrid& sparseGrid) {
   return true;
 }
 
-void mapGPMIToDifferentLevel(const GPMI& originalGPMI, const LvlMI& currentLvlMI,
-                             const LvlMI& targetLvlMI,
-                             const std::vector<NodeGenFunc*>& nodeGenFuncs, GPMI& out) {
-  assert(originalGPMI.size() == currentLvlMI.size() && currentLvlMI.size() == targetLvlMI.size() &&
-         targetLvlMI.size() == out.size());
+// /**
+//  * TODO: Document
+//  */
+// void mapGPMIToDifferentLevel(const GPMI& originalGPMI, const LvlMI& currentLvlMI,
+//                              const LvlMI& targetLvlMI,
+//                              const std::vector<NodeGenFunc*>& nodeGenFuncs, GPMI& out) {
+//   assert(originalGPMI.size() == currentLvlMI.size() && currentLvlMI.size() == targetLvlMI.size()
+//   &&
+//          targetLvlMI.size() == out.size());
 
-  const size_t nDim = originalGPMI.size();
+//   const size_t nDim = originalGPMI.size();
 
-  for (size_t dim = 0; dim < nDim; dim++) {
-    const NodeGenFunc* nodeGenFunc = nodeGenFuncs[dim];
-    out[dim] = nodeGenFunc->mapNodeIndexToDifferentLvl(originalGPMI[dim], currentLvlMI[dim],
-                                                       targetLvlMI[dim]);
-  }
-}
+//   for (size_t dim = 0; dim < nDim; dim++) {
+//     const NodeGenFunc* nodeGenFunc = nodeGenFuncs[dim];
+//     out[dim] = nodeGenFunc->mapNodeIndexToDifferentLvl(originalGPMI[dim], currentLvlMI[dim],
+//                                                        targetLvlMI[dim]);
+//   }
+// }
 
 std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
                                                  const std::vector<NodeGenFunc*>& nodeGenFuncs) {
@@ -67,27 +69,27 @@ void getQuadRulesForTensorGrid(const TensorGrid& tg, const std::vector<NodeGenFu
   }
 }
 
-/*
-TODO
-Computes the quadrature weight of a single grid point directly.
-*/
-double genQuadratureWeightOfSingleGP(const TensorGrid& tg, const GPMI& gpMI,
-                                     const std::vector<NodeGenFunc*>& nodeGenFuncs) {
-  assert(tg.nDim() == nodeGenFuncs.size());
+// /*
+// TODO: Document
+// Computes the quadrature weight of a single grid point directly.
+// */
+// double genQuadratureWeightOfSingleGP(const TensorGrid& tg, const GPMI& gpMI,
+//                                      const std::vector<NodeGenFunc*>& nodeGenFuncs) {
+//   assert(tg.nDim() == nodeGenFuncs.size());
 
-  const size_t nDim = tg.nDim();
-  const GPMI& gpCntPerDim = tg.getGPCntPerDim();
+//   const size_t nDim = tg.nDim();
+//   const GPMI& gpCntPerDim = tg.getGPCntPerDim();
 
-  QuadRule* quadRule;
-  double result = 1.0;
+//   QuadRule* quadRule;
+//   double result = 1.0;
 
-  for (size_t dim = 0; dim < nDim; dim++) {
-    quadRule = nodeGenFuncs[dim]->getQuadRule(gpCntPerDim[dim]);
-    result *= quadRule->genSingleWeight(gpMI[dim], gpCntPerDim[dim]);
-  }
+//   for (size_t dim = 0; dim < nDim; dim++) {
+//     quadRule = nodeGenFuncs[dim]->getQuadRule(gpCntPerDim[dim]);
+//     result *= quadRule->genSingleWeight(gpMI[dim], gpCntPerDim[dim]);
+//   }
 
-  return result;
-}
+//   return result;
+// }
 
 }  // namespace tools
 }  // namespace combigrid

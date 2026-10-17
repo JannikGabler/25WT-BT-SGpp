@@ -1,17 +1,16 @@
 #include <omp.h>
 #include <cassert>
-#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
-#include <sgpp/combigrid/miscellaneous/scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/operators/quadrature/quadrature_utilities.cpp>
+#include <sgpp/combigrid/tools/operators/quadrature/quadrature_utilities.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -22,15 +21,13 @@ namespace sgpp {
 namespace combigrid {
 
 double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
-  assert(sparseGrid.getGenInstr() != nullptr);
-
-  const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const size_t nDim = sparseGrid.nDim();
 
   const QuadratureContext context{.sparseGrid = sparseGrid,
                                   .sourceFunc = sourceFunc,
-                                  .domain = genInstr->getDomain(),
-                                  .nodeGenFuncs = genInstr->getNodeGenFuncs()};
+                                  .domain = genInstr.getDomain(),
+                                  .nodeGenFuncs = genInstr.getNodeGenFuncs()};
 
   double result = 0;
 
@@ -45,7 +42,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
     }
   }
 
-  return genInstr->getVolumeOfDomain() * result;
+  return genInstr.getVolumeOfDomain() * result;
 }
 
 namespace quadrature_operator {

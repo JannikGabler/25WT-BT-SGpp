@@ -13,7 +13,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
-#include <sgpp/combigrid/miscellaneous/scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 
 using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;

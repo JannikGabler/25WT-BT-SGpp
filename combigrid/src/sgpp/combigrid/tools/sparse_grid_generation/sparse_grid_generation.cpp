@@ -6,8 +6,8 @@
 #include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
-#include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation_node_lookup.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>

@@ -2,22 +2,21 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
-#include <memory>
 #include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
-#include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
-using LinInterpScratch = sgpp::combigrid::tools::LinInterpScratch;
+using LinInterpScratch = sgpp::combigrid::misc::LinInterpScratch;
 
 namespace sgpp {
 namespace combigrid {
@@ -28,8 +27,8 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
 
   const size_t nDim = sparseGrid.nDim();
 
-  const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
-  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr->getDomain());
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
 
   double result = 0;
 
@@ -39,8 +38,8 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
 
 #pragma omp for schedule(static) nowait
     for (const TensorGridCTData& tgData : sparseGrid) {
-      result += tgData.coefficient * linear_interpolation::interpolate(sourceFunc, normPoint,
-                                                                       tgData, *genInstr, scratch);
+      result += tgData.coefficient *
+                linear_interpolation::interpolate(sourceFunc, normPoint, tgData, genInstr, scratch);
     }
   }
 

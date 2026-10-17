@@ -22,13 +22,13 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
                    const SparseGrid& sparseGrid) {
   assert(point.size() == sparseGrid.nDim());
 
-  const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
-  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr->getDomain());
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
   double result = 0;
 
 #pragma omp parallel for reduction(+ : result) schedule(guided)  // TODO: Scheduling
   for (const TensorGridCTData& tgData : sparseGrid) {
-    const double v = global_interpolation::interpolate(sourceFunc, normPoint, tgData, *genInstr);
+    const double v = global_interpolation::interpolate(sourceFunc, normPoint, tgData, genInstr);
     result += tgData.coefficient * v;
   }
 

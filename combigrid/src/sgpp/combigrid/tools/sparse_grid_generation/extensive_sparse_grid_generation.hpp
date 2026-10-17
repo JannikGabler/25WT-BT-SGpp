@@ -17,15 +17,18 @@
 
 namespace sgpp {
 namespace combigrid {
+
 namespace tools {
 
-/**
- * TODO: Document
- * Important requirement: The tensor grids represented through miVec and coeffs must be ordered such
- * that all tensor grids with a CT coeff of zero are at the front of the vector.
- */
-void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                         const std::vector<CTCoeffType>& coeffs);
+// /**
+//  * TODO: Document
+//  * Important requirement: The tensor grids represented through miVec and coeffs must be ordered
+//  such
+//  * that all tensor grids with a CT coeff of zero are at the front of the vector.
+//  */
+// void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec&
+// miVec,
+//                          const std::vector<CTCoeffType>& coeffs);
 
 /// @brief Internal implementation details of the extensive-sparse-grid generation.
 namespace extensive_sparse_grid_generation {

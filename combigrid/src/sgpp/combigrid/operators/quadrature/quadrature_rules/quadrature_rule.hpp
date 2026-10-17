@@ -27,11 +27,11 @@ class QuadRule {
 
   virtual ~QuadRule() = default;
 
-  /*
-  TODO
-  Warning: Care about inefficient calls (virtual method)
-  */
-  virtual double genSingleWeight(GPCntType index, GPCntType nNodes) const = 0;
+  // /*
+  // TODO: Document
+  // Warning: Care about inefficient calls (virtual method)
+  // */
+  // virtual double genSingleWeight(GPCntType index, GPCntType nNodes) const = 0;
 
   /**
    * @brief Returns the quadrature weights for @p nNodes nodes.

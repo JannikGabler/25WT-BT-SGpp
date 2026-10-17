@@ -6,9 +6,8 @@
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/sparse_grid/extensive_sparse_grid_generation.hpp>
-#include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
-#include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation_node_lookup.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/extensive_sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>
@@ -22,29 +21,30 @@ namespace combigrid {
 
 namespace tools {
 
-void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                         const std::vector<CTCoeffType>& coeffs) {
-  assert(sg.nDim() == genInstr.nDim() && sg.nDim() == miVec.nDim());
-  assert(miVec.nMI() == coeffs.size());
-  assert(areTGsCorrectlyPartitionedForExtensiveSG(coeffs));
+// void populateExtensiveSG(ExtensiveSparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec&
+// miVec,
+//                          const std::vector<CTCoeffType>& coeffs) {
+//   assert(sg.nDim() == genInstr.nDim() && sg.nDim() == miVec.nDim());
+//   assert(miVec.nMI() == coeffs.size());
+//   assert(areTGsCorrectlyPartitionedForExtensiveSG(coeffs));
 
-  const size_t nTG = miVec.nMI();
+//   const size_t nTG = miVec.nMI();
 
-  const auto partitionPoint = std::partition_point(
-      coeffs.begin(), coeffs.end(), [](const CTCoeffType& coeff) { return coeff == 0; });
-  const size_t nTGWithCoeffZero =
-      static_cast<size_t>(std::distance(coeffs.begin(), partitionPoint));
+//   const auto partitionPoint = std::partition_point(
+//       coeffs.begin(), coeffs.end(), [](const CTCoeffType& coeff) { return coeff == 0; });
+//   const size_t nTGWithCoeffZero =
+//       static_cast<size_t>(std::distance(coeffs.begin(), partitionPoint));
 
-  std::vector<TensorGridCTData> zeroCoeffTGData =
-      genTGData(genInstr, miVec.getView().first(nTGWithCoeffZero),
-                std::span<const CTCoeffType>(coeffs).first(nTGWithCoeffZero));
-  std::vector<TensorGridCTData> nonZeroCoeffTGData =
-      genTGData(genInstr, miVec.getView().last(nTG - nTGWithCoeffZero),
-                std::span<const CTCoeffType>(coeffs).last(nTG - nTGWithCoeffZero));
+//   std::vector<TensorGridCTData> zeroCoeffTGData =
+//       genTGData(genInstr, miVec.getView().first(nTGWithCoeffZero),
+//                 std::span<const CTCoeffType>(coeffs).first(nTGWithCoeffZero));
+//   std::vector<TensorGridCTData> nonZeroCoeffTGData =
+//       genTGData(genInstr, miVec.getView().last(nTG - nTGWithCoeffZero),
+//                 std::span<const CTCoeffType>(coeffs).last(nTG - nTGWithCoeffZero));
 
-  sg.setTensorGrids(std::move(nonZeroCoeffTGData));
-  sg.setTensorGridsWithCoeffZero(std::move(zeroCoeffTGData));
-}
+//   sg.setTensorGrids(std::move(nonZeroCoeffTGData));
+//   sg.setTensorGridsWithCoeffZero(std::move(zeroCoeffTGData));
+// }
 
 /// @brief Internal implementation details of the extensive-sparse-grid generation.
 namespace extensive_sparse_grid_generation {

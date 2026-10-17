@@ -3,6 +3,7 @@
  */
 #pragma once
 
+#include <memory>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 
@@ -28,7 +29,7 @@ class DeltasSparseGrid : public SparseGridBase {
   /// @{
 
   /// @brief Returns the (shared) generation instruction or @c nullptr if none was attached.
-  const std::shared_ptr<const SGGenInstr> getGenInstr() const noexcept;
+  const SGGenInstr& getGenInstr() const noexcept;
 
   /// @}
 
@@ -53,8 +54,7 @@ class DeltasSparseGrid : public SparseGridBase {
   /// @name Attributes
   /// @{
 
-  std::shared_ptr<const SGGenInstr> genInstr =
-      nullptr;  ///< Optional generation instruction that produced this SG.
+  const std::unique_ptr<SGGenInstr> genInstr;  ///< Generation instruction that produced this SG.
 
   /// @}
 };

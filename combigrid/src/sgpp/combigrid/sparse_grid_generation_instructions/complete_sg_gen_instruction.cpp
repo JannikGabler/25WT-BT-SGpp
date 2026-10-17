@@ -36,8 +36,8 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> CompleteSGGenInstr::genReducedMIVe
   return {miVec, coeff};
 }
 
-std::shared_ptr<SGGenInstr> CompleteSGGenInstr::clone() const {
-  return std::make_shared<CompleteSGGenInstr>(*this);
+std::unique_ptr<SGGenInstr> CompleteSGGenInstr::clone() const {
+  return std::make_unique<CompleteSGGenInstr>(*this);
 }
 
 }  // namespace combigrid

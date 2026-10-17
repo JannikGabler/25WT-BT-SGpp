@@ -3,7 +3,8 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
-#include <sgpp/combigrid/tools/sparse_grid/sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/extensive_sparse_grid_generation.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
 #include <utility>
@@ -27,8 +28,8 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::genReducedMIVecWi
   return internalGenMIVecWithCoeffs(false);
 }
 
-std::shared_ptr<SGGenInstr> MIVecSGGenInstr::clone() const {
-  return std::make_shared<MIVecSGGenInstr>(*this);
+std::unique_ptr<SGGenInstr> MIVecSGGenInstr::clone() const {
+  return std::make_unique<MIVecSGGenInstr>(*this);
 }
 
 std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::internalGenMIVecWithCoeffs(
@@ -52,7 +53,7 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::internalGenMIVecW
   coeffs.shrink_to_fit();
 
   // Partition the tensor grids such that all tensor grids with a CT coeff of zero are at the front.
-  tools::sg_gen::partitionForExtensiveSG(miVec, coeffs);
+  tools::extensive_sparse_grid_generation::partitionForExtensiveSG(miVec, coeffs);
 
   return {std::move(miVec), std::move(coeffs)};
 }

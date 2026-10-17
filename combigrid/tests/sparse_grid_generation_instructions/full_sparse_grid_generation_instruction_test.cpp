@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(RandomParallel) {
 
     // Enough mis for concurrency?
     const size_t minMICntForConcurrency =
-        std::max(constants::sg_gen_instr::FSG_MIN_MI_FOR_CONCURRENCY,
+        std::max(constants::sg_gen_instr::CSG_MIN_MI_FOR_CONCURRENCY,
                  2 * constants::sg_gen_instr::FSG_MIN_MI_PER_THREAD);
     BOOST_CHECK_MESSAGE(expectedMICnt >= minMICntForConcurrency,
                         "Not enough mis for concurrency! Test will generate '"
