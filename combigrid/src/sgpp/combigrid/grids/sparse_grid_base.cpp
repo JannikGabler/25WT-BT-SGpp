@@ -125,16 +125,18 @@ void SparseGridBase::setTensorGrid(const size_t idx, const TensorGridCTData& tg)
   assert(idx < tensorGridData.size());
   assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
 
-  updateMetaValuesBeforeSwap(tensorGridData[idx], tg);
+  const bool metaValuesInvalidated = checkMetaValuesBeforeSet(tensorGridData[idx], tg);
   tensorGridData[idx] = TensorGridCTData(tg);
+  updateMetaValuesAfterSet(metaValuesInvalidated, tensorGridData[idx]);
 }
 
 void SparseGridBase::setTensorGrid(const size_t idx, TensorGridCTData&& tg) {
   assert(idx < tensorGridData.size());
   assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
 
-  updateMetaValuesBeforeSwap(tensorGridData[idx], tg);
+  const bool metaValuesInvalidated = checkMetaValuesBeforeSet(tensorGridData[idx], tg);
   tensorGridData[idx] = std::move(tg);
+  updateMetaValuesAfterSet(metaValuesInvalidated, tensorGridData[idx]);
 }
 
 // void SparseGrid::setMaxTGGPCnt(const size_t maximum) { maxTGGPCnt = maximum; }
@@ -167,10 +169,15 @@ void SparseGridBase::updateMetaValuesAfterInsertion(const TensorGridCTData& tg) 
       std::max(maxTGSumOverGPCntsPerDim, tg.tensorGrid.getNodesPerDim().size());
 }
 
-void SparseGridBase::updateMetaValuesBeforeSwap(const TensorGridCTData& oldTG,
-                                                const TensorGridCTData& newTG) {
-  if (oldTG.tensorGrid.nGP() == maxTGGPCnt ||
-      oldTG.tensorGrid.getNodesPerDim().size() == maxTGSumOverGPCntsPerDim) {
+bool SparseGridBase::checkMetaValuesBeforeSet(const TensorGridCTData& oldTG,
+                                              const TensorGridCTData& newTG) {
+  return oldTG.tensorGrid.nGP() == maxTGGPCnt ||
+         oldTG.tensorGrid.getNodesPerDim().size() == maxTGSumOverGPCntsPerDim;
+}
+
+void SparseGridBase::updateMetaValuesAfterSet(const bool haveToBeRecomputed,
+                                              const TensorGridCTData& newTG) {
+  if (haveToBeRecomputed) {
     recomputeMetaValues();
   } else {
     updateMetaValuesAfterInsertion(newTG);

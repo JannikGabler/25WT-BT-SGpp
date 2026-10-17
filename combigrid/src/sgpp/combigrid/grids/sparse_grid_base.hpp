@@ -60,21 +60,12 @@ class SparseGridBase {
   std::span<const TensorGridCTData> getTensorGrids() const noexcept;
 
   /**
-   * @brief Returns the cached maximum number of grid points across all
-   * contained tensor grids.
-   *
-   * The value must be set explicitly via @ref setMaxTGGPCnt; it is not
-   * recomputed automatically when tensor grids are added or modified.
+   * TODO: Document
    */
   size_t getMaxTGGPCnt() const noexcept;
 
   /**
-   * @brief Returns the cached maximum of @f$\sum_k n_k@f$ across all
-   * contained tensor grids, where @f$n_k@f$ is the per-dimension grid-point
-   * count.
-   *
-   * The value must be set explicitly via @ref setMaxTGSumOverGPCntsPerDim;
-   * it is not recomputed automatically.
+   * TODO: Document
    */
   size_t getMaxTGSumOverGPCntsPerDim() const noexcept;
 
@@ -174,19 +165,6 @@ class SparseGridBase {
 
   /// @}
 
-  /// @name Attributes
-  /// @{
-
-  const size_t nDim_;  ///< Spatial dimensionality (fixed at construction).
-  std::vector<TensorGridCTData>
-      tensorGridData;  ///< Tensor grids and their combination coefficients.
-
-  size_t maxTGGPCnt = 0;  ///< Cached maximum @c nGP() across contained tensor grids.
-  size_t maxTGSumOverGPCntsPerDim =
-      0;  ///< Cached maximum @f$\sum_k n_k@f$ across contained tensor grids.
-
-  /// @}
-
   /// @name Helpers
   /// @{
 
@@ -215,7 +193,26 @@ class SparseGridBase {
   /**
    * TODO: Document
    */
-  void updateMetaValuesBeforeSwap(const TensorGridCTData& oldTG, const TensorGridCTData& newTG);
+  [[nodiscard]]
+  bool checkMetaValuesBeforeSet(const TensorGridCTData& oldTG, const TensorGridCTData& newTG);
+
+  /**
+   * TODO: Document
+   */
+  void updateMetaValuesAfterSet(bool haveToBeRecomputed, const TensorGridCTData& newTG);
+
+  /// @}
+
+  /// @name Attributes
+  /// @{
+
+  const size_t nDim_;  ///< Spatial dimensionality (fixed at construction).
+  std::vector<TensorGridCTData>
+      tensorGridData;  ///< Tensor grids and their combination coefficients.
+
+  size_t maxTGGPCnt = 0;  ///< Cached maximum @c nGP() across contained tensor grids.
+  size_t maxTGSumOverGPCntsPerDim =
+      0;  ///< Cached maximum @f$\sum_k n_k@f$ across contained tensor grids.
 
   /// @}
 };

@@ -76,14 +76,15 @@ void getWeights(const QuadratureContext& context, const TensorGrid& tg,
   scratch.weights1D.resize(gpCntPerDim.sumOfElems<size_t>());
   tools::getQuadRulesForTensorGrid(tg, context.nodeGenFuncs, scratch.quadRules);
 
-  size_t vecOffset = 0;
+  size_t writeIdx = 0;
 
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
-    assert(scratch.weights1D.size() >= vecOffset + gpCntPerDim[dim]);  // TODO: Delete
+    assert(scratch.weights1D.size() >= writeIdx + gpCntPerDim[dim]);  // TODO: Delete
 
     const GPCntType nNodes = gpCntPerDim[dim];
-    scratch.quadRules[dim]->genWeightsInplace(scratch.weights1D);
-    vecOffset += nNodes;
+    scratch.quadRules[dim]->genWeightsInplace(
+        std::span(scratch.weights1D).subspan(writeIdx, nNodes));
+    writeIdx += nNodes;
   }
 }
 
