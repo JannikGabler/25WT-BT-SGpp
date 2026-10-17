@@ -42,7 +42,8 @@ double perform(tools::Benchmarker<double>::BenchmarkerContext& ctx) {
 
   // SG gen instr
   CompleteSGGenInstr genInstr(maxLvl, nDim);
-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setBoundaryLevelOffset(std::numeric_limits<LvlType>::max());
+  genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
 
   ctx.mark_checkpoint("SG Gen. Instruction");
 

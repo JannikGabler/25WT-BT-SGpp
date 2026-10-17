@@ -30,6 +30,7 @@ double quadratureDelta(const SourceFunc& sourceFunc, const SparseGrid& sparseGri
   const DeltaQuadratureContext context{.sparseGrid = sparseGrid,
                                        .sourceFunc = sourceFunc,
                                        .domain = genInstr.getDomain(),
+                                       .boundaryLvlOffset = genInstr.getBoundaryLevelOffset(),
                                        .weights1D = weights1D,
                                        .nodeIdxLvlMapFuncs = nodeIdxLvlMapFuncs};
 
@@ -53,6 +54,7 @@ namespace delta_quadrature_operator {
 size_t comp1DWeightsSize(const SparseGrid& sparseGrid) {
   const size_t nDim = sparseGrid.nDim();
   const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr().getLvl2GPCntFuncs();
+  const LvlType boundaryLvlOffset = sparseGrid.getGenInstr().getBoundaryLevelOffset();
 
   size_t totalSize = 0;
 
@@ -60,7 +62,8 @@ size_t comp1DWeightsSize(const SparseGrid& sparseGrid) {
     const LvlMI& tgMI = tgData.mi;
 
     for (size_t dim = 0; dim < nDim; dim++) {
-      totalSize += lvl2GPCntFuncs[dim](tgMI[dim]);
+      const LvlType lvl = tgMI[dim];
+      totalSize += lvl2GPCntFuncs[dim](lvl) + (lvl >= boundaryLvlOffset ? 2 : 0);
     }
   }
 
@@ -71,6 +74,7 @@ size_t comp1DWeightsSize(const SparseGrid& sparseGrid) {
 FlatNestedVec<double, 3> comp1DWeights(const SparseGrid& sparseGrid) {
   const size_t nDim = sparseGrid.nDim();
   const size_t nTG = sparseGrid.nTG();
+  const LvlType boundaryLvlOffset = sparseGrid.getGenInstr().getBoundaryLevelOffset();
 
   const std::vector<NodeGenFunc*>& nodeGenFuncs = sparseGrid.getGenInstr().getNodeGenFuncs();
   const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sparseGrid.getGenInstr().getLvl2GPCntFuncs();
@@ -82,14 +86,15 @@ FlatNestedVec<double, 3> comp1DWeights(const SparseGrid& sparseGrid) {
   weights.reserveSubVecs(1, nTG);
   weights.reserveSubVecs(2, nTG * nDim);
 
-  for (const auto& [idx, tgData] : std::views::enumerate(sparseGrid)) {
+  for (const TensorGridCTData& tgData : sparseGrid) {
     const LvlMI& tgMI = tgData.mi;
 
     tools::getQuadRulesForTensorGrid(tgData.tensorGrid, nodeGenFuncs, quadRules);
     weights.appendSubVec(1);  // weights[tgIdx]
 
     for (size_t dim = 0; dim < nDim; dim++) {
-      const GPCntType nNodes = lvl2GPCntFuncs[dim](tgMI[dim]);
+      const LvlType lvl = tgMI[dim];
+      const GPCntType nNodes = lvl2GPCntFuncs[dim](lvl) + (lvl >= boundaryLvlOffset ? 2 : 0);
 
       weights.appendSubVec(2, nNodes);  // weights[tgIdx][dim]
 
@@ -169,14 +174,39 @@ double compLocalWeightForGP(const DeltaQuadratureContext& context,
   double result = 1.0;
 
   for (size_t dim = 0; dim < nDim; dim++) {
+    // const GPCntType mappedNodeIdx =
+    //     context.nodeIdxLvlMapFuncs[dim](gpMIInDeltaTG[dim], deltaTGMI[dim], targetTGMI[dim]);
     const GPCntType mappedNodeIdx =
-        context.nodeIdxLvlMapFuncs[dim](gpMIInDeltaTG[dim], deltaTGMI[dim], targetTGMI[dim]);
+        mapNodeIdx(context, deltaTGCTData.tensorGrid.getGPCntPerDim()[dim],
+                   static_cast<GPCntType>(weights1DForTargetTG[dim].size()), deltaTGMI[dim],
+                   targetTGMI[dim], gpMIInDeltaTG[dim], context.nodeIdxLvlMapFuncs[dim]);
 
     const double weight1D = weights1DForTargetTG[dim][mappedNodeIdx];
     result *= weight1D;
   }
 
   return result;
+}
+
+GPCntType mapNodeIdx(const DeltaQuadratureContext& context, const GPCntType nNodesInDeltaTG,
+                     const GPCntType nNodesInTargetTG, const LvlType deltaTGLvl,
+                     const LvlType targetTGLvl, const GPCntType gpIdxInDeltaTG,
+                     const NodeIdxLvlMapFunc nodeIdxLvlMapFunc) {
+  if (deltaTGLvl == context.boundaryLvlOffset) {  // Has the delta tensor grid boundary nodes?
+    if (gpIdxInDeltaTG == 0) {                    // left boundary node
+      return 0;
+    } else if (gpIdxInDeltaTG == nNodesInDeltaTG - 1) {  // right boundary node
+      return nNodesInTargetTG - 1;
+    } else {
+      // Has the target tensor grid boundary nodes?
+      return nodeIdxLvlMapFunc(gpIdxInDeltaTG - 1, deltaTGLvl, targetTGLvl) +
+             (targetTGLvl >= context.boundaryLvlOffset ? 1 : 0);
+    }
+  } else {
+    // Has the target tensor grid boundary nodes?
+    return nodeIdxLvlMapFunc(gpIdxInDeltaTG, deltaTGLvl, targetTGLvl) +
+           (targetTGLvl >= context.boundaryLvlOffset ? 1 : 0);
+  }
 }
 
 // double compLocalWeightForNonBoundaryGP(const DeltaQuadratureContext& context,

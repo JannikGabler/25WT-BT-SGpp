@@ -22,6 +22,7 @@ struct DeltaQuadratureContext {
   const SparseGrid& sparseGrid;
   const SourceFunc& sourceFunc;
   const HyperCubeArea& domain;
+  const LvlType boundaryLvlOffset;
   // const std::vector<NodeGenFunc*>& nodeGenFuncs;
   // const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs;
 

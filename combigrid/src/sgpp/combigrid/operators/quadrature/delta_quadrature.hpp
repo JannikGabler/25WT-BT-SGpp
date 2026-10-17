@@ -64,6 +64,11 @@ double compLocalWeightForGP(const DeltaQuadratureContext& context,
                             const TensorGridCTData& deltaTGCTData, const GPMI& gpMIInDeltaTG,
                             const LvlMI& targetTGMI, const size_t targetTGIdx);
 
+GPCntType mapNodeIdx(const DeltaQuadratureContext& context, const GPCntType nNodesInDeltaTG,
+                     const GPCntType nNodesInTargetTG, const LvlType deltaTGLvl,
+                     const LvlType targetTGLvl, const GPCntType gpIdxInDeltaTG,
+                     const NodeIdxLvlMapFunc nodeIdxLvlMapFunc);
+
 }  // namespace delta_quadrature_operator
 
 }  // namespace combigrid
