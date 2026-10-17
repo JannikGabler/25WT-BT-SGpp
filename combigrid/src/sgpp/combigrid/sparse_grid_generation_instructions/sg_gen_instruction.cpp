@@ -135,5 +135,15 @@ std::vector<NodeGenFunc*> SGGenInstr::getUniqueNodeGenFuncs() const {
   return uniqueNodeGenFuncs;
 }
 
+bool SGGenInstr::areNodesOfAllDimsNested() const {
+  for (size_t dim = 0; dim < nDim(); dim++) {
+    if (!nodeGenFuncs[dim]->isNested(lvl2GPCntFuncs[dim])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 }  // namespace combigrid
 }  // namespace sgpp

@@ -20,6 +20,9 @@ class DeltasSparseGrid : public SparseGridBase {
 
   /**
    * TODO: Document
+   *
+   * @throws std::invalid_argument if the nodes are not nested in some dimension (see
+   * @c SGGenInstr::areNodesOfAllDimsNested).
    */
   DeltasSparseGrid(const SGGenInstr& genInstruction);
 

@@ -6,6 +6,7 @@
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/quadrature/delta_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -13,7 +14,6 @@
 #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
-#include "sgpp/combigrid/grids/deltas_sparse_grid.hpp"
 
 /*
 This:          0.015013 s

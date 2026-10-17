@@ -14,21 +14,6 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-bool areNodesOfAllDimsNested(const SparseGrid& sparseGrid) {
-  const size_t nDim = sparseGrid.nDim();
-  const SGGenInstr& sgGenInstr = sparseGrid.getGenInstr();
-  const std::vector<NodeGenFunc*>& nodeGenFuncs = sgGenInstr.getNodeGenFuncs();
-  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs = sgGenInstr.getLvl2GPCntFuncs();
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    if (!nodeGenFuncs[dim]->isNested(lvl2GPCntFuncs[dim])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 // /**
 //  * TODO: Document
 //  */
@@ -59,10 +44,28 @@ std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
 
 void getQuadRulesForTensorGrid(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
                                std::vector<QuadRule*>& out) {
-  assert(out.size() == tg.nDim());
+  assert(tg.nDim() == nodeGenFuncs.size());
+  assert(tg.nDim() == out.size());
 
-  const size_t nDim = tg.nDim();
-  const GPMI& gpCntPerDim = tg.getGPCntPerDim();
+  getQuadRulesForAllDims(tg.getGPCntPerDim(), nodeGenFuncs, out);
+}
+
+std::vector<QuadRule*> getQuadRulesForAllDims(const std::span<const GPCntType> gpCntPerDim,
+                                              const std::vector<NodeGenFunc*>& nodeGenFuncs) {
+  std::vector<QuadRule*> result(gpCntPerDim.size());
+
+  getQuadRulesForAllDims(gpCntPerDim, nodeGenFuncs, result);
+
+  return result;
+}
+
+void getQuadRulesForAllDims(const std::span<const GPCntType> gpCntPerDim,
+                            const std::vector<NodeGenFunc*>& nodeGenFuncs,
+                            std::vector<QuadRule*>& out) {
+  assert(gpCntPerDim.size() == nodeGenFuncs.size());
+  assert(gpCntPerDim.size() == out.size());
+
+  const size_t nDim = gpCntPerDim.size();
 
   for (size_t dim = 0; dim < nDim; dim++) {
     out[dim] = nodeGenFuncs[dim]->getQuadRule(gpCntPerDim[dim]);

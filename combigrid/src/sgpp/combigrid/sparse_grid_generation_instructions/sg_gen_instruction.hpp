@@ -162,6 +162,15 @@ class SGGenInstr {
   /// @brief Returns the unique node-generation functions used across all dimensions.
   std::vector<NodeGenFunc*> getUniqueNodeGenFuncs() const;
 
+  /**
+   * @brief Returns whether the nodes are nested (see @c NodeGenFunc::isNested) in every
+   * dimension w.r.t. that dimension's level-to-grid-point-count function.
+   *
+   * @throws sgpp::base::not_implemented_exception if the nestedness of some node-generation
+   * function is unknown for its level-to-grid-point-count function.
+   */
+  bool areNodesOfAllDimsNested() const;
+
  private:
   LvlType boundaryLevelOffset;  ///< See @ref getBoundaryLevelOffset.
 

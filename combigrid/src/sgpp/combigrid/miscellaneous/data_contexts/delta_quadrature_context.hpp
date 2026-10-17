@@ -4,7 +4,7 @@
 #pragma once
 
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
-#include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -19,7 +19,7 @@ namespace misc {
  */
 struct DeltaQuadratureContext {
   // Top-level arguments
-  const SparseGrid& sparseGrid;
+  const DeltasSparseGrid& deltasSparseGrid;
   const SourceFunc& sourceFunc;
   const HyperCubeArea& domain;
   const LvlType boundaryLvlOffset;

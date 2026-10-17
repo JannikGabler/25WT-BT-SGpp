@@ -20,6 +20,14 @@ namespace tools {
 LvlMIVec genFullMIVecForCompleteSG(const LvlType maxLvl, const size_t nDim) {
   if (nDim == 0) {
     return {0, 0};
+  } else if (nDim == 1) {  // Stars and bars needs at least one bar; the levels are 0, ..., maxLvl
+    LvlMIVec miVec(1, static_cast<size_t>(maxLvl) + 1);
+
+    for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
+      miVec(miIdx, 0) = static_cast<LvlType>(miIdx);
+    }
+
+    return miVec;
   }
 
   const std::vector<size_t> nMIs = complete_sg_gen::getMICnts(0, maxLvl, nDim);

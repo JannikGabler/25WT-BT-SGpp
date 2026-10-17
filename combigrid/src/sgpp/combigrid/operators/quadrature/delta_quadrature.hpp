@@ -4,12 +4,10 @@
 #pragma once
 
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-
-using sgpp::combigrid::misc::DeltaQuadratureContext;
-using sgpp::combigrid::misc::FlatNestedVec;
 
 namespace sgpp {
 namespace combigrid {
@@ -19,7 +17,7 @@ namespace combigrid {
  * More specialized version of quadrature.
  * Requires nested nodes
  */
-double quadratureDelta(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
+double quadratureDelta(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid);
 
 /******************
 Internal operations
@@ -33,38 +31,42 @@ namespace delta_quadrature_operator {
 /**
  * TODO: Document
  */
-size_t comp1DWeightsSize(const SparseGrid& sparseGrid);
+std::pair<misc::FlatNestedVec<GPCntType, 2>, GPCntType> compNodeCnts(
+    const DeltasSparseGrid& deltasSparseGrid);
 
 /**
  * TODO: Document
  */
-FlatNestedVec<double, 3> comp1DWeights(const SparseGrid& sparseGrid);
+misc::FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid);
 
 /**
  * TODO: Document
  */
-std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const SparseGrid& sparseGrid);
+std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const DeltasSparseGrid& deltasSparseGrid);
 
 /**
  * TODO: Document
  */
-double processDeltaTensorGrid(const DeltaQuadratureContext& context,
+double processDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
                               const TensorGridCTData& deltaTGCTData);
 
 /**
  * TODO: Document
  */
-double compGlobalWeightForGP(const DeltaQuadratureContext& context,
+double compGlobalWeightForGP(const misc::DeltaQuadratureContext& context,
                              const TensorGridCTData& deltaTGCTData, const GPMI& gpMIInDeltaTG);
 
 /**
  * TODO: Document
  */
-double compLocalWeightForGP(const DeltaQuadratureContext& context,
+double compLocalWeightForGP(const misc::DeltaQuadratureContext& context,
                             const TensorGridCTData& deltaTGCTData, const GPMI& gpMIInDeltaTG,
                             const LvlMI& targetTGMI, const size_t targetTGIdx);
 
-GPCntType mapNodeIdx(const DeltaQuadratureContext& context, const GPCntType nNodesInDeltaTG,
+/**
+ * TODO: Document
+ */
+GPCntType mapNodeIdx(const misc::DeltaQuadratureContext& context, const GPCntType nNodesInDeltaTG,
                      const GPCntType nNodesInTargetTG, const LvlType deltaTGLvl,
                      const LvlType targetTGLvl, const GPCntType gpIdxInDeltaTG,
                      const NodeIdxLvlMapFunc nodeIdxLvlMapFunc);

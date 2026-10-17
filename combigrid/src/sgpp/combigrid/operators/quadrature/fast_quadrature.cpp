@@ -13,7 +13,7 @@
 // namespace combigrid {
 
 // double quadratureFast(const SourceFunc& sourceFunc, const ExtensiveSparseGrid& sparseGrid) {
-//   if (!tools::areNodesOfAllDimsNested(sparseGrid)) {
+//   if (!sparseGrid.getGenInstr().areNodesOfAllDimsNested()) {
 //     throw std::invalid_argument("quadratureFast: A sparse grid with nested nodes is required.");
 //   }
 

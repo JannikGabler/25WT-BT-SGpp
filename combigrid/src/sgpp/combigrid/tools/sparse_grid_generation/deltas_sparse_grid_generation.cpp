@@ -18,7 +18,7 @@ namespace combigrid {
 namespace tools {
 
 GPCntType getDeltaNodeCnt(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc, bool includeNodesOnBoundary) {
-  return lvl2GPCntFunc(lvl) + (lvl > 0 ? lvl2GPCntFunc(lvl - 1) : 0) +
+  return lvl2GPCntFunc(lvl) - (lvl > 0 ? lvl2GPCntFunc(lvl - 1) : 0) +
          (includeNodesOnBoundary ? 2 : 0);
 }
 
@@ -29,6 +29,9 @@ std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr, const LvlMIV
                                         const std::span<const CTCoeffType> coeffs) {
   assert(mis.nDim() == genInstr.nDim());
   assert(mis.size() == coeffs.size());
+  // Non-nested nodes make the delta node generation throw, which terminates the program inside
+  // the parallel region below. The caller has to check this beforehand.
+  assert(genInstr.areNodesOfAllDimsNested());
 
   std::vector<TensorGridCTData> tgData(mis.size());
 
