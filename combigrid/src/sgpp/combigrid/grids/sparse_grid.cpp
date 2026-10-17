@@ -14,7 +14,7 @@ SparseGrid::SparseGrid(const SGGenInstr& genInstr)
     : SparseGridBase(genInstr.nDim()), genInstr(genInstr.clone()) {
   const auto [miVec, coeffs] = genInstr.genReducedMIVecWithCoeffs();
 
-  tools::populateSG(*this, genInstr, miVec, coeffs);
+  setTensorGrids(tools::sparse_grid_generation::genTGData(genInstr, miVec.getView(), coeffs));
 }
 
 /// @}

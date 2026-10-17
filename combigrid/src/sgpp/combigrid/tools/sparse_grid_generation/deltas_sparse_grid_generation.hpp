@@ -22,12 +22,6 @@ namespace tools {
 /**
  * TODO: Document
  */
-void populateDeltasSG(DeltasSparseGrid& dSG, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                      const std::vector<CTCoeffType>& coeffs);
-
-/**
- * TODO: Document
- */
 GPCntType getDeltaNodeCnt(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc, bool includeNodesOnBoundary);
 
 /******************

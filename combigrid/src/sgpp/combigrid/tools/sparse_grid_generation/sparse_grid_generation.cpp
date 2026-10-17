@@ -20,21 +20,12 @@ namespace combigrid {
 
 namespace tools {
 
-void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                const std::vector<CTCoeffType>& coeffs) {
-  assert(sg.nDim() == genInstr.nDim() && sg.nDim() == miVec.nDim());
-  assert(miVec.nMI() == coeffs.size());
-
-  std::vector<TensorGridCTData> tgData = genTGData(genInstr, miVec.getView(), coeffs);
-
-  sg.setTensorGrids(std::move(tgData));
-}
-
 /// @brief Internal implementation details of the sparse-grid generation.
 namespace sparse_grid_generation {
 
 std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr, const LvlMIVecView mis,
                                         const std::span<const CTCoeffType> coeffs) {
+  assert(mis.nDim() == genInstr.nDim());
   assert(mis.size() == coeffs.size());
 
   std::vector<TensorGridCTData> tgData(mis.size());

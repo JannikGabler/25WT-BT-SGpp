@@ -19,12 +19,6 @@ namespace sgpp {
 namespace combigrid {
 namespace tools {
 
-/**
- * TODO: Document
- */
-void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                const std::vector<CTCoeffType>& coeffs);
-
 /// @brief Internal implementation details of the sparse-grid generation.
 namespace sparse_grid_generation {
 

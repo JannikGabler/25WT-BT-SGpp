@@ -13,7 +13,8 @@ DeltasSparseGrid::DeltasSparseGrid(const SGGenInstr& genInstr)
     : SparseGridBase(genInstr.nDim()), genInstr(genInstr.clone()) {
   const auto [miVec, coeffs] = genInstr.genFullMIVecWithCoeffs();
 
-  tools::populateDeltasSG(*this, genInstr, miVec, coeffs);
+  setTensorGrids(
+      tools::deltas_sparse_grid_generation::genTGData(genInstr, miVec.getView(), coeffs));
 }
 
 /// @}

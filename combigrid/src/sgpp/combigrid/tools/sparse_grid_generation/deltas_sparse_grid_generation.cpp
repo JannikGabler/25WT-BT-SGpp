@@ -17,16 +17,6 @@ namespace combigrid {
 
 namespace tools {
 
-void populateDeltasSG(DeltasSparseGrid& dSG, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                      const std::vector<CTCoeffType>& coeffs) {
-  assert(dSG.nDim() == genInstr.nDim() && dSG.nDim() == miVec.nDim());
-  assert(miVec.nMI() == coeffs.size());
-
-  std::vector<TensorGridCTData> tgData = genTGData(genInstr, miVec.getView(), coeffs);
-
-  dSG.setTensorGrids(std::move(tgData));
-}
-
 GPCntType getDeltaNodeCnt(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc, bool includeNodesOnBoundary) {
   return lvl2GPCntFunc(lvl) + (lvl > 0 ? lvl2GPCntFunc(lvl - 1) : 0) +
          (includeNodesOnBoundary ? 2 : 0);
@@ -37,6 +27,7 @@ namespace deltas_sparse_grid_generation {
 
 std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr, const LvlMIVecView mis,
                                         const std::span<const CTCoeffType> coeffs) {
+  assert(mis.nDim() == genInstr.nDim());
   assert(mis.size() == coeffs.size());
 
   std::vector<TensorGridCTData> tgData(mis.size());
