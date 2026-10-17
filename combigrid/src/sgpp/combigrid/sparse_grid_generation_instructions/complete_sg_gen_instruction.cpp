@@ -16,7 +16,7 @@ CompleteSGGenInstr::CompleteSGGenInstr(const LvlType maxLvl, const size_t nDim)
 void CompleteSGGenInstr::setMaxLvl(const LvlType maxLvl) { this->maxLvl = maxLvl; }
 
 LvlMIVec CompleteSGGenInstr::genFullMIVec() const {
-  return tools::genReducedMIVecForCompleteSG(maxLvl, nDim());
+  return tools::genFullMIVecForCompleteSG(maxLvl, nDim());
 }
 
 LvlMIVec CompleteSGGenInstr::genReducedMIVec() const {
