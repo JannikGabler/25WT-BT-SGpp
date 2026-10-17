@@ -56,7 +56,7 @@ void EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary(const LvlType lvl,
     const double factor = 1.0 / static_cast<double>(nNodesOnLvl + 1);
 
     for (GPCntType i = 1; i <= (nNodesOnLvl + 1) / 2; i++) {
-      // Generate every second f(i) = 1 + 2 * (i-1)
+      // Generate every second node
       out[i - 1] = static_cast<double>(2 * i - 1) * factor;
     }
   } else [[unlikely]] {

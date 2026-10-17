@@ -22,6 +22,7 @@ namespace combigrid {
 
 double quadratureDelta(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   const std::shared_ptr<const SGGenInstr> genInstr = sparseGrid.getGenInstr();
+  // TODO: Consider boundary!!!
   const FlatNestedVec<double, 3> weights1D = delta_quadrature_operator::comp1DWeights(sparseGrid);
   const std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs =
       delta_quadrature_operator::compNodeIdxLvlMapFuncs(sparseGrid);

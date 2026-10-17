@@ -17,9 +17,6 @@ namespace combigrid {
 
 namespace tools {
 
-void populateSG(SparseGrid& sg, const SGGenInstr& genInstr, const LvlMIVec& miVec,
-                const std::vector<CTCoeffType>& coeffs) {}
-
 void populateDeltasSG(DeltasSparseGrid& dSG, const SGGenInstr& genInstr, const LvlMIVec& miVec,
                       const std::vector<CTCoeffType>& coeffs) {
   assert(dSG.nDim() == genInstr.nDim() && dSG.nDim() == miVec.nDim());
@@ -83,17 +80,22 @@ GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr) {
 base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
                                      const GPMI& gpCntPerDim) {
   const size_t nDim = genInstr.nDim();
+  const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
 
   base::DataVector nodesPerDim(gpCntPerDim.sumOfElems<size_t>());
-  size_t vecIdx = 0;
+  size_t writeIdx = 0;
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+    const LvlType lvl = mi[dim];
+    const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+    const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
     const GPCntType nodeCnt = gpCntPerDim[dim];
-    const bool includeBoundary = mi[dim] >= genInstr.getBoundaryLevelOffset();
+    const bool includeBoundary = (lvl == boundaryLvlOffset);
 
-    nodeGenFunc->genNodes(nodeCnt, nodesPerDim, includeBoundary, vecIdx);
-    vecIdx += nodeCnt;
+    nodeGenFunc->genDeltaNodes(lvl, lvl2GPCntFunc,
+                               std::span(nodesPerDim).subspan(writeIdx, nodeCnt), includeBoundary);
+
+    writeIdx += nodeCnt;
   }
 
   return nodesPerDim;
