@@ -13,6 +13,7 @@
 #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
+#include "sgpp/combigrid/grids/deltas_sparse_grid.hpp"
 
 /*
 This:          0.015013 s
@@ -50,12 +51,12 @@ double perform(tools::Benchmarker<double>::BenchmarkerContext& ctx) {
   ctx.mark_checkpoint("SG Gen. Instruction");
 
   // SG gen
-  const SparseGrid sg(genInstr);
+  const DeltasSparseGrid dSG(genInstr);
 
   ctx.mark_checkpoint("SG Generation");
 
   // Quadrature
-  const double result = quadratureDelta(sourceFunc, sg);
+  const double result = quadratureDelta(sourceFunc, dSG);
 
   ctx.mark_checkpoint("Quadrature");
 

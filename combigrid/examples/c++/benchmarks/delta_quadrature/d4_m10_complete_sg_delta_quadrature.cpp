@@ -48,12 +48,12 @@ double perform(tools::Benchmarker<double>::BenchmarkerContext& ctx) {
   ctx.mark_checkpoint("SG Gen. Instruction");
 
   // SG gen
-  const SparseGrid sg(genInstr);
+  const DeltasSparseGrid dSG(genInstr);
 
   ctx.mark_checkpoint("SG Generation");
 
   // Quadrature
-  const double result = quadratureDelta(sourceFunc, sg);
+  const double result = quadratureDelta(sourceFunc, dSG);
 
   ctx.mark_checkpoint("Quadrature");
 
