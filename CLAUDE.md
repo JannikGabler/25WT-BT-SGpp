@@ -186,7 +186,7 @@ None of `base/`'s hierarchical grid, basis, or operation machinery is used — C
 
 Build system: **SCons** (Python), driven by the top-level [SConstruct](SConstruct) and per-module [SConscript](combigrid/SConscript) files. Common module logic (source discovery, library building, boost tests, style checks) lives in [site_scons/ModuleHelper.py](site_scons/ModuleHelper.py); configuration/detection in [site_scons/SGppConfigure.py](site_scons/SGppConfigure.py).
 
-Modules are enabled/disabled via `SG_ALL=<bool>` (default `1`) and per-module `SG_<NAME>=<bool>` overrides (`SG_BASE`, `SG_COMBIGRID`, …). Python bindings via `SG_PYTHON=<bool>`.
+Modules are enabled/disabled via `SG_ALL=<bool>` (default `1`) and per-module `SG_<NAME>=<bool>` overrides (`SG_BASE`, `SG_COMBIGRID`, …). Python bindings via `SG_PYTHON=<bool>`. `OPT=<bool>` toggles the default optimization.
 
 ### Preferred iteration commands (combigrid only)
 
@@ -195,13 +195,7 @@ Wrapper scripts checked into repo root — read them if in doubt:
 - [compileDebug.sh](compileDebug.sh) — debug: `scons -j8 OPT=0 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1`
 - [compileASan.sh](compileASan.sh) — AddressSanitizer: adds `-fsanitize=address -fno-omit-frame-pointer` to both `CPPFLAGS` and `LINKFLAGS`, `OPT=0`.
 
-Minimal one-shot command (equivalent to `compileDebug.sh` without native tuning):
-
-```bash
-scons -j$(nproc) OPT=0 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1
-```
-
-Add `VERBOSE=1` to see compiler/linker commands, `-c` to clean. All build variables and their descriptions: `scons -h`.
+Compile with the debug configuration by default as it enables assert statements. Use the normal configuration for runtime relevant tasks (e.g. benchmarking). Add `VERBOSE=1` to see compiler/linker commands, `-c` to clean. All build variables and their descriptions: `scons -h`.
 
 ### After building
 

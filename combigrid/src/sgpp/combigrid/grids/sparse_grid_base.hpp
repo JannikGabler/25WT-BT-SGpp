@@ -80,62 +80,6 @@ class SparseGridBase {
 
   /// @}
 
-  /// @name Setters
-  /// @{
-
-  /**
-   * TODO: Document
-   * Intended method to fill the complete sparse grid
-   */
-  void setTensorGrids(std::vector<TensorGridCTData>&& tgs);
-
-  /**
-   * TODO: Document (warn about the performance penalty that a vector reallocation can cause)
-   * @brief Appends a tensor grid (copy).
-   * @param tg Tensor grid combination-technique data to add.
-   */
-  void addTensorGrid(const TensorGridCTData& tg);
-
-  /**
-   * TODO: Document (warn about the performance penalty that a vector reallocation can cause)
-   * @brief Appends a tensor grid (move).
-   * @param tg Tensor grid combination-technique data to move from.
-   */
-  void addTensorGrid(TensorGridCTData&& tg);
-
-  /**
-   * @brief Replaces the @p idx -th tensor grid (copy).
-   * @param idx Slot index, must satisfy @c idx < nTG().
-   * @param tg  New tensor grid data.
-   */
-  void setTensorGrid(size_t idx, const TensorGridCTData& tg);
-
-  /**
-   * @brief Replaces the @p idx -th tensor grid (move).
-   * @param idx Slot index, must satisfy @c idx < nTG().
-   * @param tg  New tensor grid data (moved-from).
-   */
-  void setTensorGrid(size_t idx, TensorGridCTData&& tg);
-
-  /// @}
-
-  /// @name Helpers
-  /// @{
-
-  /**
-   * @brief Resizes the internal vector of tensor grids.
-   * @param nTG New size for the vector.
-   */
-  void resize(size_t nTG);
-
-  /**
-   * @brief Preallocates space for @p n tensor grids.
-   * @param n Number of tensor grids to reserve space for.
-   */
-  void reserve(size_t n);
-
-  /// @}
-
   /// @name Iterators
   /// @{
 
@@ -191,6 +135,45 @@ class SparseGridBase {
 
   /// @}
 
+  /// @name Setters
+  /// @{
+
+  /**
+   * TODO: Document
+   * Intended method to fill the complete sparse grid
+   */
+  void setTensorGrids(std::vector<TensorGridCTData>&& tgs);
+
+  /**
+   * TODO: Document (warn about the performance penalty that a vector reallocation can cause)
+   * @brief Appends a tensor grid (copy).
+   * @param tg Tensor grid combination-technique data to add.
+   */
+  void addTensorGrid(const TensorGridCTData& tg);
+
+  /**
+   * TODO: Document (warn about the performance penalty that a vector reallocation can cause)
+   * @brief Appends a tensor grid (move).
+   * @param tg Tensor grid combination-technique data to move from.
+   */
+  void addTensorGrid(TensorGridCTData&& tg);
+
+  /**
+   * @brief Replaces the @p idx -th tensor grid (copy).
+   * @param idx Slot index, must satisfy @c idx < nTG().
+   * @param tg  New tensor grid data.
+   */
+  void setTensorGrid(size_t idx, const TensorGridCTData& tg);
+
+  /**
+   * @brief Replaces the @p idx -th tensor grid (move).
+   * @param idx Slot index, must satisfy @c idx < nTG().
+   * @param tg  New tensor grid data (moved-from).
+   */
+  void setTensorGrid(size_t idx, TensorGridCTData&& tg);
+
+  /// @}
+
   /// @name Attributes
   /// @{
 
@@ -204,9 +187,20 @@ class SparseGridBase {
 
   /// @}
 
-  /*****
-  Helper
-  *****/
+  /// @name Helpers
+  /// @{
+
+  /**
+   * @brief Resizes the internal vector of tensor grids.
+   * @param nTG New size for the vector.
+   */
+  void resize(size_t nTG);
+
+  /**
+   * @brief Preallocates space for @p n tensor grids.
+   * @param n Number of tensor grids to reserve space for.
+   */
+  void reserve(size_t n);
 
   /**
    * TODO: Document
@@ -222,6 +216,8 @@ class SparseGridBase {
    * TODO: Document
    */
   void updateMetaValuesBeforeSwap(const TensorGridCTData& oldTG, const TensorGridCTData& newTG);
+
+  /// @}
 };
 
 }  // namespace combigrid

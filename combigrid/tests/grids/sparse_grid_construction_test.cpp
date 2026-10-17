@@ -5,35 +5,43 @@
 
 /**
  * @file sparse_grid_construction_test.cpp
- * @brief Boost.Test cases verifying the construction of @c SparseGrid
- * objects from a @c CompleteSGGenInstr instruction (number of tensor
- * grids, level multi-indices, combination coefficients, node positions).
+ * @brief Boost.Test cases verifying the construction of @c SparseGrid objects from
+ * @c CompleteSGGenInstr and @c MIVecSGGenInstr instructions (number of tensor grids,
+ * level multi-indices, combination coefficients, node positions, boundary handling,
+ * cached meta values) and the generation instruction stored in the grid.
+ *
+ * The expected grids are assembled by hand in @c ExpectedSG, a minimal subclass of
+ * @c SparseGridBase that makes its protected constructor and @c addTensorGrid public. Expected node lists
+ * are built only from @c NodeGenFunc::genNodesWithoutBoundary, independently of the
+ * library's sparse-grid generation code.
  */
 
-#include <algorithm>
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/context.hpp>
-#include <boost/test/tools/old/interface.hpp>
 #include <boost/test/unit_test.hpp>
-#include <boost/test/unit_test_suite.hpp>
 
-#include <cassert>
-#include <cstring>
+#include <algorithm>
+#include <functional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
-#include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/multiindices/multiindex.hpp>
+#include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
-#include <sgpp/combigrid/tools/multiindex/multiindex_utilities.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <string>
 #include <vector>
 
 using namespace sgpp::combigrid;
@@ -42,29 +50,204 @@ static sgpp::base::RandomNumberGenerator& randGen =
     sgpp::base::RandomNumberGenerator::getInstance();
 static NodeGenFunc* equidistantNodeGenFunc = getEquidistantNodeGenFunc();
 static NodeGenFunc* clenshawCurtisNodeGenFunc = getClenshawCurtisNodeGenFunc();
+static NodeGenFunc* firstTypeChebyshevNodeGenFunc = getFirstTypeChebyshevNodeGenFunc();
 
 namespace {
 
-sgpp::base::DataVector prod2DGPs(const sgpp::base::DataVector& nodes1,
-                                 const sgpp::base::DataVector& nodes2) {
-  sgpp::base::DataVector result(nodes1.size() + nodes2.size());
+/// Concrete sparse grid with a public constructor and modifier, used to assemble expected
+/// grids by hand.
+class ExpectedSG : public SparseGridBase {
+ public:
+  explicit ExpectedSG(const size_t nDim) : SparseGridBase(nDim) {}
 
-  std::copy(nodes1.begin(), nodes1.end(), result.begin());
-  std::copy(nodes2.begin(), nodes2.end(), result.data() + nodes1.size());
+  using SparseGridBase::addTensorGrid;
+};
 
-  return result;
+/// The @p nInnerNodes inner nodes of @p nodeGenFunc, framed by 0 and 1 if @p withBoundary.
+sgpp::base::DataVector expectedNodes(const NodeGenFunc* nodeGenFunc, const GPCntType nInnerNodes,
+                                     const bool withBoundary) {
+  const sgpp::base::DataVector innerNodes = nodeGenFunc->genNodesWithoutBoundary(nInnerNodes);
+
+  if (!withBoundary) {
+    return innerNodes;
+  }
+
+  sgpp::base::DataVector nodes(nInnerNodes + 2);
+  nodes[0] = 0.0;
+  std::copy(innerNodes.begin(), innerNodes.end(), nodes.begin() + 1);
+  nodes[nInnerNodes + 1] = 1.0;
+
+  return nodes;
 }
 
-sgpp::base::DataVector prod3DGPs(const sgpp::base::DataVector& nodes1,
-                                 const sgpp::base::DataVector& nodes2,
-                                 const sgpp::base::DataVector& nodes3) {
-  sgpp::base::DataVector result(nodes1.size() + nodes2.size() + nodes3.size());
+/// Tensor grid with the given per-dimension node lists.
+TensorGrid makeTG(const std::vector<sgpp::base::DataVector>& nodesPerDim) {
+  GPMI gpCntPerDim(nodesPerDim.size());
+  size_t nNodes = 0;
 
-  std::copy(nodes1.begin(), nodes1.end(), result.begin());
-  std::copy(nodes2.begin(), nodes2.end(), result.data() + nodes1.size());
-  std::copy(nodes3.begin(), nodes3.end(), result.data() + nodes1.size() + nodes2.size());
+  for (size_t dim = 0; dim < nodesPerDim.size(); dim++) {
+    gpCntPerDim[dim] = static_cast<GPCntType>(nodesPerDim[dim].size());
+    nNodes += nodesPerDim[dim].size();
+  }
 
-  return result;
+  sgpp::base::DataVector concatenatedNodes(nNodes);
+  auto out = concatenatedNodes.begin();
+  for (const sgpp::base::DataVector& nodes : nodesPerDim) {
+    out = std::copy(nodes.begin(), nodes.end(), out);
+  }
+
+  return TensorGrid(gpCntPerDim, concatenatedNodes);
+}
+
+/**
+ * Tensor grid of level @p mi as it should be generated from @p genInstr: in dimension k,
+ * Lvl2GPCntFunc_k(l_k) inner nodes, plus the boundary nodes 0 and 1 iff
+ * l_k >= boundary level offset.
+ */
+TensorGrid expectedTG(const LvlMI& mi, const SGGenInstr& genInstr) {
+  std::vector<sgpp::base::DataVector> nodesPerDim;
+
+  for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
+    nodesPerDim.push_back(expectedNodes(genInstr.getNodeGenFuncForDim(dim),
+                                        genInstr.getLvl2GPCntFuncForDim(dim)(mi[dim]),
+                                        mi[dim] >= genInstr.getBoundaryLevelOffset()));
+  }
+
+  return makeTG(nodesPerDim);
+}
+
+/// Calls @p func for every multi-index l with 0 <= l <= @p upper (component-wise).
+void forEachMIInBox(const LvlMI& upper, const std::function<void(const LvlMI&)>& func) {
+  LvlMI mi(upper.size(), LvlType{0});
+
+  const std::function<void(size_t)> recurse = [&](const size_t dim) {
+    if (dim == upper.size()) {
+      func(mi);
+      return;
+    }
+
+    for (LvlType lvl = 0; lvl <= upper[dim]; lvl++) {
+      mi[dim] = lvl;
+      recurse(dim + 1);
+    }
+  };
+
+  recurse(0);
+}
+
+/**
+ * Expected complete sparse grid of level @p maxLvl: every l with |l|_1 <= maxLvl whose
+ * closed-form coefficient (-1)^q * binom(d-1, q), q = maxLvl - |l|_1, is non-zero.
+ */
+ExpectedSG genExpectedCompleteSG(const SGGenInstr& genInstr, const LvlType maxLvl) {
+  const size_t nDim = genInstr.nDim();
+  ExpectedSG expected(nDim);
+
+  forEachMIInBox(LvlMI(nDim, maxLvl), [&](const LvlMI& mi) {
+    const LvlType lvlSum = mi.sumOfElems();
+    if (lvlSum > maxLvl) return;
+
+    const CTCoeffType q = static_cast<CTCoeffType>(maxLvl - lvlSum);
+    const CTCoeffType coeff =
+        (q % 2 == 0 ? 1 : -1) * tools::binomial(static_cast<CTCoeffType>(nDim) - 1, q);
+
+    if (coeff != 0) {
+      expected.addTensorGrid({mi, coeff, expectedTG(mi, genInstr)});
+    }
+  });
+
+  return expected;
+}
+
+/**
+ * Expected sparse grid of an @c MIVecSGGenInstr with input @p inputMIs, by brute force: the
+ * downwards closure I of the input is enumerated in its bounding box and every coefficient is
+ * computed by the inclusion-exclusion formula c_l = sum over z in {0,1}^d with l + z in I of
+ * (-1)^|z|_1. Tensor grids with coefficient 0 are omitted.
+ */
+ExpectedSG genExpectedMIVecSG(const std::vector<LvlMI>& inputMIs, const SGGenInstr& genInstr) {
+  const size_t nDim = genInstr.nDim();
+
+  const auto isInClosure = [&inputMIs, nDim](const LvlMI& mi) {
+    return std::any_of(inputMIs.begin(), inputMIs.end(), [&mi, nDim](const LvlMI& inputMI) {
+      for (size_t dim = 0; dim < nDim; dim++) {
+        if (mi[dim] > inputMI[dim]) return false;
+      }
+      return true;
+    });
+  };
+
+  LvlMI upper(nDim, LvlType{0});
+  for (const LvlMI& inputMI : inputMIs) {
+    for (size_t dim = 0; dim < nDim; dim++) upper[dim] = std::max(upper[dim], inputMI[dim]);
+  }
+
+  ExpectedSG expected(nDim);
+
+  forEachMIInBox(upper, [&](const LvlMI& mi) {
+    if (!isInClosure(mi)) return;
+
+    CTCoeffType coeff = 0;
+    for (size_t z = 0; z < (size_t{1} << nDim); z++) {
+      LvlMI neighbor = mi;
+      CTCoeffType sign = 1;
+
+      for (size_t dim = 0; dim < nDim; dim++) {
+        if ((z >> dim) & 1) {
+          neighbor[dim]++;
+          sign = -sign;
+        }
+      }
+
+      if (isInClosure(neighbor)) coeff += sign;
+    }
+
+    if (coeff != 0) {
+      expected.addTensorGrid({mi, coeff, expectedTG(mi, genInstr)});
+    }
+  });
+
+  return expected;
+}
+
+/// Assigns random node generation functions, growth functions and a random boundary offset.
+void randomizeConfig(SGGenInstr& genInstr) {
+  const std::vector<NodeGenFunc*> nodeGenFuncs{equidistantNodeGenFunc, clenshawCurtisNodeGenFunc,
+                                               firstTypeChebyshevNodeGenFunc};
+  const std::vector<Lvl2GPCntFunc> lvl2GPCntFuncs{linearLvl2GPCntFunction,
+                                                  doublingLvl2GPCntFunction};
+
+  for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
+    genInstr.setNodeGenFuncForDim(nodeGenFuncs[randGen.getUniformIndexRN(nodeGenFuncs.size())],
+                                  dim);
+    genInstr.setLvl2GPCntFuncForDim(
+        lvl2GPCntFuncs[randGen.getUniformIndexRN(lvl2GPCntFuncs.size())], dim);
+  }
+
+  genInstr.setBoundaryLevelOffset(static_cast<LvlType>(randGen.getUniformIndexRN(4)));
+}
+
+/// Human-readable form of @p mi for test contexts, e.g. "(1, 0, 2)".
+std::string toString(const LvlMI& mi) {
+  std::string result = "(";
+  for (size_t dim = 0; dim < mi.size(); dim++) {
+    result += (dim > 0 ? ", " : "") + std::to_string(mi[dim]);
+  }
+  return result + ")";
+}
+
+CTCoeffType sumOfCoeffs(const SparseGridBase& sg) {
+  CTCoeffType sum = 0;
+  for (const TensorGridCTData& tgData : sg) sum += tgData.coefficient;
+  return sum;
+}
+
+void checkSameConfig(const SGGenInstr& result, const SGGenInstr& expected) {
+  BOOST_CHECK_EQUAL(result.nDim(), expected.nDim());
+  BOOST_CHECK_EQUAL(result.getBoundaryLevelOffset(), expected.getBoundaryLevelOffset());
+  BOOST_CHECK(result.getDomain() == expected.getDomain());
+  BOOST_CHECK(result.getNodeGenFuncs() == expected.getNodeGenFuncs());
+  BOOST_CHECK(result.getLvl2GPCntFuncs() == expected.getLvl2GPCntFuncs());
 }
 
 }  // namespace
@@ -74,14 +257,15 @@ BOOST_AUTO_TEST_SUITE(SparseGrid_Constructor)
 BOOST_AUTO_TEST_CASE(Zero_Dims) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(10);
+    const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(10));
 
     const CompleteSGGenInstr genInstr(maxLvl, 0);
 
-    const SparseGrid expected(0);
+    const ExpectedSG expected(0);
 
     const SparseGrid result(genInstr);
 
+    BOOST_CHECK_EQUAL(result.nDim(), 0u);
     BOOST_CHECK(result == expected);
   }
 }
@@ -89,29 +273,24 @@ BOOST_AUTO_TEST_CASE(Zero_Dims) {
 BOOST_AUTO_TEST_CASE(Random_Full_1D_SG) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const LvlType maxLvl = (LvlType)randGen.getUniformIndexRN(10000);
+    const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(10000));
 
+    // Default boundary level offset 0: the boundary is always included.
     CompleteSGGenInstr genInstr(maxLvl, 1);
     genInstr.setNodeGenFuncs({equidistantNodeGenFunc});
     genInstr.setLvl2GPCntFuncs({linearLvl2GPCntFunction});
 
     // Expected
-    SparseGrid expected(1, 1);
-
-    const LvlMI mi({maxLvl});
-
-    const CTCoeffType coeff = 1;
-
-    const sgpp::base::DataVector nodes =
-        equidistantNodeGenFunc->genNodes(linearLvl2GPCntFunction(maxLvl) + 2, true);
-
-    const TensorGrid tg({linearLvl2GPCntFunction(maxLvl) + 2}, nodes);
-    expected.setTensorGrid(0, TensorGridCTData{mi, coeff, tg});
+    ExpectedSG expected(1);
+    expected.addTensorGrid(
+        {LvlMI{maxLvl}, 1,
+         makeTG({expectedNodes(equidistantNodeGenFunc, linearLvl2GPCntFunction(maxLvl), true)})});
 
     // Result
     const SparseGrid result(genInstr);
 
     // Comparison
+    BOOST_CHECK_EQUAL(result.nDim(), 1u);
     BOOST_CHECK(result == expected);
   }
 }
@@ -122,85 +301,37 @@ BOOST_AUTO_TEST_CASE(Complex_Full_2D_SG) {
   genInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryLevelOffset(1);
 
-  // Expected
-  SparseGrid expected(2);
+  // Expected: dim 1 has 2^(l+1)-1 equidistant inner nodes, dim 2 has l+1 Clenshaw-Curtis inner
+  // nodes; the boundary nodes are added for l >= 1. The tensor grid (0, 0) has coefficient 0.
+  ExpectedSG expected(2);
 
-  // Tensor grid (2, 0)
-  LvlMI mi({2, 0});
+  expected.addTensorGrid({{2, 0},
+                          1,
+                          makeTG({expectedNodes(equidistantNodeGenFunc, 7, true),
+                                  expectedNodes(clenshawCurtisNodeGenFunc, 1, false)})});
+  expected.addTensorGrid({{1, 1},
+                          1,
+                          makeTG({expectedNodes(equidistantNodeGenFunc, 3, true),
+                                  expectedNodes(clenshawCurtisNodeGenFunc, 2, true)})});
+  expected.addTensorGrid({{0, 2},
+                          1,
+                          makeTG({expectedNodes(equidistantNodeGenFunc, 1, false),
+                                  expectedNodes(clenshawCurtisNodeGenFunc, 3, true)})});
+  expected.addTensorGrid({{1, 0},
+                          -1,
+                          makeTG({expectedNodes(equidistantNodeGenFunc, 3, true),
+                                  expectedNodes(clenshawCurtisNodeGenFunc, 1, false)})});
+  expected.addTensorGrid({{0, 1},
+                          -1,
+                          makeTG({expectedNodes(equidistantNodeGenFunc, 1, false),
+                                  expectedNodes(clenshawCurtisNodeGenFunc, 2, true)})});
 
-  CTCoeffType coeff = 1;
-
-  sgpp::base::DataVector nodesDim1{static_cast<double>(0),
-                                   equidistantNodeGenFunc->genNodes(7, false)[0],
-                                   equidistantNodeGenFunc->genNodes(7, false)[1],
-                                   equidistantNodeGenFunc->genNodes(7, false)[2],
-                                   equidistantNodeGenFunc->genNodes(7, false)[3],
-                                   equidistantNodeGenFunc->genNodes(7, false)[4],
-                                   equidistantNodeGenFunc->genNodes(7, false)[5],
-                                   equidistantNodeGenFunc->genNodes(7, false)[6],
-                                   static_cast<double>(1)};
-  sgpp::base::DataVector nodesDim2{clenshawCurtisNodeGenFunc->genNodes(1, false)[0]};
-
-  TensorGrid tg({static_cast<GPCntType>(9), static_cast<GPCntType>(1)},
-                prod2DGPs(nodesDim1, nodesDim2));
-  expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
-
-  // Tensor grid (1, 1)
-  mi = LvlMI({1, 1});
-
-  coeff = 1;
-
-  nodesDim1 =
-      sgpp::base::DataVector{static_cast<double>(0), equidistantNodeGenFunc->genNodes(3, false)[0],
-                             equidistantNodeGenFunc->genNodes(3, false)[1],
-                             equidistantNodeGenFunc->genNodes(3, false)[2], static_cast<double>(1)};
-  nodesDim2 = sgpp::base::DataVector{
-      static_cast<double>(0), clenshawCurtisNodeGenFunc->genNodes(2, false)[0],
-      clenshawCurtisNodeGenFunc->genNodes(2, false)[1], static_cast<double>(1)};
-
-  tg = TensorGrid({GPCntType(5), GPCntType(4)}, prod2DGPs(nodesDim1, nodesDim2));
-  expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
-
-  // Tensor grid (0, 2)
-  mi = LvlMI({0, 2});
-
-  coeff = 1;
-
-  nodesDim1 = sgpp::base::DataVector{equidistantNodeGenFunc->genNodes(1, false)[0]};
-  nodesDim2 = sgpp::base::DataVector{
-      static_cast<double>(0), clenshawCurtisNodeGenFunc->genNodes(3, false)[0],
-      clenshawCurtisNodeGenFunc->genNodes(3, false)[1],
-      clenshawCurtisNodeGenFunc->genNodes(3, false)[2], static_cast<double>(1)};
-
-  tg = TensorGrid({GPCntType(1), GPCntType(5)}, prod2DGPs(nodesDim1, nodesDim2));
-  expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
-
-  // Tensor grid (1, 0)
-  mi = LvlMI({1, 0});
-
-  coeff = -1;
-
-  nodesDim1 =
-      sgpp::base::DataVector{static_cast<double>(0), equidistantNodeGenFunc->genNodes(3, false)[0],
-                             equidistantNodeGenFunc->genNodes(3, false)[1],
-                             equidistantNodeGenFunc->genNodes(3, false)[2], static_cast<double>(1)};
-  nodesDim2 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genNodes(1, false)[0]};
-
-  tg = TensorGrid({GPCntType(5), GPCntType(1)}, prod2DGPs(nodesDim1, nodesDim2));
-  expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
-
-  // Tensor grid (0, 1)
-  mi = LvlMI({0, 1});
-
-  coeff = -1;
-
-  nodesDim1 = sgpp::base::DataVector{equidistantNodeGenFunc->genNodes(1, false)[0]};
-  nodesDim2 = sgpp::base::DataVector{
-      static_cast<double>(0), clenshawCurtisNodeGenFunc->genNodes(2, false)[0],
-      clenshawCurtisNodeGenFunc->genNodes(2, false)[1], static_cast<double>(1)};
-
-  tg = TensorGrid({GPCntType(1), GPCntType(4)}, prod2DGPs(nodesDim1, nodesDim2));
-  expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
+  // Explicit grid point counts, as a check of the expectation itself.
+  BOOST_REQUIRE(expected.getTensorGrid(0).tensorGrid.getGPCntPerDim() == GPMI({9, 1}));
+  BOOST_REQUIRE(expected.getTensorGrid(1).tensorGrid.getGPCntPerDim() == GPMI({5, 4}));
+  BOOST_REQUIRE(expected.getTensorGrid(2).tensorGrid.getGPCntPerDim() == GPMI({1, 5}));
+  BOOST_REQUIRE(expected.getTensorGrid(3).tensorGrid.getGPCntPerDim() == GPMI({5, 1}));
+  BOOST_REQUIRE(expected.getTensorGrid(4).tensorGrid.getGPCntPerDim() == GPMI({1, 4}));
 
   // Result
   const SparseGrid result(genInstr);
@@ -220,20 +351,11 @@ BOOST_AUTO_TEST_CASE(Simple_Full_3D_Level0) {
       {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryLevelOffset(1);
 
-  // Expected
-  SparseGrid expected(3);
+  // Expected: the single tensor grid (0, 0, 0) with one node per dimension.
+  ExpectedSG expected(3);
 
-  // Tensorgrid (0,0,0)
-  const LvlMI mi({0, 0, 0});
-  const CTCoeffType coeff = 1;
-
-  const sgpp::base::DataVector nodesDim1{equidistantNodeGenFunc->genNodes(1, false)[0]};
-  const sgpp::base::DataVector nodesDim2{equidistantNodeGenFunc->genNodes(1, false)[0]};
-  const sgpp::base::DataVector nodesDim3{equidistantNodeGenFunc->genNodes(1, false)[0]};
-
-  const TensorGrid tg({GPCntType(1), GPCntType(1), GPCntType(1)},
-                      prod3DGPs(nodesDim1, nodesDim2, nodesDim3));
-  expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
+  const sgpp::base::DataVector nodes = expectedNodes(equidistantNodeGenFunc, 1, false);
+  expected.addTensorGrid({{0, 0, 0}, 1, makeTG({nodes, nodes, nodes})});
 
   // Result
   const SparseGrid result(genInstr);
@@ -245,10 +367,8 @@ BOOST_AUTO_TEST_CASE(Simple_Full_3D_Level0) {
 BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
   // Generation instruction
   const LvlType maxLvl = 2;
-  const size_t dim = 3;
 
-  CompleteSGGenInstr genInstr(maxLvl, dim);
-
+  CompleteSGGenInstr genInstr(maxLvl, 3);
   genInstr.setNodeGenFuncs(
       {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
@@ -256,79 +376,8 @@ BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
   genInstr.setBoundaryLevelOffset(1);
 
   // Expected
-  SparseGrid expected(dim);
-
-  // For all multiindices l = (l1,l2,l3) with l1+l2+l3 <= maxLvl
-  for (LvlType l1 = 0; l1 <= maxLvl; ++l1) {
-    for (LvlType l2 = 0; l2 <= maxLvl; ++l2) {
-      for (LvlType l3 = 0; l3 <= maxLvl; ++l3) {
-        if (l1 + l2 + l3 > maxLvl) continue;
-        // Coefficient
-        const LvlType sum = l1 + l2 + l3;
-
-        const CTCoeffType sign = ((maxLvl - sum) % 2 == 0) ? 1 : -1;
-        const CTCoeffType binom = tools::binomial(static_cast<CTCoeffType>(dim) - 1,
-                                                  static_cast<CTCoeffType>(maxLvl - sum));
-        const CTCoeffType coeff = sign * binom;
-
-        // Nodes
-        sgpp::base::DataVector nodesDim1;
-        sgpp::base::DataVector nodesDim2;
-        sgpp::base::DataVector nodesDim3;
-
-        // Dimension 1: genEquidistantNodes, doublingLvl2GPCntFunction
-        {
-          const GPCntType gpCnt = doublingLvl2GPCntFunction(l1);
-          if (l1 > 0) {
-            nodesDim1.resize(gpCnt + 2);
-            nodesDim1[0] = 0;
-            sgpp::base::DataVector interior = equidistantNodeGenFunc->genNodes(gpCnt, false);
-            for (size_t i = 0; i < gpCnt; ++i) nodesDim1[i + 1] = interior[i];
-            nodesDim1[nodesDim1.size() - 1] = 1;
-          } else {
-            nodesDim1 = sgpp::base::DataVector{equidistantNodeGenFunc->genNodes(1, false)[0]};
-          }
-        }
-
-        // Dimension 2: genClenshawCurtisNodes, linearLvl2GPCntFunction
-        {
-          const GPCntType gpCnt = linearLvl2GPCntFunction(l2);
-          if (l2 > 0) {
-            nodesDim2.resize(gpCnt + 2);
-            nodesDim2[0] = 0;
-            sgpp::base::DataVector interior = clenshawCurtisNodeGenFunc->genNodes(gpCnt, false);
-            for (size_t i = 0; i < gpCnt; ++i) nodesDim2[i + 1] = interior[i];
-            nodesDim2[nodesDim2.size() - 1] = 1;
-          } else {
-            nodesDim2 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genNodes(1, false)[0]};
-          }
-        }
-
-        // Dimension 3: genEquidistantNodes, doublingLvl2GPCntFunction
-        {
-          const GPCntType gpCnt = doublingLvl2GPCntFunction(l3);
-          if (l3 > 0) {
-            nodesDim3.resize(gpCnt + 2);
-            nodesDim3[0] = 0;
-            sgpp::base::DataVector interior = equidistantNodeGenFunc->genNodes(gpCnt, false);
-            for (size_t i = 0; i < gpCnt; ++i) nodesDim3[i + 1] = interior[i];
-            nodesDim3[nodesDim3.size() - 1] = 1;
-          } else {
-            nodesDim3 = sgpp::base::DataVector{equidistantNodeGenFunc->genNodes(1, false)[0]};
-          }
-        }
-
-        GPMI gpcnts;
-        gpcnts.push_back(static_cast<GPCntType>(nodesDim1.size()));
-        gpcnts.push_back(static_cast<GPCntType>(nodesDim2.size()));
-        gpcnts.push_back(static_cast<GPCntType>(nodesDim3.size()));
-
-        TensorGrid tg(gpcnts, prod3DGPs(nodesDim1, nodesDim2, nodesDim3));
-        LvlMI mi({l1, l2, l3});
-        expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
-      }
-    }
-  }
+  const ExpectedSG expected = genExpectedCompleteSG(genInstr, maxLvl);
+  BOOST_REQUIRE_EQUAL(expected.nTG(), 10u);
 
   // Result
   const SparseGrid result(genInstr);
@@ -338,119 +387,16 @@ BOOST_AUTO_TEST_CASE(Complex_Full_3D_SG) {
 }
 
 /*
-Construct a random small 3D full sparse-grid instruction (random max level)
-and build the expected SparseGrid by iterating all valid multi-indices l
-with l1 + l2 + l3 <= maxLvl. This mirrors the Smolyak combination logic
-used in the explicit Complex_Full_3D_SG test.
-*/
-BOOST_AUTO_TEST_CASE(Random_Full_3D_SG) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    // Generation instruction
-    const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(3));  // 0..2
-    const size_t dim = 3;
-
-    CompleteSGGenInstr genInstr(maxLvl, dim);
-    genInstr.setNodeGenFuncs(
-        {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
-    genInstr.setLvl2GPCntFuncs(
-        {doublingLvl2GPCntFunction, linearLvl2GPCntFunction, doublingLvl2GPCntFunction});
-    genInstr.setBoundaryLevelOffset(1);
-
-    // Expected
-    SparseGrid expected(dim);
-
-    for (LvlType l1 = 0; l1 <= maxLvl; ++l1) {
-      for (LvlType l2 = 0; l2 <= maxLvl; ++l2) {
-        for (LvlType l3 = 0; l3 <= maxLvl; ++l3) {
-          if (l1 + l2 + l3 > maxLvl) continue;
-
-          const LvlType sum = l1 + l2 + l3;
-          const CTCoeffType sign = ((maxLvl - sum) % 2 == 0) ? 1 : -1;
-          const CTCoeffType binom = tools::binomial(static_cast<CTCoeffType>(dim) - 1,
-                                                    static_cast<CTCoeffType>(maxLvl - sum));
-          CTCoeffType coeff = sign * binom;
-
-          // Build per-dimension node vectors consistent with boundary handling
-          sgpp::base::DataVector nodesDim1;
-          sgpp::base::DataVector nodesDim2;
-          sgpp::base::DataVector nodesDim3;
-
-          // Dim 1: equidistant + doubling gp-count function
-          {
-            const GPCntType gpCnt = doublingLvl2GPCntFunction(l1);
-            if (l1 > 0) {
-              nodesDim1.resize(gpCnt + 2);
-              nodesDim1[0] = 0;
-              sgpp::base::DataVector interior = equidistantNodeGenFunc->genNodes(gpCnt, false);
-              for (size_t i = 0; i < gpCnt; ++i) nodesDim1[i + 1] = interior[i];
-              nodesDim1[nodesDim1.size() - 1] = 1;
-            } else {
-              nodesDim1 = sgpp::base::DataVector{equidistantNodeGenFunc->genNodes(1, false)[0]};
-            }
-          }
-
-          // Dim 2: clenshaw-curtis + linear gp-count
-          {
-            const GPCntType gpCnt = linearLvl2GPCntFunction(l2);
-            if (l2 > 0) {
-              nodesDim2.resize(gpCnt + 2);
-              nodesDim2[0] = 0;
-              sgpp::base::DataVector interior = clenshawCurtisNodeGenFunc->genNodes(gpCnt, false);
-              for (size_t i = 0; i < gpCnt; ++i) nodesDim2[i + 1] = interior[i];
-              nodesDim2[nodesDim2.size() - 1] = double(1);
-            } else {
-              nodesDim2 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genNodes(1, false)[0]};
-            }
-          }
-
-          // Dim 3: equidistant + doubling gp-count
-          {
-            const GPCntType gpCnt = doublingLvl2GPCntFunction(l3);
-            if (l3 > 0) {
-              nodesDim3.resize(gpCnt + 2);
-              nodesDim3[0] = 0;
-              sgpp::base::DataVector interior = equidistantNodeGenFunc->genNodes(gpCnt, false);
-              for (size_t i = 0; i < gpCnt; ++i) nodesDim3[i + 1] = interior[i];
-              nodesDim3[nodesDim3.size() - 1] = 1;
-            } else {
-              nodesDim3 = sgpp::base::DataVector{equidistantNodeGenFunc->genNodes(1, false)[0]};
-            }
-          }
-
-          GPMI gpcnts;
-          gpcnts.push_back(static_cast<GPCntType>(nodesDim1.size()));
-          gpcnts.push_back(static_cast<GPCntType>(nodesDim2.size()));
-          gpcnts.push_back(static_cast<GPCntType>(nodesDim3.size()));
-
-          TensorGrid tg(gpcnts, prod3DGPs(nodesDim1, nodesDim2, nodesDim3));
-          LvlMI mi({l1, l2, l3});
-          expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
-        }
-      }
-    }
-
-    // Construct result via SparseGrid constructor
-    const SparseGrid result(genInstr);
-
-    // Compare
-    BOOST_CHECK(result == expected);
-  }
-}
-
-/*
   Mixed_NodeFunctions_3D
   ----------------------
   Deterministic 3D test that uses mixed node-generation strategies
-  (Clenshaw-Curtis in some dims, equidistant in others) and verifies
-  explicit expected construction for maxLvl = 2.
+  (Clenshaw-Curtis in some dims, equidistant in others) for maxLvl = 2.
 */
 BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
   // Generation instruction
   const LvlType maxLvl = 2;
-  const size_t dim = 3;
 
-  CompleteSGGenInstr genInstr(maxLvl, dim);
+  CompleteSGGenInstr genInstr(maxLvl, 3);
   genInstr.setNodeGenFuncs(
       {clenshawCurtisNodeGenFunc, equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
   genInstr.setLvl2GPCntFuncs(
@@ -458,278 +404,300 @@ BOOST_AUTO_TEST_CASE(Mixed_NodeFunctions_3D) {
   genInstr.setBoundaryLevelOffset(1);
 
   // Expected
-  SparseGrid expected(dim);
+  const ExpectedSG expected = genExpectedCompleteSG(genInstr, maxLvl);
 
-  for (LvlType l1 = 0; l1 <= maxLvl; ++l1) {
-    for (LvlType l2 = 0; l2 <= maxLvl; ++l2) {
-      for (LvlType l3 = 0; l3 <= maxLvl; ++l3) {
-        if (l1 + l2 + l3 > maxLvl) continue;
-
-        const LvlType sum = l1 + l2 + l3;
-        const CTCoeffType sign = ((maxLvl - sum) % 2 == 0) ? 1 : -1;
-        const CTCoeffType binom = tools::binomial(static_cast<CTCoeffType>(dim) - 1,
-                                                  static_cast<CTCoeffType>(maxLvl - sum));
-        CTCoeffType coeff = sign * binom;
-
-        sgpp::base::DataVector nodesDim1;
-        sgpp::base::DataVector nodesDim2;
-        sgpp::base::DataVector nodesDim3;
-
-        // Dim 1: clenshaw-curtis + linear
-        {
-          const GPCntType gpCnt = linearLvl2GPCntFunction(l1);
-          if (l1 > 0) {
-            nodesDim1.resize(gpCnt + 2);
-            nodesDim1[0] = 0;
-            sgpp::base::DataVector interior = clenshawCurtisNodeGenFunc->genNodes(gpCnt, false);
-            for (size_t i = 0; i < gpCnt; ++i) nodesDim1[i + 1] = interior[i];
-            nodesDim1[nodesDim1.size() - 1] = 1;
-          } else {
-            nodesDim1 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genNodes(1, false)[0]};
-          }
-        }
-
-        // Dim 2: equidistant + doubling
-        {
-          const GPCntType gpCnt = doublingLvl2GPCntFunction(l2);
-          if (l2 > 0) {
-            nodesDim2.resize(gpCnt + 2);
-            nodesDim2[0] = 0;
-            sgpp::base::DataVector interior = equidistantNodeGenFunc->genNodes(gpCnt, false);
-            for (size_t i = 0; i < gpCnt; ++i) nodesDim2[i + 1] = interior[i];
-            nodesDim2[nodesDim2.size() - 1] = 1;
-          } else {
-            nodesDim2 = sgpp::base::DataVector{equidistantNodeGenFunc->genNodes(1, false)[0]};
-          }
-        }
-
-        // Dim 3: clenshaw-curtis + linear
-        {
-          const GPCntType gpCnt = linearLvl2GPCntFunction(l3);
-          if (l3 > 0) {
-            nodesDim3.resize(gpCnt + 2);
-            nodesDim3[0] = 0;
-            sgpp::base::DataVector interior = clenshawCurtisNodeGenFunc->genNodes(gpCnt, false);
-            for (size_t i = 0; i < gpCnt; ++i) nodesDim3[i + 1] = interior[i];
-            nodesDim3[nodesDim3.size() - 1] = 1;
-          } else {
-            nodesDim3 = sgpp::base::DataVector{clenshawCurtisNodeGenFunc->genNodes(1, false)[0]};
-          }
-        }
-
-        GPMI gpcnts;
-        gpcnts.push_back(static_cast<GPCntType>(nodesDim1.size()));
-        gpcnts.push_back(static_cast<GPCntType>(nodesDim2.size()));
-        gpcnts.push_back(static_cast<GPCntType>(nodesDim3.size()));
-
-        TensorGrid tg(gpcnts, prod3DGPs(nodesDim1, nodesDim2, nodesDim3));
-        LvlMI mi({l1, l2, l3});
-        expected.addTensorGrid(TensorGridCTData{mi, coeff, tg});
-      }
-    }
-  }
-
+  // Result
   const SparseGrid result(genInstr);
+
+  // Comparison
   BOOST_CHECK(result == expected);
 }
 
 /*
-  Verify behavior when boundaryLevelOffset = 0 (no explicit 0/1 boundary points
-  are added) vs boundaryLevelOffset = 1 (0 and 1 are added for levels > 0).
-  This test constructs two gen-instructions and checks that the produced
-  tensor node counts reflect the boundary policy.
+Random dimensionality, maximum level, node generation functions, growth functions and
+boundary level offset. Tensor grids with coefficient 0 (|l|_1 < maxLvl - (d-1)) must not
+be part of the sparse grid.
 */
-BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
-  const LvlType maxLvl = 1;
-  const size_t dim = 3;
+BOOST_AUTO_TEST_CASE(Random_Complete_SG) {
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    for (size_t run = 0; run < 10; run++) {
+      const size_t nDim = 1 + randGen.getUniformIndexRN(4);
+      const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(6));
 
-  // Generation instruction for boundaryLevelOffset = 0
-  CompleteSGGenInstr genInstrNoBoundary(maxLvl, dim);
-  genInstrNoBoundary.setNodeGenFuncs(
-      {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
-  genInstrNoBoundary.setLvl2GPCntFuncs(
-      {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
-  genInstrNoBoundary.setBoundaryLevelOffset(1);
+      BOOST_TEST_CONTEXT("nDim: " << nDim << ", maxLvl: " << maxLvl) {
+        CompleteSGGenInstr genInstr(maxLvl, nDim);
+        randomizeConfig(genInstr);
 
-  const SparseGrid resultNoBoundary(genInstrNoBoundary);
+        const SparseGrid result(genInstr);
 
-  // Generation instruction for boundaryLevelOffset = 1
-  CompleteSGGenInstr genInstrWithBoundary(maxLvl, dim);
-  genInstrWithBoundary.setNodeGenFuncs(
-      {equidistantNodeGenFunc, equidistantNodeGenFunc, equidistantNodeGenFunc});
-  genInstrWithBoundary.setLvl2GPCntFuncs(
-      {linearLvl2GPCntFunction, linearLvl2GPCntFunction, linearLvl2GPCntFunction});
-  genInstrWithBoundary.setBoundaryLevelOffset(0);
-
-  const SparseGrid resultWithBoundary(genInstrWithBoundary);
-
-  // Inspect one representative tensor grid: multi-index (1,0,0) should differ in GPCnt for dim2 &
-  // dim3
-  LvlMI mi({1, 0, 0});
-  const auto tgNoB = resultNoBoundary.getTensorGrid(mi);
-  const auto tgWithB = resultWithBoundary.getTensorGrid(mi);
-
-  BOOST_REQUIRE(tgNoB != resultNoBoundary.end());
-  BOOST_REQUIRE(tgWithB != resultWithBoundary.end());
-
-  const GPMI gpcntsNo = tgNoB->tensorGrid.getGPCntPerDim();
-  const GPMI gpcntsWith = tgWithB->tensorGrid.getGPCntPerDim();
-
-  BOOST_CHECK(gpcntsWith[0] == gpcntsNo[0]);
-  BOOST_CHECK(gpcntsWith[1] == gpcntsNo[1] + 2);
-  BOOST_CHECK(gpcntsWith[2] == gpcntsNo[2] + 2);
+        BOOST_CHECK_EQUAL(result.nDim(), nDim);
+        BOOST_CHECK_EQUAL(sumOfCoeffs(result), 1);
+        BOOST_CHECK(result == genExpectedCompleteSG(genInstr, maxLvl));
+      }
+    }
+  }
 }
 
-// BOOST_AUTO_TEST_CASE(fullsg_generation_consistency_2d_level2) {
-//   // Parameter
-//   const size_t nDim = 2;
-//   const LvlType maxLevel = 2;
+/*
+The boundary nodes 0 and 1 are added in dimension k iff l_k >= boundaryLevelOffset:
+offset 0 adds them to every tensor grid, a very large offset to none.
+*/
+BOOST_AUTO_TEST_CASE(BoundaryOffsetBehavior) {
+  const LvlType maxLvl = 3;
+  const size_t nDim = 3;
 
-//   CompleteSGGenInstr genInstr(maxLevel, nDim);
+  for (const LvlType boundaryLevelOffset : std::vector<LvlType>{0, 1, 2, 100}) {
+    BOOST_TEST_CONTEXT("Boundary level offset: " << boundaryLevelOffset) {
+      CompleteSGGenInstr genInstr(maxLvl, nDim);
+      genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+      genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
+      genInstr.setBoundaryLevelOffset(boundaryLevelOffset);
 
-//   // Explizit Node- / Lvl->GP-Funktionen setzen (sicherstellen, dass wir wissen, was verwendet
-//   wird) for (size_t d = 0; d < nDim; ++d) {
-//     genInstr.setNodeGenFuncForDim(genEquidistantNodes, d);
-//     genInstr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, d);
-//   }
+      const SparseGrid sg(genInstr);
+      BOOST_REQUIRE_GT(sg.nTG(), 0u);
 
-//   // Erzeuge SparseGrid über Instruktion
-//   SparseGrid sg(genInstr);
+      for (const TensorGridCTData& tgData : sg) {
+        const GPMI& gpCntPerDim = tgData.tensorGrid.getGPCntPerDim();
+        const sgpp::base::DataVector& nodes = tgData.tensorGrid.getNodesPerDim();
+        size_t firstNodeIdx = 0;
 
-//   // Hole erwartete Multiindizes + Koeffizienten direkt aus der Instruktion
-//   const std::pair<LvlMIVec, std::vector<CTCoeffType>> genWithCoeff =
-//   genInstr.genReducedMIVecWithCoeffs(); const LvlMIVec& expectedMIVec = genWithCoeff.first; const
-//   std::vector<CTCoeffType>& expectedCoeffs = genWithCoeff.second;
+        for (size_t dim = 0; dim < nDim; dim++) {
+          BOOST_TEST_CONTEXT("Tensor grid: " << toString(tgData.mi) << ", dim: " << dim) {
+            const LvlType lvl = tgData.mi[dim];
+            const bool hasBoundary = lvl >= boundaryLevelOffset;
 
-//   // Grundprüfungen
-//   BOOST_REQUIRE_EQUAL(sg.nDim(), nDim);
-//   BOOST_REQUIRE_EQUAL(sg.nTG(), expectedMIVec.nMI());
-//   BOOST_REQUIRE_EQUAL(expectedCoeffs.size(), expectedMIVec.nMI());
+            GPCntType expectedGPCnt = linearLvl2GPCntFunction(lvl);
+            if (hasBoundary) expectedGPCnt += 2;
 
-//   // Für jedes TensorGrid: Konsistenzprüfungen
-//   for (size_t tgIdx = 0; tgIdx < sg.nTG(); ++tgIdx) {
-//     const TensorGridCTData& tg = sg.getTensorGrid(tgIdx);
+            BOOST_REQUIRE_EQUAL(gpCntPerDim[dim], expectedGPCnt);
+            BOOST_CHECK_EQUAL(nodes[firstNodeIdx] == 0.0, hasBoundary);
+            BOOST_CHECK_EQUAL(nodes[firstNodeIdx + gpCntPerDim[dim] - 1] == 1.0, hasBoundary);
 
-//     // Multiindex und Koeffizient sollten exakt mit genInstr.genReducedMIVecWithCoeffs
-//     übereinstimmen BOOST_CHECK(tg.mi == expectedMIVec[tgIdx]); BOOST_CHECK_EQUAL(tg.coefficient,
-//     expectedCoeffs[tgIdx]);
+            firstNodeIdx += gpCntPerDim[dim];
+          }
+        }
+      }
+    }
+  }
+}
 
-//     // getTensorGrid(LvlMI) muss dieselben Daten liefern
-//     const auto tg_by_mi = sg.getTensorGrid(tg.mi);
-//     BOOST_REQUIRE(tg_by_mi != sg.end());
-//     BOOST_CHECK((*tg_by_mi).mi == tg.mi);
-//     BOOST_CHECK_EQUAL((*tg_by_mi).coefficient, tg.coefficient);
+/*
+All node positions live on the unit domain [0,1]^d; the user domain only affects function
+evaluations and the quadrature scaling, never the tensor grids.
+*/
+BOOST_AUTO_TEST_CASE(Domain_Does_Not_Affect_Tensor_Grids) {
+  CompleteSGGenInstr unitGenInstr(3, 2);
+  unitGenInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  unitGenInstr.setBoundaryLevelOffset(1);
 
-//     // TensorGrid -> Anzahl Punkte (nGP) muss gleich Produkt der per-dim Knotenzahlen sein
-//     std::vector<GPCntType> nGPPerDim(nDim);
-//     for (size_t d = 0; d < nDim; ++d) {
-//       const LvlType lvl = tg.mi[d];
-//       nGPPerDim[d] = genInstr.getLvl2GPCntFuncForDim(d)(lvl) + 2;
-//       BOOST_CHECK_GE(nGPPerDim[d], static_cast<GPCntType>(1));  // mindestens 1 Knoten
-//     }
-//     const unsigned long long expectedNP = prod_u64(nGPPerDim);
-//     BOOST_CHECK_MESSAGE(tg.tensorGrid.nGP() == expectedNP, "TG idx '" << tgIdx << "'.");
+  CompleteSGGenInstr scaledGenInstr(3, 2);
+  scaledGenInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  scaledGenInstr.setBoundaryLevelOffset(1);
+  scaledGenInstr.setDomain(HyperCubeArea{{-4.0, 2.0}, {10.0, 10.5}});
 
-//     // Erzeuge die Knoten pro Dimension via NodeGenFunc und vergleiche alle Grid-Punkte
-//     std::vector<sgpp::base::DataVector> perDimNodes(nDim);
-//     for (size_t d = 0; d < nDim; ++d) {
-//       perDimNodes[d] = genInstr.getNodeGenFuncForDim(d)(nGPPerDim[d]);
-//       BOOST_REQUIRE_EQUAL(perDimNodes[d].size(), static_cast<size_t>(nGPPerDim[d]));
-//     }
+  const SparseGrid unitSG(unitGenInstr);
+  const SparseGrid scaledSG(scaledGenInstr);
 
-//     // Über alle globalen Gitterpunkte iterieren und jede Koordinate prüfen
-//     const size_t nGP = static_cast<size_t>(tg.tensorGrid.nGP());
-//     for (size_t idx = 0; idx < nGP; ++idx) {
-//       // Zerlege idx in per-dim Indizes (letzte Dim schnellst-var.)
-//       std::vector<size_t> perIdx = decomposeLinearIndex(idx, nGPPerDim);
-//       BOOST_REQUIRE_EQUAL(perIdx.size(), nDim);
+  BOOST_CHECK(scaledSG == unitSG);
 
-//       for (size_t d = 0; d < nDim; ++d) {
-//         const double expectedVal = perDimNodes[d][perIdx[d]];
-//         // Zugriff über operator()(idx, dim)
-//         const double gotVal = tg.tensorGrid(static_cast<size_t>(idx), d);
-//         // numerischer Vergleich
-//         BOOST_CHECK_CLOSE(gotVal, expectedVal, 1e-12);
-//         // Werte müssen in [0,1] liegen (SparseGrid über [0,1]^d)
-//         BOOST_CHECK_GE(gotVal, 0.0);
-//         BOOST_CHECK_LE(gotVal, 1.0);
-//       }
-//     }
-//   }
-// }
+  for (const TensorGridCTData& tgData : scaledSG) {
+    for (const double node : tgData.tensorGrid.getNodesPerDim()) {
+      BOOST_CHECK_GE(node, 0.0);
+      BOOST_CHECK_LE(node, 1.0);
+    }
+  }
+}
 
-// BOOST_AUTO_TEST_CASE(fullsg_generation_consistency_3d_level1) {
-//   // kleinerer Test in 3D, maxLevel=1 (stresst andere D)
-//   const size_t nDim = 3;
-//   const LvlType maxLevel = 1;
-//   CompleteSGGenInstr genInstr(nDim, maxLevel);
+BOOST_AUTO_TEST_CASE(Meta_Values) {
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    const size_t nDim = 1 + randGen.getUniformIndexRN(4);
+    const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(6));
 
-//   // Verwende Clenshaw-Curtis (alias genClenshawCurtisNodes) in Dim 0 und Equidistant in anderen
-//   genInstr.setNodeGenFuncForDim(&genClenshawCurtisNodes, 0);
-//   for (size_t d = 1; d < nDim; ++d) {
-//     genInstr.setNodeGenFuncForDim(&genEquidistantNodes, d);
-//   }
-//   // Lvl->GPCnt: benutze doubling in allen Dimensionen
-//   for (size_t d = 0; d < nDim; ++d) {
-//     genInstr.setLvl2GPCntFuncForDim(&doublingLvl2GPCntFunction, d);
-//   }
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    randomizeConfig(genInstr);
 
-//   SparseGrid sg(genInstr);
-//   auto [expectedMIVec, expectedCoeffs] = genInstr.genReducedMIVecWithCoeffs();
+    const SparseGrid sg(genInstr);
 
-//   BOOST_REQUIRE_EQUAL(sg.nDim(), nDim);
-//   BOOST_REQUIRE_EQUAL(sg.nTG(), expectedMIVec.nMI());
-//   BOOST_REQUIRE_EQUAL(expectedCoeffs.size(), expectedMIVec.nMI());
+    size_t maxTGGPCnt = 0;
+    size_t maxTGSumOverGPCntsPerDim = 0;
+    for (const TensorGridCTData& tgData : sg) {
+      maxTGGPCnt = std::max(maxTGGPCnt, tgData.tensorGrid.nGP());
+      maxTGSumOverGPCntsPerDim = std::max(
+          maxTGSumOverGPCntsPerDim, tgData.tensorGrid.getGPCntPerDim().sumOfElems<size_t>());
+    }
 
-//   for (size_t tgIdx = 0; tgIdx < sg.nTG(); ++tgIdx) {
-//     const TensorGridCTData& tg = sg.getTensorGrid(tgIdx);
-//     BOOST_CHECK(tg.mi == expectedMIVec[tgIdx]);
-//     BOOST_CHECK_EQUAL(tg.coefficient, expectedCoeffs[tgIdx]);
+    BOOST_CHECK_EQUAL(sg.getMaxTGGPCnt(), maxTGGPCnt);
+    BOOST_CHECK_EQUAL(sg.getMaxTGSumOverGPCntsPerDim(), maxTGSumOverGPCntsPerDim);
+  }
+}
 
-//     // Berechne erwartete Knotenzahlen und Produkt
-//     std::vector<GPCntType> nGPPerDim(nDim);
-//     for (size_t d = 0; d < nDim; ++d) {
-//       const LvlType lvl = tg.mi[d];
-//       nGPPerDim[d] = genInstr.getLvl2GPCntFuncForDim(d)(lvl);
-//       BOOST_CHECK_GE(nGPPerDim[d], static_cast<GPCntType>(1));
-//     }
-//     const unsigned long long expectedNP = prod_u64(nGPPerDim);
-//     BOOST_CHECK_EQUAL(tg.tensorGrid.nGP(), expectedNP);
+BOOST_AUTO_TEST_SUITE_END()
 
-//     // Erzeuge Knoten per dim aus NodeGenFunc
-//     std::vector<sgpp::base::DataVector> perDimNodes(nDim);
-//     for (size_t d = 0; d < nDim; ++d) {
-//       perDimNodes[d] = genInstr.getNodeGenFuncForDim(d)(nGPPerDim[d]);
-//       BOOST_REQUIRE_EQUAL(perDimNodes[d].size(), static_cast<size_t>(nGPPerDim[d]));
-//     }
+BOOST_AUTO_TEST_SUITE(SparseGrid_Constructor_MIVec)
 
-//     // Überprüfe alle Punkte
-//     const size_t nGP = static_cast<size_t>(tg.tensorGrid.nGP());
-//     for (size_t idx = 0; idx < nGP; ++idx) {
-//       std::vector<size_t> perIdx = decomposeLinearIndex(idx, nGPPerDim);
-//       for (size_t d = 0; d < nDim; ++d) {
-//         const double expectedVal = perDimNodes[d][perIdx[d]];
-//         const double gotVal = tg.tensorGrid(idx, d);
-//         BOOST_CHECK_CLOSE(gotVal, expectedVal, 1e-12);
-//         BOOST_CHECK_GE(gotVal, 0.0);
-//         BOOST_CHECK_LE(gotVal, 1.0);
-//       }
-//     }
-//   }
-// }
+BOOST_AUTO_TEST_CASE(Anisotropic_2D) {
+  // Not downwards closed: the closure is (0,0), (1,0), (2,0), (3,0), (0,1).
+  const LvlMIVec miVec(std::vector<LvlMI>{{3, 0}, {0, 1}});
 
-// BOOST_AUTO_TEST_CASE(Random1D) {
-//   randGen.setSeed();
-//   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-//     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(1000));
+  MIVecSGGenInstr genInstr(miVec);
+  genInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
+  genInstr.setBoundaryLevelOffset(1);
 
-//     const CompleteSGGenInstr instr(maxLvl, 1);
-//     const LvlMIVec result = instr.genReducedMIVec();
+  // Expected: (1,0) and (2,0) have coefficient 0 and are omitted.
+  ExpectedSG expected(2);
 
-//     BOOST_CHECK_MESSAGE(result.nDim() == 1, "Seed: " << randGen.getSeed());
-//     BOOST_CHECK_MESSAGE(result.nMI() == 1, "Seed: " << randGen.getSeed());
-//     BOOST_CHECK_MESSAGE(result(0, 0) == maxLvl, "Seed: " << randGen.getSeed());
-//   }
-// }
+  expected.addTensorGrid({{3, 0},
+                          1,
+                          makeTG({expectedNodes(clenshawCurtisNodeGenFunc, 15, true),
+                                  expectedNodes(equidistantNodeGenFunc, 1, false)})});
+  expected.addTensorGrid({{0, 1},
+                          1,
+                          makeTG({expectedNodes(clenshawCurtisNodeGenFunc, 1, false),
+                                  expectedNodes(equidistantNodeGenFunc, 2, true)})});
+  expected.addTensorGrid({{0, 0},
+                          -1,
+                          makeTG({expectedNodes(clenshawCurtisNodeGenFunc, 1, false),
+                                  expectedNodes(equidistantNodeGenFunc, 1, false)})});
+
+  // Result
+  const SparseGrid result(genInstr);
+
+  // Comparison
+  BOOST_CHECK(result == expected);
+}
+
+/*
+A random (in general neither downwards closed nor duplicate-free) multi-index set,
+compared with a brute-force downwards closure and inclusion-exclusion coefficients.
+*/
+BOOST_AUTO_TEST_CASE(Random_MIVec) {
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    for (size_t run = 0; run < 10; run++) {
+      const size_t nDim = 1 + randGen.getUniformIndexRN(4);
+      const size_t nMI = 1 + randGen.getUniformIndexRN(5);
+
+      std::vector<LvlMI> inputMIs(nMI, LvlMI(nDim));
+      for (LvlMI& mi : inputMIs) {
+        for (LvlType& lvl : mi) lvl = static_cast<LvlType>(randGen.getUniformIndexRN(4));
+      }
+
+      BOOST_TEST_CONTEXT("Run: " << run << ", nDim: " << nDim << ", nMI: " << nMI) {
+        const LvlMIVec miVec(inputMIs);
+
+        MIVecSGGenInstr genInstr(miVec);
+        randomizeConfig(genInstr);
+
+        const SparseGrid result(genInstr);
+
+        BOOST_CHECK_EQUAL(result.nDim(), nDim);
+        BOOST_CHECK_EQUAL(sumOfCoeffs(result), 1);
+        BOOST_CHECK(result == genExpectedMIVecSG(inputMIs, genInstr));
+      }
+    }
+  }
+}
+
+/*
+The downwards closure of all multi-indices with |l|_1 = maxLvl is the complete sparse grid
+of level maxLvl, so both generation instructions must yield the same sparse grid.
+*/
+BOOST_AUTO_TEST_CASE(Top_Layer_Equals_Complete_SG) {
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    for (size_t run = 0; run < 5; run++) {
+      const size_t nDim = 1 + randGen.getUniformIndexRN(4);
+      const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(5));
+
+      BOOST_TEST_CONTEXT("nDim: " << nDim << ", maxLvl: " << maxLvl) {
+        std::vector<LvlMI> topLayer;
+        forEachMIInBox(LvlMI(nDim, maxLvl), [&topLayer, maxLvl](const LvlMI& mi) {
+          if (mi.sumOfElems() == maxLvl) topLayer.push_back(mi);
+        });
+        const LvlMIVec miVec(topLayer);
+
+        CompleteSGGenInstr completeGenInstr(maxLvl, nDim);
+        randomizeConfig(completeGenInstr);
+
+        MIVecSGGenInstr miVecGenInstr(miVec);
+        miVecGenInstr.setNodeGenFuncs(completeGenInstr.getNodeGenFuncs());
+        miVecGenInstr.setLvl2GPCntFuncs(completeGenInstr.getLvl2GPCntFuncs());
+        miVecGenInstr.setBoundaryLevelOffset(completeGenInstr.getBoundaryLevelOffset());
+
+        const SparseGrid completeSG(completeGenInstr);
+        const SparseGrid miVecSG(miVecGenInstr);
+
+        BOOST_CHECK(miVecSG == completeSG);
+      }
+    }
+  }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(SparseGrid_GenInstr)
+
+BOOST_AUTO_TEST_CASE(Stores_Copy_Of_Complete_Gen_Instr) {
+  const LvlType maxLvl = 3;
+
+  CompleteSGGenInstr genInstr(maxLvl, 2);
+  genInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setLvl2GPCntFuncs({linearLvl2GPCntFunction, doublingLvl2GPCntFunction});
+  genInstr.setBoundaryLevelOffset(2);
+  genInstr.setDomain(HyperCubeArea{{-1.0, 1.0}, {2.0, 5.0}});
+
+  const SparseGrid sg(genInstr);
+  const SGGenInstr& stored = sg.getGenInstr();
+
+  BOOST_CHECK(&stored != &genInstr);
+  BOOST_CHECK(dynamic_cast<const CompleteSGGenInstr*>(&stored) != nullptr);
+  checkSameConfig(stored, genInstr);
+
+  // The stored instruction reproduces the grid.
+  BOOST_CHECK(SparseGrid(stored) == sg);
+
+  // Later changes of the original instruction affect neither the stored copy nor the grid.
+  const ExpectedSG expected = genExpectedCompleteSG(genInstr, maxLvl);
+
+  genInstr.setMaxLvl(5);
+  genInstr.setNodeGenFunc(firstTypeChebyshevNodeGenFunc);
+  genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
+  genInstr.setBoundaryLevelOffset(0);
+  genInstr.setDomain({0.0, 1.0});
+
+  BOOST_CHECK_EQUAL(stored.getBoundaryLevelOffset(), 2u);
+  BOOST_CHECK(stored.getDomain() == HyperCubeArea({{-1.0, 1.0}, {2.0, 5.0}}));
+  BOOST_CHECK(stored.getNodeGenFuncForDim(0) == clenshawCurtisNodeGenFunc);
+  BOOST_CHECK(stored.getNodeGenFuncForDim(1) == equidistantNodeGenFunc);
+  BOOST_CHECK(stored.getLvl2GPCntFuncForDim(0) == linearLvl2GPCntFunction);
+  BOOST_CHECK(stored.getLvl2GPCntFuncForDim(1) == doublingLvl2GPCntFunction);
+
+  BOOST_CHECK(sg == expected);
+  BOOST_CHECK(SparseGrid(stored) == expected);
+}
+
+BOOST_AUTO_TEST_CASE(Stores_Copy_Of_MIVec_Gen_Instr) {
+  const LvlMIVec miVec(std::vector<LvlMI>{{3, 0, 1}, {0, 2, 0}, {1, 1, 1}});
+
+  MIVecSGGenInstr genInstr(miVec);
+  genInstr.setNodeGenFuncs(
+      {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  genInstr.setLvl2GPCntFuncs(
+      {linearLvl2GPCntFunction, doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
+  genInstr.setBoundaryLevelOffset(1);
+  genInstr.setDomain({-2.0, 2.0});
+
+  const SparseGrid sg(genInstr);
+  const SGGenInstr& stored = sg.getGenInstr();
+
+  BOOST_CHECK(&stored != &genInstr);
+  BOOST_CHECK(dynamic_cast<const MIVecSGGenInstr*>(&stored) != nullptr);
+  checkSameConfig(stored, genInstr);
+
+  BOOST_CHECK(SparseGrid(stored) == sg);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -15,16 +15,6 @@ using const_iterator = std::vector<TensorGridCTData>::const_iterator;
 using reverse_iterator = std::vector<TensorGridCTData>::reverse_iterator;
 using const_reverse_iterator = std::vector<TensorGridCTData>::const_reverse_iterator;
 
-/// @name Constructors
-/// @{
-
-SparseGridBase::SparseGridBase(const size_t nDim) : nDim_(nDim) {}
-
-SparseGridBase::SparseGridBase(const size_t nDim, const size_t nTG)
-    : nDim_(nDim), tensorGridData(nTG) {}
-
-/// @}
-
 /// @name Getters
 /// @{
 
@@ -55,7 +45,57 @@ size_t SparseGridBase::getMaxTGSumOverGPCntsPerDim() const noexcept {
 
 /// @}
 
-/// @name Setters
+/// @name Iterators
+/// @{
+
+iterator SparseGridBase::begin() noexcept { return tensorGridData.begin(); }
+iterator SparseGridBase::end() noexcept { return tensorGridData.end(); }
+const_iterator SparseGridBase::begin() const noexcept { return tensorGridData.begin(); }
+const_iterator SparseGridBase::end() const noexcept { return tensorGridData.end(); }
+const_iterator SparseGridBase::cbegin() const noexcept { return tensorGridData.cbegin(); }
+const_iterator SparseGridBase::cend() const noexcept { return tensorGridData.cend(); }
+
+reverse_iterator SparseGridBase::rbegin() noexcept { return tensorGridData.rbegin(); }
+reverse_iterator SparseGridBase::rend() noexcept { return tensorGridData.rend(); }
+const_reverse_iterator SparseGridBase::rbegin() const noexcept { return tensorGridData.rbegin(); }
+const_reverse_iterator SparseGridBase::rend() const noexcept { return tensorGridData.rend(); }
+const_reverse_iterator SparseGridBase::crbegin() const noexcept { return tensorGridData.crbegin(); }
+const_reverse_iterator SparseGridBase::crend() const noexcept { return tensorGridData.crend(); }
+
+/// @}
+
+/// @name Operators
+/// @{
+
+bool SparseGridBase::operator==(const SparseGridBase& other) const {
+  if (nDim() != other.nDim() || nTG() != other.nTG()) {
+    return false;
+  }
+
+  for (const TensorGridCTData& data : tensorGridData) {
+    const auto iter = std::find(other.tensorGridData.begin(), other.tensorGridData.end(), data);
+
+    if (iter == other.tensorGridData.end()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/// @}
+
+/// @name Protected Constructors
+/// @{
+
+SparseGridBase::SparseGridBase(const size_t nDim) : nDim_(nDim) {}
+
+SparseGridBase::SparseGridBase(const size_t nDim, const size_t nTG)
+    : nDim_(nDim), tensorGridData(nTG) {}
+
+/// @}
+
+/// @name Protected setters
 /// @{
 
 void SparseGridBase::setTensorGrids(std::vector<TensorGridCTData>&& tgs) {
@@ -105,57 +145,12 @@ void SparseGridBase::setTensorGrid(const size_t idx, TensorGridCTData&& tg) {
 
 /// @}
 
-/// @name Helpers
+/// @name Protected helpers
 /// @{
 
 void SparseGridBase::resize(size_t nTG) { tensorGridData.resize(nTG); }
 
 void SparseGridBase::reserve(const size_t n) { tensorGridData.reserve(n); }
-
-/// @}
-
-/// @name Iterators
-/// @{
-
-iterator SparseGridBase::begin() noexcept { return tensorGridData.begin(); }
-iterator SparseGridBase::end() noexcept { return tensorGridData.end(); }
-const_iterator SparseGridBase::begin() const noexcept { return tensorGridData.begin(); }
-const_iterator SparseGridBase::end() const noexcept { return tensorGridData.end(); }
-const_iterator SparseGridBase::cbegin() const noexcept { return tensorGridData.cbegin(); }
-const_iterator SparseGridBase::cend() const noexcept { return tensorGridData.cend(); }
-
-reverse_iterator SparseGridBase::rbegin() noexcept { return tensorGridData.rbegin(); }
-reverse_iterator SparseGridBase::rend() noexcept { return tensorGridData.rend(); }
-const_reverse_iterator SparseGridBase::rbegin() const noexcept { return tensorGridData.rbegin(); }
-const_reverse_iterator SparseGridBase::rend() const noexcept { return tensorGridData.rend(); }
-const_reverse_iterator SparseGridBase::crbegin() const noexcept { return tensorGridData.crbegin(); }
-const_reverse_iterator SparseGridBase::crend() const noexcept { return tensorGridData.crend(); }
-
-/// @}
-
-/// @name Operators
-/// @{
-
-bool SparseGridBase::operator==(const SparseGridBase& other) const {
-  if (nDim() != other.nDim() || nTG() != other.nTG()) {
-    return false;
-  }
-
-  for (const TensorGridCTData& data : tensorGridData) {
-    const auto iter = std::find(other.tensorGridData.begin(), other.tensorGridData.end(), data);
-
-    if (iter == other.tensorGridData.end()) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/// @}
-
-/// @name Protected helpers
-/// @{
 
 void SparseGridBase::recomputeMetaValues() {
   maxTGGPCnt = 0;
