@@ -15,7 +15,7 @@
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
-#include <sgpp/combigrid/operators/quadrature/delta_quadrature.hpp>
+#include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
@@ -31,7 +31,7 @@ using sgpp::combigrid::misc::FlatNestedVec;
 namespace sgpp {
 namespace combigrid {
 
-double quadratureDelta(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid) {
+double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid) {
   const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
   const size_t nDim = deltasSparseGrid.nDim();
 
@@ -87,8 +87,7 @@ bool appendSubTrieChildren(const DeltaQuadratureContext& context, const LvlMI& d
 
   // The children are sorted by level, so the ones with a level >= deltaTGMI[dim] are a suffix
   const LvlType deltaLvl = deltaTGMI[dim];
-  const auto firstChild =
-      std::ranges::lower_bound(children, deltaLvl, {}, &CTCoeffTrie::Node::lvl);
+  const auto firstChild = std::ranges::lower_bound(children, deltaLvl, {}, &CTCoeffTrie::Node::lvl);
 
   const auto weights1DOfDim = context.weights1D[dim];
   // The delta nodes of level deltaLvl follow the ones of the levels 0, ..., deltaLvl - 1
@@ -201,9 +200,8 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
             tools::getDeltaNodeCnt(deltaLvl, lvl2GPCntFunc, deltaLvl == boundaryLvlOffset);
 
         for (GPCntType deltaNodeIdx = 0; deltaNodeIdx < nDeltaNodes; deltaNodeIdx++) {
-          const GPCntType nodeIdx =
-              mapNodeIdx(nDeltaNodes, nNodes, deltaLvl, lvl, deltaNodeIdx,
-                         nodeIdxLvlMapFuncs[dim], boundaryLvlOffset);
+          const GPCntType nodeIdx = mapNodeIdx(nDeltaNodes, nNodes, deltaLvl, lvl, deltaNodeIdx,
+                                               nodeIdxLvlMapFuncs[dim], boundaryLvlOffset);
 
           assert(nodeIdx < nNodes);
           weightsOfLvl[writeIdx++] = sortedWeights[nodeIdx];
@@ -246,8 +244,7 @@ void compSubTrie(const DeltaQuadratureContext& context, const LvlMI& deltaTGMI,
 }
 
 void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
-                            const TensorGridCTData& deltaTGData,
-                            DeltaQuadratureScratch& scratch) {
+                            const TensorGridCTData& deltaTGData, DeltaQuadratureScratch& scratch) {
   const TensorGrid& deltaTG = deltaTGData.tensorGrid;
   const size_t nDim = deltaTG.nDim();
   const GPMI& nGPPerDim = deltaTG.getGPCntPerDim();

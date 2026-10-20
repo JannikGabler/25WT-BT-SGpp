@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -233,11 +234,12 @@ class Benchmarker {
     os << "Runs: " << runs_ << "  Warmups: " << warmups_ << "\n\n";
 
     // Total runtime statistics
-    const std::tuple<double, double, size_t> sTotal = stats(total_durations_);
+    const auto [totalMin, totalMean, totalSD, totalN] = stats(total_durations_);
     os << "Total per-run (s):\n";
-    os << "  mean = " << std::get<0>(sTotal) << " s"
-       << "    stddev = " << std::get<1>(sTotal) << " s"
-       << "    count = " << std::get<2>(sTotal) << "\n\n";
+    os << "  min = " << totalMin << " s"
+       << "    mean = " << totalMean << " s"
+       << "    stddev = " << totalSD << " s"
+       << "    count = " << totalN << "\n\n";
 
     os << std::scientific;
     os << "Result of the 1. run: " << results[0] << std::endl;
@@ -245,15 +247,15 @@ class Benchmarker {
     os << std::fixed;
     // Per-checkpoint statistics
     os << "Checkpoints (time since previous checkpoint) [s]:\n";
-    os << std::left << std::setw(30) << "Name" << std::right << std::setw(16) << "mean"
-       << std::setw(18) << "stddev" << std::setw(10) << "count" << "\n";
-    os << std::string(80, '-') << "\n";
+    os << std::left << std::setw(30) << "Name" << std::right << std::setw(16) << "min"
+       << std::setw(16) << "mean" << std::setw(18) << "stddev" << std::setw(10) << "count" << "\n";
+    os << std::string(96, '-') << "\n";
 
     for (size_t i = 0; i < checkpoint_names_.size(); ++i) {
       const auto& samples = per_checkpoint_samples_[i];
-      const std::tuple<double, double, size_t> s = stats(samples);
+      const auto [cpMin, cpMean, cpSD, cpN] = stats(samples);
       os << std::left << std::setw(30) << checkpoint_names_[i] << std::right << std::setw(16)
-         << std::get<0>(s) << std::setw(18) << std::get<1>(s) << std::setw(10) << std::get<2>(s)
+         << cpMin << std::setw(16) << cpMean << std::setw(18) << cpSD << std::setw(10) << cpN
          << "\n";
     }
     os << std::endl;
@@ -262,13 +264,13 @@ class Benchmarker {
 
     if (!std::isnan(analyticalResult)) {
       os << std::scientific;
-      const std::tuple<double, double, size_t> statsAbs = stats(absErrors);
-      const std::tuple<double, double, size_t> statsRel = stats(relErrors);
+      const auto [AbsErrMin, AbsErrMean, AbsErrSD, absErrN] = stats(absErrors);
+      const auto [RelErrMin, RelErrMean, RelErrSD, RelErrN] = stats(relErrors);
 
-      os << "  Absolute error:    mean = " << std::get<0>(statsAbs)
-         << "    stddev = " << std::get<1>(statsAbs) << std::endl;
-      os << "  Relative error:    mean = " << std::get<0>(statsRel)
-         << "    stddev = " << std::get<1>(statsRel) << std::endl;
+      os << "  Absolute error:    mean = " << AbsErrMean << "    stddev = " << AbsErrSD
+         << std::endl;
+      os << "  Relative error:    mean = " << RelErrMean << "    stddev = " << RelErrSD
+         << std::endl;
     } else {
       os << "  No analytical solution set." << std::endl;
     }
@@ -292,8 +294,8 @@ class Benchmarker {
   // Total duration per run (seconds)
   std::vector<double> total_durations_;
 
-  // Helper function: computes mean and standard deviation
-  static std::tuple<double, double, size_t> stats(const std::vector<double>& samples) {
+  // Helper function: computes min, mean and standard deviation
+  static std::tuple<double, double, double, size_t> stats(const std::vector<double>& samples) {
     // Filter out NaN values (usually none except empty cases)
     std::vector<double> s;
     s.reserve(samples.size());
@@ -301,13 +303,14 @@ class Benchmarker {
       if (!std::isnan(v)) s.push_back(v);
     }
     size_t n = s.size();
-    if (n == 0) return {0.0, 0.0, 0};
-    double mean = std::accumulate(s.begin(), s.end(), 0.0) / static_cast<double>(n);
+    if (n == 0) return {0.0, 0.0, 0.0, 0};
+    const double min = *std::min_element(s.begin(), s.end());
+    const double mean = std::accumulate(s.begin(), s.end(), 0.0) / static_cast<double>(n);
     double accum = 0.0;
     for (double v : s) accum += (v - mean) * (v - mean);
-    double variance = accum / static_cast<double>(n);  // population variance
-    double sd = std::sqrt(variance);
-    return {mean, sd, n};
+    const double variance = accum / static_cast<double>(n);  // population variance
+    const double sd = std::sqrt(variance);
+    return {min, mean, sd, n};
   }
 
   // Prints progress labeled with `label` ("Warmup" or "Run") to console

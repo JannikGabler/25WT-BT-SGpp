@@ -48,7 +48,7 @@
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/operators/quadrature/delta_quadrature.hpp>
+#include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
@@ -79,7 +79,7 @@ constexpr double TOL = 1e-11;
 /// Computes @c quadratureDelta on the deltas sparse grid described by @p genInstr.
 double runQuadratureDelta(const SourceFunc& sourceFunc, const SGGenInstr& genInstr) {
   const DeltasSparseGrid deltasSG(genInstr);
-  return quadratureDelta(sourceFunc, deltasSG);
+  return quadrature(sourceFunc, deltasSG);
 }
 
 /// Reference result: the regular combination-technique quadrature.
@@ -329,28 +329,27 @@ std::vector<MIWithCoeff> trieLeaves(const misc::CTCoeffTrie& trie) {
   std::vector<MIWithCoeff> result;
   std::vector<LvlType> prefix;
 
-  const std::function<void(size_t, size_t, size_t)> visit = [&](const size_t depth,
-                                                                const size_t begin,
-                                                                const size_t end) {
-    const std::span<const misc::CTCoeffTrie::Node> nodes = trie.nodesOfDepth(depth);
-    BOOST_REQUIRE_LE(end, nodes.size());
+  const std::function<void(size_t, size_t, size_t)> visit =
+      [&](const size_t depth, const size_t begin, const size_t end) {
+        const std::span<const misc::CTCoeffTrie::Node> nodes = trie.nodesOfDepth(depth);
+        BOOST_REQUIRE_LE(end, nodes.size());
 
-    for (size_t idx = begin; idx < end; idx++) {
-      if (idx > begin) BOOST_CHECK_LT(nodes[idx - 1].lvl, nodes[idx].lvl);
+        for (size_t idx = begin; idx < end; idx++) {
+          if (idx > begin) BOOST_CHECK_LT(nodes[idx - 1].lvl, nodes[idx].lvl);
 
-      prefix.push_back(nodes[idx].lvl);
+          prefix.push_back(nodes[idx].lvl);
 
-      if (depth + 1 == trie.nDim()) {
-        result.emplace_back(prefix, trie.leafCoeffs()[idx]);
-      } else {
-        BOOST_CHECK_EQUAL(trie.childBegin(depth, idx), idx == 0 ? 0 : nodes[idx - 1].childEnd);
-        BOOST_CHECK_LT(trie.childBegin(depth, idx), trie.childEnd(depth, idx));
-        visit(depth + 1, trie.childBegin(depth, idx), trie.childEnd(depth, idx));
-      }
+          if (depth + 1 == trie.nDim()) {
+            result.emplace_back(prefix, trie.leafCoeffs()[idx]);
+          } else {
+            BOOST_CHECK_EQUAL(trie.childBegin(depth, idx), idx == 0 ? 0 : nodes[idx - 1].childEnd);
+            BOOST_CHECK_LT(trie.childBegin(depth, idx), trie.childEnd(depth, idx));
+            visit(depth + 1, trie.childBegin(depth, idx), trie.childEnd(depth, idx));
+          }
 
-      prefix.pop_back();
-    }
-  };
+          prefix.pop_back();
+        }
+      };
 
   if (trie.nDim() > 0) {
     visit(0, 0, trie.nodesOfDepth(0).size());
@@ -459,9 +458,9 @@ BOOST_AUTO_TEST_CASE(Constant_Function_Is_Exact) {
       for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
         for (size_t nDim = 1; nDim <= 4; nDim++) {
           for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                                   << boundaryLvlOffset << ", nDim " << nDim
-                                                   << ", max. level " << maxLvl) {
+            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                               << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
+                               << nDim << ", max. level " << maxLvl) {
               const double value = randGen.getUniformRN(-2.0, 2.0);
 
               CompleteSGGenInstr genInstr(maxLvl, nDim);
@@ -486,9 +485,9 @@ BOOST_AUTO_TEST_CASE(Multilinear_Function_Is_Exact) {
       for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
         for (size_t nDim = 1; nDim <= 4; nDim++) {
           for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                                   << boundaryLvlOffset << ", nDim " << nDim
-                                                   << ", max. level " << maxLvl) {
+            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                               << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
+                               << nDim << ", max. level " << maxLvl) {
               std::vector<double> a(nDim);
               std::vector<double> b(nDim);
               for (size_t dim = 0; dim < nDim; dim++) {
@@ -516,9 +515,9 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Complete) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
       for (size_t nDim = 1; nDim <= 4; nDim++) {
         for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                                 << boundaryLvlOffset << ", nDim " << nDim
-                                                 << ", max. level " << maxLvl) {
+          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                             << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
+                             << nDim << ", max. level " << maxLvl) {
             CompleteSGGenInstr genInstr(maxLvl, nDim);
             genInstr.setNodeGenFunc(nodeGenFunc);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
@@ -540,9 +539,9 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Higher_Dimensions) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
       for (size_t nDim = 5; nDim <= 7; nDim++) {
         for (LvlType maxLvl = 0; maxLvl <= 3; maxLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                                 << boundaryLvlOffset << ", nDim " << nDim
-                                                 << ", max. level " << maxLvl) {
+          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                             << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
+                             << nDim << ", max. level " << maxLvl) {
             CompleteSGGenInstr genInstr(maxLvl, nDim);
             genInstr.setNodeGenFunc(nodeGenFunc);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
@@ -562,8 +561,8 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Full_Grid) {
 
   for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
-      BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                             << boundaryLvlOffset) {
+      BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                         << " nodes, boundary level offset " << boundaryLvlOffset) {
         MIVecSGGenInstr genInstr(mis);
         genInstr.setNodeGenFunc(nodeGenFunc);
         genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
@@ -588,8 +587,7 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Random_Settings) {
       }
       const LvlMIVec mis(inputMIs);
 
-      CompleteSGGenInstr completeGenInstr(static_cast<LvlType>(randGen.getUniformIndexRN(5)),
-                                          nDim);
+      CompleteSGGenInstr completeGenInstr(static_cast<LvlType>(randGen.getUniformIndexRN(5)), nDim);
       MIVecSGGenInstr miVecGenInstr(mis);
 
       for (SGGenInstr* const genInstr : {static_cast<SGGenInstr*>(&completeGenInstr),
@@ -621,9 +619,9 @@ BOOST_AUTO_TEST_CASE(Evaluates_Every_Grid_Point_Once) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
       for (size_t nDim = 2; nDim <= 3; nDim++) {
         for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                                 << boundaryLvlOffset << ", nDim " << nDim
-                                                 << ", max. level " << maxLvl) {
+          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                             << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
+                             << nDim << ", max. level " << maxLvl) {
             CompleteSGGenInstr genInstr(maxLvl, nDim);
             genInstr.setNodeGenFunc(nodeGenFunc);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
@@ -648,14 +646,13 @@ BOOST_AUTO_TEST_CASE(Evaluates_Every_Grid_Point_Once) {
 
             runQuadratureDelta(sourceFunc, genInstr);
 
-            BOOST_CHECK_EQUAL(nEvaluations.load(),
-                              expectedNumberOfUniqueGridPoints(
-                                  genInstr, completeSGLevels(nDim, maxLvl)));
+            BOOST_CHECK_EQUAL(nEvaluations.load(), expectedNumberOfUniqueGridPoints(
+                                                       genInstr, completeSGLevels(nDim, maxLvl)));
 
             std::sort(evaluatedPoints.begin(), evaluatedPoints.end());
-            const size_t nDistinctPoints = static_cast<size_t>(
-                std::unique(evaluatedPoints.begin(), evaluatedPoints.end()) -
-                evaluatedPoints.begin());
+            const size_t nDistinctPoints =
+                static_cast<size_t>(std::unique(evaluatedPoints.begin(), evaluatedPoints.end()) -
+                                    evaluatedPoints.begin());
             BOOST_CHECK_EQUAL(nDistinctPoints, evaluatedPoints.size());
           }
         }
@@ -834,36 +831,35 @@ BOOST_AUTO_TEST_CASE(Sub_Trie_Of_Delta_Tensor_Grids) {
             std::vector<MIWithCoeff> leaves;
             std::vector<LvlType> prefix;
 
-            const std::function<void(size_t, size_t, size_t)> visit = [&](const size_t depth,
-                                                                          const size_t begin,
-                                                                          const size_t end) {
-              const auto& nodes = data.scratch.trieNodes[depth];
-              const auto weightsOfDim = data.weights1D[depth];
-              const size_t deltaStart = m[depth] == 0 ? 0 : weightsOfDim[m[depth] - 1].size();
+            const std::function<void(size_t, size_t, size_t)> visit =
+                [&](const size_t depth, const size_t begin, const size_t end) {
+                  const auto& nodes = data.scratch.trieNodes[depth];
+                  const auto weightsOfDim = data.weights1D[depth];
+                  const size_t deltaStart = m[depth] == 0 ? 0 : weightsOfDim[m[depth] - 1].size();
 
-              BOOST_REQUIRE_LE(end, nodes.size());
+                  BOOST_REQUIRE_LE(end, nodes.size());
 
-              for (size_t idx = begin; idx < end; idx++) {
-                // Level of the node: the one whose weights the node points to
-                std::optional<LvlType> lvl;
-                for (LvlType l = m[depth]; l < weightsOfDim.size(); l++) {
-                  if (nodes[idx].weights == weightsOfDim[l].data() + deltaStart) lvl = l;
-                }
-                BOOST_REQUIRE(lvl.has_value());
+                  for (size_t idx = begin; idx < end; idx++) {
+                    // Level of the node: the one whose weights the node points to
+                    std::optional<LvlType> lvl;
+                    for (LvlType l = m[depth]; l < weightsOfDim.size(); l++) {
+                      if (nodes[idx].weights == weightsOfDim[l].data() + deltaStart) lvl = l;
+                    }
+                    BOOST_REQUIRE(lvl.has_value());
 
-                prefix.push_back(*lvl);
+                    prefix.push_back(*lvl);
 
-                if (depth + 1 == nDim) {
-                  leaves.emplace_back(prefix, nodes[idx].coeffSum);
-                } else {
-                  const size_t childBegin = idx == 0 ? 0 : nodes[idx - 1].childEnd;
-                  BOOST_CHECK_LT(childBegin, nodes[idx].childEnd);  // pruned
-                  visit(depth + 1, childBegin, nodes[idx].childEnd);
-                }
+                    if (depth + 1 == nDim) {
+                      leaves.emplace_back(prefix, nodes[idx].coeffSum);
+                    } else {
+                      const size_t childBegin = idx == 0 ? 0 : nodes[idx - 1].childEnd;
+                      BOOST_CHECK_LT(childBegin, nodes[idx].childEnd);  // pruned
+                      visit(depth + 1, childBegin, nodes[idx].childEnd);
+                    }
 
-                prefix.pop_back();
-              }
-            };
+                    prefix.pop_back();
+                  }
+                };
 
             visit(0, 0, data.scratch.trieNodes[0].size());
 
@@ -909,9 +905,9 @@ BOOST_AUTO_TEST_CASE(Map_Node_Idx_Preserves_The_Node) {
         const DataVector deltaNodes = expectedDeltaNodes(genInstr, 0, deltaLvl);
 
         for (LvlType targetLvl = deltaLvl; targetLvl <= 6; targetLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                                 << boundaryLvlOffset << ", delta level "
-                                                 << deltaLvl << " -> level " << targetLvl) {
+          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                             << " nodes, boundary level offset " << boundaryLvlOffset
+                             << ", delta level " << deltaLvl << " -> level " << targetLvl) {
             const DataVector targetNodes = regularNodes(genInstr, 0, targetLvl);
 
             for (GPCntType i = 0; i < deltaNodes.size(); i++) {
@@ -941,9 +937,9 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
       for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
         for (size_t nDim = 1; nDim <= 3; nDim++) {
           for (LvlType maxLvl = 0; maxLvl <= 3; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                                   << boundaryLvlOffset << ", nDim " << nDim
-                                                   << ", max. level " << maxLvl) {
+            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                               << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
+                               << nDim << ", max. level " << maxLvl) {
               CompleteSGGenInstr genInstr(maxLvl, nDim);
               genInstr.setNodeGenFunc(nodeGenFunc);
               genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
@@ -979,8 +975,7 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
                                                           << point.gp.toString()) {
                     for (size_t dim = 0; dim < nDim; dim++) {
                       const double width = domain[dim].second - domain[dim].first;
-                      BOOST_CHECK_SMALL(gp[dim] - (point.gp[dim] * width + domain[dim].first),
-                                        EPS);
+                      BOOST_CHECK_SMALL(gp[dim] - (point.gp[dim] * width + domain[dim].first), EPS);
                     }
 
                     BOOST_CHECK_SMALL(globalWeight - bruteForceGlobalWeight(sg, point.gp), EPS);
@@ -1008,9 +1003,9 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Reproduce_Quadrature) {
       for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
         for (size_t nDim = 2; nDim <= 3; nDim++) {
           for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                                   << boundaryLvlOffset << ", nDim " << nDim
-                                                   << ", max. level " << maxLvl) {
+            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                               << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
+                               << nDim << ", max. level " << maxLvl) {
               CompleteSGGenInstr genInstr(maxLvl, nDim);
               genInstr.setNodeGenFunc(nodeGenFunc);
               genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
@@ -1027,8 +1022,7 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Reproduce_Quadrature) {
                     data.context, expectedDeltaTGData(deltaMI, genInstr), data.scratch);
               }
 
-              checkQuadResult(result * genInstr.getVolumeOfDomain(),
-                              quadrature(sourceFunc, sg));
+              checkQuadResult(result * genInstr.getVolumeOfDomain(), quadrature(sourceFunc, sg));
             }
           }
         }

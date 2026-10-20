@@ -16,11 +16,6 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
-// static constexpr size_t nDim = 3;
-// static constexpr size_t maxLvl = 10;
-// static constexpr size_t warmupRuns = 2;
-// static constexpr size_t runs = 5;
-
 namespace sgpp {
 namespace combigrid {
 
@@ -64,6 +59,8 @@ double perform(sgpp::combigrid::tools::Benchmarker<double>::BenchmarkerContext& 
   return result;
 }
 
+double compExactSolution(const size_t nDim) { return std::pow(1 - std::cos(1), nDim); }
+
 template <LvlType maxLvl, size_t nDim>
 void run(const size_t nWarmupRuns, const size_t nRuns) {
   tools::Benchmarker<double> benchmarker;
@@ -75,6 +72,8 @@ void run(const size_t nWarmupRuns, const size_t nRuns) {
   benchmarker.add_checkpoint("Creation SG Gen. Instruction");
   benchmarker.add_checkpoint("SG Generation");
   benchmarker.add_checkpoint("Quadrature");
+
+  benchmarker.setAnalyticalResult(compExactSolution(nDim));
 
   benchmarker.run(perform<maxLvl, nDim>);
 

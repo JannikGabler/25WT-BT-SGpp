@@ -17,7 +17,7 @@ static constexpr size_t nWarmupRuns = 2;
 static constexpr size_t nRuns = 5;
 
 int main() {
-  std::cout << "Warning (!): This benchmark might some time.\n" << std::endl;
+  std::cout << "Warning (!): This benchmark might take some time.\n" << std::endl;
 
   quadrature_benchmark::run<maxLvl, nDim>(nWarmupRuns, nRuns);
 }

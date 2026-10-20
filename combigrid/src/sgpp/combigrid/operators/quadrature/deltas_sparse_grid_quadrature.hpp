@@ -28,7 +28,7 @@ namespace combigrid {
  * More specialized version of quadrature.
  * Requires nested nodes
  */
-double quadratureDelta(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid);
+double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid);
 
 /******************
 Internal operations
