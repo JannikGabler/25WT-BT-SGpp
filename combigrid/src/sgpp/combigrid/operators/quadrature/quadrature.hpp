@@ -15,9 +15,6 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 
-using sgpp::combigrid::misc::QuadratureContext;
-using sgpp::combigrid::misc::QuadratureScratch;
-
 namespace sgpp {
 namespace combigrid {
 
@@ -62,8 +59,8 @@ namespace quadrature_operator {
  * @return Quadrature estimate on the unit hypercube
  *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
  */
-double processTensorGrid(const QuadratureContext& context, const TensorGrid& tg,
-                         QuadratureScratch& scratch);
+double processTensorGrid(const sgpp::combigrid::misc::QuadratureContext& context,
+                         const TensorGrid& tg, sgpp::combigrid::misc::QuadratureScratch& scratch);
 
 /**
  * TODO: Document (update)
@@ -75,7 +72,8 @@ double processTensorGrid(const QuadratureContext& context, const TensorGrid& tg,
  *                      provides the matching quadrature rule).
  * @param scratch       Scratch space; @c weights and @c quadRules are filled in.
  */
-void getWeights(const QuadratureContext& context, const TensorGrid& tg, QuadratureScratch& scratch);
+void getWeights(const sgpp::combigrid::misc::QuadratureContext& context, const TensorGrid& tg,
+                sgpp::combigrid::misc::QuadratureScratch& scratch);
 
 /**
  * TODO: Document (update)
@@ -89,7 +87,7 @@ void getWeights(const QuadratureContext& context, const TensorGrid& tg, Quadratu
  * @return Tensor-product quadrature weight at @p gpMI.
  */
 double getWeightForGP(const std::vector<GPCntType>& gpMI, const GPMI& gpCntPerDim,
-                      const QuadratureScratch& scratch);
+                      const sgpp::combigrid::misc::QuadratureScratch& scratch);
 
 }  // namespace quadrature_operator
 
