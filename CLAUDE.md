@@ -191,11 +191,17 @@ Modules are enabled/disabled via `SG_ALL=<bool>` (default `1`) and per-module `S
 ### Preferred iteration commands (combigrid only)
 
 Wrapper scripts checked into repo root — read them if in doubt:
-- [compileNormal.sh](compileNormal.sh) — optimized: `scons -j8 CPPFLAGS="-march=native -flto=auto" LINKFLAGS="-march=native -flto=auto" OPT=1 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1`
-- [compileDebug.sh](compileDebug.sh) — debug: `scons -j8 OPT=0 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1`
+- [compileNormal.sh](compileNormal.sh) — optimized: `scons -j16 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 OPT=1 ARCH=avx2 CPPFLAGS="-march=native -flto=auto" LINKFLAGS="-march=native -flto=auto"`
+- [compileDebug.sh](compileDebug.sh) — debug: `scons -j16 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 OPT=0`
 - [compileASan.sh](compileASan.sh) — AddressSanitizer: adds `-fsanitize=address -fno-omit-frame-pointer` to both `CPPFLAGS` and `LINKFLAGS`, `OPT=0`.
 
 Compile with the debug configuration by default as it enables assert statements. Use the normal configuration for runtime relevant tasks (e.g. benchmarking). Add `VERBOSE=1` to see compiler/linker commands, `-c` to clean. All build variables and their descriptions: `scons -h`.
+
+### Performance-relevant configuration
+
+Performance is judged under the [compileNormal.sh](compileNormal.sh) configuration: `-O3` and `-DNDEBUG` (both added by `OPT=1` in [SGppConfigure.py:44](site_scons/SGppConfigure.py#L44), so no `assert`s), LTO (`-flto=auto`) and `-march=native`. We assume everybody running SG++ sets these flags for performance-relevant runs, so benchmarks must be done in this configuration as well.
+
+`ARCH=avx2` (adds `-mavx2 -mfma -mfpmath=sse`, [SGppConfigure.py:568-571](site_scons/SGppConfigure.py#L568-L571)) is chosen specifically for the benchmarking machine and might not be set in every environment running SG++. Since this machine is the benchmarking environment, optimizations from which this architecture benefits are worth considering, as long as they have no significant downsides on other architectures.
 
 ### After building
 
@@ -213,6 +219,7 @@ Compile with the debug configuration by default as it enables assert statements.
 
 ### Optional deps documented for `combigrid`
 
+- `USE_EIGEN=1` / `USE_ARMADILLO=1` (default off): enable the O(n log n) FFT (Waldvogel) computation of Clenshaw-Curtis weights in [clenshaw_curtis_quadrature_rule.cpp](combigrid/src/sgpp/combigrid/operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp); otherwise the O(n²) naive formula is used. Eigen wins if both are set (its FFT measured 1.2–3.7× faster). The flags are checked in [base/SConscript](base/SConscript), which adds `-DUSE_EIGEN`/`-DUSE_ARMADILLO` to the shared env; the code checks these macros, never `__has_include`.
 - `USE_DAKOTA=1` (default off): the SConstruct declares this as `sgpp::combigrid`-only, and [combigrid/doc/doxygen/install_dakota.doxy](combigrid/doc/doxygen/install_dakota.doxy) describes integration. There is currently **no `Dakota`/`.cpp`/`.hpp` use** in `combigrid/src/` — flag exists but is dormant. **Unverified** whether it is still meant to be wired up.
 
 ---
@@ -381,7 +388,7 @@ python3 -c "import pysgpp; print(pysgpp.SparseGrid)"
 - Requires SWIG ≥ 3.0.4 (developed with 4.2.0), Python 3 headers (`python3-dev`) and NumPy (base's `numpy.i`).
 - Every SCons run re-runs SWIG and recompiles the whole `pysgpp/pysgpp_wrap.cc` (~2 min): [pysgpp/SConscript](pysgpp/SConscript) deletes the wrapper on purpose because SCons' SWIG dependency tracking is unreliable.
 - All modules are wrapped into **one** flat module (`pysgpp_swig`, re-exported as `pysgpp`), built by [pysgpp/pysgpp.i](pysgpp/pysgpp.i) which `%include`s `base/build/pysgpp/base.i` first and `combigrid/build/pysgpp/combigrid.i` last. `pysgpp.i` also defines the global `%exception` (every `std::exception` → `RuntimeError`) and compiles the wrapper against each module's umbrella header.
-- Python examples: [combigrid/examples/python/](combigrid/examples/python/), 1:1 ports of the C++ examples in `examples/c++/global_interpolation/` and `examples/c++/quadrature/` (same file names). They are run by SCons with `RUN_PYTHON_EXAMPLES=1` (registered in [combigrid/SConscript](combigrid/SConscript), since `runExamples()` does not recurse into subfolders) or directly with `python3 <file>.py`.
+- Python examples: [combigrid/examples/python/](combigrid/examples/python/), 1:1 ports of the C++ examples in `examples/c++/global_interpolation/` and `examples/c++/quadrature/` (same file names). They are run by SCons with `RUN_PYTHON_EXAMPLES=1` (`runExamples()` walks `examples/` recursively) or directly with `python3 <file>.py`.
 - Comparing results with C++: operators use OpenMP `reduction(+)`, so with several threads the last ~1e-15 of a result varies between runs **in C++ as well**. Use `OMP_NUM_THREADS=1` for bit-identical C++/Python comparisons.
 
 ### Files

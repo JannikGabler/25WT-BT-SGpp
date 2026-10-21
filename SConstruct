@@ -183,9 +183,9 @@ vars.Add(BoolVariable("RUN_CPP_EXAMPLES", "Run all C++ examples", False))
 vars.Add(BoolVariable("RUN_PYTHON_EXAMPLES", "Run all Python examples", False))
 
 vars.Add(BoolVariable("USE_ARMADILLO", "Set if Armadillo should be used " +
-                                       "(only relevant for sgpp::optimization)", False))
+                                       "(relevant sgpp::combigrid and sgpp::optimization)", False))
 vars.Add(BoolVariable("USE_EIGEN", "Set if Eigen should be used " +
-                                   "(only relevant for sgpp::optimization)", False))
+                                   "(relevant for sgpp::combigrid and sgpp::optimization)", False))
 vars.Add(BoolVariable("USE_GMMPP", "Set if Gmm++ should be used " +
                                    "(only relevant for sgpp::optimization)", False))
 vars.Add(BoolVariable("USE_UMFPACK", "Set if UMFPACK should be used " +

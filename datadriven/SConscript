@@ -57,27 +57,27 @@ module.buildLibrary()
 module.generatePythonDocstrings()
 
 if env["ARCH"] == "mic":
-    module.buildExamples("examplesMIC")
-    module.runExamples("examplesMIC")
+    module.buildExamples("/examplesMIC/")
+    module.runExamples("/examplesMIC/")
 else:
-    module.buildExamples()
-    module.runExamples()
-    module.buildExamples("examplesPipeline")
+    module.buildExamples("/examples/*")
+    module.runExamples("/examples/")
+    module.buildExamples("/examplesPipeline/")
 if env["USE_OCL"]:
-    module.buildExamples("examplesOCL",
+    module.buildExamples("/examplesOCL/",
                          additionalExampleDependencies=["boost_program_options",
                                                         "boost_filesystem",
                                                         "boost_system"])
-    module.runExamples("examplesOCL")
+    module.runExamples("/examplesOCL/")
 if env.get("USE_MPI") and env["USE_OCL"]:
-    module.buildExamples("examplesMPI")
-    module.runExamples("examplesMPI")
+    module.buildExamples("/examplesMPI/")
+    module.runExamples("/examplesMPI/")
 if (env["ARCH"].lower() == "avx2"):
-    module.buildExamples("examplesAVX")
-    module.runExamples("examplesAVX")
+    module.buildExamples("/examplesAVX/")
+    module.runExamples("/examplesAVX/")
 if env["USE_HPX"]:
-    module.buildExamples("examplesHPX")
-    module.runExamples("examplesHPX")
+    module.buildExamples("/examplesHPX/")
+    module.runExamples("/examplesHPX/")
 
 
 module.runPythonTests()

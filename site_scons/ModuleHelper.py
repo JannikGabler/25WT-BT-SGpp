@@ -9,6 +9,74 @@ import os
 
 import Helper
 
+def parseGitignorePattern(pattern):
+  """Split a .gitignore-style pattern into (negated, directoryOnly, patternComponents).
+  """
+  negated = pattern.startswith("!")
+  if negated: pattern = pattern[1:]
+  directoryOnly = pattern.endswith("/")
+  pattern = pattern.rstrip("/")
+  # a leading or inner "/" anchors the pattern at the base folder, otherwise it matches at any depth
+  if "/" not in pattern: pattern = "**/" + pattern
+  return negated, directoryOnly, pattern.lstrip("/").split("/")
+
+def matchComponents(pathComponents, patternComponents):
+  """Check if all path components are matched by the pattern components.
+  """
+  if not patternComponents: return not pathComponents
+  if patternComponents[0] == "**":
+    # a trailing "**" matches one or more components, any other "**" zero or more
+    start = 1 if len(patternComponents) == 1 else 0
+    return any(matchComponents(pathComponents[i:], patternComponents[1:])
+               for i in range(start, len(pathComponents) + 1))
+  return (len(pathComponents) > 0 and
+          fnmatch.fnmatchcase(pathComponents[0], patternComponents[0]) and
+          matchComponents(pathComponents[1:], patternComponents[1:]))
+
+def mayMatchBelow(directoryComponents, patternComponents):
+  """Check if the pattern components may match the directory or a path below it.
+  """
+  for i, directoryComponent in enumerate(directoryComponents):
+    # the pattern matched a parent directory or may continue arbitrarily deep
+    if (i == len(patternComponents)) or (patternComponents[i] == "**"): return True
+    if not fnmatch.fnmatchcase(directoryComponent, patternComponents[i]): return False
+  return True
+
+def listSelectedFiles(subpath):
+  """List the files below the current (module) folder whose relative path is selected by subpath,
+  a .gitignore-style pattern or a list of them: "*", "?" and "[...]" match within one path
+  component, "**" matches any number of components, a leading or inner "/" anchors the pattern at
+  the module folder (otherwise it matches at any depth), a trailing "/" only matches directories,
+  and matching a directory matches all files below it. As in .gitignore files, later patterns take
+  precedence and a leading "!" deselects the matched files.
+  """
+  patterns = [parseGitignorePattern(pattern)
+              for pattern in ([subpath] if isinstance(subpath, str) else subpath)]
+  selectingPatterns = [patternComponents for negated, _, patternComponents in patterns
+                       if not negated]
+  selectedFiles = []
+
+  for currentFolder, subdirNames, fileNames in os.walk(".", topdown=True):
+    folderComponents = [] if currentFolder == "." else os.path.relpath(currentFolder).split(os.sep)
+    # only descend into subdirectories which may contain selected files
+    # (sorted for a deterministic order)
+    subdirNames[:] = sorted(subdirName for subdirName in subdirNames
+                            if any(mayMatchBelow(folderComponents + [subdirName], patternComponents)
+                                   for patternComponents in selectingPatterns))
+
+    for fileName in sorted(fileNames):
+      pathComponents = folderComponents + [fileName]
+      selected = False
+      for negated, directoryOnly, patternComponents in patterns:
+        # match the file itself or one of its parent directories (only the latter for directoryOnly)
+        nComponents = len(pathComponents) - 1 if directoryOnly else len(pathComponents)
+        if any(matchComponents(pathComponents[:n], patternComponents)
+               for n in range(1, nComponents + 1)):
+          selected = not negated
+      if selected: selectedFiles.append(os.path.join(*pathComponents))
+
+  return selectedFiles
+
 class Module(object):
   def __init__(self, moduleDependencies, additionalDependencies=[],
                additionalBoostTestDependencies=[], excludeFiles=[]):
@@ -155,61 +223,36 @@ class Module(object):
                               "python pysgpp/doxy2swig.py -o -c -q $SOURCE $TARGET")
       pydocTargetList.append(doxy2swig)
 
-  def buildExamples(self, exampleFolder="examples", additionalExampleDependencies=[], recursive=False):
-    """Build the examples.
+  def buildExamples(self, subpath="/examples/**", additionalExampleDependencies=[]):
+    """Build the examples selected by subpath (see listSelectedFiles).
     """
-    if not os.path.isdir(exampleFolder): return
-
     # set libraries
     exampleEnv = env.Clone()
     exampleEnv.AppendUnique(LIBS=[self.libname] +
                                  self.moduleDependencies + self.additionalDependencies +
                                  additionalExampleDependencies)
 
-    # # for each example
-    # for fileName in os.listdir(exampleFolder):
-    #   if fnmatch.fnmatch(fileName, "*.cpp"):
-    #     # source file
-    #     cpp = os.path.join(exampleFolder, fileName)
-    #     self.cpps.append(cpp)
-    #     example = exampleEnv.Program(source=cpp)
-    #     exampleEnv.Depends(example, self.libInstall)
-    #     exampleTargetList.append(example)
-    #   elif fnmatch.fnmatch(fileName, "*.hpp"):
-    #     # header file
-    #     hpp = os.path.join(exampleFolder, fileName)
-    #     self.hpps.append(hpp)
-    # collect files
-    if recursive:
-        fileList = []
-        for root, dirs, files in os.walk(exampleFolder):
-            for f in files:
-                fileList.append(os.path.join(root, f))
-    else:
-        fileList = [os.path.join(exampleFolder, f)
-                    for f in os.listdir(exampleFolder)]
+    # for each selected example file
+    for path in listSelectedFiles(subpath):
+      fileName = os.path.basename(path)
 
-    # for each example file
-    for path in fileList:
-        fileName = os.path.basename(path)
+      if fnmatch.fnmatch(fileName, "*.cpp"):
+        cpp = path
+        self.cpps.append(cpp)
+        example = exampleEnv.Program(source=cpp)
+        exampleEnv.Depends(example, self.libInstall)
+        exampleTargetList.append(example)
 
-        if fnmatch.fnmatch(fileName, "*.cpp"):
-            cpp = path
-            self.cpps.append(cpp)
-            example = exampleEnv.Program(source=cpp)
-            exampleEnv.Depends(example, self.libInstall)
-            exampleTargetList.append(example)
+      elif fnmatch.fnmatch(fileName, "*.hpp"):
+        hpp = path
+        self.hpps.append(hpp)
 
-        elif fnmatch.fnmatch(fileName, "*.hpp"):
-            hpp = path
-            self.hpps.append(hpp)
-
-  def runExamples(self, exampleFolder="examples", language="all"):
-    """Run the examples.
+  def runExamples(self, subpath="/examples/**", language="all"):
+    """Run the examples selected by subpath (see listSelectedFiles).
     """
     if language == "all":
       for language in ["cpp", "python"]:
-        self.runExamples(exampleFolder=exampleFolder, language=language)
+        self.runExamples(subpath=subpath, language=language)
       return
     elif language == "cpp":
       if not env["RUN_CPP_EXAMPLES"]: return
@@ -220,19 +263,14 @@ class Module(object):
     else:
       raise ValueError("Unsupported language for running examples.")
 
-    if not os.path.isdir(exampleFolder): return
-
-    for fileName in os.listdir(exampleFolder):
-      if fnmatch.fnmatch(fileName, fileNameFilter):
-        sourcePath = os.path.join(exampleFolder, fileName)
-
-        if language == "cpp":
-          sourcePath = os.path.splitext(sourcePath)[0]
-          cppExampleRun = env.CppExample(sourcePath + "_run", sourcePath)
-          cppTestRunTargetList.append(cppExampleRun)
-        elif language == "python":
-          pythonExampleRun = env.PythonExample(sourcePath + "_run", sourcePath)
-          pythonTestRunTargetList.append(pythonExampleRun)
+    for sourcePath in fnmatch.filter(listSelectedFiles(subpath), fileNameFilter):
+      if language == "cpp":
+        sourcePath = os.path.splitext(sourcePath)[0]
+        cppExampleRun = env.CppExample(sourcePath + "_run", sourcePath)
+        cppTestRunTargetList.append(cppExampleRun)
+      elif language == "python":
+        pythonExampleRun = env.PythonExample(sourcePath + "_run", sourcePath)
+        pythonTestRunTargetList.append(pythonExampleRun)
 
   def runPythonTests(self):
     """Run the Python tests.

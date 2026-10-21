@@ -23,6 +23,7 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
@@ -36,7 +37,41 @@ static sgpp::base::RandomNumberGenerator& randGen =
 
 static QuadRule* clenshawCurtisQuadRule = getClenshawCurtisQuadRule();
 
-namespace {}  // namespace
+namespace {
+
+/// Clenshaw-Curtis nodes on [0,1] in ascending order: x_i = (1 - cos(pi * i / (N-1))) / 2
+std::vector<double> ccNodes(const size_t nNodes) {
+  std::vector<double> nodes(nNodes);
+  const double denom = static_cast<double>(nNodes - 1);
+  for (size_t i = 0; i < nNodes; ++i) {
+    nodes[i] = (1.0 - std::cos(M_PI * static_cast<double>(i) / denom)) / 2.0;
+  }
+  return nodes;
+}
+
+/// Checks that the weights are symmetric, sum to 1 and integrate all monomials x^p with
+/// p < nNodes exactly over [0,1] (exactness degree of N-point Clenshaw-Curtis is >= N-1)
+void checkWeightsExactForPolynomials(const DataVector& weights, const size_t nNodes) {
+  BOOST_REQUIRE_EQUAL(weights.size(), nNodes);
+  const std::vector<double> nodes = ccNodes(nNodes);
+
+  for (size_t i = 0; i < nNodes; ++i) {
+    BOOST_CHECK_SMALL(weights[i] - weights[nNodes - 1 - i], 1e-14);
+  }
+
+  for (size_t p = 0; p < nNodes; ++p) {
+    double integralApprox = 0.0;
+    for (size_t i = 0; i < nNodes; ++i) {
+      integralApprox += weights[i] * std::pow(nodes[i], static_cast<double>(p));
+    }
+    const double integralExact = 1.0 / static_cast<double>(p + 1);
+    BOOST_CHECK_MESSAGE(std::abs(integralApprox - integralExact) <= 1e-13,
+                        "nNodes = " << nNodes << ", p = " << p << ": " << integralApprox
+                                    << " != " << integralExact);
+  }
+}
+
+}  // namespace
 
 BOOST_AUTO_TEST_CASE(zero_nodes) {
   const size_t nNodes = 0;
@@ -136,5 +171,68 @@ BOOST_AUTO_TEST_CASE(integrates_linear_function) {
     }
 
     BOOST_CHECK_CLOSE(integralApprox, 0.5, 1e-12);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(gen_weights_integrates_polynomials_exactly) {
+  // Covers odd and even N - 1 (relevant for the FFT path) and the doubling growth sizes
+  for (size_t nNodes = 2; nNodes <= 40; ++nNodes) {
+    checkWeightsExactForPolynomials(clenshawCurtisQuadRule->genWeights(nNodes), nNodes);
+  }
+  for (size_t nNodes : {63u, 64u, 65u, 129u}) {
+    checkWeightsExactForPolynomials(clenshawCurtisQuadRule->genWeights(nNodes), nNodes);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(naive_weights_integrate_polynomials_exactly) {
+  const quadrature_rules::ClenshawCurtisQuadRule rule;
+  for (size_t nNodes = 2; nNodes <= 40; ++nNodes) {
+    checkWeightsExactForPolynomials(rule.genWeightsNaive(nNodes), nNodes);
+  }
+}
+
+#ifdef SGPP_COMBIGRID_HAVE_FFT
+BOOST_AUTO_TEST_CASE(fft_weights_integrate_polynomials_exactly) {
+  const quadrature_rules::ClenshawCurtisQuadRule rule;
+  for (size_t nNodes = 2; nNodes <= 40; ++nNodes) {
+    checkWeightsExactForPolynomials(rule.genWeightsFFT(nNodes), nNodes);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(fft_weights_match_naive_weights) {
+  const quadrature_rules::ClenshawCurtisQuadRule rule;
+  for (size_t nNodes = 2; nNodes <= 300; ++nNodes) {
+    const DataVector naive = rule.genWeightsNaive(nNodes);
+    const DataVector fft = rule.genWeightsFFT(nNodes);
+    BOOST_REQUIRE_EQUAL(fft.size(), nNodes);
+    for (size_t i = 0; i < nNodes; ++i) {
+      BOOST_CHECK_MESSAGE(std::abs(fft[i] - naive[i]) <= 1e-14,
+                          "nNodes = " << nNodes << ", i = " << i << ": " << fft[i]
+                                      << " != " << naive[i]);
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(gen_weights_uses_fft) {
+  const quadrature_rules::ClenshawCurtisQuadRule rule;
+  for (size_t nNodes : {2u, 3u, 16u, 17u}) {
+    const DataVector weights = rule.genWeights(nNodes);
+    const DataVector fft = rule.genWeightsFFT(nNodes);
+    BOOST_REQUIRE_EQUAL(weights.size(), fft.size());
+    for (size_t i = 0; i < nNodes; ++i) {
+      BOOST_CHECK_EQUAL(weights[i], fft[i]);
+    }
+  }
+}
+#endif
+
+BOOST_AUTO_TEST_CASE(gen_weights_inplace_matches_gen_weights) {
+  for (size_t nNodes = 0; nNodes <= 33; ++nNodes) {
+    const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
+    std::vector<double> out(nNodes, -1.0);
+    clenshawCurtisQuadRule->genWeightsInplace(out);
+    for (size_t i = 0; i < nNodes; ++i) {
+      BOOST_CHECK_EQUAL(out[i], weights[i]);
+    }
   }
 }

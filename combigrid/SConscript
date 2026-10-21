@@ -9,16 +9,20 @@ Import("*")
 
 moduleDependencies = ["sgppbase"]
 additionalDependencies = []
+# Optional FFT backend for the Clenshaw-Curtis weights (Eigen is header-only, preferred if both set)
+if env["USE_ARMADILLO"] and not env["USE_EIGEN"]:
+  additionalDependencies += ["armadillo"]
 
 module = ModuleHelper.Module(moduleDependencies, additionalDependencies)
 
 module.scanSource()
 module.buildLibrary()
 module.generatePythonDocstrings()
-module.buildExamples(recursive=True)
+
+module.buildExamples()
 module.runExamples()
-# Python examples live in a subfolder (runExamples does not recurse); run with RUN_PYTHON_EXAMPLES=1.
-module.runExamples(exampleFolder="examples/python", language="python")
+
 module.buildBoostTests()
 module.runBoostTests()
+
 module.checkStyle()
