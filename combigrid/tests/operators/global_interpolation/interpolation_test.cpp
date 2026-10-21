@@ -16,6 +16,7 @@
 #include <boost/test/unit_test_suite.hpp>
 
 #include <omp.h>
+#include <algorithm>
 #include <cmath>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
@@ -48,6 +49,17 @@ SourceFunc genContantSourceFunction(const double value) {
 */
 SourceFunc genLinearSourceFunction(const double a, const double b) {
   return SourceFunc([a, b](const DataVector& point) { return a * point[0] + b; });
+}
+
+/*
+ max_{x in [lo, hi]} |a * x + b|
+
+ Reference scale for the interpolation error of linear functions: rounding errors are amplified
+ by the Lebesgue constant and thus bounded relative to max |f|, not relative to f(x). A relative
+ check (BOOST_CHECK_CLOSE) fails spuriously whenever a sample lands close to the root of f.
+*/
+double maxAbsOfLinearFunc(const double a, const double b, const double lo, const double hi) {
+  return std::max(std::fabs(a * lo + b), std::fabs(a * hi + b));
 }
 
 /*
@@ -144,13 +156,14 @@ BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D_interpolation) {
     const CompleteSGGenInstr genInstr(maxLvl, nDim);
     const SourceFunc sourceFunc = genLinearSourceFunction(a, b);
     const SparseGrid sg(genInstr);
+    const double fMax = maxAbsOfLinearFunc(a, b, 0.0, 1.0);
 
     // mehrere zufällige Testpunkte
     for (size_t s = 0; s < 20; ++s) {
       DataVector pt = genRandomPointInBounds(nDim);
       const double expected = a * pt[0] + b;
       const double result = interpolate(sourceFunc, pt, sg);
-      BOOST_CHECK_CLOSE(result, expected, 1e-8);
+      BOOST_CHECK_SMALL(result - expected, 1e-10 * fMax);
     }
   }
 }
@@ -172,12 +185,13 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_interpolation) {
 
     const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
     const SparseGrid sg(genInstr);
+    const double fMax = maxAbsOfLinearFunc(aCoeff, bCoeff, a, b);
 
     for (size_t s = 0; s < 20; ++s) {
       DataVector pt = genRandomPointInBounds(nDim, {{a, b}});
       const double expected = aCoeff * pt[0] + bCoeff;
       const double result = interpolate(sourceFunc, pt, sg);
-      BOOST_CHECK_CLOSE(result, expected, 1e-8);
+      BOOST_CHECK_SMALL(result - expected, 1e-10 * fMax);
     }
   }
 }
@@ -273,13 +287,14 @@ BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D_interpolation) {
     genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
     const SourceFunc sourceFunc = genLinearSourceFunction(a, b);
     const SparseGrid sg(genInstr);
+    const double fMax = maxAbsOfLinearFunc(a, b, 0.0, 1.0);
 
     // mehrere zufällige Testpunkte
     for (size_t s = 0; s < 20; ++s) {
       DataVector pt = genRandomPointInBounds(nDim);
       const double expected = a * pt[0] + b;
       const double result = interpolate(sourceFunc, pt, sg);
-      BOOST_CHECK_CLOSE(result, expected, 1e-10);
+      BOOST_CHECK_SMALL(result - expected, 1e-12 * fMax);
     }
   }
 }
@@ -302,12 +317,13 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_interpolation) {
 
     const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
     const SparseGrid sg(genInstr);
+    const double fMax = maxAbsOfLinearFunc(aCoeff, bCoeff, a, b);
 
     for (size_t s = 0; s < 20; ++s) {
       DataVector pt = genRandomPointInBounds(nDim, {{a, b}});
       const double expected = aCoeff * pt[0] + bCoeff;
       const double result = interpolate(sourceFunc, pt, sg);
-      BOOST_CHECK_CLOSE(result, expected, 1e-10);
+      BOOST_CHECK_SMALL(result - expected, 1e-12 * fMax);
     }
   }
 }
