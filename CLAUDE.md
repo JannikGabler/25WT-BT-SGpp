@@ -102,7 +102,7 @@ tools/
 - `sgpp::combigrid::SparseGrid` — [combigrid/src/sgpp/combigrid/grids/sparse_grid.hpp](combigrid/src/sgpp/combigrid/grids/sparse_grid.hpp). The top-level container: `nDim`, list of `TensorGridCTData`, optional shared `SGGenInstr`. Constructible directly from an `SGGenInstr`.
 - `sgpp::combigrid::TensorGrid` — [combigrid/src/sgpp/combigrid/grids/tensor_grid.hpp](combigrid/src/sgpp/combigrid/grids/tensor_grid.hpp). Anisotropic Cartesian grid: per-dim counts + flat per-dim node lists, row-major (first-dim-fastest) linear indexing.
 - `sgpp::combigrid::TensorGridCTData` — [combigrid/src/sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp](combigrid/src/sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp). `{LvlMI mi, CTCoeffType coefficient, TensorGrid tensorGrid}`.
-- `sgpp::combigrid::SGGenInstr` — [combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp](combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp). Abstract generator: holds domain, per-dim `NodeGenFunc*`, per-dim `Lvl2GPCntFunc`, boundary-level offset; subclasses implement `genMIVec()` / `genMIVecWithCoeff()` / `clone()`.
+- `sgpp::combigrid::SGGenInstr` — [combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp](combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp). Abstract generator: holds domain, per-dim `NodeGenFunc*`, per-dim `Lvl2GPCntFunc`, boundary-level offset; subclasses implement `genFullMIVec()` / `genReducedMIVec()` (and their `…WithCoeffs()` variants) / `clone()`.
 - Concrete generators:
   - `CompleteSGGenInstr(maxLvl, nDim)` — standard `|ℓ|₁ ≤ maxLvl` scheme; uses the closed-form CT coefficient formula `(−1)^q · C(d−1, q)` where `q = maxLvl − |ℓ|₁`, so zero-coefficient MIs are never materialized.
   - `MIVecSGGenInstr(const LvlMIVec&)` — external MI set (entry point for adaptive schemes). Stores a **reference** to the input vector (caller keeps it alive). On construction it: (1) computes the downwards closure via Pareto-maxima bounding-box scan, (2) calls `tools::computeCTCoeffs()` (dimension-separated O(|I|·d) algorithm), (3) drops zero-coefficient MIs. Pass `assumeDownwardsClosedness=true` to skip step 1 when the input is already closed (thesis §4.5.5; existence of this flag is unverified in actual .hpp — check before using).
@@ -314,10 +314,10 @@ There is **no pre-commit hook** in the repo. All style/lint enforcement is via t
 ## 8. Gotchas
 
 - The [combigrid/src/sgpp/combigrid/](combigrid/src/sgpp/combigrid/) tree contains many `*.hpp.lint` / `*.cpp.lint` / `*.os` / `*.gcda` files with **no** matching `.hpp`/`.cpp`. Those are stale artifacts left after files were renamed/removed and are not built. Do not resurrect them from `.lint` — they will be regenerated on next build.
-- `MIVecSGGenInstr` **references** its input `LvlMIVec` — the caller must keep it alive for the lifetime of the instruction and any `SparseGrid` derived from it ([multiindex_vector_sg_gen_instruction.hpp:44](combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp#L44)). `clone()` copies the reference, so the clone stored inside a `SparseGrid` dangles too if the vector dies (only matters if `genMIVec*()` is called on it). The Python bindings keep the vector alive automatically (§11).
+- `MIVecSGGenInstr` **references** its input `LvlMIVec` — the caller must keep it alive for the lifetime of the instruction and any `SparseGrid` derived from it ([multiindex_vector_sg_gen_instruction.hpp:44](combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp#L44)). `clone()` copies the reference, so the clone stored inside a `SparseGrid` dangles too if the vector dies (only matters if `gen*MIVec*()` is called on it). The Python bindings keep the vector alive automatically (see [python-bindings.md](combigrid/claude/python-bindings.md)).
 - `SparseGrid::operator==` is `O(nTG²)` (order-insensitive set comparison) — avoid in loops.
 - The umbrella header [sgpp_combigrid.hpp](combigrid/src/sgpp_combigrid.hpp) contains only the public API (internal helpers such as bounding boxes, lookups, scratch buffers are not included). Include specific headers for anything internal.
-- The Python bindings are part of the flat `pysgpp` module (no `pysgpp.combigrid` submodule): `pysgpp.SparseGrid`, `pysgpp.quadrature`, `pysgpp.computeCTCoeffs` (C++ namespaces such as `tools::` are dropped). See §11 for limitations (e.g. Python source functions run serially under the GIL, C++ `assert`s abort the interpreter in `OPT=0` builds).
+- The Python bindings are part of the flat `pysgpp` module (no `pysgpp.combigrid` submodule): `pysgpp.SparseGrid`, `pysgpp.quadrature`, `pysgpp.computeCTCoeffs` (C++ namespaces such as `tools::` are dropped). See [combigrid/claude/python-bindings.md](combigrid/claude/python-bindings.md) for limitations (e.g. Python source functions run serially under the GIL, C++ `assert`s abort the interpreter in `OPT=0` builds).
 - `constants::source_func::USE_CACHE = false` in [constants.hpp](combigrid/src/sgpp/combigrid/constants.hpp) — the `SourceFunc` cache exists but is not yet properly implemented.
 - Parallelism thresholds in [constants.hpp](combigrid/src/sgpp/combigrid/constants.hpp) gate concurrency per subsystem: `mi_vec::CWM_MIN_MIVEC_LENGTH_FOR_CONCURRENCY = 10000` (component-wise-max), `ct_coefficients::MIN_MIS_FOR_CONCURRENCY = 1000`. Tune before benchmarking if working with small or unusually large MI sets.
 - `setBoundaryLevelOffset(0)` enables boundary nodes in every dimension for every tensor grid (ℓ[k] ≥ 0 is always true). `setBoundaryLevelOffset(1)` (the SGMK default) adds boundary only when ℓ[k] ≥ 1, skipping the coarsest level. Very large values effectively disable boundary entirely.
@@ -376,97 +376,19 @@ source code because the thesis predates minor refactors.
 
 ## 11. Python bindings (pysgpp)
 
-### Building and running
+Full reference (build details, fast check without SCons, exposed / deliberately not exposed API,
+limitations, typemap and ownership decisions, how to extend, how to repair after C++ refactors):
+**[combigrid/claude/python-bindings.md](combigrid/claude/python-bindings.md)**. Read it before
+changing the bindings or a bound C++ API, and when answering questions about the Python API.
 
-```bash
-scons -j8 OPT=0 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 SG_PYTHON=1 COMPILE_BOOST_TESTS=0 RUN_PYTHON_TESTS=0
-export LD_LIBRARY_PATH=<repo>/lib:$LD_LIBRARY_PATH
-export PYTHONPATH=<repo>/lib:<repo>/lib/pysgpp:$PYTHONPATH
-python3 -c "import pysgpp; print(pysgpp.SparseGrid)"
-```
-
-- Requires SWIG ≥ 3.0.4 (developed with 4.2.0), Python 3 headers (`python3-dev`) and NumPy (base's `numpy.i`).
-- Every SCons run re-runs SWIG and recompiles the whole `pysgpp/pysgpp_wrap.cc` (~2 min): [pysgpp/SConscript](pysgpp/SConscript) deletes the wrapper on purpose because SCons' SWIG dependency tracking is unreliable.
-- All modules are wrapped into **one** flat module (`pysgpp_swig`, re-exported as `pysgpp`), built by [pysgpp/pysgpp.i](pysgpp/pysgpp.i) which `%include`s `base/build/pysgpp/base.i` first and `combigrid/build/pysgpp/combigrid.i` last. `pysgpp.i` also defines the global `%exception` (every `std::exception` → `RuntimeError`) and compiles the wrapper against each module's umbrella header.
-- Python examples: [combigrid/examples/python/](combigrid/examples/python/), 1:1 ports of the C++ examples in `examples/c++/global_interpolation/` and `examples/c++/quadrature/` (same file names). They are run by SCons with `RUN_PYTHON_EXAMPLES=1` (`runExamples()` walks `examples/` recursively) or directly with `python3 <file>.py`.
-- Comparing results with C++: operators use OpenMP `reduction(+)`, so with several threads the last ~1e-15 of a result varies between runs **in C++ as well**. Use `OMP_NUM_THREADS=1` for bit-identical C++/Python comparisons.
-
-### Files
-
-| file | contents |
-|---|---|
-| [combigrid/build/pysgpp/combigrid.i](combigrid/build/pysgpp/combigrid.i) | entry point: `%shared_ptr` declarations, container templates, generation instructions, grids, operators, CT coefficients |
-| [combigrid/build/pysgpp/MultiIndex.i](combigrid/build/pysgpp/MultiIndex.i) | `MI<unsigned int>` → `LvlMI` (+ `GPMI` alias), `MIVec<unsigned int>` → `LvlMIVec` |
-| [combigrid/build/pysgpp/Functions.i](combigrid/build/pysgpp/Functions.i) | growth functions (`Lvl2GPCntFunc`), `NodeGenFunc` and its getters |
-| [combigrid/build/pysgpp/SourceFunc.i](combigrid/build/pysgpp/SourceFunc.i) | `SourceFunc` from a Python callable; GIL/exception machinery; `COMBIGRID_SOURCE_FUNC_EXCEPTION` |
-| [combigrid/src/sgpp_combigrid.hpp](combigrid/src/sgpp_combigrid.hpp) | umbrella header the wrapper is compiled against (exactly the bound headers) |
-
-### What is exposed
-
-Names are identical to C++; argument order and defaults are unchanged.
-
-- **Multi-indices**: `LvlMI` / `GPMI` (constructors `()`, `(count)`, `(count, value)`, `(list)`; `toLinearIndex`, `productofElems`, `sumOfElems`, `nDim`, `at`, `front`, `back`, `empty`, `size`, `capacity`, `reserve`, `shrink_to_fit`, `clear`, `push_back`, `pop_back`, `resize`, `swap`; `== != < <= > >=`, `+ - += -=`; `len`, `[]`, `str`). `LvlMIVec` (constructors `(nDim, nMI)`, `(list of lists)`, `(list of LvlMI)`; `nDim`, `nMI`, `miVec(i, d)`, `setMI`, `moveMI`, `resize`, `shrink_to_fit`, `isDownwardsClosed`, `downwardsClosure`, `componentWiseMax`, `paretoMaxima`; `len`, `[]`).
-- **Functions**: `SourceFunc(callable)` with `evaluate`, `evaluateNormalizedInPlace`, `evaluateNormalizedOutOfPlace`; `linearLvl2GPCntFunction`, `doublingLvl2GPCntFunction`; `NodeGenFunc` (`genNodes`, `genNodesWithBoundary`, `genNodesWithoutBoundary`, `id`, `==`) and `getEquidistantNodeGenFunc`, `getClenshawCurtisNodeGenFunc`, `getFirstTypeChebyshevNodeGenFunc`, `getSecondTypeChebyshevNodeGenFunc`.
-- **Generation instructions**: `SGGenInstr` (all getters/setters, `genMIVec`, `genMIVecWithCoeff` → tuple `(LvlMIVec, tuple of ints)`, `clone`, `resize`, `getVolumeOfDomain`, `getUniqueNodeGenFuncs`), `CompleteSGGenInstr(maxLvl, nDim)` + `setMaxLvl`, `MIVecSGGenInstr(miVec)`.
-- **Grids**: `SparseGrid(genInstr)` (`nDim`, `nTG`, `getTensorGrid(idx)`, `getTensorGrid(LvlMI)` → `TensorGridCTData` or `None`, `getTensorGrids` → tuple of copies, `getGenInstr`, `getMaxTGGPCnt`, `getMaxTGSumOverGPCntsPerDim`, `==`, `len`, `[]`, iteration); read-only `TensorGridCTData` (`mi`, `coefficient`, `tensorGrid`, `==`); `TensorGrid` (constructors, `nDim`, `nGP`, `getGPCntPerDim`, `getNodesPerDim`, all `getGridPoint` / `getGridPoints` overloads, `getGridPointAndMI` (out-parameter overload or tuple `(DataVector, LvlMI)`), `==`).
-- **Operators / tools**: `interpolate`, `interpolateLinear`, `quadrature`, `computeCTCoeffs`, `computeCTCoeffSingle` (→ tuple of ints).
-- **Helper container types** (base naming convention): `UnsignedIntVector`, `UnsignedIntVectorVector`, `LvlMIVector`, `DoubleDoublePair`, `HyperCubeArea`, `NodeGenFuncVector`, `TensorGridCTDataVector`. Plain Python lists/tuples are accepted wherever these are expected.
-
-C++ → Python translation:
-
-| C++ | Python |
-|---|---|
-| `double f(const DataVector& p)`; `SourceFunc sf(f)` | `def f(p): ...` (`p` is a **tuple** of floats); `sf = pysgpp.SourceFunc(f)` |
-| `genInstr.setDomain({-1, 1})` | `genInstr.setDomain((-1, 1))` |
-| `HyperCubeArea{{0, 1}, {-1, 1}}` | `[(0, 1), (-1, 1)]` |
-| `LvlMIVec mis{{0, 5, 0}, {0, 4, 1}}` | `pysgpp.LvlMIVec([[0, 5, 0], [0, 4, 1]])` |
-| `LvlMI mi{1, 2}` | `pysgpp.LvlMI([1, 2])` |
-| `DataVector point{0.1, 0.2}` | `pysgpp.DataVector([0.1, 0.2])` |
-| `setLvl2GPCntFunc(doublingLvl2GPCntFunction)` | `setLvl2GPCntFunc(pysgpp.doublingLvl2GPCntFunction)` |
-| `tools::computeCTCoeffs(mis)` | `pysgpp.computeCTCoeffs(mis)` |
-
-### Deliberately not exposed
-
-| C++ API | reason |
-|---|---|
-| `SparseGrid(nDim)`, `SparseGrid(nDim, nTG)`, `addTensorGrid`, `setTensorGrid`, `setGenInstr`, `setMaxTGGPCnt`, `setMaxTGSumOverGPCntsPerDim` | manual assembly is extension work; a grid without instruction or with unset size caches crashes the operators |
-| `QuadRule`, `InterpolationMethod` and their implementations/getters, `NodeGenFunc::getQuadRule` / `getInterpolationMethod`, concrete `node_gen_funcs::*` classes | extension machinery; node types are chosen via the getters, quadrature/interpolation rules are selected automatically |
-| `global_interpolation::*`, `linear_interpolation::*`, `quadrature_operator::*` | internal; because SWIG flattens namespaces they would otherwise be merged into the public `interpolate` / `quadrature` as extra overloads |
-| `tools::computeCTCoeffsNaive` | reference implementation for tests |
-| `constants::*` | `constexpr`, cannot be changed at runtime |
-| everything else in `misc::` / `tools::` (lookups, bounding boxes, caches, scratch buffers, concurrency, math/hash helpers, benchmarker) | internal |
-| iterators, rvalue-reference overloads, `std::initializer_list` constructors, conversion operators, `MI::data/insert/erase`, `MIVec::data/lookup/clearCachedValues`, `MIVecElemProxy`, `MI` operators mixing `MI` and `std::vector` | no Python meaning / covered by other overloads |
-| directors (Python subclasses of `SGGenInstr`, `NodeGenFunc`, ...) | extension points; overrides would be called from OpenMP threads |
-
-### Limitations (cannot be wrapped faithfully)
-
-- **`Lvl2GPCntFunc` is a context-free C function pointer.** The two predefined functions are exposed as function-pointer constants (`%callback`); they can be passed and compared (`==`) but **not called** from Python. Custom growth functions written in Python are impossible without changing the C++ type (e.g. to `std::function`).
-- **Python source functions are evaluated serially** (every call acquires the GIL), so OpenMP does not speed them up.
-- **C++ `assert`s abort the Python process** in `OPT=0` builds (e.g. `interpolate` with a point of the wrong dimension); with `OPT=1` they are compiled out (undefined behaviour). The bindings add no extra validation. Likewise, C++ accessors without bounds checks stay unchecked (`MIVec::setMI`, `miVec(i, d)`, `SparseGrid.getTensorGrid(idx)`, `TensorGrid.getGridPoint(idx)`); only the Python-added `[]` operators raise `IndexError`.
-- `SparseGrid.getGenInstr()` returns an `SGGenInstr` proxy (no downcast), and SWIG drops the `const` of `shared_ptr<const SGGenInstr>`: setters called on it modify the instruction the sparse grid's operators use.
-- `LvlMI` comparisons are the C++ **component-wise partial order**, not lexicographic (`sorted()` on multi-indices is meaningless); `LvlMI` is unhashable.
-
-### Non-obvious typemap and ownership decisions
-
-1. **`SourceFunc` from a Python callable** ([SourceFunc.i](combigrid/build/pysgpp/SourceFunc.i)), modelled on base's `OperationQuadratureMC.i` (reuses its `PyObject *pyfunc` typemap; callable receives a tuple).
-   - `swig -threads` releases the GIL around every wrapped call and the operators call the function from OpenMP threads → every call into Python (and every `Py_INCREF`/`Py_DECREF`) happens under `PyGILState_Ensure`.
-   - A Python exception cannot cross an OpenMP region: the first exception is stored (`PyErr_Fetch`), the evaluation returns NaN, later evaluations return NaN without calling Python, and `COMBIGRID_SOURCE_FUNC_EXCEPTION(function)` re-raises it after the C++ call returns. The `SourceFunc` is reusable afterwards.
-   - `SourceFunc::func` is private, so the wrapper keeps a registry `SourceFunc*` → holder (entry removed in the `%extend` destructor).
-2. **Keep-alive references (`_owner`)**: proxies returned by reference into another object store their owner's proxy via `%pythonappend` — `SparseGrid.getTensorGrid` (both overloads), `SparseGrid.getGenInstr`, `SGGenInstr.clone`, `TensorGrid.getGPCntPerDim` / `getNodesPerDim`, `TensorGridCTData.mi` / `tensorGrid` (re-implemented as Python properties, since `%pythonappend` does not apply to data members). `MIVecSGGenInstr` stores `_miVec`, `SparseGrid` stores `_genInstr` (the clone inside the grid references the caller's `LvlMIVec`). Base does **not** do this (e.g. `Grid.getStorage()` can dangle). Verified with valgrind: 0 errors; a control run with `_owner` removed produces invalid reads.
-3. **`%shared_ptr` only for `SGGenInstr`, `CompleteSGGenInstr`, `MIVecSGGenInstr`.** `MIVec::componentWiseMax` / `paretoMaxima` return copies instead (helpers `*Copy` renamed to the C++ name), because `%shared_ptr(std::vector<size_t>)` would change how base's `SizeVector` is wrapped everywhere.
-4. **`MI::operator+=` / `-=` are not wrapped directly**: SWIG would return a second, non-owning proxy that replaces the owning one on `a += b`, deleting the object. `__iadd__` / `__isub__` are Python methods calling `__iaddImpl` / `__isubImpl` and returning `self`.
-5. **Pairs returned by value** (`genMIVecWithCoeff`, `getGridPointAndMI(idx)`) use custom `out` typemaps producing tuples: `std_pair.i` cannot instantiate `pair<MIVec, ...>` because `MIVec` is not copy-assignable (`const` member).
-6. **`std::vector<Lvl2GPCntFunc>`** (`setLvl2GPCntFuncs` / `getLvl2GPCntFuncs`) uses custom `in`/`out` typemaps: `std_vector.i` does not compile for function-pointer elements.
-7. **`SparseGrid::getTensorGrid(const LvlMI&)`** returns a private `const_iterator` typedef (does not compile in the wrapper). Replaced by the `%extend` helper `getTensorGridByMI`, `%rename`d to `getTensorGrid`. An `%ignore` with a given signature also hides an `%extend` method of the same name and signature — hence the helper name + `%rename` pattern.
-8. Node getters return raw pointers to static singletons without `%newobject` → non-owning proxies.
-
-### How to extend the bindings
-
-1. Apply the scoping rule: bind what a default user needs to build, configure, evaluate and query a surrogate; skip extension machinery unless it appears in a signature a default user calls.
-2. Add the header to [sgpp_combigrid.hpp](combigrid/src/sgpp_combigrid.hpp) — otherwise the generated `pysgpp_wrap.cc` does not compile (undeclared identifiers).
-3. Put `%ignore` / `%rename` / `%extend` / `%pythonappend` / `%exception` directives **before** the `%include "combigrid/src/..."` of the header (features only apply to declarations parsed afterwards). New `%shared_ptr` declarations go to the top of `combigrid.i`, before any class that uses the type.
-4. Instantiate container/templates with `%template` using base's naming (`<Elem>Vector`, `<A><B>Pair`) after the element type is declared. Check [base/build/pysgpp/base.i](base/build/pysgpp/base.i) first — an existing instantiation must not be duplicated (all modules share one namespace).
-5. Ownership: a method returning a reference/pointer into `self` → `%pythonappend ... %{ val._owner = self %}`; a constructor/setter that stores a reference to an argument → keep the argument alive on `self`.
-6. Any new wrapped function that evaluates a `SourceFunc` (with the `SourceFunc` as **first** argument) must get `COMBIGRID_SOURCE_FUNC_EXCEPTION(<qualified name>)` before its `%include`; otherwise Python exceptions are turned into NaN and only surface at the next checked call.
-7. SWIG gotchas: `%pythoncode` blocks containing `#` comments must use `%{ ... %}` (with `{ ... }` SWIG parses `#` lines as preprocessor directives); new public free-function names must not clash with other modules' names; internal helper namespaces must be `%ignore`d.
-8. Rebuild with the command above and check the log for SWIG warnings mentioning `combigrid/` (the remaining expected ones are 503 for `MI`'s friend operators and 389 for `operator[]`, both handled by `%extend`). Inspect the generated proxies in `lib/pysgpp/pysgpp_swig.py`, run [combigrid/examples/python/](combigrid/examples/python/), and comment every non-obvious directive in the `.i` file.
+Essentials:
+- The SWIG interface files live in [combigrid/build/pysgpp/](combigrid/build/pysgpp/) (entry point `combigrid.i`). All SG++ modules are wrapped into **one** flat module `pysgpp`: C++ namespaces are dropped, names are identical to C++.
+- Build and run:
+  ```bash
+  scons -j8 OPT=0 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 SG_PYTHON=1 COMPILE_BOOST_TESTS=0 RUN_PYTHON_TESTS=0
+  export LD_LIBRARY_PATH=<repo>/lib:$LD_LIBRARY_PATH
+  export PYTHONPATH=<repo>/lib:<repo>/lib/pysgpp:$PYTHONPATH
+  ```
+  Verify with the Python examples in [combigrid/examples/python/](combigrid/examples/python/).
+- **C++ API changes can break the bindings even when the C++ build and tests pass.** SWIG wraps every declaration of the headers in [sgpp_combigrid.hpp](combigrid/src/sgpp_combigrid.hpp) and flattens namespaces. New internal helpers in those headers therefore must be `%ignore`d. Methods moved into an unwrapped base class (e.g. `SparseGridBase`) and types without SWIG typemap (`std::unique_ptr`, `std::span`, iterators) need `%extend` forwarders. After such changes, rebuild with `SG_PYTHON=1`.
+- **Never run clang-format on `.i` files** (also not via editor format-on-save): it rewrites `%include` to `% include` etc., and SWIG fails with `Unknown SWIG preprocessor directive`.
