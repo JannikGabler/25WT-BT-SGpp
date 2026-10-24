@@ -45,8 +45,11 @@ scons -j16 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 OPT=1 ARCH=avx2 USE_EIGEN=1 USE_ARM
 = `perf.py build normal`. Acceptance-relevant measurements run with **16 threads**
 (`OMP_PROC_BIND=close OMP_PLACES=threads`); 1-thread runs (`OMP_PLACES={4}`) are diagnostics
 (micro-benchmarks). Machine: the owner's laptop (Ryzen 7 5825U, 8 cores / 16 threads, 12 GB,
-`performance` governor, boost **on**, always on AC), otherwise idle, one benchmark at a time.
-`perf.py` sets the OpenMP environment itself.
+`performance` governor and platform profile, **CPU boost off** (`/sys/devices/system/cpu/cpufreq/boost
+= 0`, all cores at the nominal 2.0 GHz; owner's decision on 2026-10-24 for reproducible numbers),
+always on AC), otherwise idle, one benchmark at a time. `envcheck` refuses to measure when boost
+or the platform profile differ from the baseline (boost is re-enabled by a reboot unless the
+owner made the setting persistent). `perf.py` sets the OpenMP environment itself.
 
 Changing compiler flags or the build configuration is a work package of its own and needs the
 owner's approval.
@@ -89,7 +92,8 @@ with operators `quad` (quadrature), `interp` (global interpolation at `pN` point
 then quadrature); grids `sg` (`SparseGrid`), `dsg` (`DeltasSparseGrid`); integrands `exp`
 (cheap: one `exp` per evaluation, exposes framework overhead), `uq` (forward-UQ integrand of the
 thesis, Chapter 7), `sin` (product of sines, as the older benchmarks). All grids use the doubling
-growth. Sizes: 0.1–4 s per pipeline at 16 threads; one pass over all 38 cases ≈ 50 s. **High
+growth. Sizes (chosen with boost on): 0.05–7 s per pipeline at 16 threads with boost off; one
+pass over all 38 cases ≈ 70 s. **High
 dimensions have priority** (they run longest): rank by absolute time saved.
 
 Warm runs: every pipeline runs `--warmups` times before the measured samples (first runs pay
@@ -102,7 +106,8 @@ processes (order alternating between rounds and cases, so thermal drift hits bot
 each with `--warmups` + `--samples`. The dominant noise is **process to process** (memory
 layout, thread placement; some cases are bimodal by up to ~9 %), not sample to sample — so the
 defaults use many short processes: e2e 5 rounds × (1 warm-up + 1 sample) at 16 threads (full
-suite ≈ 15 min), micro 5 rounds × 2 samples at 1 thread.
+suite ≈ 23 min; work sessions compare the relevant cases only), micro 5 rounds × 2 samples at
+1 thread.
 
 Reported per case and metric: medians of A and B, **speedup = median(A) / median(B)** (> 1: B is
 faster; computed as geometric mean of the per-round ratios) and a 95 % t-confidence interval of
@@ -197,11 +202,11 @@ It must compile against the unoptimized code (it is part of the "before" snapsho
   `LD_LIBRARY_PATH`; they stay valid while the working tree changes.
 - The Boost tests seed from the clock; run them several times (`--repeat 3`).
 - The repository path contains spaces; quote paths in shell commands.
-- **The laptop throttles under sustained full load**, and how much depends on the conditions
-  (room temperature, surface, preceding load): in the setup session, identical binaries and
-  settings ran a 26-minute A/B 1.6x slower at noon than two days earlier past midnight, while
-  short runs and 1-thread runs were unaffected; a 3-minute A/B lost ~8 % after the first round.
-  A/B comparisons stay valid (A and B are interleaved per case and see the same state); absolute
-  numbers are only comparable when `calibrate` ratios are near 1. A/B reports list the round
-  durations, which show the throttling. Keep the conditions similar between sessions (lid open,
-  hard surface).
+- **Throttling (why boost is off)**: with boost on, the laptop throttled under sustained full
+  load depending on the conditions (setup session: a 26-minute A/B ran 1.6x slower at noon than
+  two days earlier at night; short and 1-thread runs were unaffected). With boost off, burst and
+  sustained throughput are equal (`baseline/calibration.json`: 703 vs. 705 ms). A/B comparisons
+  are valid either way (A and B are interleaved per case); absolute numbers are only comparable
+  when `calibrate` ratios are near 1, and the round durations in A/B reports would show
+  throttling. If boost is on after a reboot, `envcheck` fails: disable it again
+  (`echo 0 | sudo tee /sys/devices/system/cpu/cpufreq/boost`) — ask the owner.

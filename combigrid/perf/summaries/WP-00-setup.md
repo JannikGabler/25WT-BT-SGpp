@@ -2,8 +2,9 @@
 
 Status: DONE (setup; committed with the owner's permission) · Date: 2026-10-24 · Base commit: 84299eeca
 Recommendation: accept — infrastructure only, no change to the module's source code
-Machine: `perf.py calibrate` reference recorded in `baseline/calibration.json` (burst 418 ms /
-sustained 427 ms for `quad/sg/equi-exp/b0/d5/L10` at 16 threads)
+Machine: CPU boost off (since the re-recording, see the last section); `perf.py calibrate`
+reference in `baseline/calibration.json`: burst 703 ms / sustained 705 ms for
+`quad/sg/equi-exp/b0/d5/L10` at 16 threads
 
 ## Change
 - Measurement infrastructure: dependency-free harness, 38 end-to-end pipelines with phase timings
@@ -36,11 +37,13 @@ sustained 427 ms for `quad/sg/equi-exp/b0/d5/L10` at 16 threads)
   1 and 16 threads on the baseline snapshot and on the final normal build.
 
 ## Benchmarks
-- Baseline (16 threads): sum over the 38 e2e cases 43 s; by group quad/sg 13.6 s, quad/dsg 16.8 s,
-  interp 4.1 s, interplin 3.1 s, mivec 5.5 s (ANALYSIS.md).
-- Noise model (6-round self-comparisons): median per-round spread 0.67 % (e2e) / 1.05 % (micro),
-  90th percentile ~2.6 % → typical 95 % CI ±0.8–1.3 % with the default 5 rounds; false-positive
-  rate of the self-comparison without noise model 4–10 % (expected 5 %).
+- Baseline (16 threads, boost off): sum over the 38 e2e cases 70.0 s; by group quad/sg 22.3 s,
+  quad/dsg 26.8 s, interp 6.6 s, interplin 5.0 s, mivec 9.3 s (ANALYSIS.md). A full e2e A/B
+  (5 rounds) takes ≈ 23 min.
+- Noise model (6-round self-comparisons, boost off): median per-round spread 0.50 % (e2e) /
+  0.39 % (micro), 90th percentile 2.0 % / 0.9 % → typical 95 % CI ±0.6 % / ±0.5 % with the
+  default 5 rounds; no false positives in either self-comparison (with boost on: 0.67 % / 1.05 %
+  and 4–10 % false positives without noise model, expected 5 %).
 
 ## Attempts not kept
 - Bootstrap over samples within rounds (3 rounds × 2 samples): 18/114 false positives — the
@@ -66,6 +69,18 @@ sustained 427 ms for `quad/sg/equi-exp/b0/d5/L10` at 16 threads)
 - Pre-existing compiler warnings (not performance-related, untouched): `#pragma once` in
   `tools/operators/quadrature/quadrature_utilities.cpp:1`; unused variable `sum` in
   `grids/tensor_grid.cpp:34` (NDEBUG builds).
+
+## Re-recording with boost off (2026-10-24, owner's instruction)
+- The owner disabled CPU boost (`cpufreq/boost = 0`, platform profile `performance`) and improved
+  the airflow. Re-recorded with `perf.py baseline --authorized-by-owner` and two 6-round
+  self-comparisons: `baseline/` (environment, calibration, micro, e2e, noise models); manifest
+  rehashed with `perf.py protect --authorized-by-owner`. `reference/` unchanged (boost does not
+  affect results). Profiles, thread scaling and counters re-measured; ANALYSIS.md, PLAN.md,
+  STATUS.md and README updated.
+- Effect: no throttling any more (round durations 288 s ×6, burst = sustained); 1.62x slower at
+  16 threads and 2.1x at 1 thread; profile shares unchanged (±2 points) except the CC weight FFT
+  (18 % → 11 % of the d = 2 CC case); 8 threads now scale 7.7–7.9x, SMT adds 0–30 %.
+- Boost is re-enabled by a reboot unless made persistent; `envcheck` then refuses to measure.
 
 ## Revert
 `git revert <setup commit>` (the setup touches no module source).

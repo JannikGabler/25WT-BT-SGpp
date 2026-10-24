@@ -1,8 +1,9 @@
 # Optimization plan — combigrid
 
 Ranked work packages (WPs). The master keeps this file current (status, ranks, new WPs from
-summaries); evidence and profiles: [ANALYSIS.md](ANALYSIS.md). Numbers: baseline, judged
-configuration, 16 threads unless stated; e2e medians from the baseline A/B self-tests.
+summaries); evidence and profiles: [ANALYSIS.md](ANALYSIS.md). Numbers: baseline (boost off,
+re-recorded 2026-10-24), judged configuration, 16 threads unless stated; e2e medians from
+`baseline/e2e_t16.jsonl`, micro from `baseline/micro_t1.jsonl`.
 
 **Ranking rule**: expected absolute time saved on the e2e suite, cases with d ≥ 7 first (they
 run longest and the owner prioritizes high dimensions), then all cases; ties broken by operator
@@ -11,20 +12,21 @@ need a functional/interface/flag change are marked **needs decision** and are no
 before the owner decided. Re-rank after every re-profiling (rule 7).
 
 Baseline e2e time per operator group (sum of `total` medians, `baseline/e2e_t16.jsonl`;
-generation < 1 % except MIVec): quad/sg 13.6 s (11.2 s at d ≥ 7) · quad/dsg 16.8 s (16.5 s at
-d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 3.0 s).
+generation ≤ 1–2 % except MIVec; boost off, total 70.0 s): quad/sg 22.3 s (18.5 s at d ≥ 7) ·
+quad/dsg 26.8 s (26.2 s at d ≥ 7) · interp 6.6 s · interplin 5.0 s · mivec 9.3 s (of which
+generation 5.1 s).
 
 | Rank | ID | Title | Status | Expected saving (e2e) |
 |---|---|---|---|---|
-| 1 | WP-01 | SG quadrature: per-grid-point work | ready | 5–6.5 s, ~2x on quad/sg d ≥ 5 |
-| 2 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 2.5–4 s (b1 d15/d20) |
-| 3 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~2.8 s, generation ≥ 10x at d ≥ 10 |
-| 4 | WP-04 | DSG quadrature: row loop | ready | 1–2 s (d ≥ 7) |
-| 5 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready (after WP-01) | 0.3–1 s; low d and many small grids |
-| 6 | WP-06 | Global interpolation: operator overhead | ready | ~0.8 s |
-| 7 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.1 s e2e (90x per 1D call) |
-| 8 | WP-08 | Linear interpolation: corner loop | ready | ~0.7 s |
-| – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | needs decision | most of interp/interplin (≥ 3 s), scales with #points |
+| 1 | WP-01 | SG quadrature: per-grid-point work | ready | 8–10.5 s, ~2x on quad/sg d ≥ 5 |
+| 2 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
+| 3 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~4.8 s, generation ≥ 10x at d ≥ 10 |
+| 4 | WP-04 | DSG quadrature: row loop | ready | 1.5–3 s (d ≥ 7) |
+| 5 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready (after WP-01) | 0.5–1.5 s; low d and many small grids |
+| 6 | WP-06 | Global interpolation: operator overhead | ready | ~1.3 s |
+| 7 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
+| 8 | WP-08 | Linear interpolation: corner loop | ready | ~1.1 s |
+| – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | needs decision | most of interp/interplin (≥ 5 s), scales with #points |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | needs decision | a few % to 10 % on hot helpers; re-evaluate after WP-01 |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | needs decision | cold runs only (no effect on warm runs) |
 
@@ -45,8 +47,8 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
 - **Evidence**: profile `quad/sg/equi-exp/b0/d10/L4`: `denormalizeDataVector` 37 %,
   `processTensorGrid` 23 %, `getWeightForGP` 13 %, `evaluateNormalizedInPlace` 3 %, integrand
   16 %; ~555 instructions per grid point at IPC 2.2, almost no cache misses (instruction-bound).
-  Micro: `micro/quad/process_tg/equi/b0/d10/L4` 36.0 ns/point vs. speed of light
-  `micro/sol/quad_tg/equi/b0/d10/L4` 12.0 ns/point (3.0x); d5: 23.0 vs. 10.3 ns (2.2x).
+  Micro: `micro/quad/process_tg/equi/b0/d10/L4` 72.5 ns/point vs. speed of light
+  `micro/sol/quad_tg/equi/b0/d10/L4` 25.1 ns/point (2.9x); d5: 46.7 vs. 21.1 ns (2.2x).
 - **Expected gain**: operator 1.8–2.5x for `quad/sg/*-exp|*-uq` at d ≥ 5, ~1.3x for the
   integrand-heavy `equi-sin`; also the quadrature phase of `mivec/*`.
 - **Risk**: low. Summation order inside a tensor grid changes (row sums) → round-off level
@@ -68,12 +70,12 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
   (recursive, `push_back` into per-depth vectors) and maps its nodes; the per-tensor-grid work
   dominates. Reuse sub-tries between consecutive delta grids (sort/visit order), precompute what
   depends on m only partially, avoid reallocation; parallelize or speed up the serial
-  preparation (0.19 s single-threaded at d20 L6).
+  preparation (0.29 s single-threaded at d20 L6).
 - **Evidence**: profile `quad/dsg/equi-exp/b1/d20/L6`: `appendSubTrieChildren` **63 %**,
   `processDeltaTensorGrid` 23 %, integrand 7 %; ~1600 instructions and ~1.5 cache misses per grid
-  point. Micro `micro/dsg/process_delta_tg/equi/b1/d20/L6` 319 ns/point vs. 13 ns/point for a
-  large delta grid at d10; `micro/dsg/prepare/equi/b1/d20/L6` 0.2 s (serial); e2e
-  `quad/dsg/equi-exp/b1/d20/L6` 4.3 s, `.../b1/d15/L7` 2.5 s.
+  point. Micro `micro/dsg/process_delta_tg/equi/b1/d20/L6` 665 ns/point vs. 28 ns/point for a
+  large delta grid at d10; `micro/dsg/prepare/equi/b1/d20/L6` 0.29 s (serial); e2e
+  `quad/dsg/equi-exp/b1/d20/L6` 6.8 s, `.../b1/d15/L7` 4.0 s.
 - **Expected gain**: 1.5–3x on `quad/dsg/*/b1/d15|d20`.
 - **Risk**: medium (trie logic; existing tests in `tests/operators/quadrature/delta_quadrature_test.cpp`
   cover sub-tries and global weights).
@@ -94,10 +96,10 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
   **Keep the output order** of the current implementation (sort if necessary): the order of the
   multi-indices (and thus of the tensor grids) is observable; changing it needs the owner.
 - **Evidence**: profile `mivec/sg/cc-exp/b1/d20/S7/n300`: `genMIVecDownwardsClosure` 96 %
-  (d10: 49 %); e2e generation 0.79 s (d10), 1.04 s (d15), 1.12 s (d20) at 16 threads (scales
-  only 4.8x from 1 thread); micro `micro/mivec/downwards_closure/d10/S10/n300` 270 ms single
-  threaded for 3 522 closure elements (77 µs each).
-- **Expected gain**: generation ≥ 10x at d ≥ 10 (≈ 2.8 s of the e2e suite).
+  (d10: 50 %); e2e generation 1.37 s (d10), 1.79 s (d15), 1.90 s (d20) at 16 threads (scales
+  only 6.1x from 1 thread); micro `micro/mivec/downwards_closure/d10/S10/n300` 593 ms single
+  threaded for 3 522 closure elements (168 µs each).
+- **Expected gain**: generation ≥ 10x at d ≥ 10 (≈ 4.8 s of the e2e suite).
 - **Risk**: low–medium (correctness of the closure; tests exist in
   `tests/multiindex_vector/multiindex_vector_downwards_closure_test.cpp`).
 - **Tests**: closure tests (incl. order), refcheck `closureSize`/`closureCoeffHash`.
@@ -113,9 +115,9 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
   of `compRowWeights`, hoisting, and the cost split between weights and calls.
 - **Evidence**: profile `quad/dsg/equi-exp/b0/d10/L7`: `processDeltaTensorGrid` (inlined loops)
   41 %, integrand + `exp` 47 %; ~218 instructions per point; micro
-  `micro/dsg/process_delta_tg/equi/b0/d10/L7` 12.9 ns/point.
+  `micro/dsg/process_delta_tg/equi/b0/d10/L7` 27.7 ns/point.
   Upper bound ≈ 1.9x (integrand share); realistic 1.2–1.4x.
-- **Expected gain**: 1–2 s on `quad/dsg/*` at d ≥ 7.
+- **Expected gain**: 1.5–3 s on `quad/dsg/*` at d ≥ 7.
 - **Risk**: low–medium. **Tests**: delta quadrature tests. **Micro**: `micro/dsg/process_delta_tg/*`
   (add a speed-of-light case). **E2E filter**: `^quad/dsg/` · **Functional change**: none.
 - **Dependencies**: after WP-02 (same files; re-profile in between).
@@ -128,10 +130,10 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
   for every tensor grid and dimension (CC: FFT + ~6 allocations per call). Precompute per
   dimension and level once per `quadrature()` call (as `comp1DWeights` does for the deltas
   operator) and look them up.
-- **Evidence**: `micro/quad/process_tg/cc/b0/d2/L16` 39.4 ns/point vs. equi 16.7 ns/point (CC weights
-  of a 131073-node dimension); profile `quad/sg/cc-uq/b0/d2/L20`: Eigen FFT 14 % + `genWeightsFFT`
-  4 %; `micro/quad/process_all_tgs/equi/b1/d20/L4` 64.7 ns/point vs. 36 ns/point in a large grid.
-  Also: `quad/sg/equi-exp/b0/d2/L20` scales only 5.5x (41 grids for 16 threads; no parallelism
+- **Evidence**: `micro/quad/process_tg/cc/b0/d2/L16` 81.2 ns/point vs. equi 33.6 ns/point (CC weights
+  of a 131073-node dimension); profile `quad/sg/cc-uq/b0/d2/L20`: Eigen FFT 9 % + `genWeightsFFT`
+  2 %; `micro/quad/process_all_tgs/equi/b1/d20/L4` 134 ns/point vs. 72.5 ns/point in a large grid.
+  Also: `quad/sg/equi-exp/b0/d2/L20` scales only 6.6x (41 grids for 16 threads; no parallelism
   inside a grid) — load balancing at low d belongs here or into a follow-up WP.
 - **Expected gain**: 1.1–1.4x on `quad/sg/cc-*` at d ≤ 3 and on many-small-grid cases (b1 d15/d20).
 - **Risk**: low. **Tests**: quadrature tests + CC rule tests. **Micro**: `micro/quad/process_tg/cc/*`,
@@ -147,7 +149,7 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
   parallel region per query point over few tensor grids (`guided`) leaves threads spinning.
 - **Evidence**: profile `interp/sg/cc/b0/d5/L6/p64`: `denormalizeDataVector` 12 %,
   `getGridPoint` 11 %, `hasTrivialResult` 3 %, integrand (`cos`) ~52 %; `interp/sg/cheb1/b0/d5`:
-  libgomp spinning ≥ 15 %. Micro `micro/interp/global_tg/cc/b0/d5/L6` 59 ns/point.
+  libgomp spinning ≥ 15 %. Micro `micro/interp/global_tg/cc/b0/d5/L6` 127 ns/point.
 - **Expected gain**: 1.2–1.5x on `interp/*` (integrand-dominated).
 - **Risk**: low. **Tests**: `tests/operators/global_interpolation/interpolation_test.cpp` (errors
   are checked relative to max |f|, see `maxAbsOfLinearFunc`). **Micro**: `micro/interp/global_tg/*`.
@@ -160,10 +162,10 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
   1D call (equidistant and Chebyshev-1 nodes). Weights depend only on the node distribution:
   compute them once (per tensor grid and dimension in the operator, or cached per (node family,
   n)) and evaluate in O(n).
-- **Evidence**: `micro/interp/barycentric_1d/generic/n65` 18 µs per call (273 ns/node) vs.
-  optimized CC formula 0.18 µs (2.8 ns/node); profile `interp/sg/cheb1/b0/d5/L4/p64`:
-  `barycentricFormulaWeights` + `log` 17 %. Grows quadratically with the level.
-- **Expected gain**: small in the e2e suite (~0.1 s, sizes are small), large for higher levels
+- **Evidence**: `micro/interp/barycentric_1d/generic/n65` 38 µs per call (577 ns/node) vs.
+  optimized CC formula 0.38 µs (5.8 ns/node); profile `interp/sg/cheb1/b0/d5/L4/p64`:
+  `barycentricFormulaWeights` + `log` 18 %. Grows quadratically with the level.
+- **Expected gain**: small in the e2e suite (~0.2 s, sizes are small), large for higher levels
   with equidistant/Chebyshev-1 nodes. Cheap to do.
 - **Risk**: low (thread safety of a cache; prefer computing per tensor grid in the operator, which
   may require an internal signature change of `InterpolationMethod` — internal, not public API).
@@ -179,8 +181,8 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
   neighbor coordinates once per tensor grid, update weights/coordinates incrementally (Gray code
   or per-dimension factors), skip corners with weight 0.
 - **Evidence**: profile `interplin/sg/equi/b1/d8/L5/p256`: `computeNeighborGPWithWeight` 17 %,
-  `denormalizeDataVector` 11 %, integrand (`cos`) ~57 %; micro `micro/interplin/tg/equi/b1/d8/L5`
-  86 ns per corner.
+  `denormalizeDataVector` 11 %, integrand (`cos`) ~58 %; micro `micro/interplin/tg/equi/b1/d8/L5`
+  185 ns per corner.
 - **Expected gain**: 1.2–1.4x on `interplin/*`.
 - **Risk**: low (skipping zero-weight corners changes the evaluation count → refcheck INFO;
   results unchanged). **Tests**: linear interpolation tests. **E2E filter**: `^interplin/`
@@ -192,7 +194,7 @@ d ≥ 7) · interp 4.1 s · interplin 3.1 s · mivec 5.5 s (of which generation 
   overload (points → values) or a surrogate object that stores the function values per tensor
   grid evaluates each grid point once and interpolates all points from the stored values.
 - **Expected gain**: interp/interplin e2e cases are dominated by integrand evaluations (52–57 %
-  `cos` + integrand): ~#points-fold fewer evaluations, i.e. most of the 7 s of these groups; far more
+  `cos` + integrand): ~#points-fold fewer evaluations, i.e. most of the 11.6 s of these groups; far more
   for real (expensive) source functions.
 - **Interface**: new public API (and Python bindings); existing functions unchanged. Owner decides.
 

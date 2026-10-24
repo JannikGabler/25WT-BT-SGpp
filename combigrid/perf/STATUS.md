@@ -3,15 +3,17 @@
 Last processed: WP-00 (setup, 2026-10-24) · Next WP number: 01 · Re-profilings done: 0 (RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`),
-  16 threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), boost on, AC, idle machine.
+  16 threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (all cores at
+  2.0 GHz), platform profile `performance`, AC, idle machine.
 - **Baseline**: source of commit 84299eeca (unchanged by the setup); baseline commit = the setup
   commit, find it with
   `git log --diff-filter=A --format=%h -- combigrid/perf/baseline/e2e_t16.jsonl`.
   Snapshot name `baseline` (rebuild with `perf.py snapshot baseline --commit <that hash>` if
   `.work/` was cleaned). Numbers: `baseline/`, overview in ANALYSIS.md.
-- **Machine note**: the laptop throttles under sustained 16-thread load depending on the
-  conditions (up to 1.6x in long runs); A/B stays valid, absolute numbers need `calibrate`
-  ratios near 1 (README, Pitfalls). Owner option: disable boost (would require a new baseline).
+- **Machine note**: boost was disabled and the baseline re-recorded on 2026-10-24 because the
+  laptop throttled under sustained load with boost on (up to 1.6x). Boost comes back after a
+  reboot unless made persistent; `envcheck` then fails — ask the owner to disable it again
+  (README, Pitfalls). A full e2e A/B takes ≈ 23 min; work sessions filter to relevant cases.
 - **Owner's rules**: acceptance by the owner only; minimal gains may be proposed but must be
   labelled and weighed against API/functionality/maintainability/readability; functional/
   interface/flag changes only after consulting the owner; errors stay in the same order of
@@ -36,7 +38,7 @@ Last processed: WP-00 (setup, 2026-10-24) · Next WP number: 01 · Re-profilings
 
 ## Next action
 
-Issue WP-01 (no decision needed; expected 5–6.5 s of the 43 s e2e suite). Before WP-06…08, ask
+Issue WP-01 (no decision needed; expected 8–10.5 s of the 70 s e2e suite). Before WP-06…08, ask
 the owner about D-1: a multi-point API would change what is worth optimizing in the interpolation
 operators.
 
@@ -60,3 +62,5 @@ changed hot-spot ranking). Last profile: setup (ANALYSIS.md). Next: RP-1.
 ## Log
 
 - 2026-10-24 WP-00 setup finished: perf suite, baseline, reference, noise model, analysis, plan.
+- 2026-10-24 boost disabled by the owner; baseline, calibration and noise model re-recorded
+  (boost off), ANALYSIS/PLAN numbers updated; reference results unchanged.

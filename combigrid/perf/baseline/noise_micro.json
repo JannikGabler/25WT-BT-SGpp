@@ -1,89 +1,89 @@
 {
  "micro/dsg/prepare/equi/b1/d20/L6": {
-  "call": 0.0268888652933053
+  "call": 0.0071029601725207765
  },
  "micro/dsg/process_delta_tg/equi/b0/d10/L7": {
-  "call": 0.010945317105887186
+  "call": 0.006807764201287243
  },
  "micro/dsg/process_delta_tg/equi/b0/d5/L12": {
-  "call": 0.007141062864092678
+  "call": 0.002024293705504042
  },
  "micro/dsg/process_delta_tg/equi/b1/d20/L6": {
-  "call": 0.00518231277830507
+  "call": 0.002684076734835466
  },
  "micro/gen/complete_mis_with_coeffs/d20/L6": {
-  "call": 0.0052168186079177255
+  "call": 0.0027953124112021026
  },
  "micro/gen/sparse_grid/cc/b1/d20/L5": {
-  "call": 0.013530485819860796
+  "call": 0.0075629081162044386
  },
  "micro/interp/barycentric_1d/generic/n65": {
-  "call": 0.010138642764342266
+  "call": 0.0071986549166092135
  },
  "micro/interp/barycentric_1d/generic/n9": {
-  "call": 0.01308202448747714
+  "call": 0.005896264488538951
  },
  "micro/interp/barycentric_1d/opt_cc/n65": {
-  "call": 0.010242397050379532
+  "call": 0.0009120556935585782
  },
  "micro/interp/barycentric_1d/opt_cc/n9": {
-  "call": 0.015241280912208055
+  "call": 0.0021114465033766922
  },
  "micro/interp/global_tg/cc/b0/d5/L6": {
-  "call": 0.026598398757099035
+  "call": 0.010598535253198827
  },
  "micro/interp/global_tg/cheb1/b0/d5/L4": {
-  "call": 0.010487449833166478
+  "call": 0.01710161999723562
  },
  "micro/interplin/tg/equi/b1/d8/L5": {
-  "call": 0.027576887584831556
+  "call": 0.004368132154960062
  },
  "micro/mivec/ct_coeffs/d10/S12/n1000": {
-  "call": 0.0012886263905396594
+  "call": 0.0028978798462346907
  },
  "micro/mivec/downwards_closure/d10/S10/n300": {
-  "call": 0.0073382143973826945
+  "call": 0.0012493593077296616
  },
  "micro/mivec/downwards_closure/d20/S6/n100": {
-  "call": 0.01538534588716653
+  "call": 0.009068659893694674
  },
  "micro/quad/process_all_tgs/equi/b1/d20/L4": {
-  "call": 0.003255531159768788
+  "call": 0.003909921200239491
  },
  "micro/quad/process_tg/cc/b0/d10/L4": {
-  "call": 0.010553942825877512
+  "call": 0.003100993140059098
  },
  "micro/quad/process_tg/cc/b0/d2/L16": {
-  "call": 0.005424331431994324
+  "call": 0.003906834532475212
  },
  "micro/quad/process_tg/equi/b0/d10/L4": {
-  "call": 0.053694384621736785
+  "call": 0.00953666201387554
  },
  "micro/quad/process_tg/equi/b0/d2/L16": {
-  "call": 0.019266706002347304
+  "call": 0.003245392775483246
  },
  "micro/quad/process_tg/equi/b0/d5/L10": {
-  "call": 0.010955331087809292
+  "call": 0.00347753660579772
  },
  "micro/quadrule/cc_weights/n1025": {
-  "call": 0.008554694667528473
+  "call": 0.0033022363104942705
  },
  "micro/quadrule/cc_weights/n32769": {
-  "call": 0.013715150947737127
+  "call": 0.001811174620179396
  },
  "micro/quadrule/cc_weights/n33": {
-  "call": 0.014541379816977475
+  "call": 0.0049136131529085286
  },
  "micro/sol/quad_tg/equi/b0/d10/L4": {
-  "call": 0.0070284158664906254
+  "call": 0.00683274674987119
  },
  "micro/sol/quad_tg/equi/b0/d5/L10": {
-  "call": 0.010487944403902588
+  "call": 0.006547700460006729
  },
  "micro/sourcefunc/eval_normalized_in_place/d10": {
-  "call": 0.00685692875565411
+  "call": 0.002101547435632767
  },
  "micro/tg/iterate_mutable/equi/b0/d10/L4": {
-  "call": 0.010315611273148197
+  "call": 0.007761171487003176
  }
 }
