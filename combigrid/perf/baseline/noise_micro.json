@@ -1,0 +1,89 @@
+{
+ "micro/dsg/prepare/equi/b1/d20/L6": {
+  "call": 0.0268888652933053
+ },
+ "micro/dsg/process_delta_tg/equi/b0/d10/L7": {
+  "call": 0.010945317105887186
+ },
+ "micro/dsg/process_delta_tg/equi/b0/d5/L12": {
+  "call": 0.007141062864092678
+ },
+ "micro/dsg/process_delta_tg/equi/b1/d20/L6": {
+  "call": 0.00518231277830507
+ },
+ "micro/gen/complete_mis_with_coeffs/d20/L6": {
+  "call": 0.0052168186079177255
+ },
+ "micro/gen/sparse_grid/cc/b1/d20/L5": {
+  "call": 0.013530485819860796
+ },
+ "micro/interp/barycentric_1d/generic/n65": {
+  "call": 0.010138642764342266
+ },
+ "micro/interp/barycentric_1d/generic/n9": {
+  "call": 0.01308202448747714
+ },
+ "micro/interp/barycentric_1d/opt_cc/n65": {
+  "call": 0.010242397050379532
+ },
+ "micro/interp/barycentric_1d/opt_cc/n9": {
+  "call": 0.015241280912208055
+ },
+ "micro/interp/global_tg/cc/b0/d5/L6": {
+  "call": 0.026598398757099035
+ },
+ "micro/interp/global_tg/cheb1/b0/d5/L4": {
+  "call": 0.010487449833166478
+ },
+ "micro/interplin/tg/equi/b1/d8/L5": {
+  "call": 0.027576887584831556
+ },
+ "micro/mivec/ct_coeffs/d10/S12/n1000": {
+  "call": 0.0012886263905396594
+ },
+ "micro/mivec/downwards_closure/d10/S10/n300": {
+  "call": 0.0073382143973826945
+ },
+ "micro/mivec/downwards_closure/d20/S6/n100": {
+  "call": 0.01538534588716653
+ },
+ "micro/quad/process_all_tgs/equi/b1/d20/L4": {
+  "call": 0.003255531159768788
+ },
+ "micro/quad/process_tg/cc/b0/d10/L4": {
+  "call": 0.010553942825877512
+ },
+ "micro/quad/process_tg/cc/b0/d2/L16": {
+  "call": 0.005424331431994324
+ },
+ "micro/quad/process_tg/equi/b0/d10/L4": {
+  "call": 0.053694384621736785
+ },
+ "micro/quad/process_tg/equi/b0/d2/L16": {
+  "call": 0.019266706002347304
+ },
+ "micro/quad/process_tg/equi/b0/d5/L10": {
+  "call": 0.010955331087809292
+ },
+ "micro/quadrule/cc_weights/n1025": {
+  "call": 0.008554694667528473
+ },
+ "micro/quadrule/cc_weights/n32769": {
+  "call": 0.013715150947737127
+ },
+ "micro/quadrule/cc_weights/n33": {
+  "call": 0.014541379816977475
+ },
+ "micro/sol/quad_tg/equi/b0/d10/L4": {
+  "call": 0.0070284158664906254
+ },
+ "micro/sol/quad_tg/equi/b0/d5/L10": {
+  "call": 0.010487944403902588
+ },
+ "micro/sourcefunc/eval_normalized_in_place/d10": {
+  "call": 0.00685692875565411
+ },
+ "micro/tg/iterate_mutable/equi/b0/d10/L4": {
+  "call": 0.010315611273148197
+ }
+}

@@ -1,0 +1,8 @@
+{
+  "description": "Tolerance policy of `perf.py refcheck` (PROTECTED). For every value with exact value x: e_ref = |v_ref - x|, e_new = |v_new - x|, unit = 2^-52 * magnitude * (sumAbsCoeffs + sqrt(sumGP)) (round-off unit of the combination; reassociation across thread counts moved results by at most 1.54 units in the setup session), noise = noise_units * unit. OK if e_new <= ok_ratio * e_ref + noise; WARN if e_new <= fail_ratio * e_ref + noise (error grew slightly: must be stated and justified in the summary, the owner decides); FAIL otherwise. 'ints' (structure: number of tensor grids, number of grid points, order-independent hash of the (multi-index, coefficient) pairs, closure size/hash) must match exactly (a change is a functional change); 'floats' (node checksum) up to float_rel_tol; 'info' (number of source function evaluations) changes are reported as INFO. Owner requirement: errors stay in the same order of magnitude, may grow slightly, but should generally not. Per-case overrides: {\"<case>\": {\"ok_ratio\": .., \"fail_ratio\": .., \"noise_units\": ..}} (only with the owner's consent).",
+  "noise_units": 4,
+  "ok_ratio": 1.1,
+  "fail_ratio": 3.0,
+  "float_rel_tol": 1e-12,
+  "overrides": {}
+}

@@ -1,0 +1,99 @@
+{
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "1",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-38-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "2.03",
+   "6.62",
+   "9.05"
+  ]
+ },
+ "snapshot": {
+  "name": "baseline",
+  "source": "working tree",
+  "time": 1792621910.143523,
+  "stamp": {
+   "config": "normal",
+   "scons": [
+    "scons",
+    "-j16",
+    "SG_ALL=0",
+    "SG_BASE=1",
+    "SG_COMBIGRID=1",
+    "OPT=1",
+    "ARCH=avx2",
+    "USE_EIGEN=1",
+    "USE_ARMADILLO=1",
+    "CPPFLAGS=-march=native -flto=auto",
+    "LINKFLAGS=-march=native -flto=auto",
+    "COMPILE_BOOST_TESTS=1",
+    "RUN_BOOST_TESTS=0"
+   ],
+   "time": 1792621888.8423746,
+   "git": {
+    "rev": "84299eeca8e820dc316b52402027ad2f5d7d0daf",
+    "dirty": true,
+    "diff_sha256": "77f4235e0a41f881",
+    "changed_files": [
+     ".gitignore",
+     "combigrid/examples/c++/benchmarks/perf/",
+     "combigrid/perf/",
+     "compileASan.sh",
+     "compileDebug.sh",
+     "compileNormal.sh",
+     "compile_commands.json"
+    ]
+   }
+  },
+  "git": {
+   "rev": "84299eeca8e820dc316b52402027ad2f5d7d0daf",
+   "dirty": true,
+   "diff_sha256": "77f4235e0a41f881",
+   "changed_files": [
+    ".gitignore",
+    "combigrid/examples/c++/benchmarks/perf/",
+    "combigrid/perf/",
+    "compileASan.sh",
+    "compileDebug.sh",
+    "compileNormal.sh",
+    "compile_commands.json"
+   ]
+  },
+  "build_info": {
+   "compiler": "15.2.0",
+   "ndebug": true,
+   "optimize": true,
+   "avx2": true,
+   "fma": true,
+   "march_native_zen": true,
+   "use_eigen": true,
+   "use_armadillo": true,
+   "asan": false,
+   "openmp": 201511,
+   "omp_max_threads": 16
+  }
+ },
+ "recorded": 1792843067.4685795,
+ "omp_binding": {
+  "1": {
+   "OMP_PROC_BIND": "true",
+   "OMP_PLACES": "{4}"
+  },
+  "16": {
+   "OMP_PROC_BIND": "close",
+   "OMP_PLACES": "threads"
+  }
+ },
+ "foreign_cpu_load": {
+  "micro": 0.0011975027977524373,
+  "e2e": 0.0012981895322584293
+ }
+}

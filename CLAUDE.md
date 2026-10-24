@@ -191,7 +191,7 @@ Modules are enabled/disabled via `SG_ALL=<bool>` (default `1`) and per-module `S
 ### Preferred iteration commands (combigrid only)
 
 Wrapper scripts checked into repo root — read them if in doubt:
-- [compileNormal.sh](compileNormal.sh) — optimized: `scons -j16 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 OPT=1 ARCH=avx2 CPPFLAGS="-march=native -flto=auto" LINKFLAGS="-march=native -flto=auto"`
+- [compileNormal.sh](compileNormal.sh) — optimized: `scons -j16 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 OPT=1 ARCH=avx2 USE_EIGEN=1 USE_ARMADILLO=1 CPPFLAGS="-march=native -flto=auto" LINKFLAGS="-march=native -flto=auto"`
 - [compileDebug.sh](compileDebug.sh) — debug: `scons -j16 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 OPT=0`
 - [compileASan.sh](compileASan.sh) — AddressSanitizer: adds `-fsanitize=address -fno-omit-frame-pointer` to both `CPPFLAGS` and `LINKFLAGS`, `OPT=0`.
 
@@ -200,6 +200,8 @@ Compile with the debug configuration by default as it enables assert statements.
 ### Performance-relevant configuration
 
 Performance is judged under the [compileNormal.sh](compileNormal.sh) configuration: `-O3` and `-DNDEBUG` (both added by `OPT=1` in [SGppConfigure.py:44](site_scons/SGppConfigure.py#L44), so no `assert`s), LTO (`-flto=auto`) and `-march=native`. We assume everybody running SG++ sets these flags for performance-relevant runs, so benchmarks must be done in this configuration as well.
+
+Eigen and Armadillo are available in all performance-relevant runs, so the judged configuration additionally sets `USE_EIGEN=1 USE_ARMADILLO=1` (= `combigrid/perf/scripts/perf.py build normal`), and performance is judged with 16 threads (see §12).
 
 `ARCH=avx2` (adds `-mavx2 -mfma -mfpmath=sse`, [SGppConfigure.py:568-571](site_scons/SGppConfigure.py#L568-L571)) is chosen specifically for the benchmarking machine and might not be set in every environment running SG++. Since this machine is the benchmarking environment, optimizations from which this architecture benefits are worth considering, as long as they have no significant downsides on other architectures.
 
@@ -392,3 +394,14 @@ Essentials:
   Verify with the Python examples in [combigrid/examples/python/](combigrid/examples/python/).
 - **C++ API changes can break the bindings even when the C++ build and tests pass.** SWIG wraps every declaration of the headers in [sgpp_combigrid.hpp](combigrid/src/sgpp_combigrid.hpp) and flattens namespaces. New internal helpers in those headers therefore must be `%ignore`d. Methods moved into an unwrapped base class (e.g. `SparseGridBase`) and types without SWIG typemap (`std::unique_ptr`, `std::span`, iterators) need `%extend` forwarders. After such changes, rebuild with `SG_PYTHON=1`.
 - **Never run clang-format on `.i` files** (also not via editor format-on-save): it rewrites `%include` to `% include` etc., and SWIG fails with `Unknown SWIG preprocessor directive`.
+
+---
+
+## 12. Performance optimization phase
+
+Benchmarks (micro / phase / end-to-end), A/B comparisons, reference check, protected files and
+all commands: [combigrid/perf/README.md](combigrid/perf/README.md). Status and plan:
+[combigrid/perf/STATUS.md](combigrid/perf/STATUS.md), [PLAN.md](combigrid/perf/PLAN.md). The
+master session follows the skill `perf-master`, work sessions follow the skill `perf-work`.
+Protected files (baseline, reference results, tolerances, `perf.py`, the e2e/reference
+benchmarks, pre-existing benchmarks) must not be edited; a hook blocks it.

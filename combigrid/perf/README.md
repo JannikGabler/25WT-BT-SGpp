@@ -1,0 +1,207 @@
+# combigrid performance suite and optimization phase
+
+Infrastructure for optimizing the combination technique module in a sequence of small,
+independent sessions. Who reads what:
+
+| Reader | Start here |
+|---|---|
+| master session | skill `perf-master` (`.claude/skills/perf-master/SKILL.md`), then [STATUS.md](STATUS.md) |
+| work session | skill `perf-work` (`.claude/skills/perf-work/SKILL.md`) + the prompt from the master |
+| anybody running benchmarks | this file |
+
+## Layout
+
+```
+combigrid/perf/
+  README.md          this file (commands, methodology, protection)
+  STATUS.md          compact status of the optimization phase (the master's main input)
+  PLAN.md            ranked work packages (WPs) with location, hypothesis, evidence, risk, ...
+  ANALYSIS.md        initial analysis and profiles (re-profiling results are appended)
+  summaries/         TEMPLATE.md + WP-NN-<slug>.md, one per work session
+  results/WP-NN/     A/B reports (.md + raw .json) and refcheck output of a work session
+  baseline/          [protected] measurements of the unoptimized code + environment
+  reference/         [protected] reference outputs (reference.jsonl) + tolerances.json
+  protected.sha256   [protected] checksum manifest of all protected files
+  scripts/perf.py    [protected] the driver (stdlib-only Python)
+  .work/             git-ignored: snapshots, logs, raw runs, profiles, build stamp
+combigrid/examples/c++/benchmarks/perf/      (SCons builds them with the configuration flags)
+  perf_harness.hpp   [protected] dependency-free harness (sampling, calibration, JSON output)
+  perf_problems.hpp  [protected] integrands with exact integrals, points, multi-index sets
+  perf_e2e.cpp       [protected] L3 end-to-end pipelines with L2 phase timings, public API only
+  perf_reference.cpp [protected] reference outputs, public API only
+  perf_micro.cpp     L1 micro-benchmarks of internals (extended/adapted by work packages)
+```
+
+## The judged configuration
+
+Performance is judged as in CLAUDE.md ("Performance-relevant configuration") with Eigen and
+Armadillo enabled (the owner guarantees both libraries in all performance-relevant runs):
+
+```
+scons -j16 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 OPT=1 ARCH=avx2 USE_EIGEN=1 USE_ARMADILLO=1 \
+      CPPFLAGS="-march=native -flto=auto" LINKFLAGS="-march=native -flto=auto"
+```
+
+= `perf.py build normal`. Acceptance-relevant measurements run with **16 threads**
+(`OMP_PROC_BIND=close OMP_PLACES=threads`); 1-thread runs (`OMP_PLACES={4}`) are diagnostics
+(micro-benchmarks). Machine: the owner's laptop (Ryzen 7 5825U, 8 cores / 16 threads, 12 GB,
+`performance` governor, boost **on**, always on AC), otherwise idle, one benchmark at a time.
+`perf.py` sets the OpenMP environment itself.
+
+Changing compiler flags or the build configuration is a work package of its own and needs the
+owner's approval.
+
+## Commands
+
+All commands: `python3 combigrid/perf/scripts/perf.py <command>` (from the repo root; the path
+contains spaces, always quote it). `-h` shows all options.
+
+| Command | Purpose |
+|---|---|
+| `envcheck` | idle CPU, governor, AC, boost state equal to the baseline, perf permissions |
+| `calibrate` | ~70 s: runs fixed workloads with the `baseline` snapshot (16-thread e2e case for ~1 min: burst and sustained medians; 1-thread micro case) and compares them with `baseline/calibration.json`: detects machine-state changes (power limits, thermal state, background load) that `envcheck` cannot see; WARN beyond ±7 % |
+| `build normal\|debug\|asan [--tests compile\|run\|skip]` | SCons build of base + combigrid (~3 min from scratch, switching configurations rebuilds everything); writes the build stamp |
+| `test [--repeat N] [--run-test FILTER]` | runs `combigrid/tests/test_combigrid_boost` of the current build (tests are time-seeded: repeat) |
+| `snapshot NAME` | copies the current **normal** build (libs + perf binaries) to `.work/snapshots/NAME` |
+| `snapshot NAME --commit REV` | builds REV in a temporary git worktree and snapshots it (e.g. the baseline commit) |
+| `run e2e\|micro [--snapshot NAME] [--filter RE]` | one run, table + raw JSON in `.work/runs/` |
+| `ab e2e\|micro A B [--filter RE] [--save DIR --name STEM]` | interleaved A/B comparison (below) |
+| `refcheck [--snapshot NAME] [--threads 1,16]` | reference check (below); exit code 1 on FAIL |
+| `profile CASE_REGEX [--suite e2e\|micro] [--threads N] [--children]` | `perf record -g` of one case, prints the top functions; data in `.work/profiles/` |
+| `verify` | checksums of the protected files |
+| `reject [--apply] [--keep PATH ...]` | reverts all changes vs. HEAD except `summaries/` and `results/` (dry run by default) |
+
+`current` as snapshot name means the in-tree build (must be a `normal` build made by
+`perf.py build`; benchmarks refuse builds of other configurations or builds made outside of
+`perf.py`).
+
+## Benchmark levels
+
+| Level | Where | What |
+|---|---|---|
+| L1 micro | `perf_micro` (1 thread) | one internal function at the hot spot: one tensor grid, one 1D rule, one MI-set operation; `micro/sol/...` are hand-written "speed of light" loops for the same task |
+| L2 phase | `perf_e2e` metrics `generation`, `operator` | grid construction resp. operator application of a pipeline |
+| L3 end-to-end | `perf_e2e` metric `total` (16 threads) | the complete user pipeline: source function, generation instruction, grid, operator |
+
+E2E case names: `<operator>/<grid>/<nodes>[-<integrand>]/b<boundary offset>/d<dim>/L<level>[/...]`
+with operators `quad` (quadrature), `interp` (global interpolation at `pN` points), `interplin`
+(multilinear), `mivec` (`MIVecSGGenInstr` from `nN` anisotropic multi-indices with 1-norm ≤ `S`,
+then quadrature); grids `sg` (`SparseGrid`), `dsg` (`DeltasSparseGrid`); integrands `exp`
+(cheap: one `exp` per evaluation, exposes framework overhead), `uq` (forward-UQ integrand of the
+thesis, Chapter 7), `sin` (product of sines, as the older benchmarks). All grids use the doubling
+growth. Sizes: 0.1–4 s per pipeline at 16 threads; one pass over all 38 cases ≈ 50 s. **High
+dimensions have priority** (they run longest): rank by absolute time saved.
+
+Warm runs: every pipeline runs `--warmups` times before the measured samples (first runs pay
+for OpenMP thread creation, page faults and the OpenBLAS thread pool that Armadillo pulls in).
+
+## A/B methodology
+
+`perf.py ab SUITE A B`: for every round and every case, A and B run back to back as separate
+processes (order alternating between rounds and cases, so thermal drift hits both equally),
+each with `--warmups` + `--samples`. The dominant noise is **process to process** (memory
+layout, thread placement; some cases are bimodal by up to ~9 %), not sample to sample — so the
+defaults use many short processes: e2e 5 rounds × (1 warm-up + 1 sample) at 16 threads (full
+suite ≈ 15 min), micro 5 rounds × 2 samples at 1 thread.
+
+Reported per case and metric: medians of A and B, **speedup = median(A) / median(B)** (> 1: B is
+faster; computed as geometric mean of the per-round ratios) and a 95 % t-confidence interval of
+the per-round log ratios whose spread is bounded below by the **noise model**
+(`baseline/noise_{e2e,micro}.json`: per-case spread measured by comparing the baseline with
+itself over 6 rounds; floor 0.3 %). Verdict: `faster` if the CI lies above 1, `SLOWER` if below,
+`~ (noise)` otherwise. The footer gives the sum of the medians (absolute time saved over all
+compared cases) and an accuracy sanity line. Speedups inside the noise band are reported as
+"within noise", never as gains. Noise figures: [ANALYSIS.md](ANALYSIS.md#measurement-noise).
+
+**Foreign CPU load** (CPU time of other processes as a share of all CPUs, measured per round
+from `/proc/stat` minus our own processes) is reported by `run`, `ab` and `baseline`; above 2 %
+the report carries a WARN and the comparison must be repeated once the cause is gone. This
+catches background jobs that start in the middle of a measurement (observed in the setup
+session: unattended upgrades after a reboot slowed 16-thread runs by 1.6x for 30 minutes while
+1-thread runs were unaffected) — `envcheck` only checks idleness before a run.
+
+Rules: compare against a **fresh "before" snapshot built in the same session** (never against
+old stored numbers: the laptop drifts). Do not build or run anything else while measuring.
+Results of a work session go to `combigrid/perf/results/WP-NN/` (`--save`).
+
+## Reference check
+
+`perf_reference` computes 104 cases (all operators; node families equi/cc/cheb1; boundary
+offsets 0/1; unit and shifted domains; d = 1–10; complete, deltas and MIVec grids) with exact
+solutions. `perf.py refcheck` compares a build against `reference/reference.jsonl` (recorded on
+the unoptimized code) at 1 and 16 threads, using `reference/tolerances.json`:
+
+- the **error against the exact solution** may not grow: `|new − exact| ≤ 1.1·|ref − exact| + noise`
+  is OK; up to `3·|ref − exact| + noise` is **WARN** (must be stated and justified in the summary;
+  the owner decides); more is **FAIL**. `noise` = 4 round-off units of the combination
+  (2^-52 · magnitude · (Σ|c_ℓ| + √#points)); reassociation across thread counts moved results by
+  at most 1.54 units in the setup session.
+- structure (`ints`: number of tensor grids, grid points, order-independent hash of all
+  (multi-index, coefficient) pairs, closure size/hash) must match **exactly** — a change is a
+  functional change;
+- node positions (`floats`: checksum) up to 1e-12 relative;
+- the number of source function evaluations (`info`) may change (reported as INFO, state it).
+
+Owner requirement: numerical errors stay in the same order of magnitude; they may grow slightly
+but should generally not.
+
+## Protection
+
+Protected: `baseline/`, `reference/` (incl. tolerances), `protected.sha256`, `scripts/perf.py`,
+`perf_harness.hpp`, `perf_problems.hpp`, `perf_e2e.cpp`, `perf_reference.cpp`, the pre-existing
+benchmarks (`examples/c++/benchmarks/{quadrature,dsg_quadrature,multiindex_vector,source_function}`,
+`examples/c++/thesis/comparison`), `tools/benchmarking/benchmarker.hpp`, and the hook itself
+(`.claude/hooks/protect_perf.py`, `.claude/settings.json`).
+
+Enforcement: the `PreToolUse` hook `.claude/hooks/protect_perf.py` blocks edits of these files
+(and obvious shell writes); `perf.py verify` checks their SHA-256 sums against
+`protected.sha256` (every work session runs it at start and end; the owner sees violations in
+the diff). Only the owner may change protected files: edit them, then run
+`perf.py protect --authorized-by-owner` to rehash (e.g. for a new baseline after a change of the
+judged configuration).
+
+`perf_micro.cpp` is *not* protected: work packages add micro-benchmarks there. Existing case
+names keep their meaning; if a case must change because an internal signature changed, the
+summary says so; if its meaning changes, it gets a new name.
+
+## Adding a micro-benchmark
+
+In `perf_micro.cpp`, add a registration function and call it in `main()`:
+
+```cpp
+suite.addMicro("micro/<area>/<function>/<config>", [=](MicroRun& run) {
+  // setup (not timed): build the grid, scratch buffers, inputs
+  run.setItems(nItems);                     // e.g. grid points -> reports ns/item
+  run.measure([&]() { doNotOptimize(f(...)); });  // timed; called many times
+});
+```
+
+It must compile against the unoptimized code (it is part of the "before" snapshot). Check with
+`perf.py run micro --filter <name> --no-envcheck` (exploratory) before the A/B.
+
+## Profiling and tools
+
+- `perf` works (`kernel.perf_event_paranoid = 1`, persisted): `perf.py profile`, or
+  `perf record -g` / `perf annotate` / `perf stat` directly (set `LD_LIBRARY_PATH` to the
+  snapshot's `lib/`).
+- valgrind/callgrind (deterministic instruction counts, 1 thread), heaptrack (allocations),
+  hyperfine are installed. No Google Benchmark, no NumPy (the scripts use the stdlib only).
+- `objdump -dr lib/libsgppcombigrid.so` shows whether helpers are inlined (exported functions go
+  through the PLT under `-fPIC` without `-fno-semantic-interposition`).
+
+## Pitfalls
+
+- `lib/` and all object files are shared by the debug, ASan and normal builds; `perf.py` refuses
+  to benchmark a build it did not make (build stamp) or a non-`normal` build.
+- Snapshots are copies of `lib/libsgpp{base,combigrid}.so` + perf binaries, run via
+  `LD_LIBRARY_PATH`; they stay valid while the working tree changes.
+- The Boost tests seed from the clock; run them several times (`--repeat 3`).
+- The repository path contains spaces; quote paths in shell commands.
+- **The laptop throttles under sustained full load**, and how much depends on the conditions
+  (room temperature, surface, preceding load): in the setup session, identical binaries and
+  settings ran a 26-minute A/B 1.6x slower at noon than two days earlier past midnight, while
+  short runs and 1-thread runs were unaffected; a 3-minute A/B lost ~8 % after the first round.
+  A/B comparisons stay valid (A and B are interleaved per case and see the same state); absolute
+  numbers are only comparable when `calibrate` ratios are near 1. A/B reports list the round
+  durations, which show the throttling. Keep the conditions similar between sessions (lid open,
+  hard surface).
