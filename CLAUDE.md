@@ -297,6 +297,9 @@ There is **no pre-commit hook** in the repo. All style/lint enforcement is via t
 - **C++ standard**: C++23, selected with the SCons variable `CPP_STD` (`11`, `14`, `17`, `20`, `23`) in [SConstruct](SConstruct) and applied by `checkCppStandard()` in [site_scons/SGppConfigure.py](site_scons/SGppConfigure.py) (CT module is not required to be compilable with older versions than C++23).
 - **Namespaces**: `sgpp::combigrid` is the primary; nested `tools`, `misc`, `constants`, plus per-operator inline namespaces (`global_interpolation`, `quadrature_operator`, `linear_interpolation`) used to scope internal helpers. Full path spelled out — no `using namespace` in headers.
 - **Header guards**: Use `#pragma once`
+- **Method declarations and definitions** (guideline, not binding):
+  - A method is intended to have a pure declaration with a documentation in a header file and a implementing definition in the corresponding `.cpp` file. The implementation can have comments that explain important or complex functionality for easier understandability but it shouldn't be a direct copy of the documentation in the header.
+  - Method definitions are allowed to be inlined into header where that is measurably faster even with LTO. This is, however, not the preferred choice from a coding guideline standpoint.
 - **File header**: every `.cpp`/`.hpp` must start with the exact 4-line SG++ copyright banner:
   ```
   // Copyright (C) 2008-today The SG++ project
@@ -308,7 +311,8 @@ There is **no pre-commit hook** in the repo. All style/lint enforcement is via t
 - **Includes**: angle brackets only, absolute paths (`#include <sgpp/...>`, `#include <cstdint>`), grouped conventionally but not re-sorted by clang-format (`IncludeBlocks: Preserve`). Enforced by `tools/check_includes.py`.
 - **Doxygen**: heavy use of Javadoc-style block comments (`/** ... */`) with `@brief`, `@param`, `@return`, `@note`, and `@f$ ... @f$` for LaTeX math. Follow this pattern for new public API; new files typically get a top-of-file `@file` + `@brief`.
 - **Naming**: `PascalCase` for types (`SparseGrid`, `SourceFunc`, `CompleteSGGenInstr`); `camelCase` for functions/methods (`nDim()`, `setDomain()`, `computeCTCoeffs`); trailing underscore or plain camelCase for member variables (`nDim_`, `tensorGridData`); `SCREAMING_SNAKE_CASE` for `constexpr` constants; `snake_case` file names.
-- **Error handling**: `assert` for internal invariants (e.g. `assert(point.size() == sparseGrid.nDim())`); `throw` a subclass of `sgpp::base::*_exception` for actual user-input errors. Do not `throw std::exception`.
+- **Length of methods**: Method definitions with more than 30 lines should be functionally decomposed into multiple, smaller methods. Violations are acceptable in rare cases where long method definitions are unavoidable due to, for example, optimization reasons.
+- **Error handling**: `assert` for internal invariants (e.g. `assert(point.size() == sparseGrid.nDim())`); Prefer to `throw` a subclass of `sgpp::base::*_exception` if viable otherwise use std exceptions.
 - **Parallelism**: OpenMP (`#pragma omp parallel for`) is used in the operator top-level drivers ([global_interpolation.cpp:29](combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp#L29), [quadrature.cpp:30](combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp#L30), [linear_interpolation.cpp:37](combigrid/src/sgpp/combigrid/operators/linear_interpolation/linear_interpolation.cpp#L37)) and internally, gated by the thresholds in `constants.hpp`. There is also a custom lightweight thread-pool in [tools/concurrency.hpp](combigrid/src/sgpp/combigrid/tools/concurrency.hpp).
 
 ---
