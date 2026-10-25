@@ -244,7 +244,6 @@ namespace std {
 %ignore sgpp::combigrid::linear_interpolation::computeNeighborGPWithWeight;
 %ignore sgpp::combigrid::quadrature_operator::processTensorGrid;
 %ignore sgpp::combigrid::quadrature_operator::getWeights;
-%ignore sgpp::combigrid::quadrature_operator::getWeightForGP;
 
 // Re-raise exceptions of Python source functions after the operator returns (see SourceFunc.i).
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::interpolate)

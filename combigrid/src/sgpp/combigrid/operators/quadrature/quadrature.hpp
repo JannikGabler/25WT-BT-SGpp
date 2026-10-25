@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file quadrature.hpp
  * @brief Tensor-product quadrature operator on a combination-technique
@@ -44,18 +49,26 @@ Internal operations
  */
 namespace quadrature_operator {
 
+/*
+ * TODO: Add internal helpers from quadrature.cpp with documentation to the header (was skipped to
+ * the inlining issues)
+ */
+
 /**
- * TODO: Document (update)
  * @brief Tensor-product quadrature on a single tensor grid.
  *
- * Iterates over all grid points, multiplies the per-dimension 1D weights,
- * evaluates @p sourceFunc, and accumulates the weighted sum.
+ * Maps the 1D nodes of @p tg onto the domain once and iterates over the grid points row by row.
+ * The row dimension (innermost) is the first dimension with more than one node; dimensions with
+ * one node are not iterated (constant coordinate and weight factor). A step to the next row
+ * updates only the coordinates and the partial weight products of the dimensions that changed.
+ * Each row is summed with the 1D weights of the row dimension and multiplied once by the product
+ * of the weights of the other dimensions. The source function is evaluated at the grid points in
+ * domain coordinates.
  *
- * @param sourceFunc Source function.
- * @param tg         Tensor grid.
- * @param genInstr   Generation instruction (provides domain and per-dim
- *                   node-generation/quadrature rules).
- * @param scratch    Per-thread scratch space; reused across calls.
+ * @param context Read-only data of the quadrature call (source function, domain and
+ *                per-dimension node-generation functions, which provide the quadrature rules).
+ * @param tg      Tensor grid (at least one dimension).
+ * @param scratch Per-thread scratch space; reused across calls.
  * @return Quadrature estimate on the unit hypercube
  *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
  */
@@ -74,20 +87,6 @@ double processTensorGrid(const sgpp::combigrid::misc::QuadratureContext& context
  */
 void getWeights(const sgpp::combigrid::misc::QuadratureContext& context, const TensorGrid& tg,
                 sgpp::combigrid::misc::QuadratureScratch& scratch);
-
-/**
- * TODO: Document (update)
- * @brief Computes the tensor-product weight at multi-index @p gpMI from
- * the per-dimension weights stored in @p scratch.
- *
- * @param gpMI         Per-dimension grid-point indices.
- * @param gpCntPerDim  Per-dimension grid-point counts (used to walk the
- *                     concatenated weight vector).
- * @param scratch      Scratch space pre-populated by @ref getWeights.
- * @return Tensor-product quadrature weight at @p gpMI.
- */
-double getWeightForGP(const std::vector<GPCntType>& gpMI, const GPMI& gpCntPerDim,
-                      const sgpp::combigrid::misc::QuadratureScratch& scratch);
 
 }  // namespace quadrature_operator
 

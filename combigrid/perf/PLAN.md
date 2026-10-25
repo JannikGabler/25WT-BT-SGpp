@@ -18,17 +18,21 @@ generation 5.1 s).
 
 | Rank | ID | Title | Status | Expected saving (e2e) |
 |---|---|---|---|---|
-| 1 | WP-01 | SG quadrature: per-grid-point work | ready | 8–10.5 s, ~2x on quad/sg d ≥ 5 |
-| 2 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
-| 3 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~4.8 s, generation ≥ 10x at d ≥ 10 |
-| 4 | WP-04 | DSG quadrature: row loop | ready | 1.5–3 s (d ≥ 7) |
-| 5 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready (after WP-01) | 0.5–1.5 s; low d and many small grids |
-| 6 | WP-06 | Global interpolation: operator overhead | ready | ~1.3 s |
-| 7 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
-| 8 | WP-08 | Linear interpolation: corner loop | ready | ~1.1 s |
-| – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | needs decision | most of interp/interplin (≥ 5 s), scales with #points |
-| – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | needs decision | a few % to 10 % on hot helpers; re-evaluate after WP-01 |
-| – | D-3 | Armadillo/OpenBLAS thread pool in every process | needs decision | cold runs only (no effect on warm runs) |
+| – | WP-01 | SG quadrature: per-grid-point work | accepted (2026-10-25) | measured: 15.8 s saved; quad/sg 22.3 → 9.4 s (2.4x), mivec 9.3 → 6.4 s |
+| 1 | WP-11 | Toolchain measurement: GCC flags, Clang ThinLTO, Clang full LTO (measurement only) | in progress (owner: next) | decision data; gcc-nosi ≲ 4 % on the SG quad path, rest unknown |
+| 2 | RP-1 | Re-profiling after WP-01 (quad/sg changed 2.4x) | ready (after WP-11) | re-ranks everything below |
+| 3 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
+| 4 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~4.8 s, generation ≥ 10x at d ≥ 10 |
+| 5 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
+| 6 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | 1.5–3 s (d ≥ 7) |
+| 7 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready | 0.5–1.5 s; low d and many small grids |
+| 8 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | ~1.3 s |
+| 9 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
+| 10 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s |
+| 11 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
+| – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
+| – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | measured in WP-11 | ≲ 4 % on the SG quad path after WP-01; more where exported helpers remain |
+| – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10 | – |
 
 ---
 
@@ -59,6 +63,10 @@ generation 5.1 s).
 - **Micro**: `micro/quad/process_tg/*`, `micro/quad/process_all_tgs/*`, `micro/sol/quad_tg/*`.
 - **E2E filter**: `^quad/sg/|^mivec/`
 - **Functional change**: none. **Dependencies**: none.
+- **Result (accepted 2026-10-25)**: rows along the first multi-node dimension, nodes premapped
+  per tensor grid, 1-node dimensions folded into constant factors. quad/sg 22.30 → 9.41 s,
+  mivec 9.27 → 6.39 s (15.8 s saved, 2.0x over 17 cases); d10 b0 3.5x, b1 d15/d20 4.4/4.7x,
+  equi-sin d7 1.45x; micro now 0.86–0.88x of the old speed-of-light loop; refcheck 104/104 OK.
 
 ## WP-02 — DSG quadrature: per-delta-tensor-grid overhead at high d
 - **Location**: `operators/quadrature/deltas_sparse_grid_quadrature.{hpp,cpp}`
@@ -120,7 +128,8 @@ generation 5.1 s).
 - **Expected gain**: 1.5–3 s on `quad/dsg/*` at d ≥ 7.
 - **Risk**: low–medium. **Tests**: delta quadrature tests. **Micro**: `micro/dsg/process_delta_tg/*`
   (add a speed-of-light case). **E2E filter**: `^quad/dsg/` · **Functional change**: none.
-- **Dependencies**: after WP-02 (same files; re-profile in between).
+- **Dependencies**: after WP-02 (same files; re-profile in between). From WP-01: delta grids at
+  b1 have the same 1-node dimensions; iterating only the multi-node dimensions should carry over.
 
 ## WP-05 — SG quadrature: per-tensor-grid costs
 - **Location**: `quadrature.cpp` (`getWeights`), `quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp`
@@ -138,7 +147,10 @@ generation 5.1 s).
 - **Expected gain**: 1.1–1.4x on `quad/sg/cc-*` at d ≤ 3 and on many-small-grid cases (b1 d15/d20).
 - **Risk**: low. **Tests**: quadrature tests + CC rule tests. **Micro**: `micro/quad/process_tg/cc/*`,
   `micro/quad/process_all_tgs/*`, `micro/quadrule/cc_weights/*`. **E2E filter**: `^quad/sg/|^mivec/`
-- **Functional change**: none. **Dependencies**: after WP-01 (same function).
+- **Functional change**: none. **Dependencies**: WP-01 accepted (same function).
+- **From WP-01 (after its change)**: `micro/quad/process_tg/cc/b0/d2/L16` 66 ns/point vs. equi
+  ~34 ns/point (per-grid CC weight computation) → cache 1D weights per (rule, #nodes);
+  `process_all_tgs/equi/b1/d20/L4` 27.9 ns/point vs. 21.6 at b0/d10 (many small grids).
 
 ## WP-06 — Global interpolation: operator overhead
 - **Location**: `operators/global_interpolation/global_interpolation.cpp`.
@@ -153,7 +165,10 @@ generation 5.1 s).
 - **Expected gain**: 1.2–1.5x on `interp/*` (integrand-dominated).
 - **Risk**: low. **Tests**: `tests/operators/global_interpolation/interpolation_test.cpp` (errors
   are checked relative to max |f|, see `maxAbsOfLinearFunc`). **Micro**: `micro/interp/global_tg/*`.
-- **E2E filter**: `^interp/` · **Functional change**: none. **Dependencies**: none.
+- **E2E filter**: `^interp/` · **Functional change**: none. **Dependencies**: none; re-assess the
+  expected gain after the owner's decision on WP-09 (a batched API removes per-query-point work).
+  From WP-01: the operator still calls `evaluateNormalizedInPlace` → `denormalizeDataVector` per
+  point; WP-01's node premapping per tensor grid applies here.
 
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
@@ -186,7 +201,124 @@ generation 5.1 s).
 - **Expected gain**: 1.2–1.4x on `interplin/*`.
 - **Risk**: low (skipping zero-weight corners changes the evaluation count → refcheck INFO;
   results unchanged). **Tests**: linear interpolation tests. **E2E filter**: `^interplin/`
-- **Functional change**: none. **Dependencies**: none.
+- **Functional change**: none. **Dependencies**: none; re-assess after the owner's decision on
+  WP-09. From WP-01: same per-point `evaluateNormalizedInPlace` path; premap the nodes.
+
+## WP-09 — Multi-point interpolation API (from D-1; proposal, owner decides after the results)
+- **Source**: D-1. Owner, 2026-10-24: "Approve it as a work package. A new API can be considered
+  if the performance gain is worth it. I will decide on this after having the results."
+- **Location**: `operators/global_interpolation/global_interpolation.{hpp,cpp}`,
+  `operators/linear_interpolation/linear_interpolation.{hpp,cpp}`, umbrella
+  `combigrid/src/sgpp_combigrid.hpp`, bindings `combigrid/build/pysgpp/` (new declarations in
+  bound headers are wrapped by SWIG automatically).
+- **Hypothesis**: `interpolate` evaluates the source function at every grid point of every tensor
+  grid for every query point (`interp/sg/cc/b0/d5/L6/p64`: 2.2e6 evaluations = 64 × ~34k SG
+  points). A multi-point variant evaluates each tensor grid once and interpolates all query
+  points from its value tensor; per query point only the d nested 1D interpolations remain.
+  Design options (session compares, picks one, justifies): (a) batched free functions
+  (points → values) processing tensor grid by tensor grid, stateless, memory = largest tensor
+  grid + #points; (b) a surrogate object storing the values per tensor grid, memory = all SG
+  points, reusable for later queries. Existing functions keep signatures and results.
+  `interpolateLinear` probably evaluates only the 2^d corner neighbors per point and tensor grid
+  (verify): batching then helps only through shared corners or whole-grid evaluation —
+  quantify from the evaluation counts before implementing it there.
+- **Evidence**: baseline single-point API: interp 6.6 s, interplin 5.0 s (d ≥ 7: 3.7 s / 4.4 s);
+  integrand (`cos`) 52–57 % plus per-point assembly/mapping (`getGridPoint` +
+  `denormalizeDataVector`) 23 % (`interp/sg/cc/b0/d5/L6/p64`) / 28 %
+  (`interplin/sg/equi/b1/d8/L5/p256`, incl. `computeNeighborGPWithWeight`). Evaluation counts:
+  ANALYSIS.md e2e table.
+- **Expected gain**: only for callers of the new API: interp ≥ 2x on e2e-like cases, up to
+  ~#points-fold for expensive source functions; interplin unknown until corner reuse is
+  quantified. The existing e2e suite measures the old API and must not regress.
+- **Measurement (deviates from the standard)**: the new API does not exist in the before
+  snapshot. (1) Standard A/B `^interp/|^interplin/` on the existing cases: no regression.
+  (2) Gain: an unprotected comparison benchmark (new micro cases or a separate driver, never
+  `perf_e2e.cpp`) running the same problems/points as the `interp/*` and `interplin/*` e2e cases
+  (from `perf_problems.hpp`), once as a loop over the single-point API and once with the new API,
+  interleaved, ≥ 5 rounds, 16 threads; report speedup, evaluation counts and peak memory per case.
+  (3) New-API results equal the single-point results within round-off on all interp/interplin
+  reference cases.
+- **Risk**: medium — public API surface (C++ and Python), parallelization changes (over points
+  vs. tensor grids), memory of option (b).
+- **Tests**: new: batched == single-point for several node families, boundary offsets 0/1,
+  non-unit domains, anisotropic MI sets, d = 1, zero and one query points; existing interpolation
+  tests unchanged.
+- **E2E filter**: `^interp/|^interplin/` (no-regression check).
+- **Functional change**: new public API, agreed as a proposal for this WP (owner decides after
+  the results); existing API and results unchanged. Python bindings: expose if straightforward;
+  the `SG_PYTHON=1` build must succeed in any case.
+- **Dependencies**: none. Decides the value of WP-06/WP-08; WP-07 stays relevant either way.
+
+## WP-10 — Do not link Armadillo when Eigen provides the FFT (from D-3)
+- **Source**: D-3. Owner, 2026-10-24: keep the WP; if it only reduces start-up times it is
+  probably not worth implementing — decided after the results are measured. So: **measure
+  first** (cold-start cost with and without the OpenBLAS pool, e.g. `OPENBLAS_NUM_THREADS=1`
+  as a no-code proxy), implement only if the numbers are clearly above noise, and report the
+  cost/benefit either way.
+- **Location**: `base/SConscript` (`USE_EIGEN` / `USE_ARMADILLO` handling), FFT backend selection
+  in `operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp`
+  (Eigen wins when both are set).
+- **Hypothesis**: with `USE_EIGEN=1 USE_ARMADILLO=1`, `libsgppbase.so` links Armadillo → OpenBLAS
+  although the FFT uses Eigen; OpenBLAS starts its thread pool in every process.
+- **Evidence**: 5–18 % of the samples of cold single-pipeline runs (ANALYSIS.md); no effect on
+  warm runs. After WP-01: OpenBLAS 6.9 % of the samples in the profile of
+  `quad/sg/equi-exp/b1/d20/L5` (a 240 ms process): the share grows as the operators get faster.
+- **Expected gain**: cold process start (short programs, Python scripts, tests); the warm e2e
+  suite is expected unchanged (within noise).
+- **Measurement**: linked libraries (`ldd`) before/after, wall time of repeated fresh processes
+  of short e2e cases (and a Python import), A/B on a few short cases.
+- **Risk**: other modules or the Python build may use Armadillo (check first); all four
+  `USE_EIGEN`/`USE_ARMADILLO` combinations must still build and pass the tests.
+- **Functional change**: build configuration (linking only), agreed in principle by the owner.
+  No new flags. If other users of Armadillo make a clean change impossible: BLOCKED with options.
+- **Dependencies**: none; lowest priority.
+
+## WP-11 — Toolchain measurement: GCC flags vs. Clang ThinLTO vs. Clang full LTO
+- **Source**: D-2 and the owner's question on Clang vs. GCC. Owner, 2026-10-25: "create a
+  toolchain measurement WP but please add a third configuration that measures Clang with full
+  LTO (not ThinLTO). Please schedule this work package as the next work package."
+- **Goal**: data for the owner's decision whether to change the judged toolchain/flags.
+  Measurement only: SConstruct, `site_scons/`, `compileNormal.sh` and `perf.py` stay unchanged.
+- **Configurations** (otherwise the judged configuration: `OPT=1 ARCH=avx2 USE_EIGEN=1
+  USE_ARMADILLO=1`, `-march=native`; source = HEAD with WP-01):
+  1. `gcc` — reference, = `perf.py build normal` (GCC 15.2, `-flto=auto`).
+  2. `gcc-nosi` — + `-fno-semantic-interposition`.
+  3. `gcc-nosi-bsym` — 2 + `-fno-plt` + `-Wl,-Bsymbolic-functions`.
+  4. `clang-thin` — `COMPILER=clang` (Clang 21.1.8), `-flto=thin`, `-fuse-ld=lld`.
+  5. `clang-full` — `COMPILER=clang`, full LTO (`-flto`), `-fuse-ld=lld`.
+  Optional: the better Clang variant + `-fno-semantic-interposition` (Clang inlines exported
+  functions by default; the flag adds direct calls).
+- **Per configuration**: Boost tests (`--repeat 3`); refcheck at 16 threads (OK/WARN/FAIL counts;
+  FP contraction defaults differ: GCC `fast`, Clang `on`); full e2e A/B vs. `gcc` (all 38 cases,
+  flags affect every operator; ≈ 18–23 min each) and micro A/B vs. `gcc`; for the best variant per
+  compiler a profile of 2 high-d cases incl. the OpenMP runtime share (libgomp vs. libomp).
+- **Build times** (wall, `-j16`, idle): clean build, rebuild after touching one `.cpp`
+  (`quadrature.cpp`) and after touching a widely included header, for `gcc`, `clang-thin` (with
+  and without a ThinLTO cache), `clang-full`, and the debug builds (`OPT=0`) of both compilers.
+  Count compiler warnings per compiler.
+- **Tooling constraint**: `perf.py build normal` hard-codes the judged scons arguments, benchmarks
+  only accept builds with a valid build stamp, and `perf.py` is protected. Do not edit protected
+  files or bypass the hook. Preferred: a new unprotected wrapper (e.g.
+  `combigrid/perf/scripts/toolchain.py`) that reuses perf.py's build/snapshot/ab/refcheck by
+  import with the variant's scons arguments and records the real compiler and flags in each
+  snapshot's metadata. If that is impossible without changing perf.py: BLOCKED, describing the
+  minimal perf.py extension the owner would apply.
+- **Pitfalls**: SCons persists variables in `buildVars.out`, so `COMPILER=clang` or extra flags can
+  leak into later builds: restore it / pass `COMPILER=gnu` and the original flags explicitly, and
+  verify each snapshot's compiler (`readelf -p .comment`). Configurations share `lib/` and the
+  object files (full rebuild per switch). Clang binaries load `/usr/lib/x86_64-linux-gnu/libomp.so.5`
+  (package `libomp5` 22.1.2), not Clang 21's own 21.1.8: record the runtime used (`ldd`). `perf.py`
+  sets the standard OMP variables (both runtimes honour them); do not tune runtime-specific ones.
+  End state: judged `gcc` build in the tree, tests and refcheck OK, `buildVars.out` as before.
+- **Python**: for the best non-reference variant, check that `SG_PYTHON=1` builds and the
+  combigrid Python examples run (no measurement).
+- **Expected**: `gcc-nosi` ≲ 4 % on the SG quadrature path, more on interpolation/DSG paths that
+  still call exported helpers; Clang vs. GCC typically within ±10 % per group, either direction;
+  the OpenMP runtime may matter for small parallel regions (interpolation).
+- **Functional change**: none in the tree. Adopting a configuration changes the judged
+  configuration: owner decides after the results (baseline re-recording is owner-only).
+- **Dependencies**: WP-01 committed. RP-1 follows directly, so it profiles the then-judged
+  configuration.
 
 ## D-1 — Multi-point interpolation API (needs decision)
 - **Idea**: `interpolate` / `interpolateLinear` evaluate the source function at all grid points
@@ -197,6 +329,8 @@ generation 5.1 s).
   `cos` + integrand): ~#points-fold fewer evaluations, i.e. most of the 11.6 s of these groups; far more
   for real (expensive) source functions.
 - **Interface**: new public API (and Python bindings); existing functions unchanged. Owner decides.
+- **Decision (2026-10-24)**: approved as work package WP-09; adoption of the API is decided after
+  its results.
 
 ## D-2 — `-fno-semantic-interposition` / visibility (needs decision)
 - SG++ compiles with `-fPIC` without `-fno-semantic-interposition`: exported functions are never
@@ -204,8 +338,26 @@ generation 5.1 s).
   `getWeightForGP`, `denormalizeDataVector`, `getGridPoint`). The flag (combigrid only, or all
   modules) would let GCC inline them. Re-measure after WP-01/WP-06/WP-08 (they remove the hottest
   PLT calls structurally).
+- Effects explained to the owner 2026-10-24 (inlining/IPA/direct calls of exported functions in
+  their own library, also across TUs with LTO; only breaks deliberate symbol interposition,
+  e.g. LD_PRELOAD of an SG++ symbol; no API/ABI change; possible round-off changes from FMA
+  contraction across former call boundaries). Still open; proposed: measurement-only WP after
+  WP-01.
+- Owner asked (2026-10-24) whether `-fPIC` itself can go. Facts given: `-fPIC` is added for every
+  object on non-Windows platforms (`site_scons/SGppConfigure.py:107`, also with
+  `BUILD_STATICLIB=1`); shared libraries and the Python module `_pysgpp_swig.so` require PIC;
+  the PIC addressing itself is nearly free on x86-64, the cost is GCC's interposition rule.
+  Variants for the measurement WP: `-fno-semantic-interposition` (compile time: inlining + direct
+  calls), `-Wl,-Bsymbolic-functions` (link time: direct calls only), both; dropping `-fPIC` for
+  static C++-only builds (GCC 15.2 here defaults to PIE) only as a reference point, since it
+  changes the build model.
+- WP-01 findings: on the SG quadrature path only `SourceFunc::evaluate@plt` is left per point
+  (1.0–1.5 % of cycles; the `evaluate` wrapper 2–3 % more could be inlined) → ≲ 4 % there; per
+  tensor grid `getWeights` and the trivial `TensorGrid` getters (out-of-line in tensor_grid.cpp).
+- Owner 2026-10-25: measure in WP-11 together with Clang (ThinLTO and full LTO).
 
 ## D-3 — Armadillo/OpenBLAS thread pool (needs decision, low)
 - With `USE_ARMADILLO=1`, `libsgppbase.so` links Armadillo → OpenBLAS, whose thread pool spins at
   process start (5–18 % of the samples of cold single-pipeline runs). No measurable effect on warm
   runs. Options: not linking Armadillo when Eigen provides the FFT, or nothing.
+- **Decision (2026-10-24)**: "Sure" → WP-10 (do not link Armadillo when Eigen provides the FFT).

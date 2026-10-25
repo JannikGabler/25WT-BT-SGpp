@@ -461,6 +461,7 @@ int main(int argc, char** argv) {
   addProcessTG(suite, "cc", 0, 2, 16);
   addProcessTG(suite, "cc", 0, 10, 4);
   addProcessAllTGs(suite, "equi", 1, 20, 4);
+  addProcessAllTGs(suite, "cc", 1, 10, 5);  // WP-01: many short rows (levels 0 have 1 node)
   addSolQuadTG(suite, "equi", 0, 5, 10);
   addSolQuadTG(suite, "equi", 0, 10, 4);
   addIterateTG(suite, 10, 4);
