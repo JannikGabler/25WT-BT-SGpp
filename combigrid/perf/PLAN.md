@@ -3,7 +3,9 @@
 Ranked work packages (WPs). The master keeps this file current (status, ranks, new WPs from
 summaries); evidence and profiles: [ANALYSIS.md](ANALYSIS.md). Numbers: baseline (boost off,
 re-recorded 2026-10-24), judged configuration, 16 threads unless stated; e2e medians from
-`baseline/e2e_t16.jsonl`, micro from `baseline/micro_t1.jsonl`.
+`baseline/e2e_t16.jsonl`, micro from `baseline/micro_t1.jsonl`. WP-13 adds
+`-fno-semantic-interposition` to GCC `OPT=1` builds via site_scons; the baseline (built from
+fed2cdb4e with its own site_scons) stays without it, so the flag counts as an optimization.
 
 **Ranking rule**: expected absolute time saved on the e2e suite, cases with d ≥ 7 first (they
 run longest and the owner prioritizes high dimensions), then all cases; ties broken by operator
@@ -19,8 +21,9 @@ generation 5.1 s).
 | Rank | ID | Title | Status | Expected saving (e2e) |
 |---|---|---|---|---|
 | – | WP-01 | SG quadrature: per-grid-point work | accepted (2026-10-25) | measured: 15.8 s saved; quad/sg 22.3 → 9.4 s (2.4x), mivec 9.3 → 6.4 s |
-| 1 | WP-11 | Toolchain measurement: GCC flags, Clang ThinLTO, Clang full LTO (measurement only) | in progress (owner: next) | decision data; gcc-nosi ≲ 4 % on the SG quad path, rest unknown |
-| 2 | RP-1 | Re-profiling after WP-01 (quad/sg changed 2.4x) | ready (after WP-11) | re-ranks everything below |
+| – | WP-11 | Toolchain measurement: GCC flags, Clang ThinLTO, Clang full LTO (measurement only) | accepted (2026-10-25): gcc-nosi → WP-13 | measured: gcc-nosi e2e 54.20 → 52.91 s (1.024x); Clang not adopted |
+| 1 | WP-13 | `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`, all modules) | in progress (prompt 2026-10-25) | ≈ 1.3 s (e2e 1.024x as gcc-nosi in WP-11) |
+| 2 | RP-1 | Re-profiling after WP-01/WP-13 | ready (after WP-13) | re-ranks everything below |
 | 3 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
 | 4 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~4.8 s, generation ≥ 10x at d ≥ 10 |
 | 5 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
@@ -30,8 +33,9 @@ generation 5.1 s).
 | 9 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
 | 10 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s |
 | 11 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
+| 12 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
-| – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | measured in WP-11 | ≲ 4 % on the SG quad path after WP-01; more where exported helpers remain |
+| – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | decided 2026-10-25: site_scons, GCC, `OPT=1` → WP-13 | measured: e2e 1.024x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10 | – |
 
 ---
@@ -92,6 +96,9 @@ generation 5.1 s).
 - **Micro**: `micro/dsg/process_delta_tg/equi/b1/d20/L6`, `micro/dsg/prepare/equi/b1/d20/L6`.
 - **E2E filter**: `^quad/dsg/`
 - **Functional change**: none. **Dependencies**: none.
+- **From WP-11**: with gcc-nosi `appendSubTrieChildren` is still 64 % of `quad/dsg/equi-exp/b1/d20/L6`
+  (16 threads; Clang ThinLTO 66 %, 11 % more cycles there); quad/dsg is the largest group
+  (26.3 s with gcc-nosi), so WP-02 stays the top optimization candidate.
 
 ## WP-03 — Downwards closure of multi-index sets
 - **Location**: `tools/downwards_closedness.hpp` (`genMIVecDownwardsClosure`), helpers in
@@ -114,6 +121,10 @@ generation 5.1 s).
 - **Micro**: `micro/mivec/downwards_closure/*`, `micro/mivec/ct_coeffs/*`.
 - **E2E filter**: `^mivec/`
 - **Functional change**: none if the order is preserved. **Dependencies**: none.
+- **From WP-11**: Clang ThinLTO generates MI sets 1.4–1.9x faster than GCC (e2e mivec d20/d15/d10
+  1.60x/1.47x/1.29x; micro `downwards_closure` 1.23–1.42x, `complete_mis_with_coeffs` 1.57x).
+  Compare the generated code of the dominance/closure loops: a source-level change may give GCC
+  the same (in addition to the algorithmic change).
 
 ## WP-04 — DSG quadrature: row loop
 - **Location**: `deltas_sparse_grid_quadrature.hpp` (`forEachGPWithGlobalWeight`,
@@ -169,6 +180,11 @@ generation 5.1 s).
   expected gain after the owner's decision on WP-09 (a batched API removes per-query-point work).
   From WP-01: the operator still calls `evaluateNormalizedInPlace` → `denormalizeDataVector` per
   point; WP-01's node premapping per tensor grid applies here.
+- **From WP-11**: `-fno-semantic-interposition` (WP-13) removes the PLT calls of exported
+  helpers (interp 1.065x); RP-1 re-measures the shares of `denormalizeDataVector`/`getGridPoint`.
+  On `interp/sg/cc/b0/d10/L2/p8` Clang needs 32 % fewer cycles in `interpolateFirstDim` (34 vs.
+  50 G): compare the generated code. Refcheck: `interp/sg/equi/b0/d2/L5/cos-shifted` WARNs on any
+  FMA-placement change in the barycentric formula (owner 2026-10-25: tolerance stays; explain it).
 
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
@@ -188,6 +204,9 @@ generation 5.1 s).
 - **Micro**: `micro/interp/barycentric_1d/generic/*`, `micro/interp/global_tg/cheb1/*`.
 - **E2E filter**: `^interp/sg/(cheb1|equi)/` · **Functional change**: none.
 - **Dependencies**: after or together with WP-06 (same call path) — master decides.
+- **From WP-11**: `interp/sg/equi/b0/d2/L5/cos-shifted` WARNs whenever FMA placement in
+  `BarycentricFormula::evaluateFormula` changes (Clang: error 1.6e-6 → 4.2e-6; pathological case,
+  Lebesgue constant ~1e16). Owner 2026-10-25: tolerance stays; the summary explains a WARN.
 
 ## WP-08 — Linear interpolation: corner loop
 - **Location**: `operators/linear_interpolation/linear_interpolation.cpp`, `TensorGrid::getNeighborsForLinInterpolation`.
@@ -319,6 +338,36 @@ generation 5.1 s).
   configuration: owner decides after the results (baseline re-recording is owner-only).
 - **Dependencies**: WP-01 committed. RP-1 follows directly, so it profiles the then-judged
   configuration.
+- **Result (2026-10-25, accepted)**: gcc-nosi e2e 1.024x (quad/sg 1.017x, quad/dsg 1.018x, interp
+  1.065x, interplin 1.000x, mivec 1.043x; 25 faster / 1 SLOWER at 0.990x), refcheck OK, 100/104
+  bitwise identical. Clang ThinLTO 1.034x but quadrature 0.96–0.98x, refcheck WARN, 612 warnings;
+  full LTO 1.018x. Owner: adopt `-fno-semantic-interposition` via site_scons for GCC `OPT=1`
+  builds of all modules (WP-13); baseline unchanged; `toolchain.py` kept.
+
+## WP-13 — `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`)
+- **Source**: WP-11 summary + owner's decision 2026-10-25 (switched from "judged configuration
+  only" to SCons after the master's answer: safe in the GNU path, baseline stays valid).
+- **Location**: `site_scons/SGppConfigure.py`, `configureGNUCompiler` (covers `gnu`, `openmpi`,
+  `mpich`); the generic `OPT` branch at line ~43 applies to every compiler, so not there. Not on
+  `win32`/`cygwin` (as `-fPIC` at line ~106). Compile and link flags (WP-11 passed it in
+  CPPFLAGS and LINKFLAGS; the LTO link step optimizes). CLAUDE.md §4: what `OPT=1` adds.
+- **Expected**: as gcc-nosi in WP-11: e2e 54.20 → 52.91 s (1.024x; quad/sg 1.017x, quad/dsg
+  1.018x, interp 1.065x, interplin 1.000x, mivec 1.043x), micro geomean 1.062x, refcheck OK
+  (100/104 bitwise, 4 uq ≤ 1.1e-15 relative); PLT calls 2090 → 1709, local aliases 7 → 85.
+- **Other modules**: all GCC `OPT=1` builds get the flag. Behavior changes only for interposed
+  or duplicate exported symbols: check strong exported symbols defined in more than one
+  `lib/libsgpp*.so`; build and test the other modules with and without the flag if the
+  dependencies allow (pre-existing failures must be identical).
+- **Risk**: low (no source change; Windows CI untested locally → excluded). `OPT=0` builds unchanged.
+- **E2E filter**: all (`.`), micro: all.
+- **Functional change**: build configuration, approved by the owner 2026-10-25.
+
+## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
+- **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where
+  Clang is slower) and WP-03 (MI closure, where Clang is 1.4–1.9x faster) changed the code.
+- **Content**: `toolchain.py` build + snapshot of `gcc` (judged, incl. nosi) and `clang-thin`,
+  refcheck, full e2e and micro A/B; no build-time measurements.
+- **Status**: planned; the owner decides after WP-02/WP-03 whether to run it.
 
 ## D-1 — Multi-point interpolation API (needs decision)
 - **Idea**: `interpolate` / `interpolateLinear` evaluate the source function at all grid points
@@ -355,6 +404,10 @@ generation 5.1 s).
   (1.0–1.5 % of cycles; the `evaluate` wrapper 2–3 % more could be inlined) → ≲ 4 % there; per
   tensor grid `getWeights` and the trivial `TensorGrid` getters (out-of-line in tensor_grid.cpp).
 - Owner 2026-10-25: measure in WP-11 together with Clang (ThinLTO and full LTO).
+- **Decision (2026-10-25, after WP-11)**: first "judged configuration only", then switched by the
+  owner to site_scons: `-fno-semantic-interposition` in `configureGNUCompiler` when `OPT=1`, not on
+  win32/cygwin, all modules → WP-13. compileNormal.sh/perf.py unchanged, no baseline
+  re-recording. `-fno-plt`/`-Bsymbolic-functions` not adopted (no gain).
 
 ## D-3 — Armadillo/OpenBLAS thread pool (needs decision, low)
 - With `USE_ARMADILLO=1`, `libsgppbase.so` links Armadillo → OpenBLAS, whose thread pool spins at

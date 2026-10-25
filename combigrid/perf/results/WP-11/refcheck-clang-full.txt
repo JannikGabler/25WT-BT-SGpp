@@ -1,0 +1,4 @@
+refcheck (1 thread(s)): 103 OK, 0 INFO, 1 WARN, 0 FAIL
+  WARN interp/sg/equi/b0/d2/L5/cos-shifted: error grew at value 3: |ref-exact|=1.625e-06 |new-exact|=4.178e-06 (x2.57, noise allowance 4.4e-14)
+refcheck (16 thread(s)): 103 OK, 0 INFO, 1 WARN, 0 FAIL
+  WARN interp/sg/equi/b0/d2/L5/cos-shifted: error grew at value 3: |ref-exact|=1.625e-06 |new-exact|=4.178e-06 (x2.57, noise allowance 4.4e-14)

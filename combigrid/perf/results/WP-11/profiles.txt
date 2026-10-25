@@ -1,0 +1,57 @@
+## WP-11-gcc-nosi: quad/dsg/equi-exp/b1/d20/L6
+profile of `^quad/dsg/equi-exp/b1/d20/L6$` (e2e, 16 threads, self time)
+    64.28%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::delta_quadrature_operator::{anon}::appendSubTrieChildren
+    23.38%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::delta_quadrature_operator::forEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid
+     3.71%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+     1.99%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     1.21%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     0.97%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::delta_quadrature_operator::compSubTrie
+     0.75%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+
+-- by DSO (self):
+
+## WP-11-gcc-nosi: interp/sg/cc/b0/d10/L2/p8
+profile of `^interp/sg/cc/b0/d10/L2/p8$` (e2e, 16 threads, self time)
+    54.44%  perf_e2e  libm.so.6                [.] __cos_fma
+    25.62%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::interpolateFirstDim
+     8.67%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     2.31%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate
+     1.75%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     1.66%  perf_e2e  perf_e2e                 [.] cos@plt
+     1.16%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     0.94%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::barycentricFormula
+     0.85%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     0.55%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+
+-- by DSO (self):
+
+## WP-11-clang-thin: quad/dsg/equi-exp/b1/d20/L6
+profile of `^quad/dsg/equi-exp/b1/d20/L6$` (e2e, 16 threads, self time)
+    65.74%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::delta_quadrature_operator::{anon}::appendSubTrieChildren
+    19.60%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid
+     3.47%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+     1.93%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     1.16%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     0.64%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     0.62%  perf_e2e  libomp.so.5              [.] 0x0000000000121110
+
+-- by DSO (self):
+
+## WP-11-clang-thin: interp/sg/cc/b0/d10/L2/p8
+profile of `^interp/sg/cc/b0/d10/L2/p8$` (e2e, 16 threads, self time)
+    56.57%  perf_e2e  libm.so.6                [.] __cos_fma
+    17.85%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::interpolateFirstDim
+     9.27%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     2.59%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate
+     1.48%  perf_e2e  libomp.so.5              [.] 0x0000000000121110
+     1.31%  perf_e2e  perf_e2e                 [.] cos@plt
+     1.03%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     0.64%  perf_e2e  libomp.so.5              [.] 0x00000000000baf19
+     0.63%  perf_e2e  libomp.so.5              [.] 0x00000000000baf2a
+     0.62%  perf_e2e  libomp.so.5              [.] 0x00000000000baf23
+     0.61%  perf_e2e  libomp.so.5              [.] 0x00000000000baf1b
+     0.60%  perf_e2e  libomp.so.5              [.] 0x00000000000baf1e
+     0.59%  perf_e2e  libomp.so.5              [.] 0x00000000000baf12
+
+-- by DSO (self):
+
