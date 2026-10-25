@@ -507,6 +507,16 @@ def configureGNUCompiler(config):
       "-fno-strict-aliasing",
       "-funroll-loops"])
 
+  # -fno-semantic-interposition: with -fPIC, GCC assumes that every exported function may be
+  # interposed (e.g., via LD_PRELOAD) and therefore neither inlines nor calls it directly, not even
+  # within its own translation unit. Optimized builds give up interposition of SG++ functions for
+  # inlining and direct calls. Also passed to the linker, as the optimizer runs there with -flto.
+  # Skipped where -fPIC is not used (cygwin and win32, see doConfigure).
+  if config.env["OPT"] and (version >= (5, 0, 0)) and \
+      (config.env["PLATFORM"] not in ["cygwin", "win32"]):
+    config.env.AppendUnique(CPPFLAGS=["-fno-semantic-interposition"])
+    config.env.AppendUnique(LINKFLAGS=["-fno-semantic-interposition"])
+
   # Mitigation for old Ubuntu (should probably be also applied to Debian?):
   # Package 'libomp-dev' installs a symlink 'libgomp.so' to 'libomp.so' in /usr/lib/x86_64-linux.
   # If this path is manually added (-L...), then ld uses this symlink and, thus, links against

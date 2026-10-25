@@ -199,7 +199,7 @@ Compile with the debug configuration by default as it enables assert statements.
 
 ### Performance-relevant configuration
 
-Performance is judged under the [compileNormal.sh](compileNormal.sh) configuration: `-O3` and `-DNDEBUG` (both added by `OPT=1` in [SGppConfigure.py:44](site_scons/SGppConfigure.py#L44), so no `assert`s), LTO (`-flto=auto`) and `-march=native`. We assume everybody running SG++ sets these flags for performance-relevant runs, so benchmarks must be done in this configuration as well.
+Performance is judged under the [compileNormal.sh](compileNormal.sh) configuration: `-O3` and `-DNDEBUG` (both added by `OPT=1` in [SGppConfigure.py:44](site_scons/SGppConfigure.py#L44), so no `assert`s), `-fno-semantic-interposition` for compiling and linking (added by `OPT=1` for GCC in `configureGNUCompiler`, [SGppConfigure.py:510-518](site_scons/SGppConfigure.py#L510-L518); lets GCC inline and directly call exported functions despite `-fPIC`), LTO (`-flto=auto`) and `-march=native`. We assume everybody running SG++ sets these flags for performance-relevant runs, so benchmarks must be done in this configuration as well.
 
 Eigen and Armadillo are available in all performance-relevant runs, so the judged configuration additionally sets `USE_EIGEN=1 USE_ARMADILLO=1` (= `combigrid/perf/scripts/perf.py build normal`), and performance is judged with 16 threads (see §12).
 

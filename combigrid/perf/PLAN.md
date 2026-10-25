@@ -22,20 +22,21 @@ generation 5.1 s).
 |---|---|---|---|---|
 | – | WP-01 | SG quadrature: per-grid-point work | accepted (2026-10-25) | measured: 15.8 s saved; quad/sg 22.3 → 9.4 s (2.4x), mivec 9.3 → 6.4 s |
 | – | WP-11 | Toolchain measurement: GCC flags, Clang ThinLTO, Clang full LTO (measurement only) | accepted (2026-10-25): gcc-nosi → WP-13 | measured: gcc-nosi e2e 54.20 → 52.91 s (1.024x); Clang not adopted |
-| 1 | WP-13 | `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`, all modules) | in progress (prompt 2026-10-25) | ≈ 1.3 s (e2e 1.024x as gcc-nosi in WP-11) |
-| 2 | RP-1 | Re-profiling after WP-01/WP-13 | ready (after WP-13) | re-ranks everything below |
-| 3 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
-| 4 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~4.8 s, generation ≥ 10x at d ≥ 10 |
-| 5 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
-| 6 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | 1.5–3 s (d ≥ 7) |
-| 7 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready | 0.5–1.5 s; low d and many small grids |
-| 8 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | ~1.3 s |
-| 9 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
-| 10 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s |
-| 11 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
-| 12 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
+| – | WP-13 | `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`, all modules) | accepted (2026-10-26) | measured: e2e 54.03 → 52.79 s (1.023x, 1.24 s) |
+| 1 | WP-14 | `-fno-strict-aliasing`: measure its cost, restrict its scope (complete SG++ build) | in progress (prompt 2026-10-26) | unknown (measurement first); judged builds lose the flag if the restriction holds |
+| 2 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 | ready (after WP-14) | re-ranks everything below |
+| 4 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
+| 5 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~4.8 s, generation ≥ 10x at d ≥ 10 |
+| 6 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
+| 7 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | 1.5–3 s (d ≥ 7) |
+| 8 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready | 0.5–1.5 s; low d and many small grids |
+| 9 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | ~1.3 s |
+| 10 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
+| 11 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s |
+| 12 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
+| 13 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
-| – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | decided 2026-10-25: site_scons, GCC, `OPT=1` → WP-13 | measured: e2e 1.024x |
+| – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10 | – |
 
 ---
@@ -361,6 +362,54 @@ generation 5.1 s).
 - **Risk**: low (no source change; Windows CI untested locally → excluded). `OPT=0` builds unchanged.
 - **E2E filter**: all (`.`), micro: all.
 - **Functional change**: build configuration, approved by the owner 2026-10-25.
+- **Result (2026-10-26, accepted)**: GCC ≥ 5, `OPT=1`, not cygwin/win32, `AppendUnique` to
+  CPPFLAGS/LINKFLAGS, placed after `-fno-strict-aliasing -funroll-loops`. e2e 1.023x (quad/sg
+  1.015x, quad/dsg 1.016x, interp 1.062x, interplin 1.007x, mivec 1.041x), micro 1.059x, 0 SLOWER
+  e2e; code bitwise = WP-11 gcc-nosi; refcheck OK; 816/816 Boost cases in all 8 modules
+  (SG_ALL=1 SG_PYTHON=0; GSL, MPI, OpenCL, CGAL, UMFPACK, Gmm++ not found/used); Python examples
+  OK. No duplicate exported functions across SG++ libraries (94 duplicates are RTTI data).
+
+## WP-14 — `-fno-strict-aliasing`: measure its cost and restrict its scope
+- **Source**: owner 2026-10-25, after the master's research on whether SWIG still needs the flag.
+- **Background**: `configureGNUCompiler` adds `-fno-strict-aliasing` to every object of every
+  module (`site_scons/SGppConfigure.py` ~502–508, together with `-funroll-loops`; Intel path ~665
+  too; the Clang path never adds it). Justification in the comment: SWIG Java docs / CHANGES 2006.
+  Research (2026-10-25): SWIG 4.x **Java** wrappers still type-pun jlong ↔ pointer (`java.swg`:
+  `$1 = *($&1_ltype)&$input;`), and the SWIG 4.3 Java manual (§27.2.4, §27.8.5) still requires the
+  flag with GCC optimization. **Python**: not needed as far as known: PEP 3123 fixed
+  `PyObject_HEAD` in Python 3.0, this machine's Python passes no such flag to extensions
+  (`sysconfig` CFLAGS), SWIG 4's Python typemaps convert via a `void*` temporary +
+  `reinterpret_cast`. WP-11's Clang build (no flag) passed combigrid tests, refcheck and all
+  combigrid Python examples. The wrappers inherit the flag via `env.Clone()`
+  (`pysgpp/SConscript:29`, `jsgpp/SConscript:24`) and are compiled with `-w` (warnings hidden).
+- **Part A, measure** (judged build incl. WP-13 vs. the same + `-fstrict-aliasing` appended to
+  CPPFLAGS/LINKFLAGS, last flag wins; `toolchain.py` variant): Boost tests `--repeat 3`, refcheck
+  1/16 threads (strict aliasing does not change FP semantics: a result change hints at code that
+  relies on type punning), full e2e + micro A/B. Strict-aliasing scan: build all modules with
+  strict aliasing on (`-Wall` then enables `-Wstrict-aliasing=3`; optionally `=2` for more,
+  with false positives) and list the warnings per module and file.
+- **Part B, restrict** (all builds of the complete project: `SG_ALL=1`, `SG_PYTHON=1`, `SG_JAVA=1`
+  if a JDK is available; all Boost tests, C++ examples, Python examples and Python tests;
+  outcomes compared with the unchanged build, pre-existing failures must be identical):
+  1. Preferred: drop the flag from the global GNU flags and add it only to the SWIG wrapper
+     environments that need it: `javaEnv` (required per SWIG docs); `pyEnv` only if evidence says
+     so. Adding it in the wrapper SConscript applies to every compiler (also fixes the Clang
+     path for jsgpp); report it.
+  2. Fallback (owner's): if library code itself needs the flag (scan warnings, failing tests,
+     result changes), add it globally only when bindings are compiled (`SG_PYTHON`/`SG_JAVA`,
+     narrowed to the bindings that need it). Per-module restriction may be described as an
+     additional option with evidence, not implemented.
+  No new warnings allowed (CI builds with `-Werror`); `-funroll-loops` and the Intel path stay
+  unchanged.
+- **Machine**: JDK installed by the owner 2026-10-25 (openjdk-21-jdk-headless 21.0.12; `javac`,
+  `java` in /usr/bin), so `SG_JAVA=1` is built and tested like the other bindings.
+- **Expected gain**: unknown (TBAA lets GCC keep int bounds/sizes in registers across `double`
+  stores and vectorize more); measurement first.
+- **E2E filter**: all (`.`), micro: all. **Risk**: medium for other modules (hidden type punning);
+  low for combigrid (Clang evidence).
+- **Functional change**: build configuration, approved by the owner 2026-10-25 (restrict the
+  flag's scope; fallback: only when bindings are compiled). **Dependencies**: WP-13 accepted
+  (same function in site_scons; complete-project test runs of WP-13 serve as the reference).
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where
