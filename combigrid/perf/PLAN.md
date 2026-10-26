@@ -401,6 +401,17 @@ generation 5.1 s).
      additional option with evidence, not implemented.
   No new warnings allowed (CI builds with `-Werror`); `-funroll-loops` and the Intel path stay
   unchanged.
+- **Interaction with WP-13** (owner's question 2026-10-26): TBAA only helps where GCC sees the
+  accesses in one body; WP-13's inlining of exported helpers creates such bodies, and IPA modref
+  summaries (used only for non-interposable functions) carry type information only with strict
+  aliasing, so the gains compound (WP-14 measures strict aliasing *given* WP-13). Risk side:
+  punning across former call boundaries was hidden by opaque PLT calls; inlining + strict
+  aliasing can now miscompile it, and `-Wstrict-aliasing` does not see it. WP-13's all-module
+  tests still had `-fno-strict-aliasing`. Clang (inlines exported functions, never adds the flag)
+  was already in the combined state (WP-11: combigrid tests + Python examples OK).
+  Runtime check (optional, available): Clang 21 TypeSanitizer `-fsanitize=type` (experimental;
+  runtime `libclang_rt.tysan-x86_64.a` installed): Boost tests of all modules, reports of real
+  violations in library code → fallback.
 - **Machine**: JDK installed by the owner 2026-10-25 (openjdk-21-jdk-headless 21.0.12; `javac`,
   `java` in /usr/bin), so `SG_JAVA=1` is built and tested like the other bindings.
 - **Expected gain**: unknown (TBAA lets GCC keep int bounds/sizes in registers across `double`

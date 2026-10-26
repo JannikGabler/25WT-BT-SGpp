@@ -1,0 +1,9 @@
+#!/bin/sh
+# Copyright (C) 2008-today The SG++ project
+# This file is part of the SG++ project. For conditions of distribution and
+# use, please see the copyright notice provided with SG++ or at
+# sgpp.sparsegrids.org
+#
+# toolchain.py variant gcc-sa (WP-14): g++ with -fstrict-aliasing after all other arguments, so
+# it overrides the -fno-strict-aliasing that SGppConfigure.py appends after the user's CPPFLAGS.
+exec g++ "$@" -fstrict-aliasing

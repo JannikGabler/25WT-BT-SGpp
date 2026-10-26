@@ -110,7 +110,9 @@ WP-14 (flag changes only), so it profiles the final flag setup. Last profile: se
   e2e 1.023x (1.24 s), 0 SLOWER, refcheck OK, code bitwise = WP-11 gcc-nosi, 816/816 Boost cases
   in all 8 modules; foreign load 0.2 % (JDK install did not disturb). Side note: optimization's
   `IterativeGridGeneratorLinearSurplus` ends with 199 instead of 198 points (round-off, test
-  passes). README "Profiling and tools" note → WP-14. WP-14 prompt issued.
+  passes). README "Profiling and tools" note → WP-14. WP-14 prompt issued; owner asked how
+  `-fno-semantic-interposition` interacts with strict aliasing (answered: gains compound, latent
+  cross-call punning exposed) → TypeSanitizer step added, prompt re-issued before its start.
 
 ## Archive
 

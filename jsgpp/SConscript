@@ -32,6 +32,12 @@ for module in moduleNames:
 # (as we cannot do anything against them and as they confuse jenkins)
 javaEnv.AppendUnique(CPPFLAGS=["-w"])
 
+# SWIG's Java typemaps convert between jlong and pointers by type punning
+# (e.g., "$1 = *($&1_ltype)&$input;" in java.swg), so the SWIG Java documentation requires
+# -fno-strict-aliasing when compiling the wrapper with optimization. Only the wrapper needs it;
+# the SG++ libraries are compiled with strict aliasing. Added here for every compiler.
+javaEnv.AppendUnique(CPPFLAGS=["-fno-strict-aliasing"])
+
 defines = ["-D" + c + "=" + javaEnv["CPPDEFINES"][c]
            for c in javaEnv["CPPDEFINES"]]
 #swigIncludePaths = ["-I" + module + "/src/" for module in moduleFolders]

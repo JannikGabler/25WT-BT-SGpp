@@ -3,7 +3,8 @@
 # This file is part of the SG++ project. For conditions of distribution and
 # use, please see the copyright notice provided with SG++ or at
 # sgpp.sparsegrids.org
-"""Toolchain variants for the combigrid performance suite (WP-11, Python standard library only).
+"""Toolchain variants for the combigrid performance suite (WP-11, WP-14 added gcc-sa; Python
+standard library only).
 
 Builds base + combigrid with a compiler/flag variant of the judged configuration and snapshots
 it, reusing the machinery of the protected driver perf.py (imported, never modified): the SCons
@@ -69,6 +70,13 @@ GCC_LINK = "-march=native -flto=auto"
 # the compile step. -O3 in LINKFLAGS makes the Clang driver pass -plugin-opt=O3.
 CLANG_LINK = "-fuse-ld=lld -O3"
 NOSI = "-fno-semantic-interposition"
+# SGppConfigure.py appends -fno-strict-aliasing after the user's CPPFLAGS, so -fstrict-aliasing in
+# CPPFLAGS loses (the last -f wins). The wrapper g++-sa appends it after all arguments instead;
+# build() prepends WRAPPERS to PATH for the variants in PATH_VARIANTS (SCons passes os.environ to
+# the commands). The objects' DW_AT_producer records the effective flag order.
+WRAPPERS = Path(__file__).resolve().parent / "wrappers"
+SA = "-fstrict-aliasing"
+PATH_VARIANTS = {"gcc-sa"}
 
 
 # SConstruct runs its configure checks (e.g. for the Eigen headers) with $CXX before
@@ -92,6 +100,8 @@ VARIANTS = {
                       _with_flags(f"{GCC_CPP} {NOSI} -fno-plt",
                                   f"{GCC_LINK} {NOSI} -fno-plt -Wl,-Bsymbolic-functions"),
                       "gcc-nosi + -fno-plt + -Wl,-Bsymbolic-functions"),
+    "gcc-sa": ("gcc-sa", ["CXX=g++-sa"] + _with_flags(GCC_CPP, f"{GCC_LINK} {SA}"),
+               "gcc + -fstrict-aliasing (WP-14; last on every compile line via wrappers/g++-sa)"),
     "clang-thin": ("clang-thin",
                    _with_flags("-march=native -flto=thin",
                                f"-march=native -flto=thin {CLANG_LINK}", "clang"),
@@ -179,6 +189,8 @@ def build(variant, tests="compile", jobs=16, clean=False, tag="", extra=()):
     SG_PYTHON=1) and writes the build stamp. Returns (wall-clock seconds of the build, log path);
     a preceding clean is not timed."""
     backup_buildvars()
+    if variant in PATH_VARIANTS and not os.environ["PATH"].startswith(f"{WRAPPERS}:"):
+        os.environ["PATH"] = f"{WRAPPERS}:{os.environ['PATH']}"
     (WORK / "logs").mkdir(parents=True, exist_ok=True)
     stem = f"build-{variant}{'-' + tag if tag else ''}-{perf.now_tag()}"
     keep = None

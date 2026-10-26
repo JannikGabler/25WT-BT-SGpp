@@ -192,7 +192,14 @@ It must compile against the unoptimized code (it is part of the "before" snapsho
 - valgrind/callgrind (deterministic instruction counts, 1 thread), heaptrack (allocations),
   hyperfine are installed. No Google Benchmark, no NumPy (the scripts use the stdlib only).
 - `objdump -dr lib/libsgppcombigrid.so` shows whether helpers are inlined (exported functions go
-  through the PLT under `-fPIC` without `-fno-semantic-interposition`).
+  through the PLT under `-fPIC` without `-fno-semantic-interposition`; GCC `OPT=1` builds have
+  that flag since WP-13, see `configureGNUCompiler` in `site_scons/SGppConfigure.py`).
+- Strict aliasing: since WP-14 SG++ code is compiled with GCC's default `-fstrict-aliasing`; only
+  the SWIG Java wrapper (`jsgpp/SConscript`) gets `-fno-strict-aliasing`. Type punning through
+  pointer casts is undefined behavior and may be miscompiled: use `std::bit_cast` or `memcpy`.
+  The `baseline` snapshot (and every snapshot before WP-14) was built with
+  `-fno-strict-aliasing`. `combigrid/perf/scripts/toolchain.py` variant `gcc-sa` re-enables it
+  for a pre-WP-14 tree (the wrapper `scripts/wrappers/g++-sa` appends the flag last).
 
 ## Pitfalls
 

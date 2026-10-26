@@ -499,13 +499,12 @@ def configureGNUCompiler(config):
     allWarnings.append(['-Wno-conversion', '-Wno-format-nonliteral'])
 
 
-  # -fno-strict-aliasing: http://www.swig.org/Doc1.3/Java.html or
-  #     http://www.swig.org/Release/CHANGES, 03/02/2006
-  #     "If you are going to use optimizations turned on with gcc > 4.0 (for example -O2),
-  #     ensure you also compile with -fno-strict-aliasing"
-  config.env.Append(CPPFLAGS=allWarnings + [
-      "-fno-strict-aliasing",
-      "-funroll-loops"])
+  # Strict aliasing (GCC's default from -O2 on) is not disabled globally: SG++'s own code does not
+  # need -fno-strict-aliasing, only the SWIG Java wrapper does (SWIG's Java typemaps convert
+  # between jlong and pointers by type punning), so jsgpp/SConscript adds it to that wrapper
+  # alone. The Python wrapper does not need it (SWIG's Python typemaps cast via void*, and
+  # PEP 3123 made PyObject_HEAD conforming).
+  config.env.Append(CPPFLAGS=allWarnings + ["-funroll-loops"])
 
   # -fno-semantic-interposition: with -fPIC, GCC assumes that every exported function may be
   # interposed (e.g., via LD_PRELOAD) and therefore neither inlines nor calls it directly, not even
