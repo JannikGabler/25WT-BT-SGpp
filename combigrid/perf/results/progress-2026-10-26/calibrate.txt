@@ -1,0 +1,8 @@
+calibrate: quad/sg/equi-exp/b0/d5/L10 (16 thread(s), 120 samples): burst 708.34ms, sustained 706.60ms
+calibrate: micro/sol/quad_tg/equi/b0/d10/L4 (1 thread(s), 10 samples): burst 15.94ms, sustained 15.82ms
+  quad/sg/equi-exp/b0/d5/L10 burst: ratio to baseline 1.007
+  quad/sg/equi-exp/b0/d5/L10 sustained: ratio to baseline 1.003
+  micro/sol/quad_tg/equi/b0/d10/L4 burst: ratio to baseline 1.004
+  micro/sol/quad_tg/equi/b0/d10/L4 sustained: ratio to baseline 0.999
+  foreign CPU load: 2.4%
+  WARN: the machine runs the baseline binaries up to 1% off the recorded baseline (power limit, thermal state, background load?). A/B comparisons stay valid (both sides run in the same state), but absolute numbers are not comparable with baseline/. State the ratios in the summary; tell the owner if sustained differs.

@@ -61,11 +61,9 @@ Ranks 3–12 are re-ranked by RP-1.
 
 ## Next action
 
-Owner: commit WP-13 (site_scons, CLAUDE.md, summary, `results/WP-13/`, STATUS/PLAN), then start
-WP-14 (prompt issued 2026-10-26). Next master start: fill in WP-13's commit hash, process the
+WP-14 in progress (checkpoint commit 50d552f00, no summary yet). Next master start: process the
 WP-14 summary, then RP-1 (no baseline step), re-rank, then the top optimization WP (currently
-WP-02). WP-06/WP-08 only after the
-owner decided on adopting WP-09's API.
+WP-02). WP-06/WP-08 only after the owner decided on adopting WP-09's API.
 
 ## Open decisions for the owner
 
@@ -106,13 +104,20 @@ WP-14 (flag changes only), so it profiles the final flag setup. Last profile: se
 
 ## Log
 
-- 2026-10-26 WP-11 committed (9ab8f642d). WP-13 accepted by the owner (commit: pending, fill in):
+- 2026-10-26 WP-11 committed (9ab8f642d). WP-13 accepted by the owner (a16733d65):
   e2e 1.023x (1.24 s), 0 SLOWER, refcheck OK, code bitwise = WP-11 gcc-nosi, 816/816 Boost cases
   in all 8 modules; foreign load 0.2 % (JDK install did not disturb). Side note: optimization's
   `IterativeGridGeneratorLinearSurplus` ends with 199 instead of 198 points (round-off, test
   passes). README "Profiling and tools" note → WP-14. WP-14 prompt issued; owner asked how
   `-fno-semantic-interposition` interacts with strict aliasing (answered: gains compound, latent
   cross-call punning exposed) → TypeSanitizer step added, prompt re-issued before its start.
+- 2026-10-26 Master restart: WP-13 hash filled in; WP-14 checkpoint 50d552f00 (no summary yet).
+  Progress report for the owner's supervisor meeting (owner's request):
+  `results/progress-2026-10-26/e2e.md` = master 3ffe4d382 / e6a21c331 (worktree builds with their
+  own flags, owner: no added flags; snapshots `report-master`, `report-dev`) vs. baseline vs.
+  WP-13. Old states use naive O(n²) CC weights (their FFT code does not compile). 28 common
+  cases: 51.1 s (master) → 41.9 s (baseline) → 25.3 s (WP-13). Finding for WP-03/RP-1: mivec
+  `generation` at d15/d20 was faster on master (1.56/1.66 s) than at baseline (1.79/1.90 s).
 
 ## Archive
 

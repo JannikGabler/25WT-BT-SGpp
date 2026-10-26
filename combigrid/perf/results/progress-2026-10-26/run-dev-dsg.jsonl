@@ -1,0 +1,8 @@
+{"case": "quad/dsg/equi-exp/b0/d3/L16", "rc": 0, "wall": 21.300579164, "out": "{\"suite\":\"e2e\",\"case\":\"quad/dsg/equi-exp/b0/d3/L16\",\"kind\":\"pipeline\",\"threads\":16,\"samples\":1,\"warmups\":0,\"unit\":\"s\",\"metrics\":{\"total\":[21.268232164],\"setup\":[6.7744999999999996e-05],\"generation\":[0.037713093000000003],\"operator\":[21.228535377]},\"result\":2.1840591764879687,\"exact\":2.1840591764905084,\"counters\":{\"nTG\":969,\"sumGP\":32112641}}\n"}
+{"case": "quad/dsg/equi-exp/b0/d5/L12", "rc": 124, "wall": 45.018278216, "out": "\n"}
+{"case": "quad/dsg/cc-uq/b0/d5/L12", "rc": 124, "wall": 45.018388215, "out": "\n"}
+{"case": "quad/dsg/cc-uq/b0/d7/L10", "rc": 124, "wall": 45.020802549, "out": "\n"}
+{"case": "quad/dsg/equi-exp/b1/d15/L7", "rc": 124, "wall": 45.047131559, "out": "\n"}
+{"case": "quad/dsg/equi-exp/b0/d10/L7", "rc": 124, "wall": 45.019045978, "out": "\n"}
+{"case": "quad/dsg/equi-exp/b1/d20/L6", "rc": 124, "wall": 45.060980122, "out": "\n"}
+{"case": "quad/dsg/cc-uq/b0/d10/L7", "rc": 124, "wall": 45.019091235, "out": "\n"}
