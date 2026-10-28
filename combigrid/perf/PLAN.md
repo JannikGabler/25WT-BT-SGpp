@@ -19,6 +19,14 @@ before the owner decided. Re-rank after every re-profiling (rule 7).
 **Memory** (owner 2026-10-28): runtime stays the ranking metric; peak memory (max RSS per e2e
 process, from WP-15 on) is monitored, reported with every runtime change and weighed in
 decisions. Memory reduction is a valid secondary goal where profiles show potential.
+**Strict aliasing** (owner 2026-10-28): code written before WP-14 (3dc286c3d) was designed for
+`-fno-strict-aliasing` (e.g. manual load hoisting, copies into locals, cached raw pointers, data
+layouts or access patterns chosen to avoid reloads, comments that cite the flag). Every
+code-changing WP (all except WP-10, WP-12 and RP-k) keeps this in mind: where it touches such
+code, check whether it can be simplified now and simplify it if the benchmarks show no
+regression. Hoisting across opaque calls (`SourceFunc::evaluate`, recursion) and across stores of
+pointer-to-`T` still pays (WP-01, WP-20). Candidates outside the WP's scope go into the
+summary's follow-ups. The master copies this note into every such prompt.
 
 Baseline e2e time per operator group (sum of `total` medians, `baseline/e2e_t16.jsonl`;
 generation ≤ 1–2 % except MIVec; boost off, total 70.0 s): quad/sg 22.3 s (18.5 s at d ≥ 7) ·
@@ -36,7 +44,8 @@ At RP-1 (rp-1, total 53.4 s): quad/sg 9.2 s (6.9 s at d ≥ 7) · quad/dsg **27.
 | – | WP-15 | Peak-memory measurement in the benchmark harness (owner's request; protected `perf.py`) | accepted (2026-10-28) | measured: runtime impact nil (full suite 1.0002x, 0 SLOWER); floor 10.2 MiB |
 | – | WP-16 | Adapt `perf.py` and the protection to the benchmark move (`combigrid/benchmarks/`) | accepted (2026-10-28) | measured: A/A old vs. new layout 1.001x, memory 0.994, 0 flags |
 | – | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | accepted (2026-10-28) | measured: baseline → rp-1 e2e 69.95 → 53.41 s (1.31x; d ≥ 7 1.28x); memory geomean 1.028, 3 `MEM+` (quad/sg d2/d3, WP-01 scratch) |
-| 1 | WP-02 | DSG quadrature: per-delta-tensor-grid trie work at high d | in progress (prompt issued 2026-10-28) | 4.1–5.5 s (b1 d15/d20); memory up to −150 MiB |
+| – | WP-20 | `FlatNestedVector` under strict aliasing: UB check, obsolete workarounds, code generation (owner's request) | accepted (2026-10-28) | measured: no UB; quad/dsg 27.08 → 26.10 s (1.037x, −0.98 s; b1 d20 1.076x, b1 d15 1.068x, b0 1.01–1.02x); `^quad/` 1.027x; bitwise identical; memory geomean 1.001, 0 flags |
+| 1 | WP-02 | DSG quadrature: per-delta-tensor-grid trie work at high d | in progress (prompt issued 2026-10-28, after WP-20) | ≈ 3.8–5.0 s (b1 d15/d20; trie work ≈ 7.5 s after WP-20); memory up to −150 MiB |
 | 2 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ≈ 5.1 s (generation ≥ 10x, d ≥ 10); first step −1.55 s |
 | 3 | WP-04 | DSG quadrature: row loop (b0) | ready (after WP-02) | 1.5–3 s (b0 d7/d10) |
 | 4 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04) | ≈ 1–1.5 s (quad/sg + quad/dsg kernels); interface |
@@ -55,8 +64,10 @@ At RP-1 (rp-1, total 53.4 s): quad/sg 9.2 s (6.9 s at d ≥ 7) · quad/dsg **27.
 | – | D-4 | Batched `SourceFunc` evaluation (interface) | decided 2026-10-28 → WP-17 | – |
 | – | D-5 | Shared 1D node arrays in `TensorGrid` (interface, memory) | decided 2026-10-28 → WP-18 | – |
 
-Ranking notes (RP-1): WP-02 and WP-03 tie on the expected saving; DSG (quadrature) first by the
-tie-break. WP-09 precedes WP-06/WP-08 because its decision sets their value. WP-05 saves only
+Ranking notes (RP-1, WP-20): WP-20 ran before WP-02 (owner 2026-10-28: same hot path). After
+WP-20 (quad/dsg 26.1 s) WP-02's estimate drops to ≈ 3.8–5.0 s vs. WP-03 ≈ 5.1 s: still a tie
+within the estimates' precision → DSG (quadrature) first by the tie-break; WP-02 also has the
+larger memory potential. WP-09 precedes WP-06/WP-08 because its decision sets their value. WP-05 saves only
 at d ≤ 3, so it ranks behind WP-06/WP-08 (0.4–0.45 s at d ≥ 7) despite the largest memory
 potential of the plan (owner 2026-10-28: NEW-A merged into WP-05, runtime rank kept).
 
@@ -134,6 +145,17 @@ potential of the plan (owner 2026-10-28: NEW-A merged into WP-05, runtime rank k
   51 % of the heap peak, RSS 329 MiB) / 102 MiB (d15, RSS 233 MiB): not materializing one
   sub-trie per delta grid per thread saves most of it; a sub-trie cache could raise the peak
   (report it).
+- **From WP-20** (accepted): `appendSubTrieChildren` now reads the grandchild range and leaf
+  coefficient from local spans (b1 d20 1.076x, d15 1.068x; e2e b1/d20/L6 6.52 s, b1/d15/L7
+  3.83 s) → the WP-14 note above is resolved, no `FlatNestedVec` UB. The trie work is bound by
+  the mispredicted `lower_bound` branch on `child->lvl` (29 % of the function's cycles) and
+  `push_back`/recursion overhead, not by container access. Keep views/spans local wherever a loop
+  `push_back`s `TrieNode`s (their `const double*` field aliases the container's `T*`) or recurses;
+  hot code takes `nodesOfDepth()` once (`CTCoeffTrie::childBegin/childEnd` only outside hot
+  loops); chained element writes need no workaround. The per-call `context.weights1D[dim]` view
+  (≈ 6 loads) could become per-delta-grid precomputed data. New micro cases
+  `micro/dsg/sub_tries/equi/b1/d20/L6/s256`, `.../b0/d10/L7/s16` (`compSubTrie` for every s-th
+  delta grid). Expected now **≈ 3.8–5.0 s** (trie work ≈ 5.1 s at d20, 2.4 s at d15; 2–3x on it).
 
 ## WP-03 — Downwards closure of multi-index sets
 - **Location**: `tools/downwards_closedness.hpp` (`genMIVecDownwardsClosure`), helpers in
@@ -196,6 +218,10 @@ potential of the plan (owner 2026-10-28: NEW-A merged into WP-05, runtime rank k
   trie nodes). The loop is ≈ 6.1 s of the four b0 d7/d10 cases (d7 shares assumed as at d10).
   Target: SG-kernel parity (215 → ≈ 152 instructions/point, 27.8 vs. 21.8 ns/point). Expected
   1.5–3 s. Memory nil. The `std::function` part belongs to WP-17.
+- **From WP-20**: strict aliasing still costs ~1 % on `quad/dsg/equi-exp/b0/d10/L7` (row loop:
+  `updateCoeffSums`/`compRowWeights`, no `FlatNestedVec`; 0.990 [0.985, 0.994] vs. the same
+  source with `-fno-strict-aliasing`). Attribute with `toolchain.py build gcc-nsa` (judged flags
+  + `-fno-strict-aliasing`) and fix at the source level (flag changes → owner).
 
 ## WP-05 — SG quadrature at low d: CC 1D weights and per-thread scratch (incl. RP-1 NEW-A)
 - **Scope after RP-1** (owner 2026-10-28: NEW-A merged into WP-05, runtime rank kept): (a) CC 1D
@@ -679,6 +705,43 @@ potential of the plan (owner 2026-10-28: NEW-A merged into WP-05, runtime rank k
 - **Risk**: low–medium (summation order → round-off, refcheck; determinism across runs).
 - **Tests**: quadrature tests. **E2E filter**: `^quad/sg/` · **Functional change**: none.
 - **Dependencies**: after WP-05 (it changes the d2 cost split).
+
+## WP-20 — `FlatNestedVector` under strict aliasing
+- **Source**: owner, 2026-10-28: `FlatNestedVector` was designed around `-fno-strict-aliasing`
+  being active; WP-14 removed the flag, so the design should be revisited. Owner chose an own WP
+  before WP-02. Related: WP-14 summary — the dsg trie functions became uniformly ~5 % slower
+  under strict aliasing, cause not attributed.
+- **Location**: `miscellaneous/flat_nested_vector/flat_nested_vector.hpp`,
+  `flat_nested_vector_view.hpp`; users (file search): `miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp`,
+  `operators/quadrature/deltas_sparse_grid_quadrature.{hpp,cpp}`,
+  `miscellaneous/data_contexts/delta_quadrature_context.hpp`,
+  `miscellaneous/data_contexts/quadrature_context.hpp`, `combigrid/benchmarks/perf/perf_micro.cpp`;
+  tests `tests/miscellaneous/flat_nested_vector_test.cpp`, `tests/operators/quadrature/delta_quadrature_test.cpp`.
+- **Hypothesis**: (1) constructs that relied on `-fno-strict-aliasing` (type punning through
+  pointer casts, storage reuse across types) are UB now → fix regardless of the gain
+  (`std::bit_cast`/`memcpy`/`std::start_lifetime_as` or a type-correct layout); (2) workarounds
+  against aliasing pessimization (manual load hoisting, copies into locals, layout chosen for the
+  old flag) may be obsolete, or the layout may now prevent GCC from using strict aliasing
+  (e.g. offsets and payload of the same type still alias; `char`-typed storage aliases
+  everything). Inspect the generated code of the hot users (`appendSubTrieChildren`,
+  `updateCoeffSums`, `compRowWeights`, the SG quadrature context accesses) and attribute WP-14's
+  −5 % with the `gcc-sa` toolchain variant (= judged flags + `-fno-strict-aliasing`, WP-14).
+- **Evidence**: WP-14: quad/dsg 0.970x (`quad/dsg/equi-exp/b1/d20/L6` 6.67 → 7.03 s,
+  `b0/d10/L7` 0.976x, `cc-uq/b0/d10/L7` 0.990x), quad/sg 0.995x. RP-1: trie work 66–79 % of
+  the b1 d15/d20 cases, row loop 35–45 % of b0 d10.
+- **Expected gain**: up to the WP-14 loss on quad/dsg (≤ ≈ 0.8 s; b1 d20 ≈ 0.36 s), more if the
+  structure now gets better code than before WP-14; quad/sg small. Correctness fix if UB is found.
+  Memory nil unless the layout changes. NO-GAIN is an acceptable outcome (report findings).
+- **Scope**: the data structure, its accessors and how the users access it; no trie algorithm
+  changes (WP-02).
+- **Risk**: low–medium (shared by CTCoeffTrie and both quadrature operators).
+- **Tests**: `flat_nested_vector_test.cpp` (extend: every access path, views, empty inner
+  vectors, growth), delta quadrature + quadrature tests; `-Wstrict-aliasing=3/2` scan of
+  combigrid (WP-14 method); ASan run.
+- **Micro**: `micro/dsg/process_delta_tg/equi/b1/d20/L6`, `micro/dsg/process_delta_tg/equi/b0/d10/L7`,
+  `micro/dsg/prepare/equi/b1/d20/L6`, `micro/quad/process_tg/equi/b0/d10/L4`; add a
+  `FlatNestedVector` access case if useful. **E2E filter**: `^quad/`
+- **Functional change**: none (internal data structure). **Dependencies**: before WP-02.
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where

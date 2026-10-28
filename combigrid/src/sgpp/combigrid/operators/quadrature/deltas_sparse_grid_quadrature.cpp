@@ -81,9 +81,11 @@ bool appendSubTrieChildren(const DeltaQuadratureContext& context, const LvlMI& d
                            DeltaQuadratureScratch& scratch, const size_t dim,
                            const size_t childBegin, const size_t childEnd) {
   const CTCoeffTrie& coeffTrie = context.coeffTrie;
+  const std::span<const CTCoeffTrie::Node> nodesOfDim = coeffTrie.nodesOfDepth(dim);
   const std::span<const CTCoeffTrie::Node> children =
-      coeffTrie.nodesOfDepth(dim).subspan(childBegin, childEnd - childBegin);
+      nodesOfDim.subspan(childBegin, childEnd - childBegin);
   const bool isLeafDepth = (dim + 1 == coeffTrie.nDim());
+  const double* const leafCoeffs = coeffTrie.leafCoeffs().data();
 
   // The children are sorted by level, so the ones with a level >= deltaTGMI[dim] are a suffix
   const LvlType deltaLvl = deltaTGMI[dim];
@@ -101,13 +103,15 @@ bool appendSubTrieChildren(const DeltaQuadratureContext& context, const LvlMI& d
     const double* const weights = weights1DOfDim[child->lvl].data() + deltaNodesStart;
 
     if (isLeafDepth) {
-      subTrieNodes.push_back({weights, 0, coeffTrie.leafCoeffs()[childIdx]});
+      subTrieNodes.push_back({weights, 0, leafCoeffs[childIdx]});
       appended = true;
     } else {
       subTrieNodes.push_back({weights, 0, 0.0});
+      // = coeffTrie.childBegin(dim, childIdx), from the local span
+      const size_t grandChildBegin = (childIdx == 0) ? 0 : nodesOfDim[childIdx - 1].childEnd;
 
-      if (appendSubTrieChildren(context, deltaTGMI, scratch, dim + 1,
-                                coeffTrie.childBegin(dim, childIdx), child->childEnd)) {
+      if (appendSubTrieChildren(context, deltaTGMI, scratch, dim + 1, grandChildBegin,
+                                child->childEnd)) {
         subTrieNodes.back().childEnd = scratch.trieNodes[dim + 1].size();
         appended = true;
       } else {  // No tensor grid >= deltaTGMI below the child

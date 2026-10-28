@@ -315,6 +315,39 @@ void addDeltaPrep(Suite& suite, const std::string& nodes, const LvlType boundary
   });
 }
 
+/// delta_quadrature_operator::compSubTrie (the per-delta-tensor-grid trie work) for every
+/// @p stride -th delta tensor grid (all of them take minutes at d20).
+void addSubTries(Suite& suite, const std::string& nodes, const LvlType boundary,
+                 const size_t nDim, const LvlType maxLvl, const size_t stride) {
+  suite.addMicro(
+      "micro/dsg/sub_tries/" + cfg(nodes, boundary, nDim, maxLvl) + "/s" + std::to_string(stride),
+      [=](MicroRun& run) {
+        CompleteSGGenInstr genInstr(maxLvl, nDim);
+        perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
+        const DeltasSparseGrid dsg(genInstr);
+        const SourceFunc sourceFunc(perf::expSum);
+        const cg::misc::FlatNestedVec<double, 3> weights1D =
+            cg::delta_quadrature_operator::comp1DWeights(dsg);
+        const cg::misc::CTCoeffTrie coeffTrie(dsg.getTensorGrids(), nDim);
+        const cg::misc::DeltaQuadratureContext context{.deltasSparseGrid = dsg,
+                                                       .sourceFunc = sourceFunc,
+                                                       .domain = dsg.getGenInstr().getDomain(),
+                                                       .weights1D = weights1D,
+                                                       .coeffTrie = coeffTrie};
+        cg::misc::DeltaQuadratureScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
+
+        run.setItems(static_cast<double>((dsg.nTG() + stride - 1) / stride));
+        run.measure([&]() {
+          size_t nNodes = 0;
+          for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
+            cg::delta_quadrature_operator::compSubTrie(context, dsg.getTensorGrid(tg).mi, scratch);
+            nNodes += scratch.trieNodes[0].size();
+          }
+          doNotOptimize(nNodes);
+        });
+      });
+}
+
 /*******************************************************************************
 Interpolation
 *******************************************************************************/
@@ -475,6 +508,8 @@ int main(int argc, char** argv) {
   addProcessDeltaTG(suite, "equi", 0, 10, 7);
   addProcessDeltaTG(suite, "equi", 1, 20, 6);
   addDeltaPrep(suite, "equi", 1, 20, 6);
+  addSubTries(suite, "equi", 1, 20, 6, 256);  // WP-20: FlatNestedVec reads of the trie work
+  addSubTries(suite, "equi", 0, 10, 7, 16);
 
   // Interpolation
   addInterpTG(suite, "cc", 5, 6);

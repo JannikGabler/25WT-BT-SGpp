@@ -7,8 +7,10 @@
  * @file flat_nested_vector_test.cpp
  * @brief Boost.Test cases for @c FlatNestedVec and @c FlatNestedVecView:
  * conversion from and to nested @c std::vector, chained @c operator[] access,
- * views and their iterators, the flat @c std::vector interface, incremental
- * building (fuzzed against a nested @c std::vector) and value semantics.
+ * views and their iterators, the flat @c std::vector interface, elements of the
+ * offsets' type and structs written through chained access, incremental building
+ * (fuzzed against a nested @c std::vector), growth across reallocations and
+ * value semantics.
  */
 
 #define BOOST_TEST_DYN_LINK
@@ -261,6 +263,139 @@ BOOST_AUTO_TEST_CASE(testViewIterators) {
   const FlatNestedVecView<const int, 3, std::size_t> constView = fv[0];
   BOOST_CHECK(constView.flat().data() == fv.data());
   BOOST_TEST(constView[2][1][0] == 4);
+}
+
+BOOST_AUTO_TEST_CASE(testConstAccessPaths) {
+  const FlatNestedVec<double, 3> fv(raggedDepth3());
+  const auto view = fv[4];
+  BOOST_TEST(view.front().size() == 1U);
+  BOOST_TEST(view.back()[3] == 11.0);
+  BOOST_CHECK(view.cbegin() == view.begin() && view.cend() == view.end());
+  BOOST_TEST((*view.cbegin())[0] == 7.0);
+  BOOST_TEST(fv.nested().front().front()[2] == 3.0);
+  BOOST_TEST(fv.nested().back().flat().size() == 5U);
+  BOOST_CHECK(fv.flat().data() == fv.data());
+  BOOST_TEST(fv.flat().size() == fv.size());
+  BOOST_TEST(*fv.crbegin() == 11.0);
+  BOOST_TEST(std::distance(fv.rbegin(), fv.rend()) == 11);
+  BOOST_TEST(fv.nEntries(2) == 8U);
+}
+
+// Elements of the offsets' type (and structs containing it): writes to elements through chained
+// access must not be confused with the offsets, which have the same type.
+BOOST_AUTO_TEST_CASE(testElementsOfTheIndexType) {
+  NestedStdVec<std::size_t, 3> nested{{{0, 1}, {}, {2}}, {{3, 4, 5}}, {}, {{6}, {7, 8}}};
+  FlatNestedVec<std::size_t, 3> fv(nested);
+
+  for (std::size_t i = 0; i < nested.size(); i++) {
+    for (std::size_t j = 0; j < nested[i].size(); j++) {
+      for (std::size_t k = 0; k < nested[i][j].size(); k++) {
+        // Large values: would be out of range if they ended up in an offset array.
+        fv[i][j][k] = 1000 + fv[i][j][k] * 7 + fv[i].size();
+        nested[i][j][k] = 1000 + nested[i][j][k] * 7 + nested[i].size();
+      }
+    }
+  }
+  checkRepresents(fv, nested);
+
+  FlatNestedVec<std::size_t, 2> lastOffsets;
+  for (std::size_t i = 0; i < 4; i++) {
+    lastOffsets.appendSubVec(1);
+    for (std::size_t k = 0; k <= i; k++) {
+      lastOffsets.push_back(0);
+      lastOffsets.back() = lastOffsets.nEntries(2) * 100;  // as CTCoeffTrie sets childEnd
+    }
+  }
+  checkRepresents(lastOffsets, NestedStdVec<std::size_t, 2>{
+                                   {100}, {200, 300}, {400, 500, 600}, {700, 800, 900, 1000}});
+}
+
+BOOST_AUTO_TEST_CASE(testStructElements) {
+  struct Node {
+    unsigned int lvl;
+    std::size_t childEnd;
+    bool operator==(const Node& other) const = default;
+  };
+  FlatNestedVec<Node, 2> fv;
+  NestedStdVec<Node, 2> nested;
+  for (std::size_t depth = 0; depth < 3; depth++) {
+    fv.appendSubVec(1);
+    nested.emplace_back();
+    for (std::size_t i = 0; i < 3 + depth; i++) {
+      fv.push_back(Node{static_cast<unsigned int>(i), 0});
+      nested.back().push_back(Node{static_cast<unsigned int>(i), 0});
+      fv.back().childEnd = 10 * depth + i;
+      nested.back().back().childEnd = 10 * depth + i;
+    }
+  }
+  BOOST_TEST_REQUIRE(fv.nEntries(1) == 3U);
+  for (std::size_t depth = 0; depth < 3; depth++) {
+    BOOST_TEST_REQUIRE(fv[depth].size() == nested[depth].size());
+    for (std::size_t i = 0; i < nested[depth].size(); i++) {
+      BOOST_CHECK(fv[depth][i] == nested[depth][i]);
+      fv[depth][i].lvl += 5;
+      BOOST_TEST(fv[depth][i].childEnd == 10 * depth + i);
+    }
+  }
+  BOOST_TEST(fv[2][4].lvl == 9U);
+}
+
+/*************************************************************
+Growth and reallocation
+*************************************************************/
+
+BOOST_AUTO_TEST_CASE(testGrowthAcrossReallocations) {
+  FlatNestedVec<double, 3> fv;
+  NestedStdVec<double, 3> nested;
+  const double* oldData = nullptr;
+  std::size_t nReallocs = 0;
+  std::size_t nDepth2 = 0;
+
+  for (std::size_t i = 0; i < 40; i++) {
+    fv.appendSubVec(1, i % 3);  // starts with empty sub-vectors of depth 2
+    nested.emplace_back(i % 3);
+    nDepth2 += i % 3;
+    for (std::size_t j = 0; j < 5; j++) {
+      fv.appendSubVec(2);
+      nested.back().emplace_back();
+      nDepth2++;
+      for (std::size_t k = 0; k < (i + j) % 7; k++) {
+        fv.push_back(static_cast<double>(1000 * i + 10 * j + k));
+        nested.back().back().push_back(static_cast<double>(1000 * i + 10 * j + k));
+      }
+      if (fv.data() != oldData) nReallocs++;
+      oldData = fv.data();
+      // Views obtained after the growth see all elements.
+      BOOST_TEST(fv.nEntries(2) == nDepth2);
+      BOOST_TEST_REQUIRE(fv[i].size() == nested[i].size());
+      BOOST_CHECK(std::ranges::equal(fv[i].back(), nested[i].back()));
+    }
+  }
+  BOOST_TEST(nReallocs > 3U);
+  checkRepresents(fv, nested);
+
+  fv.shrink_to_fit();
+  BOOST_TEST(fv.capacity() == fv.size());
+  checkRepresents(fv, nested);
+}
+
+BOOST_AUTO_TEST_CASE(testReserveKeepsContents) {
+  const auto nested = raggedDepth3();
+  FlatNestedVec<double, 3> fv(nested);
+  fv.reserve(1000);
+  BOOST_TEST(fv.capacity() >= 1000U);
+  fv.reserveSubVecs(1, 100);
+  fv.reserveSubVecs(2, 200);
+  checkRepresents(fv, nested);
+
+  // Reserving in an empty container does not create sub-vectors.
+  FlatNestedVec<double, 3> empty;
+  empty.reserveSubVecs(1, 10);
+  empty.reserveSubVecs(2, 10);
+  empty.reserve(10);
+  BOOST_TEST(empty.nEntries(1) == 0U);
+  BOOST_TEST(empty.nEntries(2) == 0U);
+  BOOST_CHECK((empty == FlatNestedVec<double, 3>()));
 }
 
 BOOST_AUTO_TEST_CASE(testFlatInterfaceWithAlgorithms) {

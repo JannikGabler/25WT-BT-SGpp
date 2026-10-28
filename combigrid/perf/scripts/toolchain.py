@@ -3,8 +3,8 @@
 # This file is part of the SG++ project. For conditions of distribution and
 # use, please see the copyright notice provided with SG++ or at
 # sgpp.sparsegrids.org
-"""Toolchain variants for the combigrid performance suite (WP-11, WP-14 added gcc-sa; Python
-standard library only).
+"""Toolchain variants for the combigrid performance suite (WP-11, WP-14 added gcc-sa, WP-20
+gcc-nsa; Python standard library only).
 
 Builds base + combigrid with a compiler/flag variant of the judged configuration and snapshots
 it, reusing the machinery of the protected driver perf.py (imported, never modified): the SCons
@@ -76,6 +76,7 @@ NOSI = "-fno-semantic-interposition"
 # the commands). The objects' DW_AT_producer records the effective flag order.
 WRAPPERS = Path(__file__).resolve().parent / "wrappers"
 SA = "-fstrict-aliasing"
+NSA = "-fno-strict-aliasing"
 PATH_VARIANTS = {"gcc-sa"}
 
 
@@ -102,6 +103,9 @@ VARIANTS = {
                       "gcc-nosi + -fno-plt + -Wl,-Bsymbolic-functions"),
     "gcc-sa": ("gcc-sa", ["CXX=g++-sa"] + _with_flags(GCC_CPP, f"{GCC_LINK} {SA}"),
                "gcc + -fstrict-aliasing (WP-14; last on every compile line via wrappers/g++-sa)"),
+    # Since WP-14 nothing else sets the flag, so appending it to CPPFLAGS suffices.
+    "gcc-nsa": ("gcc-nsa", _with_flags(f"{GCC_CPP} {NSA}", f"{GCC_LINK} {NSA}"),
+                "gcc + -fno-strict-aliasing (WP-20: the pre-WP-14 flag on a post-WP-14 tree)"),
     "clang-thin": ("clang-thin",
                    _with_flags("-march=native -flto=thin",
                                f"-march=native -flto=thin {CLANG_LINK}", "clang"),

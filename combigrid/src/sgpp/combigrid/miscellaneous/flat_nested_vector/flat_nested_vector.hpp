@@ -88,14 +88,20 @@ using NestedStdVec = typename NestedStdVecSelector<T, D>::type;
  * @f$D-1@f$ dependent offset loads plus the element load (a nested vector
  * needs @f$D@f$ dependent pointer loads plus the element load).
  *
- * <b>Hot loops.</b> Keep the view or span of the sub-vector being worked on in
- * a local variable (or iterate with range-for) instead of evaluating
- * @c fv[x1]...[xD] per element. SG++ compiles with @c -fno-strict-aliasing,
- * so after every store to an element the compiler must assume that the
- * container's array pointers changed and reloads all @f$D@f$ of them; a
- * local view keeps them in registers. Measured for @c weights1D[tg][dim][node]
- * writes: chained access is about 1.2x slower than a nested vector, a local
- * span is 2-3x faster than it.
+ * <b>Hot loops.</b> SG++ compiles with strict aliasing, so storing elements
+ * does not make the compiler reload the container's array pointers and
+ * offsets: in a loop, chained @c fv[x1]...[xD] writes compile like writes
+ * through a local span (@c FlatNestedVec<double, 3>: 0.64 ns per element
+ * either way, nested vector 0.67 ns; 4.5 ns chained with
+ * @c -fno-strict-aliasing). Keep the view or span of the sub-vector being
+ * worked on in a local variable (or iterate with range-for) when the loop also
+ * - stores pointers to @p T, e.g. into other containers (GCC gives pointers to
+ *   @c T and to @c const @c T one alias set, so they alias the container's
+ *   element pointer: chained reads with a @c push_back of
+ *   @c {const double*, std::size_t, double} per element were 1.35x slower),
+ * - stores values of type @p Index, which alias the offsets, or
+ * - calls functions the compiler cannot see into (e.g. recursion).
+ * Otherwise every chained access reloads up to @f$2D@f$ pointers and offsets.
  * For large containers accessed randomly, a 32-bit @p Index pays off.
  *
  * <b>Invalidation.</b> Like @c std::vector: every operation that may
