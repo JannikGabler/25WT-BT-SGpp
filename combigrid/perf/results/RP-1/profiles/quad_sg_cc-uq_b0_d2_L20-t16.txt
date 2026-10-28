@@ -1,0 +1,30 @@
+profile of `^quad/sg/cc-uq/b0/d2/L20$` (e2e, 16 threads, self time)
+    12.90%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::uqIntegrand
+    10.80%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     8.01%  perf_e2e  libsgppcombigrid.so      [.] Eigen::internal::kiss_cpx_fft<double>::bfly4
+     6.53%  perf_e2e  libsgppcombigrid.so      [.] void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >
+     6.41%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     5.46%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_operator::processTensorGrid
+     4.53%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     3.86%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT
+     3.78%  perf_e2e  [unknown]                [k] 0xffffffffa7c2e90a
+     2.91%  perf_e2e  libm.so.6                [.] __sincos_fma
+     2.48%  perf_e2e  libsgppbase.so           [.] sgpp::base::DataVector::DataVector
+     2.27%  perf_e2e  libm.so.6                [.] __cos_fma
+     1.93%  perf_e2e  [unknown]                [k] 0xffffffffa74011b2
+     1.57%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     1.03%  perf_e2e  libm.so.6                [.] __cexp
+     1.00%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     0.97%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     0.93%  perf_e2e  perf_e2e                 [.] exp@plt
+     0.73%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     0.69%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     0.61%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     0.57%  perf_e2e  [unknown]                [k] 0xffffffffa750410b
+     0.54%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     0.51%  perf_e2e  libc.so.6                [.] __memmove_avx_unaligned_erms
+     0.48%  perf_e2e  [unknown]                [k] 0xffffffffa7504109
+     0.46%  perf_e2e  [unknown]                [k] 0xffffffffa7401268
+     0.36%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-155635-_quad_sg_cc_uq_b0_d2_L20_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

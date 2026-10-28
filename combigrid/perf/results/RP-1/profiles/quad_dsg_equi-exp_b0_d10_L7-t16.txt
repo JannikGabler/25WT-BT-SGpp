@@ -1,0 +1,14 @@
+profile of `^quad/dsg/equi-exp/b0/d10/L7$` (e2e, 16 threads, self time)
+    44.80%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::delta_quadrature_operator::forEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid
+    19.69%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+    15.86%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+    10.75%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     1.99%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     1.73%  perf_e2e  perf_e2e                 [.] exp@plt
+     1.37%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     1.06%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     0.62%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::delta_quadrature_operator::{anon}::appendSubTrieChildren
+     0.41%  perf_e2e  libsgppcombigrid.so      [.] memset@plt
+     0.33%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-155541-_quad_dsg_equi_exp_b0_d10_L7_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

@@ -1,0 +1,28 @@
+# heaptrack summary: rp1-quad_dsg_equi-exp_b0_d3_L16 (16 threads; rp-1 cases: --samples 1 --warmups 0; WP-01 cases: --samples 1 --warmups 1; run under systemd-run MemoryMax=8G)
+calls to allocation functions: 3848 (8825/s)
+peak heap memory consumption: 38.29M
+peak RSS (including heaptrack overhead): 54.27M
+total memory leaked: 25.82K
+
+== 29.36M over 1017 calls
+     11.75M /  943 calls: tools::deltas_sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/deltas_sparse_grid_generation.cpp:79 <- tools::deltas_sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/deltas_sparse_grid_gene
+      7.87M /   15 calls: quadrature  <- miscellaneous/data_scratches/delta_quadrature_scratch.hpp:60
+      7.87M /   15 calls: quadrature  <- miscellaneous/data_scratches/delta_quadrature_scratch.hpp:64
+    836.52K /   26 calls: tools::deltas_sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/deltas_sparse_grid_generation.cpp:79 <- tools::deltas_sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/deltas_sparse_grid_gene
+    524.34K /    1 calls: quadrature  <- miscellaneous/data_scratches/delta_quadrature_scratch.hpp:60 <- quadrature <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:50 <- perf_e2e
+    524.34K /    1 calls: quadrature  <- miscellaneous/data_scratches/delta_quadrature_scratch.hpp:64 <- quadrature <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:50 <- perf_e2e
+== 8.39M over 73 calls
+      8.39M /   19 calls: quadrature <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:39 <- perf_e2e
+      3.27K /    1 calls: quadrature <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:40 <- perf_e2e
+== 253.06K over 370 calls
+    175.10K /  147 calls: delta_quadrature_operator::prepareDeltaTensorGrid <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:256 <- delta_quadrature_operator::forEachGPWithGlobalWeight<> <- operators/quadrature/deltas_sparse_grid_quadrature.hpp:180 <-
+     52.22K /  121 calls: delta_quadrature_operator::prepareDeltaTensorGrid <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:256 <- delta_quadrature_operator::forEachGPWithGlobalWeight<> <- operators/quadrature/deltas_sparse_grid_quadrature.hpp:180 <-
+     12.29K /   10 calls: delta_quadrature_operator::prepareDeltaTensorGrid <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:256 <- delta_quadrature_operator::forEachGPWithGlobalWeight<> <- operators/quadrature/deltas_sparse_grid_quadrature.hpp:180 <-
+      6.53K /   77 calls: delta_quadrature_operator::prepareDeltaTensorGrid <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:256 <- delta_quadrature_operator::forEachGPWithGlobalWeight<> <- operators/quadrature/deltas_sparse_grid_quadrature.hpp:180 <-
+      6.14K /    9 calls: delta_quadrature_operator::prepareDeltaTensorGrid <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:256 <- delta_quadrature_operator::forEachGPWithGlobalWeight<> <- operators/quadrature/deltas_sparse_grid_quadrature.hpp:180 <-
+== 108.53K over 1 calls
+    108.53K /    1 calls: DeltasSparseGrid::DeltasSparseGrid <- grids/deltas_sparse_grid.cpp:26 <- perf_e2e
+== 73.73K over 1 calls
+     73.73K /    1 calls: 
+== 24.58K over 1 calls
+     24.58K /    1 calls: perf_e2e

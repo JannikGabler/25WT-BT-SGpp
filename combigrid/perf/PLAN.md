@@ -7,7 +7,9 @@ re-recorded 2026-10-24), judged configuration, 16 threads unless stated; e2e med
 `-fno-semantic-interposition` to GCC `OPT=1` builds via site_scons; the baseline (built from
 fed2cdb4e with its own site_scons) stays without it, so the flag counts as an optimization.
 WP-14 turns strict aliasing on (GCC default; `-fno-strict-aliasing` only for the SWIG Java
-wrapper); the baseline keeps `-fno-strict-aliasing`. Numbers below predate RP-1.
+wrapper); the baseline keeps `-fno-strict-aliasing`. Entry bodies keep their setup numbers;
+the "From RP-1" lines and the table's expected savings are RP-1's (snapshot `rp-1` = f48d2bbc1,
+ANALYSIS.md "Re-profiling RP-1", `results/RP-1/`).
 
 **Ranking rule**: expected absolute time saved on the e2e suite, cases with d ≥ 7 first (they
 run longest and the owner prioritizes high dimensions), then all cases; ties broken by operator
@@ -22,6 +24,8 @@ Baseline e2e time per operator group (sum of `total` medians, `baseline/e2e_t16.
 generation ≤ 1–2 % except MIVec; boost off, total 70.0 s): quad/sg 22.3 s (18.5 s at d ≥ 7) ·
 quad/dsg 26.8 s (26.2 s at d ≥ 7) · interp 6.6 s · interplin 5.0 s · mivec 9.3 s (of which
 generation 5.1 s).
+At RP-1 (rp-1, total 53.4 s): quad/sg 9.2 s (6.9 s at d ≥ 7) · quad/dsg **27.1 s (51 %;
+26.5 s at d ≥ 7)** · interp 5.7 s · interplin 4.5 s · mivec 6.9 s (of which generation 5.65 s).
 
 | Rank | ID | Title | Status | Expected saving (e2e) |
 |---|---|---|---|---|
@@ -31,20 +35,30 @@ generation 5.1 s).
 | – | WP-14 | `-fno-strict-aliasing` only for the SWIG Java wrapper; datadriven punning → `std::bit_cast` | accepted (2026-10-28) | measured: e2e 52.77 → 53.42 s (0.988x, −0.65 s); interp/interplin 1.10x, quad/dsg 0.970x, mivec 0.886x |
 | – | WP-15 | Peak-memory measurement in the benchmark harness (owner's request; protected `perf.py`) | accepted (2026-10-28) | measured: runtime impact nil (full suite 1.0002x, 0 SLOWER); floor 10.2 MiB |
 | – | WP-16 | Adapt `perf.py` and the protection to the benchmark move (`combigrid/benchmarks/`) | accepted (2026-10-28) | measured: A/A old vs. new layout 1.001x, memory 0.994, 0 flags |
-| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | in progress (prompt re-issued 2026-10-28) | re-ranks everything below |
-| 3 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
-| 4 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~5.4 s (WP-14 made the closure 11–19 % slower), generation ≥ 10x at d ≥ 10 |
-| 5 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
-| 6 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | 1.5–3 s (d ≥ 7) |
-| 7 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready | 0.5–1.5 s; low d and many small grids |
-| 8 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | ~1.3 s (before WP-13/WP-14, which gave interp 1.06x · 1.10x) |
-| 9 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
-| 10 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s (before WP-14: interplin 1.10x) |
-| 11 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
-| 12 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
+| – | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | accepted (2026-10-28) | measured: baseline → rp-1 e2e 69.95 → 53.41 s (1.31x; d ≥ 7 1.28x); memory geomean 1.028, 3 `MEM+` (quad/sg d2/d3, WP-01 scratch) |
+| 1 | WP-02 | DSG quadrature: per-delta-tensor-grid trie work at high d | in progress (prompt issued 2026-10-28) | 4.1–5.5 s (b1 d15/d20); memory up to −150 MiB |
+| 2 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ≈ 5.1 s (generation ≥ 10x, d ≥ 10); first step −1.55 s |
+| 3 | WP-04 | DSG quadrature: row loop (b0) | ready (after WP-02) | 1.5–3 s (b0 d7/d10) |
+| 4 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04) | ≈ 1–1.5 s (quad/sg + quad/dsg kernels); interface |
+| 5 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only (integrand 67–71 % per query point); gates WP-06/WP-08 |
+| 6 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | 0.6–0.7 s (d ≥ 7 ≈ 0.4 s) |
+| 7 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ≈ 0.5 s (d ≥ 7 ≈ 0.45 s) |
+| 8 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | ready | 0.5–0.8 s (d ≤ 3); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1079 → ≈ 280–730 MiB |
+| 9 | WP-07 | Generic barycentric formula: cache the weights | ready | ≈ 0.2 s (d < 7) |
+| 10 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | 0.1–0.3 s (d2) |
+| 11 | WP-18 | Shared 1D node arrays per (dimension, level) (from D-5; memory; proposal for the owner) | ready | memory −64 / −101 / −17 MiB (dsg b1 d20 / sg d2 L20 / sg b1 d20); runtime small |
+| 12 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | warm e2e nil; cold start; floor −1…−4.5 MiB per process |
+| 13 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10 | – |
+| – | D-4 | Batched `SourceFunc` evaluation (interface) | decided 2026-10-28 → WP-17 | – |
+| – | D-5 | Shared 1D node arrays in `TensorGrid` (interface, memory) | decided 2026-10-28 → WP-18 | – |
+
+Ranking notes (RP-1): WP-02 and WP-03 tie on the expected saving; DSG (quadrature) first by the
+tie-break. WP-09 precedes WP-06/WP-08 because its decision sets their value. WP-05 saves only
+at d ≤ 3, so it ranks behind WP-06/WP-08 (0.4–0.45 s at d ≥ 7) despite the largest memory
+potential of the plan (owner 2026-10-28: NEW-A merged into WP-05, runtime rank kept).
 
 ---
 
@@ -111,6 +125,15 @@ generation 5.1 s).
   (quad/dsg 0.970x; `quad/dsg/equi-exp/b1/d20/L6` 6.67 → 7.03 s). Measure the rewrite under the
   final flags; fix code generation at the source level (re-adding `-fno-strict-aliasing` per file
   would be a flag change → owner).
+- **From RP-1**: `appendSubTrieChildren` **64.8 %** (b1 d20 L6) / **44.4 %** (b1 d15 L7) +
+  `compSubTrie` 0.9 / 1.3 % + `updateCoeffSums` 13.3 / 19.9 % (per-trie work too) → per-delta-grid
+  trie work **79 / 66 %**; serial preparation 0.29 s. Scope therefore includes `updateCoeffSums`
+  and the serial preparation. e2e rp-1: b1 d20 L6 7.04 s, b1 d15 L7 4.09 s (0.962x / 0.968x of
+  baseline, WP-14). Expected **4.1–5.5 s** (trie work ≈ 5.6 s at d20, 2.7 s at d15; 2–3x on it).
+  Memory: per-thread sub-trie vectors (`appendSubTrieChildren` push_back, cpp:109) 154 MiB (d20,
+  51 % of the heap peak, RSS 329 MiB) / 102 MiB (d15, RSS 233 MiB): not materializing one
+  sub-trie per delta grid per thread saves most of it; a sub-trie cache could raise the peak
+  (report it).
 
 ## WP-03 — Downwards closure of multi-index sets
 - **Location**: `tools/downwards_closedness.hpp` (`genMIVecDownwardsClosure`), helpers in
@@ -143,6 +166,14 @@ generation 5.1 s).
   +3.9 %, cycles +23 %, IPC 2.07 → 1.75; micro `downwards_closure` 0.94–0.96x; e2e generation
   d15 1.68 → 2.07 s, d20 1.88 → 2.07 s; mivec 0.886x). The rewrite replaces this loop anyway;
   measure under the final flags (flag changes → owner).
+- **From RP-1**: `genMIVecDownwardsClosure` **78.6 / 96.6 / 97.6 %** at d10/d15/d20; generation
+  5.65 s (11 % of the suite). Cause of the old master's advantage (rp-1 generation 1.33–1.46x
+  slower): `tools::mi_view::lessEqualInEveryDim` (via `miVecDominatesMI` → `operator>=`), which
+  GCC 15 compiles to an AVX2 early-break loop with an alignment-dispatch prologue (IPC 1.76 vs.
+  2.11–2.48); present since the MIView refactor (baseline), amplified by WP-14
+  (`results/RP-1/mivec-master-vs-rp-1.md`). First step / fallback: a scalar early-exit dominance
+  test (or `#pragma GCC novector`) restores master speed, **−1.55 s** (d10 0.48, d15 0.52, d20
+  0.55 s), a few lines. Expected total **≈ 5.1 s**. Memory nil.
 
 ## WP-04 — DSG quadrature: row loop
 - **Location**: `deltas_sparse_grid_quadrature.hpp` (`forEachGPWithGlobalWeight`,
@@ -159,11 +190,22 @@ generation 5.1 s).
   (add a speed-of-light case). **E2E filter**: `^quad/dsg/` · **Functional change**: none.
 - **Dependencies**: after WP-02 (same files; re-profile in between). From WP-01: delta grids at
   b1 have the same 1-node dimensions; iterating only the multi-node dimensions should carry over.
+- **From RP-1**: b0 d10 L7 row loop vs. integrand: equi-exp **44.8 % vs. 50.5 %**, cc-uq
+  **35.0 % vs. 61.1 %**; inside the loop `updateCoeffSums` 15.0 / 11.8, `compRowWeights` 9.1 / 6.4,
+  row + advance 9.2 / 7.4, `std::function` call 4.6 / 3.9 % (rows are short; per-row work over all
+  trie nodes). The loop is ≈ 6.1 s of the four b0 d7/d10 cases (d7 shares assumed as at d10).
+  Target: SG-kernel parity (215 → ≈ 152 instructions/point, 27.8 vs. 21.8 ns/point). Expected
+  1.5–3 s. Memory nil. The `std::function` part belongs to WP-17.
 
-## WP-05 — SG quadrature: per-tensor-grid costs
-- **Location**: `quadrature.cpp` (`getWeights`), `quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp`
+## WP-05 — SG quadrature at low d: CC 1D weights and per-thread scratch (incl. RP-1 NEW-A)
+- **Scope after RP-1** (owner 2026-10-28: NEW-A merged into WP-05, runtime rank kept): (a) CC 1D
+  weights once per (rule, #nodes) per `quadrature()` call and fewer `genWeightsFFT` temporaries;
+  (b) per-thread scratch grown on demand / without zero-fill. The many-small-grid part is
+  obsolete (per-tensor-grid costs < 1 % at b1 d15/d20).
+- **Location**: `quadrature.cpp` (`getWeights`, `mapNodesOntoDomain`), `quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp`
   (`genWeightsInplace` allocates and runs an FFT per call), `tools/operators/quadrature/quadrature_utilities.cpp`,
-  iterator construction (allocations per tensor grid).
+  `QuadratureScratch` (ctor; `nodesPerDim` quadrature_scratch.hpp:47, `weights1D`),
+  `miscellaneous/data_scratches/delta_quadrature_scratch.hpp` (same pattern).
 - **Hypothesis**: 1D weights depend only on (quadrature rule, number of nodes) but are recomputed
   for every tensor grid and dimension (CC: FFT + ~6 allocations per call). Precompute per
   dimension and level once per `quadrature()` call (as `comp1DWeights` does for the deltas
@@ -180,6 +222,20 @@ generation 5.1 s).
 - **From WP-01 (after its change)**: `micro/quad/process_tg/cc/b0/d2/L16` 66 ns/point vs. equi
   ~34 ns/point (per-grid CC weight computation) → cache 1D weights per (rule, #nodes);
   `process_all_tgs/equi/b1/d20/L4` 27.9 ns/point vs. 21.6 at b0/d10 (many small grids).
+- **From RP-1 (weights)**: `quad/sg/cc-uq/b0/d2/L20` (1.19 s): CC 1D weights **36 %** (1 thread
+  44 %; Eigen kissfft 14.5 %, twiddles 6.2 %), scratch zero-fill + page faults 10.7 %, integrand
+  ≈ 31 %; scales only 4.2x. Expected 0.4–0.6 s (cc d2/L20 only); memory up to −300 MiB (CC FFT
+  temporaries ≈ 360 MiB at the peak).
+- **From RP-1 (scratch, NEW-A)**: every thread allocates `weights1D` and `nodesPerDim` in each
+  `quadrature()` call with `sparseGrid.getMaxTGSumOverGPCntsPerDim()` doubles and zero-fills
+  them (`DataVector(n)`): 2 × 16 × 16.8 MiB = 537 MiB at d2/L20 (heaptrack; the WP-01 `MEM+`:
+  `nodesPerDim` +268 MiB); ≈ 525 MiB of fresh pages per call (4.0e5 page faults over 3
+  pipelines), 10.7 % (cc) / 17.8 % (equi) of the samples. Only the threads processing the
+  largest grids need the full size; 1-thread peaks 137 / 298 MiB. `DeltaQuadratureScratch` has
+  the same pattern (2 × 7.9 MiB at `quad/dsg/equi-exp/b0/d3/L16`). Expected: runtime −0.07 / −0.13 s,
+  memory equi d2 620 → ≈ 120–270 MiB, cc d2 1079 → ≈ 580–730 MiB (before the weights part),
+  cc d3 −4 MiB; a few lines, no API change.
+- **E2E filter (RP-1)**: `^quad/|^mivec/`; report the `MEM-` cases.
 
 ## WP-06 — Global interpolation: operator overhead
 - **Location**: `operators/global_interpolation/global_interpolation.cpp`.
@@ -203,6 +259,10 @@ generation 5.1 s).
   On `interp/sg/cc/b0/d10/L2/p8` Clang needs 32 % fewer cycles in `interpolateFirstDim` (34 vs.
   50 G): compare the generated code. Refcheck: `interp/sg/equi/b0/d2/L5/cos-shifted` WARNs on any
   FMA-placement change in the barycentric formula (owner 2026-10-25: tolerance stays; explain it).
+- **From RP-1**: helpers now inlined into the callers. `interp/sg/cc/b0/d5/L6/p64`:
+  `denormalizeDataVector` 6.8 %, `getGridPoint` 7.8 % (+ 2.8 % vector access), `hasTrivialResult`
+  + `nearlyEqual` 2.4 %, libgomp 4.8 %; `.../d10/L2/p8` (1.99 s): 8.4 / 5.0 / 1.3 / 3.9 %;
+  integrand 67–71 %. Expected 0.6–0.7 s (d ≥ 7 ≈ 0.4 s).
 
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
@@ -225,6 +285,9 @@ generation 5.1 s).
 - **From WP-11**: `interp/sg/equi/b0/d2/L5/cos-shifted` WARNs whenever FMA placement in
   `BarycentricFormula::evaluateFormula` changes (Clang: error 1.6e-6 → 4.2e-6; pathological case,
   Lebesgue constant ~1e16). Owner 2026-10-25: tolerance stays; the summary explains a WARN.
+- **From RP-1**: `interp/sg/cheb1/b0/d5/L4/p64`: `barycentricFormulaWeights` 9.0 + `log` 13.9 +
+  `exp` 2.9 % + their allocations 5.5 %; libgomp 21.3 %; 1 thread: weights 34.3 % + allocations
+  8.2 %. Expected ≈ 0.2 s (d < 7).
 
 ## WP-08 — Linear interpolation: corner loop
 - **Location**: `operators/linear_interpolation/linear_interpolation.cpp`, `TensorGrid::getNeighborsForLinInterpolation`.
@@ -240,6 +303,9 @@ generation 5.1 s).
   results unchanged). **Tests**: linear interpolation tests. **E2E filter**: `^interplin/`
 - **Functional change**: none. **Dependencies**: none; re-assess after the owner's decision on
   WP-09. From WP-01: same per-point `evaluateNormalizedInPlace` path; premap the nodes.
+- **From RP-1**: `interplin/sg/equi/b1/d8/L5/p256`: `computeNeighborGPWithWeight` 16.6 %,
+  `denormalizeDataVector` 5.0 %; `.../d10/L5/p32` (2.47 s): 19.8 / 4.3 %; integrand 68–69 %.
+  Expected ≈ 0.5 s (d ≥ 7 ≈ 0.45 s).
 
 ## WP-09 — Multi-point interpolation API (from D-1; proposal, owner decides after the results)
 - **Source**: D-1. Owner, 2026-10-24: "Approve it as a work package. A new API can be considered
@@ -285,6 +351,9 @@ generation 5.1 s).
   the results); existing API and results unchanged. Python bindings: expose if straightforward;
   the `SG_PYTHON=1` build must succeed in any case.
 - **Dependencies**: none. Decides the value of WP-06/WP-08; WP-07 stays relevant either way.
+- **From RP-1**: value unchanged — the integrand is 67–71 % per query point in interp/interplin
+  (rp-1: interp 5.7 s, interplin 4.5 s). Coordinate with WP-17 (batched source-function
+  evaluation) if both are adopted.
 
 ## WP-10 — Do not link Armadillo when Eigen provides the FFT (from D-3)
 - **Source**: D-3. Owner, 2026-10-24: keep the WP; if it only reduces start-up times it is
@@ -309,6 +378,9 @@ generation 5.1 s).
 - **Functional change**: build configuration (linking only), agreed in principle by the owner.
   No new flags. If other users of Armadillo make a clean change impossible: BLOCKED with options.
 - **Dependencies**: none; lowest priority.
+- **From RP-1**: warm e2e nil; process floor 10.2–10.6 MiB, of which ≤ 4.5 MiB from the
+  Armadillo/LAPACK/OpenBLAS stack (old master without it: 6.0 MiB); OpenBLAS threads 4–9 % of the
+  samples of short processes (`quad/sg/.../b1/d20/L5`, `.../d2/L20`).
 
 ## WP-11 — Toolchain measurement: GCC flags vs. Clang ThinLTO vs. Clang full LTO
 - **Source**: D-2 and the owner's question on Clang vs. GCC. Owner, 2026-10-25: "create a
@@ -463,6 +535,11 @@ generation 5.1 s).
   is material. From WP-15: `quad/sg/cc-uq/b0/d2/L20` 806 → 1076 MiB since WP-01 (snapshots
   `WP-01-before`/`WP-01-after` exist): find the cause; does `quad/sg/equi-exp/b0/d2/L20`
   (620 MiB) follow the same pattern.
+- **Result** (accepted 2026-10-28, summary `summaries/RP-1-reprofiling.md`): baseline → rp-1
+  e2e 69.95 → 53.41 s (1.31x), quad/dsg now 51 % of the suite; WP-01 memory step = per-thread
+  zero-filled `nodesPerDim` scratch (→ WP-05). Re-ranking, new WP-17/WP-18/WP-19; answers
+  merged into the "From RP-1" lines above. `ab micro` runs 0 warm-ups: allocation-heavy micro
+  cases show first-call times (ratios valid; absolute numbers from `run micro`).
 
 ## WP-15 — Peak-memory measurement in the benchmark harness
 - **Source**: owner 2026-10-28: "The benchmarks are currently only tracking runtime and not
@@ -537,6 +614,72 @@ generation 5.1 s).
   refcheck OK. Historical records (summaries, results, ANALYSIS, `baseline/environment.json`)
   keep the old paths.
 
+## WP-17 — Batched source-function evaluation (from D-4; proposal, owner decides after the results)
+- **Source**: RP-1 summary (D-4). Owner, 2026-10-28: include in the plan as a candidate WP; the
+  interface change is a proposal, adoption is decided after the results (as WP-09).
+- **Location**: `functions/source_functions/source_function.{hpp,cpp}` (`SourceFunc::evaluate`,
+  `evaluateNormalizedInPlace`), the row kernels in `operators/quadrature/quadrature.cpp`
+  (`processTensorGrid` / `sumOverRows`) and `deltas_sparse_grid_quadrature.hpp`
+  (`forEachGPWithGlobalWeight`), umbrella `combigrid/src/sgpp_combigrid.hpp`, bindings
+  `combigrid/build/pysgpp/`.
+- **Hypothesis**: the kernels call the user function through `std::function<double(const
+  DataVector&)>` once per grid point: an opaque call that blocks inlining and vectorization across
+  points and forces reloads of scratch data (WP-01). Evaluating a row / block of points per call
+  removes the per-point dispatch and lets batch-aware integrands vectorize. Generic design (owner
+  preference: no fast-path + fallback split), e.g. per-point callables wrapped once into the
+  batched form at construction (inlinable inner call), so all operators use one path. The
+  session compares designs and justifies its choice; existing constructors and Python callables
+  keep working with unchanged results.
+- **Evidence** (RP-1): the complete-SG operator is integrand-bound at d ≥ 5 (integrand 65–92 %);
+  `std::function` dispatch (inlined call lines + `_M_invoke`) is 4–9 % of the quad/sg kernels
+  (`quad/sg/equi-exp/b0/d10/L4` 7.4 %) and 3.9–4.6 % of the DSG row loop (b0 d10 L7).
+- **Expected gain**: ≈ 1–1.5 s e2e (quad/sg + quad/dsg) with the existing per-point integrands;
+  more for integrands that vectorize over a batch (new-API callers only).
+- **Measurement**: standard A/B `^quad/|^mivec/` (existing per-point integrands: dispatch gain,
+  no regression; interp/interplin too if they switch); the batch-integrand gain in an
+  unprotected comparison benchmark (as WP-09), same problems as the e2e cases.
+- **Risk**: medium–high — public API (C++ and Python, GIL path), every operator, numerics of
+  vectorized integrands (refcheck).
+- **Tests**: batched == per-point for every operator, node family, boundary offsets 0/1,
+  non-unit domains; existing tests unchanged.
+- **Functional change**: new/changed public `SourceFunc` interface, agreed as a proposal for this
+  WP; existing results unchanged within round-off; the `SG_PYTHON=1` build must succeed.
+- **Dependencies**: after WP-02 and WP-04 (same DSG row loop). Coordinate with WP-09.
+
+## WP-18 — Shared 1D node arrays per (dimension, level) (from D-5; memory; proposal)
+- **Source**: RP-1 summary (NEW-D). Owner, 2026-10-28: include in the plan as a candidate WP;
+  the change of the public `TensorGrid` storage is a proposal, adoption decided after the results.
+- **Location**: `grids/tensor_grid.{hpp,cpp}` (per-dimension node lists), `grids/sparse_grid.{hpp,cpp}`,
+  `tools/sparse_grid/sparse_grid_generation.*`, `SGGenInstr` node generation, operators reading
+  the node lists, bindings `combigrid/build/pysgpp/`.
+- **Hypothesis**: every tensor grid stores its own copies of its 1D node lists although they
+  depend only on (dimension, level) for a given generation instruction; store each distinct
+  list once per sparse grid and reference it from the tensor grids.
+- **Evidence** (RP-1 heaptrack): node lists 64 MiB at `quad/dsg/equi-exp/b1/d20/L6` (21 % of the
+  heap, 230 230 small allocations), 101 MiB at `quad/sg/*/b0/d2/L20` (16 %), 16.8 MiB at
+  `quad/sg/equi-exp/b1/d20/L5` (≈ 50 k allocations, 29 %), 43 MiB at dsg b1 d15.
+- **Expected gain**: memory −64 / −101 / −17 MiB on those cases; runtime: fewer allocations in
+  generation (≤ 2 % except mivec) — small, measure.
+- **Risk**: medium — public `TensorGrid` interface and ownership, copies of `SparseGrid`,
+  `SparseGrid::operator==`, Python bindings.
+- **Tests**: tensor grid / sparse grid construction and equality tests, all operator tests.
+- **E2E filter**: full suite (memory of every case).
+- **Functional change**: public `TensorGrid` storage, agreed as a proposal; observable results
+  unchanged; the `SG_PYTHON=1` build must succeed.
+- **Dependencies**: after WP-02 (it changes the DSG memory picture).
+
+## WP-19 — SG quadrature: load balancing at low d
+- **Source**: RP-1 summary (NEW-C).
+- **Location**: `operators/quadrature/quadrature.cpp` (parallel loop over the tensor grids).
+- **Hypothesis**: at d2 a few huge tensor grids (41 grids for 16 threads) limit the parallelism
+  to whole tensor grids; split huge grids into row ranges so threads share them.
+- **Evidence**: thread scaling `quad/sg/cc-uq/b0/d2/L20` 4.2x, `quad/sg/equi-exp/b0/d2/L20` 6.2x
+  at 16 threads; libgomp + OpenBLAS 17.4 % of the equi d2 samples.
+- **Expected gain**: 0.1–0.3 s (d2 cases).
+- **Risk**: low–medium (summation order → round-off, refcheck; determinism across runs).
+- **Tests**: quadrature tests. **E2E filter**: `^quad/sg/` · **Functional change**: none.
+- **Dependencies**: after WP-05 (it changes the d2 cost split).
+
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where
   Clang is slower) and WP-03 (MI closure, where Clang is 1.4–1.9x faster) changed the code.
@@ -589,3 +732,15 @@ generation 5.1 s).
   process start (5–18 % of the samples of cold single-pipeline runs). No measurable effect on warm
   runs. Options: not linking Armadillo when Eigen provides the FFT, or nothing.
 - **Decision (2026-10-24)**: "Sure" → WP-10 (do not link Armadillo when Eigen provides the FFT).
+
+## D-4 — Batched `SourceFunc` evaluation (needs decision → decided)
+- **Idea** (RP-1): evaluate a row of points per call instead of one `std::function` dispatch per
+  grid point; ≈ 1–1.5 s (4–9 % of the quad/sg and DSG kernels), enables vectorized integrands.
+  Cost: public API + Python bindings.
+- **Decision (2026-10-28)**: included as candidate WP-17; adoption decided after its results.
+
+## D-5 — Shared 1D node arrays in `TensorGrid` (needs decision → decided; memory)
+- **Idea** (RP-1): one node array per (dimension, level) instead of per-tensor-grid copies;
+  −64 MiB (dsg b1 d20), −101 MiB (sg d2/L20), −17 MiB (sg b1 d20); 230 k fewer allocations.
+  Cost: public `TensorGrid` storage.
+- **Decision (2026-10-28)**: included as candidate WP-18; adoption decided after its results.

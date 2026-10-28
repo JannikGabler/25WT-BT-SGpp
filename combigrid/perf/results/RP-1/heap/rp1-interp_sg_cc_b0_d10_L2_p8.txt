@@ -1,0 +1,24 @@
+# heaptrack summary: rp1-interp_sg_cc_b0_d10_L2_p8 (16 threads; rp-1 cases: --samples 1 --warmups 0; WP-01 cases: --samples 1 --warmups 1; run under systemd-run MemoryMax=8G)
+calls to allocation functions: 13288 (5810/s)
+peak heap memory consumption: 7.20M
+peak RSS (including heaptrack overhead): 28.77M
+total memory leaked: 25.82K
+
+== 7.04M over 6354 calls
+      3.06M /  121 calls: global_interpolation::interpolate <- operators/global_interpolation/global_interpolation.cpp:51 <- interpolate  <- operators/global_interpolation/global_interpolation.cpp:31
+      2.62M /  246 calls: global_interpolation::interpolate <- operators/global_interpolation/global_interpolation.cpp:51 <- interpolate  <- operators/global_interpolation/global_interpolation.cpp:31
+    874.80K /   67 calls: global_interpolation::interpolate <- operators/global_interpolation/global_interpolation.cpp:51 <- interpolate  <- operators/global_interpolation/global_interpolation.cpp:31
+    472.39K /    4 calls: global_interpolation::interpolate <- operators/global_interpolation/global_interpolation.cpp:51 <- interpolate  <- operators/global_interpolation/global_interpolation.cpp:31 <- interpolate
+      1.02K from 191 other places
+== 73.73K over 1 calls
+     73.73K /    1 calls: 
+== 24.58K over 1 calls
+     24.58K /    1 calls: ::addInterpolation::{lambda#1}::operator const  <- std::function<>::operator const <- perf::Suite::runPipeline const <- bench/perf_harness.hpp:396 <- perf::Suite::main
+== 19.58K over 5875 calls
+     11.31K /   42 calls: tools::sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/sparse_grid_generation.cpp:72 <- tools::sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/sparse_grid_generation.cpp:48
+      6.61K /   24 calls: tools::sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/sparse_grid_generation.cpp:72 <- tools::sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/sparse_grid_generation.cpp:48 <- tools::spar
+== 12.00K over 30 calls
+      6.00K /   15 calls: 
+      6.00K /   15 calls: tools::sparse_grid_generation::genTGData <- tools/sparse_grid_generation/sparse_grid_generation.cpp:33 <- SparseGrid::SparseGrid <- grids/sparse_grid.cpp:17 <- ::addInterpolation::{lambda#1}::operator const 
+== 7.39K over 1 calls
+      7.39K /    1 calls: SparseGrid::SparseGrid <- grids/sparse_grid.cpp:17 <- ::addInterpolation::{lambda#1}::operator const  <- std::function<>::operator const <- perf::Suite::runPipeline const

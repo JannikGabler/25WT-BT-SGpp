@@ -1,0 +1,24 @@
+### report-master mivec/sg/cc-exp/b1/d20/S7/n300
+307342734201,instructions
+145748652978,cycles
+496259473,branch-misses
+2197542,cache-misses
+73020.94,task-clock
+### report-master mivec/sg/cc-exp/b1/d15/S10/n300
+388451374752,instructions
+156448081947,cycles
+457828535,branch-misses
+2699417,cache-misses
+78381.90,task-clock
+### rp-1 mivec/sg/cc-exp/b1/d20/S7/n300
+352537581791,instructions
+199892419359,cycles
+547875899,branch-misses
+3312607,cache-misses
+100151.07,task-clock
+### rp-1 mivec/sg/cc-exp/b1/d15/S10/n300
+353014353298,instructions
+202143452346,cycles
+512001246,branch-misses
+2999424,cache-misses
+101278.69,task-clock

@@ -1,0 +1,29 @@
+profile of `^interp/sg/cheb1/b0/d5/L4/p64$` (e2e, 16 threads, self time)
+    20.59%  perf_e2e  libm.so.6                [.] __cos_fma
+    11.58%  perf_e2e  libm.so.6                [.] __ieee754_log_fma
+     9.35%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     9.01%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::barycentricFormulaWeights
+     7.68%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::interpolateFirstDim
+     6.39%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     4.83%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     4.61%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     3.05%  perf_e2e  libc.so.6                [.] _mid_memalign
+     3.03%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     1.65%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::BarycentricFormula::interpolate
+     1.60%  perf_e2e  libm.so.6                [.] log@@GLIBC_2.29
+     1.53%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     1.46%  perf_e2e  libc.so.6                [.] cfree@GLIBC_2.2.5
+     1.45%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::InterpolationMethod::hasTrivialResult
+     1.41%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     1.02%  perf_e2e  libc.so.6                [.] __posix_memalign
+     0.96%  perf_e2e  libm.so.6                [.] __log_finite@GLIBC_2.15@plt
+     0.94%  perf_e2e  libsgppbase.so           [.] operator new
+     0.90%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c70
+     0.73%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     0.67%  perf_e2e  libsgppcombigrid.so      [.] log@plt
+     0.57%  perf_e2e  perf_e2e                 [.] cos@plt
+     0.55%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.47%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     0.32%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c0
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-155725-_interp_sg_cheb1_b0_d5_L4_p64_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

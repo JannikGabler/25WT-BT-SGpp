@@ -1,0 +1,17 @@
+profile of `^quad/sg/equi-exp/b1/d15/L6$` (e2e, 16 threads, self time)
+    29.05%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+    27.43%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+    15.37%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_operator::processTensorGrid
+    12.39%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     3.35%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     1.46%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     1.45%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     1.30%  perf_e2e  perf_e2e                 [.] exp@plt
+     1.25%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     1.06%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     0.90%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.71%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     0.42%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a82
+     0.35%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-155643-_quad_sg_equi_exp_b1_d15_L6_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

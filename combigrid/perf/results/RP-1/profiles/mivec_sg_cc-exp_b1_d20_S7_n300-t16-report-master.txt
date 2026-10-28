@@ -1,0 +1,10 @@
+profile of `^mivec/sg/cc-exp/b1/d20/S7/n300$` (e2e, 16 threads, self time)
+    91.47%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::MIVec<unsigned int> sgpp::combigrid::tools::genMIVecDownwardsClosure<unsigned int>
+     2.13%  perf_e2e  libc.so.6             [.] _mid_memalign
+     0.98%  perf_e2e  libc.so.6             [.] cfree@GLIBC_2.2.5
+     0.81%  perf_e2e  libc.so.6             [.] __posix_memalign
+     0.75%  perf_e2e  libc.so.6             [.] __memmove_avx_unaligned_erms
+     0.62%  perf_e2e  libsgppbase.so        [.] operator new
+     0.46%  perf_e2e  libgomp.so.1.0.0      [.] 0x0000000000026c7b
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-160913-_mivec_sg_cc_exp_b1_d20_S7_n300_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

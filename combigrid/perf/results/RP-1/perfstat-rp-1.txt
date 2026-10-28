@@ -1,0 +1,42 @@
+### quad/dsg/equi-exp/b1/d20/L6
+1321385424840,instructions
+645880946799,cycles
+1263710077,cache-misses
+119012,page-faults
+323588.16,task-clock
+### quad/dsg/equi-exp/b0/d10/L7
+1181914471049,instructions
+540569265495,cycles
+22887703,cache-misses
+10353,page-faults
+270823.55,task-clock
+### quad/sg/equi-exp/b0/d10/L4
+194493509969,instructions
+92780963382,cycles
+1646304,cache-misses
+1593,page-faults
+46486.36,task-clock
+### quad/sg/equi-exp/b0/d2/L20
+47775447971,instructions
+32465909770,cycles
+22684298,cache-misses
+402863,page-faults
+16271.11,task-clock
+### quad/sg/cc-uq/b0/d2/L20
+81939887942,instructions
+58347417216,cycles
+268760577,cache-misses
+1108921,page-faults
+29239.88,task-clock
+### mivec/sg/cc-exp/b1/d20/S7/n300
+352508806136,instructions
+199595681633,cycles
+3396299,cache-misses
+1189,page-faults
+99999.28,task-clock
+### interp/sg/cc/b0/d5/L6/p64
+278768456247,instructions
+141143359049,cycles
+3559307,cache-misses
+1239,page-faults
+70714.68,task-clock

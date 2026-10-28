@@ -1,0 +1,21 @@
+profile of `^interp/sg/cheb1/b0/d5/L4/p64$` (e2e, 1 threads, self time)
+    29.23%  perf_e2e  libm.so.6             [.] __cos_fma
+    14.25%  perf_e2e  libm.so.6             [.] __ieee754_log_fma
+    12.23%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::tools::barycentricFormulaWeights
+    10.96%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::global_interpolation::interpolateFirstDim
+     6.63%  perf_e2e  perf_e2e              [.] sgpp::combigrid::perf::cosProd
+     3.67%  perf_e2e  libc.so.6             [.] _mid_memalign
+     2.53%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::InterpolationMethod::hasTrivialResult
+     2.27%  perf_e2e  libm.so.6             [.] log@@GLIBC_2.29
+     2.14%  perf_e2e  libm.so.6             [.] exp@@GLIBC_2.29
+     2.01%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::global_interpolation::BarycentricFormula::interpolate
+     1.96%  perf_e2e  libm.so.6             [.] __ieee754_exp_fma
+     1.65%  perf_e2e  libc.so.6             [.] cfree@GLIBC_2.2.5
+     1.47%  perf_e2e  libc.so.6             [.] __posix_memalign
+     1.41%  perf_e2e  libsgppbase.so        [.] operator new
+     1.38%  perf_e2e  perf_e2e              [.] cos@plt
+     1.37%  perf_e2e  libm.so.6             [.] __log_finite@GLIBC_2.15@plt
+     0.99%  perf_e2e  libsgppcombigrid.so   [.] log@plt
+     0.53%  perf_e2e  libc.so.6             [.] __memset_avx2_unaligned_erms
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-160240-_interp_sg_cheb1_b0_d5_L4_p64_-t1.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

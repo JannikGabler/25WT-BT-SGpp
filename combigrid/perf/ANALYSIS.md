@@ -14,6 +14,7 @@ AC, idle; e2e at 16 threads, micro at 1 thread. Raw data: `baseline/` (protected
 6. [Hardware counters](#hardware-counters)
 7. [Further findings](#further-findings)
 8. [From findings to work packages](#from-findings-to-work-packages)
+9. [Re-profiling RP-1](#re-profiling-rp-1) (after WP-01, WP-13, WP-14; incl. peak memory)
 
 ## Measurement noise
 
@@ -269,3 +270,195 @@ in the b1 d = 20 case (sub-trie construction: memory-bound pointer work).
 | re-evaluation of the integrand per query point | D-1 (interface) |
 | PLT calls of exported helpers | D-2 (flag) |
 | OpenBLAS thread pool | D-3 (build) |
+
+## Re-profiling RP-1
+
+Work session RP-1, 2026-10-28. Code: f48d2bbc1 (= `rp-1` snapshot: WP-01, WP-13, WP-14, WP-15/16
+infrastructure). Judged configuration, boost off, `calibrate` OK (e2e 1.004 burst / 1.002
+sustained, micro 1.005 / 1.003). Reports: `results/RP-1/` (`e2e.md` full suite baseline → rp-1,
+`micro.md`, `groups.md`, `profile-splits.md`, `profiles/`, `heap/`, `perfstat-*.txt`,
+`scaling-t*.json`, `mivec-master-vs-rp-1.md`). Since WP-13 exported helpers are inlined:
+their shares below come from `perf report --sort sym,srcfile|srcline` splits of the caller
+(method: `results/RP-1/profile-splits.md`).
+
+### Cumulative progress baseline → rp-1
+
+Full e2e A/B (`ab e2e baseline rp-1`, 38 cases, 5 rounds, foreign load ≤ 0.4 %):
+
+| group | baseline | rp-1 | speedup | d ≥ 7: baseline → rp-1 | peak RSS geomean | verdicts (total) |
+|---|---|---|---|---|---|---|
+| quad/sg | 22.35 s | 9.19 s | 2.43x | 18.51 → 6.93 s (2.67x) | 1.080 (3 MEM+) | 13 faster |
+| quad/dsg | 26.72 s | 27.10 s | 0.986x | 26.12 → 26.53 s (0.985x) | 0.999 | 3 faster, 3 ~, 3 SLOWER (b1 d15 0.968, b1 d20 0.962, cc d10 0.993) |
+| interp | 6.61 s | 5.70 s | 1.16x | 3.72 → 3.25 s (1.14x) | 1.006 | 8 faster |
+| interplin | 5.01 s | 4.52 s | 1.11x | 4.39 → 3.96 s (1.11x) | 0.993 | 3 faster, 1 ~ |
+| mivec | 9.27 s | 6.91 s | 1.34x | 7.05 → 6.16 s (1.14x) | 1.011 | 2 faster, 2 SLOWER (d15 0.902, d20 0.924) |
+| **all** | **69.95 s** | **53.41 s** | **1.31x** | 59.78 → 46.84 s (1.28x) | **1.028** | 29 faster, 4 ~, 5 SLOWER |
+
+mivec phases: operator 4.19 → 1.25 s (3.34x), generation 5.07 → 5.65 s (0.897x). The three
+`MEM+` cases are all complete-SG quadrature at low d: `quad/sg/equi-exp/b0/d2/L20` 363.7 →
+619.9 MiB (1.70x), `quad/sg/cc-uq/b0/d2/L20` 786.2 → 1079.1 MiB (1.37x), `quad/sg/cc-uq/b0/d3/L14`
+37.8 → 40.5 MiB (1.07x); all other cases within their spread. Micro (29 common cases): 1.905 →
+1.405 s (1.36x), 19 faster, 6 ~, 4 SLOWER (`downwards_closure` d10/d20 0.955/0.948,
+`ct_coeffs` 0.959, `dsg/process_delta_tg/b1/d20` 0.985).
+
+### Where the time goes (rp-1)
+
+quad/dsg is now **51 %** of the suite (27.1 of 53.4 s) and holds the four longest cases:
+`quad/dsg/equi-exp/b1/d20/L6` 7.04 s, `quad/dsg/cc-uq/b0/d10/L7` 7.02 s,
+`quad/dsg/equi-exp/b0/d10/L7` 5.66 s, `quad/dsg/equi-exp/b1/d15/L7` 4.09 s (together 23.8 s =
+45 %). Next: `interplin/.../d10/L5/p32` 2.47 s, `quad/sg/equi-sin/b0/d7/L7` 2.41 s (integrand
+92 %), mivec d15/d20 2.10/2.07 s (generation only), `interp/sg/cc/b0/d10/L2/p8` 1.99 s, mivec d10
+1.99 s. Generation phases ≤ 2 % except MIVec (5.65 s = 11 % of the suite). Per-case table:
+`results/RP-1/groups.md`.
+
+### Hot spots per operator (profiles, 16 threads)
+
+| case (rp-1 total) | top shares (setup values in brackets) |
+|---|---|
+| `quad/dsg/equi-exp/b1/d20/L6` (7.04 s) | `appendSubTrieChildren` **64.8 %** [63 %] + `compSubTrie` 0.9 % · row loop 23.3 % [23 %] of which `updateCoeffSums` 13.3 % · integrand 7 % · serial preparation 0.29 s (micro) |
+| `quad/dsg/equi-exp/b1/d15/L7` (4.09 s) | `appendSubTrieChildren` **44.4 %** + `compSubTrie` 1.3 % · row loop 35.8 % of which `updateCoeffSums` 19.9 % · integrand 13.5 % |
+| `quad/dsg/equi-exp/b0/d10/L7` (5.66 s) | row loop **44.8 %** [41 %] = `updateCoeffSums` 15.0 / `compRowWeights` 9.1 / row + advance 9.2 / `std::function` call 4.6 / other 6.9 · integrand **50.5 %** [47 %] · memset 2.4 % |
+| `quad/dsg/cc-uq/b0/d10/L7` (7.02 s) | row loop **35.0 %** = 11.8 / 6.4 / 7.4 / 3.9 / 5.5 · integrand **61.1 %** |
+| `quad/sg/equi-exp/b0/d10/L4` (0.94 s) | integrand 70.9 % · `processTensorGrid` 25.2 % (`sumOverRows` 16.1, `std::function` call 7.4) · [setup: `denormalizeDataVector` 37 %, `getWeightForGP` 13 % — gone] |
+| `quad/sg/equi-sin/b0/d7/L7` (2.41 s) | `sin` + integrand **91.6 %** [62 %] · `processTensorGrid` 6.3 % |
+| `quad/sg/equi-exp/b1/d20/L5` (0.24 s) | integrand 65.2 % · `processTensorGrid` 12.5 % · per-tensor-grid setup (weights, mapping) ≈ 0.6 % · libgomp + OpenBLAS 17.4 % (1 thread: integrand 80.6 %, operator 15.4 %) |
+| `quad/sg/cc-uq/b0/d2/L20` (1.19 s) | **CC 1D weights 36 %** (1 thread 44 %; Eigen kissfft 14.5 %, twiddles 6.2 %) [9 % + 2 %] · `QuadratureScratch` zero-fill + page faults **10.7 %** · integrand ≈ 31 % · kernel 22.7 % |
+| `quad/sg/equi-exp/b0/d2/L20` (0.40 s) | integrand ≈ 48 % · `QuadratureScratch` zero-fill + page faults **17.8 %** · `processTensorGrid` 12.2 % · libgomp + OpenBLAS 17.4 % (41 grids, load imbalance) |
+| `interp/sg/cc/b0/d10/L2/p8` (1.99 s) | `cos` + integrand 70.9 % · `interpolateFirstDim` 19.1 % = `denormalizeDataVector` 8.4 / `getGridPoint` 5.0 / vector access 3.1 / `std::function` 1.6 · barycentric (CC) 3.5 % · libgomp 3.9 % |
+| `interp/sg/cc/b0/d5/L6/p64` (1.45 s) | `cos` + integrand 66.6 % [52 %] · `denormalizeDataVector` 6.8 % [12 %] · `getGridPoint` 7.8 % (+ 2.8 % vector access) [11 %] · `hasTrivialResult` + `nearlyEqual` 2.4 % [3 %] · libgomp 4.8 % |
+| `interp/sg/cheb1/b0/d5/L4/p64` (0.34 s) | generic barycentric weights (`barycentricFormulaWeights` 9.0 + `log` 13.9 + `exp` 2.9) 25.8 % [18 %] + their allocations 5.5 % · libgomp **21.3 %** [≥ 15 %] · `cos` + integrand ≈ 25 % · 1 thread: weights 34.3 % + allocations 8.2 % |
+| `interplin/sg/equi/b1/d10/L5/p32` (2.47 s) | `cos` + integrand 67.7 % · `computeNeighborGPWithWeight` 19.8 % · `denormalizeDataVector` (inlined) 4.3 % |
+| `interplin/sg/equi/b1/d8/L5/p256` (1.50 s) | `cos` + integrand 68.7 % [57 %] · `computeNeighborGPWithWeight` 16.6 % [17 %] · `denormalizeDataVector` 5.0 % [11 %] |
+| `mivec/sg/cc-exp/b1/d10/S12/n1000` (1.99 s) | `genMIVecDownwardsClosure` **78.6 %** [49 %] · quadrature ≈ 17 % |
+| `mivec/.../d15/S10/n300`, `.../d20/S7/n300` (2.10 / 2.07 s) | `genMIVecDownwardsClosure` **96.6 % / 97.6 %** [– / 96 %] |
+
+Observations:
+- **The complete-SG operator is integrand-bound now** at d ≥ 5: operator overhead 6–25 %, of
+  which the `std::function` dispatch of `SourceFunc::evaluate` (inlined call lines + `_M_invoke`)
+  is 4–9 % — the same holds for the DSG row loop (5–6 %).
+- **Per-tensor-grid costs of quad/sg are negligible** for many small grids (b1 d15/d20 < 1 %);
+  they matter only for CC at low d, where the FFT weights of the few huge 1D rules dominate.
+- **DSG b1: the trie work per delta grid is 66–79 %** (`appendSubTrieChildren` + `compSubTrie` +
+  `updateCoeffSums`), **DSG b0: the row loop is 35–45 %**, with `updateCoeffSums` and
+  `compRowWeights` (per-row work over all trie nodes, rows are short) as the largest parts.
+- **Interpolation**: the helpers named in WP-06/WP-08 now hide in the callers (inlined), at
+  roughly half of their setup shares; the integrand is 67–71 %.
+- **libgomp spinning**: 21 % in `interp/sg/cheb1/b0/d5/L4/p64`, 4–9 % elsewhere; OpenBLAS threads
+  4–9 % of the samples of short processes (`quad/sg/.../b1/d20/L5`, `.../d2/L20`).
+
+### Micro-benchmarks and speed of light (rp-1, 1 thread)
+
+| case | setup | rp-1 |
+|---|---|---|
+| micro/quad/process_tg/equi/b0/d10/L4 vs. micro/sol/quad_tg/equi/b0/d10/L4 | 72.5 vs. 25.1 ns/point (2.9x) | **21.8 vs. 24.1 ns/point (0.90x)** |
+| micro/quad/process_tg/equi/b0/d5/L10 vs. sol | 46.7 vs. 21.1 ns/point | 18.5 vs. 21.3 ns/point (0.87x) |
+| micro/quad/process_all_tgs/equi/b1/d20/L4 | 134.3 ns/point | 27.4 ns/point (1.26x of a large grid) |
+| micro/quad/process_tg/cc/b0/d2/L16 vs. equi | 81.2 vs. 33.6 ns/point | 64.9 vs. 16.1 ns/point: CC weights ≈ 75 % of the call |
+| micro/dsg/process_delta_tg/equi/b0/d10/L7 | 27.7 ns/point | 27.8 ns/point = **1.28x the SG kernel** per point (152 vs. 215 instructions/point) |
+| micro/dsg/process_delta_tg/equi/b1/d20/L6 · micro/dsg/prepare/equi/b1/d20/L6 | 665 ns/point · 288 ms | 693 ns/point · 292 ms (serial) |
+| micro/interp/global_tg/cc/b0/d5/L6 · cheb1/b0/d5/L4 | 127.4 · 207.5 ns/point | 107.6 · 190.3 ns/point |
+| micro/interp/barycentric_1d/generic/n65 vs. opt_cc/n65 | 577 vs. 5.8 ns/node | 576 vs. 3.0 ns/node (190x) |
+| micro/interplin/tg/equi/b1/d8/L5 | 185.5 ns/corner | 166.0 ns/corner |
+| micro/mivec/downwards_closure/d10/S10/n300 · d20/S6/n100 | 593 · 19.4 ms | 637 · 21.0 ms |
+| micro/gen/complete_mis_with_coeffs/d20/L6 · gen/sparse_grid/cc/b1/d20/L5 | 16.3 · 83.0 ms | 9.4 · 65.7 ms |
+
+Note: `ab micro` runs 0 warm-ups, so allocation-heavy cases show first-call times there
+(`cc_weights/n32769` 4.4 vs. 2.3 ms, `gen/complete_mis_with_coeffs` 44.9 vs. 9.4 ms in `run
+micro`); their A/B ratios are still valid (same conditions on both sides).
+
+### Thread scaling (operator time, rp-1)
+
+| case | 1 thread | 8 | 16 | 16 vs. 1 | peak RSS 1 / 8 / 16 threads |
+|---|---|---|---|---|---|
+| quad/sg/equi-exp/b0/d10/L4 | 8.85 s | 1.12 s | 0.93 s | 9.5x | 10.8 / 11.4 / 12.8 MiB |
+| quad/sg/equi-exp/b1/d20/L5 | 2.05 s | 0.26 s | 0.21 s | 9.8x | 52.6 / 53.2 / 57.6 MiB |
+| quad/sg/equi-exp/b0/d2/L20 | 2.03 s | 0.35 s | 0.33 s | 6.2x | 137 / 362 / 620 MiB |
+| quad/sg/cc-uq/b0/d2/L20 | 4.66 s | 1.23 s | 1.10 s | **4.2x** | 298 / 800 / 1079 MiB |
+| interp/sg/cheb1/b0/d5/L4/p64 | 2.64 s | 0.37 s | 0.34 s | 7.8x | 10.0 / 11.1 / 12.1 MiB |
+
+(16 threads: medians of the A/B; 1 and 8 threads: one `run e2e`.) The d2/L20 cases scale poorly
+(41 tensor grids whose sizes span three orders of magnitude, no parallelism inside a grid; for
+CC the FFT weights of the level-20/19 rules sit on the critical path), and their peak memory
+grows with the thread count (per-thread scratch, below).
+
+### Hardware counters (`perf stat`, 16 threads, 1 warm-up + 2 samples)
+
+| case | instructions | IPC | instructions per grid point | cache misses | page faults |
+|---|---|---|---|---|---|
+| quad/sg/equi-exp/b0/d10/L4 | 1.94e11 [7.1e11] | 2.10 [2.23] | ≈ 152 [555] | 1.6e6 | 1.6e3 |
+| quad/dsg/equi-exp/b0/d10/L7 | 1.18e12 [1.20e12] | 2.19 [2.20] | ≈ 215 [218] | 2.3e7 | 1.0e4 |
+| quad/dsg/equi-exp/b1/d20/L6 | 1.32e12 [1.34e12] | 2.05 [2.12] | ≈ 1570 [1590] | 1.26e9 [1.25e9] | 1.2e5 |
+| quad/sg/equi-exp/b0/d2/L20 | 4.78e10 | 1.47 | ≈ 112 | 2.3e7 | **4.0e5** |
+| quad/sg/cc-uq/b0/d2/L20 | 8.19e10 | 1.40 | ≈ 191 | 2.7e8 | **1.1e6** |
+| mivec/sg/cc-exp/b1/d20/S7/n300 | 3.53e11 | 1.76 | – | 3.4e6 | 1.2e3 |
+| interp/sg/cc/b0/d5/L6/p64 | 2.79e11 | 1.98 | ≈ 660 per evaluation (5 `cos`) | 3.6e6 | 1.2e3 |
+
+### MIVec generation: old master vs. rp-1
+
+`ab e2e report-master rp-1` (mivec d10/d15/d20; master 3ffe4d382 built with its own flags, no
+`-DNDEBUG`, naive CC weights, no Armadillo): generation master 1.03 / 1.55 / 1.52 s vs. rp-1
+1.51 / 2.07 / 2.07 s (rp-1 0.688x / 0.748x / 0.733x; baseline 1.37 / 1.79 / 1.90 s). Both spend
+91–98 % in `genMIVecDownwardsClosure` (same bounding-box algorithm). The difference is the inlined
+dominance test: master compares `miVec(idx, dim)` element by element (`miDominatesMI`, scalar
+early exit, unrolled ×8, IPC 2.11 at d20 / 2.48 at d15), while baseline and rp-1 go through
+`miVecDominatesMI(miVec, paretoMaxima, MIView)` → `operator>=` →
+`tools::mi_view::lessEqualInEveryDim`, which GCC 15 compiles to an AVX2 early-break loop with a
+per-test prologue (index multiply, 32-byte alignment test of both operands, remainder dispatch)
+and a scalar fallback for misaligned operands (rp-1: 24 % of the function's samples; baseline:
+the alignment test `and $0x1f` alone is its hottest instruction, 10.4 %). The test usually exits
+after few components, so the vector path does not pay off: rp-1 needs 15 % more instructions (d20;
+−9 % at d15) at IPC 1.76 (+29–37 % cycles). The vectorization exists since the MIView refactor
+(baseline); WP-14 (strict aliasing) made it 11–19 % slower. Master pays 4.5 % for malloc/free of
+a `std::vector` copy per box element, which rp-1 avoids.
+
+### Peak memory
+
+Peak RSS = process floor (10.2–10.6 MiB: libraries incl. Armadillo/LAPACK/OpenBLAS; master
+without them: 6.0 MiB; `OPENBLAS_NUM_THREADS=1` saves ≈ 1 MiB) + thread stacks/arenas (≈ 7–18
+MiB at 16 threads: RSS − heap peak − floor) + case data. 22 of 38 cases stay below 20 MiB. heaptrack (16 threads, capped
+at 8 GiB, `results/RP-1/heap/`) on the largest peaks:
+
+| case (rp-1 peak RSS) | heap peak | owners at the peak |
+|---|---|---|
+| quad/sg/cc-uq/b0/d2/L20 (1079 MiB) | 998 MiB | **per-thread `QuadratureScratch`: `weights1D` 268 MiB + `nodesPerDim` 268 MiB** (16 × 16.8 MiB each, sized by the largest tensor grid, zero-filled in every `quadrature()` call) · CC FFT temporaries (`genWeightsFFT`: `A`, `b`, `B`, `s`, `wcc`, `w01`, Eigen plan) ≈ 360 MiB, depending on how many large rules are computed concurrently · tensor grid node lists 101 MiB |
+| quad/sg/equi-exp/b0/d2/L20 (620 MiB) | 638 MiB | the same two scratch buffers 537 MiB (84 %) · node lists 101 MiB |
+| quad/dsg/equi-exp/b1/d20/L6 (329 MiB) | 301 MiB | **per-thread sub-trie vectors** (`appendSubTrieChildren` push_back, cpp:109) 154 MiB (51 %) · 230 230 delta tensor grid node lists 64 MiB (21 %, one small allocation each) · tensor grid data 26 MiB · MIs/counts 18 MiB · coefficient trie 19 MiB |
+| quad/dsg/equi-exp/b1/d15/L7 (233 MiB) | 196 MiB | sub-trie vectors 102 MiB (52 %) · node lists 43 MiB · tensor grid data 19 MiB · MIs/counts 10 MiB · coefficient trie 10 MiB |
+| quad/dsg/equi-exp/b0/d3/L16 (63 MiB) | 38 MiB | node lists 12.6 MiB · `DeltaQuadratureScratch` 2 × 7.9 MiB (same zero-filled per-thread pattern) · 1D weights 8.4 MiB |
+| quad/sg/equi-exp/b1/d20/L5, b1/d15/L6 (58, 55 MiB) | 36, 33 MiB | node lists 16.8 / 16.9 MiB (≈ 50 k small allocations) · tensor grid data and MIs ≈ 13–19 MiB |
+| quad/sg/cc-uq/b0/d3/L14 (40.5 MiB) | 19 MiB | scratch 2 × 3.9 MiB (the WP-01 `MEM+`: `nodesPerDim` +3.9 MiB) · node lists 5.5 MiB · CC temporaries 3.4 MiB |
+
+**Cause of the WP-01 step**: WP-01 added `QuadratureScratch::nodesPerDim` (quadrature_scratch.hpp:47;
+the nodes mapped onto the domain once per tensor grid). Like the older `weights1D`, every thread
+allocates it in each `quadrature()` call with `sparseGrid.getMaxTGSumOverGPCntsPerDim()` doubles
+and zero-fills it (`DataVector(n)` = `assign(n, 0.0)`): 2^21 + 4 doubles = 16.8 MiB × 16 threads
+= 268 MiB. heaptrack WP-01-before vs. WP-01-after (`quad/sg/cc-uq/b0/d2/L20`): the
+DataVector-allocation group grows 377.5 → 637.5 MiB, exactly by the new 251.7 MiB (15 workers) +
+16.8 MiB (master) buffer; peak heap 672 → 1050 MiB. `quad/sg/equi-exp/b0/d2/L20` follows the same
+pattern (+256 MiB measured). Runtime side effect: the zero-fill faults ≈ 525 MiB of fresh pages
+per call (4.0e5 page faults over 3 pipelines), 10.7 % / 17.8 % of the samples of the two cases.
+Only the threads processing the largest tensor grids need the full size; at 1 thread the peak is
+137 / 298 MiB.
+
+Material reductions (MiB / share of the peak; cost):
+- Per-thread quadrature scratch without zero-fill or grown on demand (only touched pages count):
+  ≈ −350…−500 MiB on the d2/L20 cases (what remains is at most the buffers of the 16 largest grids,
+  ≈ 190 MiB; equi 620 → ≈ 120–270 MiB, cc 1079 → ≈ 580–730 MiB), −4 MiB on cc d3; runtime up to
+  −0.07 / −0.13 s; a few lines in `QuadratureScratch` /
+  `getWeights` / `mapNodesOntoDomain` (and `DeltaQuadratureScratch`). No API change.
+- CC weights computed once per (rule, #nodes) per `quadrature()` call (WP-05) and with fewer
+  temporaries in `genWeightsFFT`: up to ≈ −300 MiB on `quad/sg/cc-uq/b0/d2/L20`, runtime −0.4 s.
+- DSG sub-trie scratch (WP-02): 154 / 102 MiB = 51 % of the heap peaks of b1 d20/d15; a design
+  that does not materialize one sub-trie per delta grid per thread saves most of it; a cache of
+  sub-tries could increase it.
+- Shared 1D node arrays instead of per-tensor-grid copies: −64 MiB (b1 d20 DSG, 19 %), −101 MiB
+  (d2/L20, 16 %), −17 MiB (b1 d20 SG, 29 %); changes the public `TensorGrid` storage → interface.
+- Not linking Armadillo (WP-10): −1…−4.5 MiB per process (floor 10.5 → ≥ 6 MiB).
+
+### Findings → work packages (RP-1)
+
+Re-ranking with expected savings: summary `summaries/RP-1-reprofiling.md` ("Profile shift /
+follow-ups"). New in RP-1: quadrature scratch zero-fill (memory + page faults), the vectorized
+MI dominance test (mivec generation 1.33–1.46x slower than master), `std::function` dispatch per
+grid point (4–9 % of the quadrature kernels; interface), load imbalance of quad/sg at low d,
+shared node arrays (memory; interface).

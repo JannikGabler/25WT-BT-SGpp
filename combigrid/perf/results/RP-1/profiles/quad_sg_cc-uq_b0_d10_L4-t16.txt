@@ -1,0 +1,11 @@
+profile of `^quad/sg/cc-uq/b0/d10/L4$` (e2e, 16 threads, self time)
+    52.73%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::uqIntegrand
+    18.44%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_operator::processTensorGrid
+    12.78%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     9.16%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     1.46%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     1.33%  perf_e2e  perf_e2e                 [.] exp@plt
+     1.24%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     1.02%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-155625-_quad_sg_cc_uq_b0_d10_L4_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

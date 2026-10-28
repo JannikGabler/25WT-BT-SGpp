@@ -1,0 +1,32 @@
+# heaptrack summary: cc-d2-WP-01-after (16 threads; rp-1 cases: --samples 1 --warmups 0; WP-01 cases: --samples 1 --warmups 1; run under systemd-run MemoryMax=8G)
+calls to allocation functions: 3790 (1456/s)
+peak heap memory consumption: 1.05G
+peak RSS (including heaptrack overhead): 1.13G
+total memory leaked: 25.82K
+
+== 637.54M over 342 calls
+    251.66M /   30 calls: quadrature  <- miscellaneous/data_scratches/quadrature_scratch.hpp:45
+    251.66M /   30 calls: quadrature  <- miscellaneous/data_scratches/quadrature_scratch.hpp:47
+     85.98M /   72 calls: tools::sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/sparse_grid_generation.cpp:72 <- tools::sparse_grid_generation::genTGForMI <- tools/sparse_grid_generation/sparse_grid_generation.cpp:48 <- tools::spar
+     16.78M /    1 calls: quadrature  <- miscellaneous/data_scratches/quadrature_scratch.hpp:47 <- quadrature <- operators/quadrature/quadrature.cpp:39 <- perf_e2e
+     16.78M /    1 calls: quadrature  <- miscellaneous/data_scratches/quadrature_scratch.hpp:45 <- quadrature <- operators/quadrature/quadrature.cpp:39 <- perf_e2e
+     14.68M /    3 calls: tools::sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/sparse_grid_generation.cpp:72 <- tools::sparse_grid_generation::genTGForMI <- tools/sparse_grid_generation/sparse_grid_generation.cpp:48 <- tools::spar
+== 268.44M over 496 calls
+    150.99M /  100 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:34 <- quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace const <- operators
+     58.72M /  100 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:146 <- quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/qu
+     29.36M /  100 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:34 <- quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace const <- operators
+     16.78M /   42 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:34 <- quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace const <- operators
+      8.39M /   42 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:146 <- quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/qu
+      4.19M /   42 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:34 <- quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace const <- operators
+== 142.61M over 674 calls
+     75.50M /  100 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:34 <- quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace const <- operators
+     54.53M /  100 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:34 <- quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace const <- operators
+      8.39M /   42 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:34 <- quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace const <- operators
+      4.19M /   42 calls: quadrature_rules::ClenshawCurtisQuadRule::genWeights const <- operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.cpp:34 <- quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace const <- operators
+== 73.73K over 1 calls
+     73.73K /    1 calls: 
+== 24.58K over 2 calls
+     24.58K /    1 calls: SourceFunc::SourceFunc <- functions/source_functions/source_function.cpp:13 <- perf_e2e
+== 12.00K over 30 calls
+      6.00K /   15 calls: 
+      6.00K /   15 calls: tools::sparse_grid_generation::genTGData <- tools/sparse_grid_generation/sparse_grid_generation.cpp:33 <- SparseGrid::SparseGrid <- grids/sparse_grid.cpp:17 <- perf_e2e

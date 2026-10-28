@@ -1,0 +1,32 @@
+# heaptrack summary: rp1-quad_dsg_equi-exp_b1_d15_L7 (16 threads; rp-1 cases: --samples 1 --warmups 0; WP-01 cases: --samples 1 --warmups 1; run under systemd-run MemoryMax=8G)
+calls to allocation functions: 515131 (69349/s)
+peak heap memory consumption: 195.70M
+peak RSS (including heaptrack overhead): 244.35M
+total memory leaked: 25.82K
+
+== 103.16M over 2928 calls
+      6.29M /    1 calls: delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_
+      6.29M /    4 calls: delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_
+      6.29M /    4 calls: delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_
+      3.15M /    1 calls: delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_
+      3.15M /    1 calls: delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_
+      3.15M /    6 calls: delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_quadrature_operator::appendSubTrieChildren <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:109 <- delta_
+     74.85M from 1129 other places
+== 43.01M over 170592 calls
+     40.16M / 157724 calls: tools::deltas_sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/deltas_sparse_grid_generation.cpp:79 <- tools::deltas_sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/deltas_sparse_grid_ge
+      2.82M / 12820 calls: tools::deltas_sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/deltas_sparse_grid_generation.cpp:79 <- tools::deltas_sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/deltas_sparse_grid_gen
+     17.04K /   15 calls: quadrature  <- miscellaneous/data_scratches/delta_quadrature_scratch.hpp:60
+     17.04K /   15 calls: quadrature  <- miscellaneous/data_scratches/delta_quadrature_scratch.hpp:64
+      1.80K /   15 calls: quadrature  <- miscellaneous/data_scratches/delta_quadrature_scratch.hpp:62
+      1.14K /    1 calls: quadrature  <- miscellaneous/data_scratches/delta_quadrature_scratch.hpp:60 <- quadrature <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:50 <- perf_e2e
+      1.26K from 2 other places
+== 19.10M over 1 calls
+     19.10M /    1 calls: DeltasSparseGrid::DeltasSparseGrid <- grids/deltas_sparse_grid.cpp:26 <- perf_e2e
+== 10.23M over 170544 calls
+      9.46M / 157724 calls: 
+    769.20K / 12820 calls: tools::deltas_sparse_grid_generation::genTGData <- tools/sparse_grid_generation/deltas_sparse_grid_generation.cpp:38 <- DeltasSparseGrid::DeltasSparseGrid <- grids/deltas_sparse_grid.cpp:26 <- perf_e2e
+== 10.23M over 170548 calls
+      9.46M / 157724 calls: tools::deltas_sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/deltas_sparse_grid_generation.cpp:51
+    769.20K / 12820 calls: tools::deltas_sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/deltas_sparse_grid_generation.cpp:51 <- tools::deltas_sparse_grid_generation::genTGData <- tools/sparse_grid_generation/deltas_sparse_grid_generation.cp
+== 8.39M over 22 calls
+      8.39M /   13 calls: quadrature <- operators/quadrature/deltas_sparse_grid_quadrature.cpp:40 <- perf_e2e

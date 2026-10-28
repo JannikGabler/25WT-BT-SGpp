@@ -1,0 +1,9 @@
+profile of `^quad/sg/equi-sin/b0/d7/L7$` (e2e, 16 threads, self time)
+    74.45%  perf_e2e  libm.so.6                [.] __sin_fma
+    13.35%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::sinProd
+     6.33%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_operator::processTensorGrid
+     3.30%  perf_e2e  perf_e2e                 [.] sin@plt
+     0.77%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     0.49%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-155616-_quad_sg_equi_sin_b0_d7_L7_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

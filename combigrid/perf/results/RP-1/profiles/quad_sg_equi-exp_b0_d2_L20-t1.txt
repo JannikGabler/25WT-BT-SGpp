@@ -1,0 +1,14 @@
+profile of `^quad/sg/equi-exp/b0/d2/L20$` (e2e, 1 threads, self time)
+    23.39%  perf_e2e  libm.so.6             [.] exp@@GLIBC_2.29
+    22.15%  perf_e2e  libm.so.6             [.] __ieee754_exp_fma
+    17.95%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::quadrature_operator::processTensorGrid
+    17.69%  perf_e2e  perf_e2e              [.] sgpp::combigrid::perf::expSum
+     5.23%  perf_e2e  perf_e2e              [.] exp@plt
+     4.06%  perf_e2e  perf_e2e              [.] std::_Function_handler<double 
+     1.72%  perf_e2e  libm.so.6             [.] __exp_finite@GLIBC_2.15@plt
+     0.61%  perf_e2e  [unknown]             [k] 0xffffffffa74011b2
+     0.50%  perf_e2e  [unknown]             [k] 0xffffffffa7c2e90a
+     0.46%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary
+     0.35%  perf_e2e  libsgppbase.so        [.] sgpp::base::DataVector::DataVector
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-160257-_quad_sg_equi_exp_b0_d2_L20_-t1.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

@@ -1,0 +1,569 @@
+{
+ "suite": "micro",
+ "snapshot": "rp-1",
+ "threads": 1,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-38-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "5.06",
+   "4.17",
+   "6.90"
+  ]
+ },
+ "records": [
+  {
+   "suite": "micro",
+   "case": "micro/quad/process_tg/equi/b0/d2/L16",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.006313028888888889,
+     0.006313479
+    ]
+   },
+   "items": 393219,
+   "batch": 9,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quad/process_tg/equi/b0/d5/L10",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0030613514736842103,
+     0.003071754105263158
+    ]
+   },
+   "items": 165969,
+   "batch": 19,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quad/process_tg/equi/b0/d10/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.01416162475,
+     0.01414316925
+    ]
+   },
+   "items": 649539,
+   "batch": 4,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quad/process_tg/cc/b0/d2/L16",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.025620127,
+     0.0254037245
+    ]
+   },
+   "items": 393219,
+   "batch": 2,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quad/process_tg/cc/b0/d10/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.014320286,
+     0.0142306275
+    ]
+   },
+   "items": 649539,
+   "batch": 4,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quad/process_all_tgs/equi/b1/d20/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.109697518,
+     0.109953695
+    ]
+   },
+   "items": 4010946,
+   "batch": 1,
+   "counters": {
+    "nTG": 10626
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quad/process_all_tgs/cc/b1/d10/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.055467026,
+     0.055121452
+    ]
+   },
+   "items": 2304931,
+   "batch": 1,
+   "counters": {
+    "nTG": 3003
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/sol/quad_tg/equi/b0/d5/L10",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.003466898882352941,
+     0.003615586117647059
+    ]
+   },
+   "items": 165969,
+   "batch": 17,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/sol/quad_tg/equi/b0/d10/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.015666679,
+     0.01567731225
+    ]
+   },
+   "items": 649539,
+   "batch": 4,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/tg/iterate_mutable/equi/b0/d10/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00745612875,
+     0.00745347475
+    ]
+   },
+   "items": 649539,
+   "batch": 8,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/sourcefunc/eval_normalized_in_place/d10",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     6.273220628272252e-05,
+     6.515674554973822e-05
+    ]
+   },
+   "items": 1024,
+   "batch": 955,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quadrule/cc_weights/n33",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     2.2408393761167363e-06,
+     2.2396174806432402e-06
+    ]
+   },
+   "items": 33,
+   "batch": 26864,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quadrule/cc_weights/n1025",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     5.1774746e-05,
+     5.1745202999999995e-05
+    ]
+   },
+   "items": 1025,
+   "batch": 1000,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quadrule/cc_weights/n32769",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00221621,
+     0.0023454182592592596
+    ]
+   },
+   "items": 32769,
+   "batch": 27,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/dsg/process_delta_tg/equi/b0/d5/L12",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.007865962714285715,
+     0.007895784857142858
+    ]
+   },
+   "items": 331776,
+   "batch": 7,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/dsg/process_delta_tg/equi/b0/d10/L7",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.071176691,
+     0.068892964
+    ]
+   },
+   "items": 2519424,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/dsg/process_delta_tg/equi/b1/d20/L6",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0028316788999999997,
+     0.00284672965
+    ]
+   },
+   "items": 4096,
+   "batch": 20,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/dsg/prepare/equi/b1/d20/L6",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.291404231,
+     0.291780954
+    ]
+   },
+   "items": 230230,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg/cc/b0/d5/L6",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0011254428490566038,
+     0.001122497679245283
+    ]
+   },
+   "items": 10449,
+   "batch": 53,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg/cheb1/b0/d5/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00051073054,
+     0.0005067084000000001
+    ]
+   },
+   "items": 2673,
+   "batch": 100,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/barycentric_1d/generic/n9",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     8.377647826086957e-07,
+     8.374356521739131e-07
+    ]
+   },
+   "items": 9,
+   "batch": 71300,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/barycentric_1d/generic/n65",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     3.7378726874999996e-05,
+     3.7487765625e-05
+    ]
+   },
+   "items": 65,
+   "batch": 1600,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/barycentric_1d/opt_cc/n9",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     3.1848414490599506e-08,
+     3.1992863231745514e-08
+    ]
+   },
+   "items": 9,
+   "batch": 1885167,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/barycentric_1d/opt_cc/n65",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     1.9686668550567963e-07,
+     1.962059881774241e-07
+    ]
+   },
+   "items": 65,
+   "batch": 304333,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg/equi/b1/d8/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     4.249683886925795e-05,
+     4.250932650176679e-05
+    ]
+   },
+   "items": 256,
+   "batch": 1415,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/gen/complete_mis_with_coeffs/d20/L6",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.009326846666666668,
+     0.009426719333333333
+    ]
+   },
+   "items": 230230,
+   "batch": 6,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/gen/sparse_grid/cc/b1/d20/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.066075162,
+     0.065236932
+    ]
+   },
+   "items": 53130,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/mivec/downwards_closure/d10/S10/n300",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.636691427,
+     0.637065285
+    ]
+   },
+   "items": 3522,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/mivec/downwards_closure/d20/S6/n100",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.020975624666666665,
+     0.021040832666666665
+    ]
+   },
+   "items": 291,
+   "batch": 3,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/mivec/ct_coeffs/d10/S12/n1000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.015594254,
+     0.015623692
+    ]
+   },
+   "items": 14384,
+   "batch": 4,
+   "counters": {}
+  }
+ ],
+ "process_floor_kib": null
+}

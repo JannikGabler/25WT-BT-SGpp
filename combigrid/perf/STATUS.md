@@ -1,25 +1,27 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-16 (2026-10-28) · Next free WP number: 17 · Re-profilings done: 0 (RP-0 = setup; RP-1 in progress)
+Last processed: RP-1 (2026-10-28) · Next free WP number: 20 · Re-profilings done: 1 (RP-1, 2026-10-28; RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), 16
   threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (all cores at
   2.0 GHz), platform profile `performance`, AC, idle machine. GCC 15.2 stays the judged compiler.
   Flags from site_scons (not compileNormal.sh/perf.py): `-fno-semantic-interposition` (WP-13, GCC
   `OPT=1`); strict aliasing on (WP-14: `-fno-strict-aliasing` only for the SWIG Java wrapper).
-- **Baseline**: source of 84299eeca; baseline commit = setup commit **fed2cdb4e**. Snapshot
-  `baseline` exists in `.work/snapshots/` (if `.work/` was cleaned:
-  `perf.py snapshot baseline --commit fed2cdb4e`). Numbers: `baseline/`, ANALYSIS.md. It keeps its
-  own site_scons flags (no nosi, with `-fno-strict-aliasing`); flag changes count towards the
-  cumulative progress (WP-13 1.023x, WP-14 0.988x). No re-recording.
+- **Baseline**: setup commit **fed2cdb4e** (source of 84299eeca); snapshot `baseline` in
+  `.work/snapshots/` (if cleaned: `perf.py snapshot baseline --commit fed2cdb4e`); numbers in
+  `baseline/`, ANALYSIS.md. Own site_scons flags (no nosi, `-fno-strict-aliasing`): flag changes
+  count towards the progress (WP-13 1.023x, WP-14 0.988x). No re-recording. **At RP-1** (`rp-1`
+  = f48d2bbc1): e2e 69.95 → 53.41 s (1.31x), memory geomean 1.028 (3 `MEM+`: WP-01 scratch).
 - **Memory** (WP-15): `run e2e`/`ab e2e` report the peak RSS of every e2e process (GNU time
   launcher, outside the process, runtime impact nil); process floor 10.2 MiB; flag `MEM+`/`MEM-`
   = |B/A − 1| > 3 % and no overlap of the rounds. `run e2e` runs one process per case (owner
   2026-10-28); `baseline/e2e_t16.jsonl` was one process → compare per-case times within one mode.
+- **Method note**: `ab micro` runs 0 warm-ups → allocation-heavy micro cases show first-call
+  times (ratios valid; absolute numbers from `run micro`).
 - **Machine note**: boost off since 2026-10-24 (throttling up to 1.6x with boost on); a reboot
   re-enables it, the owner disables it manually — if `envcheck` fails on boost, ask the owner.
   Full e2e A/B ≈ 18–23 min (sessions filter). `scons -c` is fine (owner 2026-10-25). Sanitizer
-  runs need a memory cap (uncapped TySan crashed the PC).
+  and heap-profiler runs need a memory cap (`systemd-run --user --scope -p MemoryMax=8G`).
 - **Toolchain**: GCC 15.2 (judged); Clang 21.1.8 + libomp + lld; JDK 21 (`SG_JAVA=1`).
   `perf/scripts/toolchain.py` (WP-11; variant `gcc-sa` from WP-14) builds compiler/flag variants.
 - **Owner's rules**: acceptance by the owner only; minimal gains may be proposed but must be
@@ -29,8 +31,7 @@ Last processed: WP-16 (2026-10-28) · Next free WP number: 17 · Re-profilings d
   ranks the plan; peak memory is reported to the owner with every runtime change and weighed in
   decisions; memory reduction is a valid secondary goal where potential exists.
 - **Refcheck WARN case** (owner 2026-10-25: tolerance stays): `interp/sg/equi/b0/d2/L5/cos-shifted`
-  (65 equidistant nodes, Lebesgue constant ~1e16) WARNs whenever FMA placement in
-  `BarycentricFormula::evaluateFormula` changes; the summary explains it, the owner judges.
+  (Lebesgue constant ~1e16) WARNs on any FMA-placement change in `BarycentricFormula::evaluateFormula`.
 - **Commits**: the owner commits after every session (one commit per WP: code + summary +
   `results/WP-NN/` + STATUS/PLAN, message "Accept WP-NN: …" / "Reject WP-NN: …"); the tree
   must be clean before the next work session starts.
@@ -46,34 +47,34 @@ Last processed: WP-16 (2026-10-28) · Next free WP number: 17 · Re-profilings d
 | – | WP-14 | `-fno-strict-aliasing` only for the SWIG Java wrapper; datadriven punning → `std::bit_cast` | accepted | e2e 0.988x (52.77 → 53.42 s): interp 1.10x, interplin 1.10x, quad/sg 0.995x, quad/dsg 0.970x, mivec 0.886x; refcheck OK; complete project identical | [WP-14](summaries/WP-14-strict-aliasing.md) |
 | – | WP-15 | Peak-memory measurement in the benchmark harness (owner's request) | accepted | infrastructure: runtime impact nil (full suite 1.0002x, 0 SLOWER); floor 10.2 MiB; MEM± rule 3 % + no overlap | [WP-15](summaries/WP-15-memory-measurement.md) |
 | – | WP-16 | Adapt `perf.py` and the protection to the benchmark move (`combigrid/benchmarks/`) | accepted | infrastructure: A/A old vs. new layout 1.001x, memory 0.994, 0 flags; refcheck OK; pre-move commits still snapshot | [WP-16](summaries/WP-16-benchmark-move.md) |
-| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | in progress (prompt re-issued 2026-10-28) | | |
-| 3 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | | |
-| 4 | WP-03 | Downwards closure of MI sets | ready | | |
+| – | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | accepted | baseline → rp-1 e2e 1.31x (69.95 → 53.41 s; d ≥ 7 1.28x); quad/sg 2.43x, quad/dsg 0.986x (51 % of the suite), mivec 1.34x; memory geomean 1.028, 3 MEM+ (WP-01 scratch) | [RP-1](summaries/RP-1-reprofiling.md) |
+| 1 | WP-02 | DSG quadrature: per-delta-tensor-grid trie work at high d | in progress (prompt issued 2026-10-28) | | |
+| 2 | WP-03 | Downwards closure of MI sets | ready | | |
+| 3 | WP-04 | DSG quadrature: row loop (b0) | ready (after WP-02) | | |
+| 4 | WP-17 | Batched source-function evaluation (from D-4; proposal) | ready (after WP-04) | | |
 | 5 | WP-09 | Multi-point interpolation API (proposal; from D-1) | ready | | |
-| 6 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | | |
-| 7 | WP-05 | SG quadrature: per-tensor-grid costs | ready | | |
-| 8 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09) | | |
+| 6 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09) | | |
+| 7 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09) | | |
+| 8 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. NEW-A) | ready | | |
 | 9 | WP-07 | Generic barycentric formula: cache the weights | ready | | |
-| 10 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09) | | |
-| 11 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3; measure first) | ready | | |
-| 12 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional) | planned (owner decides) | | |
-| – | D-1 | Multi-point interpolation API | decided → WP-09 | | |
-| – | D-2 | `-fno-semantic-interposition` | done: WP-13 accepted | | |
-| – | D-3 | Armadillo/OpenBLAS thread pool | decided → WP-10 | | |
-
-Ranks 3–12 are re-ranked by RP-1 (rank 2 is free).
+| 10 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
+| 11 | WP-18 | Shared 1D node arrays per (dimension, level) (from D-5; memory; proposal) | ready | | |
+| 12 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3; measure first) | ready | | |
+| 13 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional) | planned (owner decides) | | |
+Decisions (PLAN.md): D-1 → WP-09 · D-2 done (WP-13) · D-3 → WP-10 · D-4 batched `SourceFunc`
+→ WP-17 · D-5 shared node arrays → WP-18. Ranking notes below the PLAN.md table.
 
 ## Next action
 
-Owner: commit WP-16 ("Accept WP-16: …": `perf.py`, `toolchain.py`, README, CLAUDE.md,
-`.gitignore`, `perf_problems.hpp`, rehashed `protected.sha256`, `results/WP-16/`, the summary,
-STATUS/PLAN). Then start RP-1 (prompt re-issued 2026-10-28; precondition = that commit). Next
-master start: process the RP-1 summary, re-rank PLAN.md, issue the top optimization WP
-(currently WP-02). WP-06/WP-08 only after the owner decided on WP-09's API.
+Owner: commit RP-1 ("Accept RP-1: …": `ANALYSIS.md`, `results/RP-1/`, the summary, STATUS/PLAN).
+The tree must be clean before the work session: `compileASan.sh`, `compileDebug.sh` and
+`compileNormal.sh` are untracked (CLAUDE.md §4 calls them checked in) — commit or ignore them.
+Then start WP-02 (prompt issued 2026-10-28). Next master start: process the WP-02 summary;
+next candidate WP-03.
 
 ## Open decisions for the owner
 
-- WP-09 (after its summary): adopt the multi-point interpolation API or not.
+- WP-09 / WP-17 / WP-18 (after their summaries): adopt the proposed interface or not.
 - WP-10 (after its summary): implement only if the measured start-up gain is worth it.
 - WP-12 (after WP-02/WP-03): re-run the GCC/Clang comparison or not.
 
@@ -100,19 +101,20 @@ master start: process the RP-1 summary, re-rank PLAN.md, issue the top optimizat
 - WP-15 memory flag by ratio only (±2 %, ±3 %): false flags in 5 of 9 A/A cases, up to 57 % of
   the 5/5 round splits (bimodal `quad/sg/equi-exp/b1/d20/L5` 53.7 vs. 57–60 MiB) → 3 % + no
   overlap of rounds (≤ 0.8 %). `os.wait4`/`RUSAGE_CHILDREN` from Python: reports the driver's peak.
+- RP-1 profiling: `perf script` callchains through libm are unreliable, and inlined helpers
+  (since WP-13) have no own symbol → use `perf report --sort sym,srcfile|srcline` splits.
 
 ## Re-profiling
 
-Accepted since the last profile (setup): WP-01, WP-13, WP-14 (+ WP-15, measurement). Trigger
-met (WP-01 quad/sg 2.4x; WP-14 mivec 0.886x, dsg trie ~0.95x). RP-1 in progress, incl. memory.
+Last: RP-1 (2026-10-28, accepted). Accepted optimizations since RP-1: none. Next RP-2 when 2
+optimizations are accepted (likely after WP-02 + WP-03), a group changes by ≥ 1.3x, or the
+hot-spot ranking shifts.
 
 ## Log
 
-- 2026-10-28 Refactor committed (666b3c601; it also removed the WP-14 strict-aliasing comment in
-  `SGppConfigure.py`, CLAUDE.md §4 keeps the explanation). WP-16 accepted (owner asked; rehashed,
-  `verify` OK, hook blocks moved files; owner fixed a stale path in `perf_problems.hpp`; commit
-  pending). Complete-project checks: example count changed → same-layout references. RP-1
-  prompt re-issued.
+- 2026-10-28 RP-1 accepted (owner; measurement only; commit pending). Re-ranked: WP-02 1, WP-03
+  2, WP-04 3; RP-1 NEW-A (scratch) merged into WP-05 (owner; runtime rank kept → 8); D-4 → WP-17,
+  D-5 → WP-18 as proposals (owner); NEW-C → WP-19. WP-02 prompt issued.
 
 ## Archive
 
@@ -120,6 +122,8 @@ met (WP-01 quad/sg 2.4x; WP-14 mivec 0.886x, dsg trie ~0.95x). RP-1 in progress,
   (5281e0b7d); WP-11 → WP-13, strict aliasing → WP-14. 2026-10-26 WP-11 (9ab8f642d), WP-13
   (a16733d65), WP-14 issued (checkpoint 50d552f00); supervisor progress report 044d2794d (28
   cases: 51.1 s master → 41.9 s baseline → 25.3 s WP-13; mivec generation d15/d20 faster on
-  master → RP-1). 2026-10-28 WP-14 accepted (datadriven → `std::bit_cast`); owner requested
-  peak-memory monitoring → WP-15 (a485cec02; memory: `quad/sg/cc-uq/b0/d2/L20` +240 MiB since
-  WP-01 → RP-1). Benchmark move (staged) broke `verify`/paths → WP-16; RP-1 prompts superseded.
+  master → RP-1). 2026-10-28 WP-14 accepted (3dc286c3d; datadriven → `std::bit_cast`); owner
+  requested peak-memory monitoring → WP-15 (a485cec02; memory: `quad/sg/cc-uq/b0/d2/L20`
+  +240 MiB since WP-01 → RP-1). Benchmark move (staged) broke `verify`/paths → WP-16; RP-1
+  prompts superseded. Refactor 666b3c601 (removed the WP-14 comment in `SGppConfigure.py`;
+  CLAUDE.md §4 keeps it); WP-16 accepted (f48d2bbc1).

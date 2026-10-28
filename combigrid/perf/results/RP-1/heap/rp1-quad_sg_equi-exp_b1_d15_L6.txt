@@ -1,0 +1,23 @@
+# heaptrack summary: rp1-quad_sg_equi-exp_b1_d15_L6 (16 threads; rp-1 cases: --samples 1 --warmups 0; WP-01 cases: --samples 1 --warmups 1; run under systemd-run MemoryMax=8G)
+calls to allocation functions: 163372 (113060/s)
+peak heap memory consumption: 33.12M
+peak RSS (including heaptrack overhead): 58.92M
+total memory leaked: 25.82K
+
+== 16.93M over 54312 calls
+     15.77M / 49782 calls: tools::sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/sparse_grid_generation.cpp:72 <- tools::sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/sparse_grid_generation.cpp:48
+      1.16M / 4482 calls: tools::sparse_grid_generation::getNodesPerDimForTG <- tools/sparse_grid_generation/sparse_grid_generation.cpp:72 <- tools::sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/sparse_grid_generation.cpp:48 <- tools::spar
+== 6.73M over 54269 calls
+      3.26M /    1 calls: SparseGrid::SparseGrid <- grids/sparse_grid.cpp:15 <- perf_e2e
+      2.99M / 49782 calls: tools::sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/sparse_grid_generation.cpp:46
+    268.92K / 4482 calls: tools::sparse_grid_generation::genTGData  <- tools/sparse_grid_generation/sparse_grid_generation.cpp:46 <- tools::sparse_grid_generation::genTGData <- tools/sparse_grid_generation/sparse_grid_generation.cpp:33 <- SparseGrid::SparseGri
+    217.06K /    1 calls: SparseGrid::SparseGrid <- grids/sparse_grid.cpp:15 <- perf_e2e
+== 6.08M over 1 calls
+      6.08M /    1 calls: SparseGrid::SparseGrid <- grids/sparse_grid.cpp:17 <- perf_e2e
+== 3.26M over 54264 calls
+      2.99M / 49782 calls: 
+    268.92K / 4482 calls: tools::sparse_grid_generation::genTGData <- tools/sparse_grid_generation/sparse_grid_generation.cpp:33 <- SparseGrid::SparseGrid <- grids/sparse_grid.cpp:17 <- perf_e2e
+== 73.73K over 1 calls
+     73.73K /    1 calls: 
+== 24.58K over 1 calls
+     24.58K /    1 calls: perf_e2e

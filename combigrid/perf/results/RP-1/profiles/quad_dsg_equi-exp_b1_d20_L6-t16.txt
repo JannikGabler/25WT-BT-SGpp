@@ -1,0 +1,10 @@
+profile of `^quad/dsg/equi-exp/b1/d20/L6$` (e2e, 16 threads, self time)
+    64.77%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::delta_quadrature_operator::{anon}::appendSubTrieChildren
+    23.33%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::delta_quadrature_operator::forEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid
+     3.81%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+     1.93%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     1.20%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     0.86%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::delta_quadrature_operator::compSubTrie
+     0.62%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261028-155439-_quad_dsg_equi_exp_b1_d20_L6_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)
