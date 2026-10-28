@@ -43,7 +43,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 PERF = REPO / "combigrid" / "perf"
 WORK = PERF / ".work"
-BENCH_SRC = REPO / "combigrid" / "examples" / "c++" / "benchmarks" / "perf"
+# Directory of the perf benchmarks (sources and built binaries) in a source tree, current layout
+# first. Commits before the benchmark move (WP-16) keep them below examples/c++/, so `snapshot
+# --commit` of such a commit resolves the directory per tree (see bench_dir).
+BENCH_DIRS = ["combigrid/benchmarks/perf", "combigrid/examples/c++/benchmarks/perf"]
 TEST_EXE = REPO / "combigrid" / "tests" / "test_combigrid_boost"
 LIBS = ["libsgppbase.so", "libsgppcombigrid.so"]
 EXES = {"e2e": "perf_e2e", "micro": "perf_micro", "reference": "perf_reference"}
@@ -71,15 +74,15 @@ PROTECTED_DIRS = [
 ]
 PROTECTED_GLOBS = [
     "combigrid/perf/scripts/perf.py",
-    "combigrid/examples/c++/benchmarks/perf/perf_harness.hpp",
-    "combigrid/examples/c++/benchmarks/perf/perf_problems.hpp",
-    "combigrid/examples/c++/benchmarks/perf/perf_e2e.cpp",
-    "combigrid/examples/c++/benchmarks/perf/perf_reference.cpp",
-    "combigrid/examples/c++/benchmarks/quadrature/*.?pp",
-    "combigrid/examples/c++/benchmarks/dsg_quadrature/*.?pp",
-    "combigrid/examples/c++/benchmarks/multiindex_vector/*.?pp",
-    "combigrid/examples/c++/benchmarks/source_function/*.?pp",
-    "combigrid/examples/c++/thesis/comparison/*.?pp",
+    "combigrid/benchmarks/perf/perf_harness.hpp",
+    "combigrid/benchmarks/perf/perf_problems.hpp",
+    "combigrid/benchmarks/perf/perf_e2e.cpp",
+    "combigrid/benchmarks/perf/perf_reference.cpp",
+    "combigrid/benchmarks/quadrature/*.?pp",
+    "combigrid/benchmarks/dsg_quadrature/*.?pp",
+    "combigrid/benchmarks/multiindex_vector/*.?pp",
+    "combigrid/benchmarks/source_function/*.?pp",
+    "combigrid/benchmarks/bachelor_thesis/comparison/*.?pp",
     "combigrid/src/sgpp/combigrid/tools/benchmarking/benchmarker.hpp",
     ".claude/hooks/protect_perf.py",
     ".claude/settings.json",
@@ -371,6 +374,16 @@ def cmd_build(args):
                                  "git": git_state()}, indent=1))
 
 
+def bench_dir(tree):
+    """Returns the perf benchmark directory of the source tree `tree` in the layout of its
+    revision: the first entry of BENCH_DIRS that holds the sources (binaries left behind in a
+    former location do not count)."""
+    for rel in BENCH_DIRS:
+        if (tree / rel / f"{EXES['e2e']}.cpp").is_file():
+            return tree / rel
+    return tree / BENCH_DIRS[0]
+
+
 def current_build(require_config=None):
     """Returns (bin_dir_map, lib_dir, stamp) of the current in-tree build."""
     if not STAMP.exists():
@@ -383,7 +396,7 @@ def current_build(require_config=None):
     if require_config and stamp["config"] != require_config:
         die(f"current build is '{stamp['config']}', expected '{require_config}' "
             f"(run `perf.py build {require_config}`)")
-    bins = {suite: BENCH_SRC / exe for suite, exe in EXES.items()}
+    bins = {suite: bench_dir(REPO) / exe for suite, exe in EXES.items()}
     return bins, REPO / "lib", stamp
 
 
@@ -410,7 +423,7 @@ def copy_build(src_repo, dest, meta):
     (dest / "bin").mkdir()
     for lib in LIBS:
         shutil.copy2(src_repo / "lib" / lib, dest / "lib" / lib)
-    src_bench = src_repo / "combigrid" / "examples" / "c++" / "benchmarks" / "perf"
+    src_bench = bench_dir(src_repo)
     for exe in EXES.values():
         if (src_bench / exe).exists():
             shutil.copy2(src_bench / exe, dest / "bin" / exe)

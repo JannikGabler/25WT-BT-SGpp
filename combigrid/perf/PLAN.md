@@ -30,17 +30,18 @@ generation 5.1 s).
 | – | WP-13 | `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`, all modules) | accepted (2026-10-26) | measured: e2e 54.03 → 52.79 s (1.023x, 1.24 s) |
 | – | WP-14 | `-fno-strict-aliasing` only for the SWIG Java wrapper; datadriven punning → `std::bit_cast` | accepted (2026-10-28) | measured: e2e 52.77 → 53.42 s (0.988x, −0.65 s); interp/interplin 1.10x, quad/dsg 0.970x, mivec 0.886x |
 | – | WP-15 | Peak-memory measurement in the benchmark harness (owner's request; protected `perf.py`) | accepted (2026-10-28) | measured: runtime impact nil (full suite 1.0002x, 0 SLOWER); floor 10.2 MiB |
-| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | in progress (prompt 2026-10-28, with memory) | re-ranks everything below |
-| 2 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
-| 3 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~5.4 s (WP-14 made the closure 11–19 % slower), generation ≥ 10x at d ≥ 10 |
-| 4 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
-| 5 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | 1.5–3 s (d ≥ 7) |
-| 6 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready | 0.5–1.5 s; low d and many small grids |
-| 7 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | ~1.3 s (before WP-13/WP-14, which gave interp 1.06x · 1.10x) |
-| 8 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
-| 9 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s (before WP-14: interplin 1.10x) |
-| 10 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
-| 11 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
+| – | WP-16 | Adapt `perf.py` and the protection to the benchmark move (`combigrid/benchmarks/`) | accepted (2026-10-28) | measured: A/A old vs. new layout 1.001x, memory 0.994, 0 flags |
+| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | in progress (prompt re-issued 2026-10-28) | re-ranks everything below |
+| 3 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
+| 4 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~5.4 s (WP-14 made the closure 11–19 % slower), generation ≥ 10x at d ≥ 10 |
+| 5 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
+| 6 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | 1.5–3 s (d ≥ 7) |
+| 7 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready | 0.5–1.5 s; low d and many small grids |
+| 8 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | ~1.3 s (before WP-13/WP-14, which gave interp 1.06x · 1.10x) |
+| 9 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
+| 10 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s (before WP-14: interplin 1.10x) |
+| 11 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
+| 12 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10 | – |
@@ -504,6 +505,37 @@ generation 5.1 s).
   differ from the one-process `baseline/e2e_t16.jsonl` for a few small cases; compare within one
   mode). 22/38 cases < 20 MiB (floor-dominated); largest `quad/sg/cc-uq/b0/d2/L20` 1.07 GiB.
   Per-phase peaks: option for a later memory WP.
+
+## WP-16 — Adapt `perf.py` and the protection to the benchmark move
+- **Source**: owner's refactor 2026-10-28: `combigrid/examples/c++/benchmarks/*` →
+  `combigrid/benchmarks/*` (incl. `perf/`), `examples/c++/thesis/comparison` →
+  `benchmarks/bachelor_thesis/comparison`, `examples/c++/thesis/applications` →
+  `examples/c++/bachelor_thesis/applications`; `combigrid/SConscript`:
+  `module.buildExamples("/benchmarks/*")` (built, not run by `RUN_CPP_EXAMPLES`). Pure renames.
+- **Breakage found by the master**: `perf.py verify` fails (34 protected paths missing);
+  `perf.py` `BENCH_SRC` (l. 46), `PROTECTED_GLOBS` (l. 74–82) and the worktree path of
+  `snapshot --commit` (l. 413) name the old layout, so build/snapshot/run/refcheck miss the perf
+  binaries and the hook (reads the manifest) no longer guards the moved files; 19 built
+  benchmark binaries under `combigrid/benchmarks/` are not git-ignored (examples are, via
+  `*/examples/**`); README layout/protection paths (l. 27, 188–189) are stale.
+- **Change**: new paths in `perf.py`; `snapshot --commit` of commits before the move (baseline
+  fed2cdb4e, WP commits) must keep working → resolve the layout per tree (new path if present,
+  else old). README, `.gitignore` (binaries only; sources stay trackable), other stale paths.
+  Existing `.work/snapshots/` stay valid (copies). The owner regenerates the manifest
+  (`perf.py protect --authorized-by-owner`): same hashes at the new paths.
+- **Validation**: `build normal`, `snapshot`, short filtered `run e2e`/`run micro`, `refcheck`
+  (OK) with the new layout; `snapshot --commit a485cec02` (old layout) works; A/A `ab e2e`
+  old-layout vs. new-layout snapshot on a few cases: runtime and memory equal.
+- **Note for complete-project checks**: the C++ example count changes (benchmarks and the thesis
+  comparison templates, which failed without arguments, are no longer run) → compare against
+  references with the same layout.
+- **Expected gain**: none. **Risk**: low. **Dependencies**: refactor committed by the owner.
+- **Result (2026-10-28, accepted)**: `perf.py` resolves the layout per tree (`BENCH_DIRS` =
+  new, old; first with `perf_e2e.cpp`), so `snapshot --commit` of pre-move commits (fed2cdb4e)
+  works; `PROTECTED_GLOBS` → new paths (same 34 files, same hashes except `perf.py`/
+  `perf_problems.hpp`); owner's `.gitignore` covers the binaries. A/A 1.001x, memory 0.994,
+  refcheck OK. Historical records (summaries, results, ANALYSIS, `baseline/environment.json`)
+  keep the old paths.
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where

@@ -24,13 +24,17 @@ combigrid/perf/
   protected.sha256   [protected] checksum manifest of all protected files
   scripts/perf.py    [protected] the driver (stdlib-only Python)
   .work/             git-ignored: snapshots, logs, raw runs, profiles, build stamp
-combigrid/examples/c++/benchmarks/perf/      (SCons builds them with the configuration flags)
+combigrid/benchmarks/perf/   (SCons builds them with the configuration flags, never runs them)
   perf_harness.hpp   [protected] dependency-free harness (sampling, calibration, JSON output)
   perf_problems.hpp  [protected] integrands with exact integrals, points, multi-index sets
   perf_e2e.cpp       [protected] L3 end-to-end pipelines with L2 phase timings, public API only
   perf_reference.cpp [protected] reference outputs, public API only
   perf_micro.cpp     L1 micro-benchmarks of internals (extended/adapted by work packages)
 ```
+
+Commits before the benchmark move (666b3c601, 2026-10-28; e.g. the baseline commit) have the
+perf benchmarks in `combigrid/examples/c++/benchmarks/perf/`. `perf.py` looks them up per source
+tree (`BENCH_DIRS`: current layout first), so `snapshot NAME --commit REV` works for both layouts.
 
 ## The judged configuration
 
@@ -185,8 +189,8 @@ but should generally not.
 
 Protected: `baseline/`, `reference/` (incl. tolerances), `protected.sha256`, `scripts/perf.py`,
 `perf_harness.hpp`, `perf_problems.hpp`, `perf_e2e.cpp`, `perf_reference.cpp`, the pre-existing
-benchmarks (`examples/c++/benchmarks/{quadrature,dsg_quadrature,multiindex_vector,source_function}`,
-`examples/c++/thesis/comparison`), `tools/benchmarking/benchmarker.hpp`, and the hook itself
+benchmarks (`benchmarks/{quadrature,dsg_quadrature,multiindex_vector,source_function}`,
+`benchmarks/bachelor_thesis/comparison`), `tools/benchmarking/benchmarker.hpp`, and the hook itself
 (`.claude/hooks/protect_perf.py`, `.claude/settings.json`).
 
 Enforcement: the `PreToolUse` hook `.claude/hooks/protect_perf.py` blocks edits of these files

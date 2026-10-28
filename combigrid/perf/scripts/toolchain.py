@@ -377,7 +377,8 @@ def count_warnings(log):
     areas, flags = {}, {}
     for (file, _, _, flag) in unique:
         area = next((a for a in ("combigrid/src", "combigrid/tests", "combigrid/examples",
-                                 "base/src") if file.startswith(a)), "other")
+                                 "combigrid/benchmarks", "base/src") if file.startswith(a)),
+                    "other")
         areas[area] = areas.get(area, 0) + 1
         flags[flag] = flags.get(flag, 0) + 1
     return len(unique), areas, flags

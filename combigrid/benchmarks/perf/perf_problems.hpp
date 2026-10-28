@@ -104,8 +104,8 @@ inline double sinProd(const DataVector& x) {
 
 inline double sinProdIntegral(const HyperCubeArea& domain) {
   long double result = 1.0L;
-  for (const auto& [a, b] : domain) result *= std::cos(static_cast<long double>(a)) -
-                                              std::cos(static_cast<long double>(b));
+  for (const auto& [a, b] : domain)
+    result *= std::cos(static_cast<long double>(a)) - std::cos(static_cast<long double>(b));
   return static_cast<double>(result);
 }
 
@@ -129,7 +129,7 @@ inline double expSumIntegral(const HyperCubeArea& domain) {
 /**
  * @brief Integrand of the forward-UQ example of the thesis (Sections 6.3 and 7):
  * f(x) = prod_k 4 (1 - x_k)^3 * exp(-sum_k x_k / d) on [0, 1]^d (one exp per evaluation, as in
- * combigrid/examples/c++/thesis/comparison/uq_electron_beam_template.cpp).
+ * combigrid/benchmarks/bachelor_thesis/comparison/uq_electron_beam_template.cpp).
  */
 inline double uqIntegrand(const DataVector& x) {
   const size_t nDim = x.size();

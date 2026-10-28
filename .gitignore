@@ -7,9 +7,17 @@
 !*/examples/**/
 !*/examples/**/*.*
 
+#getting rid of weverything without a . in benchmarks folder and all subfolders (executables on linux)
+*/benchmarks/**
+!*/benchmarks/**/
+!*/benchmarks/**/*.*
+
 #ignoring ide files
 .vscode/
 .idea/
+
+#ignoring machine-specific compilation files
+compile_commands.json
 
 #ignoring Python virtual environments
 .venv/
