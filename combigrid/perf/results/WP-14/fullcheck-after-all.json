@@ -1,0 +1,105 @@
+{
+ "tag": "after",
+ "git": {
+  "repo": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp",
+  "head": "044d2794d",
+  "diff_build_files": "",
+  "python": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/.venv/bin/python3 2.5.4"
+ },
+ "steps": [
+  {
+   "name": "build",
+   "exit": 0,
+   "seconds": 767,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/after/build.log"
+  },
+  {
+   "name": "run-cpp",
+   "exit": "interrupted (PC shutdown 2026-10-28 00:32)",
+   "seconds": null,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/after/run-cpp.log"
+  },
+  {
+   "name": "run-cpp-2",
+   "exit": 2,
+   "seconds": 5858,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/after/run-cpp-2.log"
+  },
+  {
+   "name": "run-python",
+   "exit": 0,
+   "seconds": 216,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/after/run-python.log"
+  },
+  {
+   "name": "run-pytests",
+   "exit": 0,
+   "seconds": 198,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/after/run-pytests.log"
+  }
+ ],
+ "boost": {
+  "base": {
+   "exit": 0,
+   "seconds": 15.8,
+   "cases": "190/190",
+   "assertions": "3613802/3613802"
+  },
+  "combigrid": {
+   "exit": 0,
+   "seconds": 61.7,
+   "cases": "390/390",
+   "assertions": "1882900/1882900"
+  },
+  "datadriven": {
+   "exit": 0,
+   "seconds": 161.7,
+   "cases": "135/135",
+   "assertions": "854763/854763"
+  },
+  "misc": {
+   "exit": 0,
+   "seconds": 0.1,
+   "cases": "1/1",
+   "assertions": "1/1"
+  },
+  "optimization": {
+   "exit": 0,
+   "seconds": 3.0,
+   "cases": "45/45",
+   "assertions": "277725/277725"
+  },
+  "pde": {
+   "exit": 0,
+   "seconds": 160.7,
+   "cases": "48/48",
+   "assertions": "58929/58929"
+  },
+  "quadrature": {
+   "exit": 0,
+   "seconds": 0.4,
+   "cases": "2/2",
+   "assertions": "9/9"
+  },
+  "solver": {
+   "exit": 0,
+   "seconds": 871.8,
+   "cases": "5/5",
+   "assertions": "47/47"
+  }
+ },
+ "resumed": [
+  {
+   "repo": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp",
+   "head": "044d2794d",
+   "diff_build_files": "",
+   "python": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/.venv/bin/python3 2.5.4"
+  },
+  {
+   "repo": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp",
+   "head": "044d2794d",
+   "diff_build_files": "",
+   "python": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/.venv/bin/python3 2.5.4"
+  }
+ ]
+}

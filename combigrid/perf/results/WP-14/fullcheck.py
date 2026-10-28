@@ -19,6 +19,9 @@ the judged flags:
   summary / compare   condensed results (per module and per run target) of one or two states.
 Logs: combigrid/perf/.work/logs/wp14/<TAG>/; summaries: combigrid/perf/results/WP-14/ (both in
 the main tree, also for --repo).
+Python: the virtual environment --venv (default: the repository's .venv, which has numpy) is put
+first on PATH, because SConstruct derives the numpy include path and whether Python examples and
+tests run from the `python3` on PATH; all states must use the same one.
 """
 
 import argparse
@@ -118,16 +121,36 @@ def boost_counts(log):
 
 
 def cmd_all(args):
-    state = {"tag": args.tag, "git": git_state(), "steps": []}
-    if not args.skip_build:
-        state["steps"].append(scons(args.tag, "build", ALL + ["COMPILE_BOOST_TESTS=1"] + NO_RUN,
-                                    args.jobs, args.extra))
-    state["boost"] = boost_tests(args.tag)
-    for name, flag in RUN_PASSES.items():
+    saved = HERE / f"fullcheck-{args.tag}-all.json"
+    if args.resume:
+        # continue a paused/interrupted state: keep its build, Boost results and finished passes
+        state = json.loads(saved.read_text())
+        state.setdefault("resumed", []).append(git_state())
+    else:
+        state = {"tag": args.tag, "git": git_state(), "steps": []}
+        build_log = LOGS / args.tag / "build.log"
+        if not args.skip_build:
+            state["steps"].append(scons(args.tag, "build", ALL + ["COMPILE_BOOST_TESTS=1"] +
+                                        NO_RUN, args.jobs, args.extra))
+        elif build_log.exists():
+            # build of an earlier (interrupted) run of this state; its exit code is in that
+            # run's output, its warnings and flags in the log
+            state["steps"].append({"name": "build", "exit": "earlier run", "seconds": None,
+                                   "log": str(build_log)})
+        save(args.tag, "all", state)
+    if not args.resume or "boost" not in state:
+        state["boost"] = boost_tests(args.tag)
+        save(args.tag, "all", state)
+    for name in args.passes:
+        flag = RUN_PASSES[name]
         flags = [f for f in NO_RUN if f.split("=")[0] != flag.split("=")[0]] + [flag]
-        state["steps"].append(scons(args.tag, f"run-{name}", ALL + ["COMPILE_BOOST_TESTS=1"] +
-                                    flags, 1, args.extra))
-    save(args.tag, "all", state)
+        # --targets/--suffix: continue an interrupted pass with its remaining run targets as a
+        # separate step (e.g. run-cpp-2); the comparison combines the steps of one pass
+        step = f"run-{name}{args.suffix}"
+        state["steps"] = [s for s in state["steps"] if s["name"] != step]
+        state["steps"].append(scons(args.tag, step, ALL + ["COMPILE_BOOST_TESTS=1"] + flags, 1,
+                                    args.extra + args.targets))
+        save(args.tag, "all", state)
 
 
 def cmd_java(args):
@@ -160,7 +183,11 @@ def git_state():
     diff = subprocess.run(["git", "diff", "--stat", "--", "site_scons", "jsgpp", "pysgpp",
                            "combigrid/build"],
                           cwd=REPO, capture_output=True, text=True).stdout.strip()
-    return {"repo": str(REPO), "head": head, "diff_build_files": diff}
+    python = subprocess.run(["python3", "-c", "import sys; print(sys.executable, end=' ');"
+                             "import numpy; print(numpy.__version__)"], capture_output=True,
+                            text=True)
+    return {"repo": str(REPO), "head": head, "diff_build_files": diff,
+            "python": (python.stdout or python.stderr).strip().splitlines()[-1]}
 
 
 def save(tag, kind, state):
@@ -219,12 +246,31 @@ def flag_placement(log, flags=("-fno-strict-aliasing", "-fstrict-aliasing")):
 
 
 def run_targets(log):
-    """Commands SCons executed in a run pass (one per example / Python test)."""
-    targets = []
+    """Run targets SCons executed in a run pass, as "<dir>/<command>" (chdir builders print
+    os.chdir('<dir>') before the command; the directory makes equal example names unique)."""
+    targets, cwd = [], ""
     for line in read(log).splitlines():
-        if re.match(r"^(cd .* && )?(\./\S+|python3 \S+)( |$)", line) and "scons" not in line:
-            targets.append(line.strip())
+        m = re.match(r"os\.chdir\('([^/'][^']*)'\)", line)
+        if m:
+            cwd = m.group(1)
+        elif re.match(r"^(\./\S+|python3 \S+)$", line.strip()) and "scons" not in line:
+            targets.append(f"{cwd}/{line.strip()}" if cwd else line.strip())
     return targets
+
+
+def pass_result(steps, name):
+    """Combines the steps of one pass (run-cpp, run-cpp-2, ...): executed targets (an interrupted
+    target that a later step reran appears twice), real failures, and interrupted targets."""
+    executed, failed, interrupted = [], {}, set()
+    for step in [s for s in steps if s["name"] == name or s["name"].startswith(name + "-")]:
+        executed += run_targets(step["log"])
+        for f in scons_failures(step["log"]):
+            target, message = f.split(": ", 1)
+            if "interrupted" in message:
+                interrupted.add(target)
+            else:
+                failed[target] = message
+    return executed, failed, interrupted
 
 
 def cmd_summary(args):
@@ -271,16 +317,20 @@ def cmd_compare(args):
             continue
         sa, sb = json.loads(pa.read_text()), json.loads(pb.read_text())
         print(f"\n## {kind}: {a} vs {b}")
-        for step_a, step_b in zip(sa["steps"], sb["steps"]):
-            fa, fb = scons_failures(step_a["log"]), scons_failures(step_b["log"])
-            same = "identical" if fa == fb else "DIFFERENT"
-            print(f"  {step_a['name']}: failed targets {len(fa)} vs {len(fb)} ({same})")
-            for f in sorted(set(fa) ^ set(fb)):
-                print(f"    only in {'A' if f in fa else 'B'}: {f}")
-            if step_a["name"].startswith("run-"):
-                ra, rb = run_targets(step_a["log"]), run_targets(step_b["log"])
-                print(f"    run commands {len(ra)} vs {len(rb)}"
-                      f" ({'identical' if ra == rb else 'DIFFERENT'})")
+        for name in [f"run-{n}" for n in RUN_PASSES]:
+            if not any(st["name"].startswith(name) for st in sa["steps"] + sb["steps"]):
+                continue
+            ea, fa, ia = pass_result(sa["steps"], name)
+            eb, fb, ib = pass_result(sb["steps"], name)
+            ua, ub = list(dict.fromkeys(ea)), list(dict.fromkeys(eb))
+            print(f"  {name}: executed {len(ua)} vs {len(ub)} distinct targets "
+                  f"({'same set' if set(ua) == set(ub) else 'DIFFERENT set'}); failed "
+                  f"{len(fa)} vs {len(fb)} ({'identical' if fa == fb else 'DIFFERENT'}); "
+                  f"interrupted {len(ia)} vs {len(ib)}")
+            for t in sorted(set(fa) | set(fb)):
+                print(f"    failed: {t}: {fa.get(t, 'ok')} | {fb.get(t, 'ok')}")
+            for t in sorted(set(ua) ^ set(ub)):
+                print(f"    only in {a if t in ua else b}: {t}")
         for module in sa.get("boost", {}):
             ra, rb = sa["boost"][module], sb["boost"].get(module, {})
             keys = ("exit", "cases", "cases_failed", "cases_skipped", "assertions")
@@ -302,6 +352,13 @@ def main():
     p.add_argument("tag")
     p.add_argument("--jobs", type=int, default=16)
     p.add_argument("--skip-build", action="store_true")
+    p.add_argument("--resume", action="store_true",
+                   help="continue the saved state (no build; Boost tests only if missing)")
+    p.add_argument("--passes", nargs="+", choices=list(RUN_PASSES), default=list(RUN_PASSES),
+                   help="run passes to (re)do, in this order")
+    p.add_argument("--targets", nargs="+", default=[],
+                   help="SCons targets of the pass (default: all of its run targets)")
+    p.add_argument("--suffix", default="", help="step name suffix, e.g. -2 for run-cpp-2")
     p.add_argument("--extra", nargs="*", default=[], help="additional SCons arguments")
     p.set_defaults(func=cmd_all)
     p = sub.add_parser("java")
@@ -315,9 +372,14 @@ def main():
     p.add_argument("b")
     p.set_defaults(func=cmd_compare)
     parser.add_argument("--repo", type=Path, default=MAIN, help="tree to build and check")
+    parser.add_argument("--venv", type=Path, default=MAIN / ".venv",
+                        help="Python virtual environment put first on PATH ('none': keep PATH)")
     args = parser.parse_args()
     global REPO
     REPO = args.repo.resolve()
+    if str(args.venv) != "none":
+        os.environ["VIRTUAL_ENV"] = str(args.venv)
+        os.environ["PATH"] = f"{args.venv / 'bin'}{os.pathsep}{os.environ['PATH']}"
     args.func(args)
 
 

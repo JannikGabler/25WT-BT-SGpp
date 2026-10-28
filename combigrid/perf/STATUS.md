@@ -1,27 +1,23 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-13 (2026-10-26) · Next free WP number: 15 · Re-profilings done: 0 (RP-0 = setup)
+Last processed: WP-14 (2026-10-28) · Next free WP number: 15 · Re-profilings done: 0 (RP-0 = setup; RP-1 in progress)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), 16
   threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (all cores at
   2.0 GHz), platform profile `performance`, AC, idle machine. GCC 15.2 stays the judged compiler.
-  `-fno-semantic-interposition` comes via site_scons since WP-13 (GCC, `OPT=1`), not via
-  compileNormal.sh/perf.py.
-- **Baseline**: source of commit 84299eeca (unchanged by the setup); baseline commit = the setup
-  commit **fed2cdb4e** (found with
-  `git log --diff-filter=A --format=%h -- combigrid/perf/baseline/e2e_t16.jsonl`).
-  Snapshot name `baseline` (rebuild with `perf.py snapshot baseline --commit fed2cdb4e` if
-  `.work/` was cleaned). Numbers: `baseline/`, overview in ANALYSIS.md. The baseline stays
-  without `-fno-semantic-interposition` (built from fed2cdb4e with its own site_scons); the
-  flag's gain (WP-13, 1.023x) counts towards the cumulative progress. No re-recording.
-- **Machine note**: boost was disabled and the baseline re-recorded on 2026-10-24 because the
-  laptop throttled under sustained load with boost on (up to 1.6x). Boost comes back after a
-  reboot; the owner disables it manually (decided 2026-10-24). If `envcheck` fails because of
-  boost, ask the owner to disable it again (README, Pitfalls). A full e2e A/B takes ≈ 18–23 min;
-  work sessions filter to relevant cases. `scons -c` (clears all of `lib/`, incl. other modules'
-  libraries and `lib/pysgpp`) is fine: everything there is rebuildable (owner 2026-10-25).
-- **Toolchain**: GCC 15.2 (judged); Clang 21.1.8 + libomp + lld installed. `perf/scripts/toolchain.py`
-  (WP-11) builds/snapshots compiler/flag variants; it preserves `lib/` across its `scons -c`.
+  Flags from site_scons (not compileNormal.sh/perf.py): `-fno-semantic-interposition` (WP-13, GCC
+  `OPT=1`); strict aliasing on (WP-14: `-fno-strict-aliasing` only for the SWIG Java wrapper).
+- **Baseline**: source of 84299eeca; baseline commit = setup commit **fed2cdb4e**. Snapshot
+  `baseline` exists in `.work/snapshots/` (if `.work/` was cleaned:
+  `perf.py snapshot baseline --commit fed2cdb4e`). Numbers: `baseline/`, ANALYSIS.md. It keeps its
+  own site_scons flags (no nosi, with `-fno-strict-aliasing`); flag changes count towards the
+  cumulative progress (WP-13 1.023x, WP-14 0.988x). No re-recording.
+- **Machine note**: boost off since 2026-10-24 (throttling up to 1.6x with boost on); a reboot
+  re-enables it, the owner disables it manually — if `envcheck` fails on boost, ask the owner.
+  Full e2e A/B ≈ 18–23 min (sessions filter). `scons -c` is fine (owner 2026-10-25). Sanitizer
+  runs need a memory cap (uncapped TySan crashed the PC).
+- **Toolchain**: GCC 15.2 (judged); Clang 21.1.8 + libomp + lld; JDK 21 (`SG_JAVA=1`).
+  `perf/scripts/toolchain.py` (WP-11; variant `gcc-sa` from WP-14) builds compiler/flag variants.
 - **Owner's rules**: acceptance by the owner only; minimal gains may be proposed but must be
   labelled and weighed against API/functionality/maintainability/readability; functional/
   interface/flag changes only after consulting the owner; errors stay in the same order of
@@ -41,36 +37,37 @@ Last processed: WP-13 (2026-10-26) · Next free WP number: 15 · Re-profilings d
 | – | WP-01 | SG quadrature: per-grid-point work | accepted | quad/sg 2.4x (22.3 → 9.4 s), mivec 1.45x; 15.8 s saved; b1 d20 4.7x | [WP-01](summaries/WP-01-sg-quad-per-point.md) |
 | – | WP-11 | Toolchain measurement: GCC flags, Clang ThinLTO, Clang full LTO | accepted (gcc-nosi → WP-13) | gcc-nosi e2e 1.024x (interp 1.065x, mivec 1.043x, quad 1.02x); Clang not adopted | [WP-11](summaries/WP-11-toolchain.md) |
 | – | WP-13 | `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`) | accepted | e2e 1.023x (54.03 → 52.79 s), interp 1.062x, 0 SLOWER; all 8 modules' tests pass | [WP-13](summaries/WP-13-nosi-scons.md) |
-| 1 | WP-14 | `-fno-strict-aliasing`: measure cost, restrict scope (complete SG++ build) | in progress (prompt 2026-10-26) | | |
-| 2 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 | ready (after WP-14) | | |
-| 4 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | | |
-| 5 | WP-03 | Downwards closure of MI sets | ready | | |
-| 6 | WP-09 | Multi-point interpolation API (proposal; from D-1) | ready | | |
-| 7 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | | |
-| 8 | WP-05 | SG quadrature: per-tensor-grid costs | ready | | |
-| 9 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09) | | |
-| 10 | WP-07 | Generic barycentric formula: cache the weights | ready | | |
-| 11 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09) | | |
-| 12 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3; measure first) | ready | | |
-| 13 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional) | planned (owner decides) | | |
+| – | WP-14 | `-fno-strict-aliasing` only for the SWIG Java wrapper; datadriven punning → `std::bit_cast` | accepted (owner 2026-10-28) | e2e 0.988x (52.77 → 53.42 s): interp 1.10x, interplin 1.10x, quad/sg 0.995x, quad/dsg 0.970x, mivec 0.886x; refcheck OK; complete project identical | [WP-14](summaries/WP-14-strict-aliasing.md) |
+| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 | in progress (prompt 2026-10-28) | | |
+| 2 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | | |
+| 3 | WP-03 | Downwards closure of MI sets | ready | | |
+| 4 | WP-09 | Multi-point interpolation API (proposal; from D-1) | ready | | |
+| 5 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | | |
+| 6 | WP-05 | SG quadrature: per-tensor-grid costs | ready | | |
+| 7 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09) | | |
+| 8 | WP-07 | Generic barycentric formula: cache the weights | ready | | |
+| 9 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09) | | |
+| 10 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3; measure first) | ready | | |
+| 11 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional) | planned (owner decides) | | |
 | – | D-1 | Multi-point interpolation API | decided → WP-09 | | |
 | – | D-2 | `-fno-semantic-interposition` | done: WP-13 accepted | | |
 | – | D-3 | Armadillo/OpenBLAS thread pool | decided → WP-10 | | |
 
-Ranks 3–12 are re-ranked by RP-1.
+Ranks 2–11 are re-ranked by RP-1.
 
 ## Next action
 
-WP-14 in progress (checkpoint commit 50d552f00, no summary yet). Next master start: process the
-WP-14 summary, then RP-1 (no baseline step), re-rank, then the top optimization WP (currently
-WP-02). WP-06/WP-08 only after the owner decided on adopting WP-09's API.
+Owner: commit WP-14 ("Accept WP-14: …": `site_scons`/`jsgpp` part is already in 50d552f00; add
+the datadriven fix, `results/WP-14/`, the summary, STATUS/PLAN), so the tree is clean. Then start
+RP-1 (prompt 2026-10-28; `baseline` snapshot exists). Next master start: process the RP-1
+summary, re-rank PLAN.md, issue the top optimization WP (currently WP-02). WP-06/WP-08 only after
+the owner decided on adopting WP-09's API.
 
 ## Open decisions for the owner
 
 - WP-09 (after its summary): adopt the multi-point interpolation API or not.
 - WP-10 (after its summary): implement only if the measured start-up gain is worth it.
 - WP-12 (after WP-02/WP-03): re-run the GCC/Clang comparison or not.
-- WP-14 (after its summary): accept the restricted scope (or the fallback).
 
 ## Do not retry
 
@@ -95,35 +92,32 @@ WP-02). WP-06/WP-08 only after the owner decided on adopting WP-09's API.
   + nosi 1.033x (no effect).
 - WP-11 Clang without explicit `CC/CXX/LINK`: SConstruct's configure checks run with g++, which
   rejects `-flto=thin` → pass `CC=clang CXX=clang++ LINK=clang++` (and `-O3` at link for lld).
+- WP-14 TySan (Clang 21 `-fsanitize=type`) over SG++: OpenBLAS × shadow memory > 12 GB per binary
+  (crashed the PC uncapped), runtime crash in `isAliasingLegal` aborted 21/74 combigrid suites,
+  all report classes false positives (vptr, OpenMP bounds, mt19937, layout), ~3 h → use the
+  `-Wstrict-aliasing=3/2` scan instead; if ever rerun: `OPENBLAS_NUM_THREADS=1` + cgroup cap.
 
 ## Re-profiling
 
-Accepted optimizations since the last profile: 2 (WP-01, WP-13). Trigger met: WP-01 changed
-quad/sg by 2.4x (≥ 1.3x) and shifted its hot spots (integrand now ≈ 60 %). RP-1 runs right after
-WP-14 (flag changes only), so it profiles the final flag setup. Last profile: setup (ANALYSIS.md).
+Accepted changes since the last profile: 3 (WP-01, WP-13, WP-14). Trigger met: WP-01 changed
+quad/sg by 2.4x (≥ 1.3x) and shifted its hot spots (integrand now ≈ 60 %); WP-14 shifted mivec
+generation (0.864x) and the dsg trie (~0.95x). RP-1 in progress (prompt 2026-10-28). Last
+profile: setup (ANALYSIS.md).
 
 ## Log
 
-- 2026-10-26 WP-11 committed (9ab8f642d). WP-13 accepted by the owner (a16733d65):
-  e2e 1.023x (1.24 s), 0 SLOWER, refcheck OK, code bitwise = WP-11 gcc-nosi, 816/816 Boost cases
-  in all 8 modules; foreign load 0.2 % (JDK install did not disturb). Side note: optimization's
-  `IterativeGridGeneratorLinearSurplus` ends with 199 instead of 198 points (round-off, test
-  passes). README "Profiling and tools" note → WP-14. WP-14 prompt issued; owner asked how
-  `-fno-semantic-interposition` interacts with strict aliasing (answered: gains compound, latent
-  cross-call punning exposed) → TypeSanitizer step added, prompt re-issued before its start.
-- 2026-10-26 Master restart: WP-13 hash filled in; WP-14 checkpoint 50d552f00 (no summary yet).
-  Progress report for the owner's supervisor meeting (owner's request):
-  `results/progress-2026-10-26/e2e.md` = master 3ffe4d382 / e6a21c331 (worktree builds with their
-  own flags, owner: no added flags; snapshots `report-master`, `report-dev`) vs. baseline vs.
-  WP-13. Old states use naive O(n²) CC weights (their FFT code does not compile). 28 common
-  cases: 51.1 s (master) → 41.9 s (baseline) → 25.3 s (WP-13). Finding for WP-03/RP-1: mivec
-  `generation` at d15/d20 was faster on master (1.56/1.66 s) than at baseline (1.79/1.90 s).
+- 2026-10-28 WP-14 accepted by the owner (recorded in the summary; commit pending): flag only on
+  `javaEnv`; datadriven's 8 punning sites → `std::bit_cast` (owner's choice; bitwise identical);
+  complete project identical to HEAD. e2e 0.988x: operators gain, closure and dsg trie lose →
+  notes in WP-03/WP-02. Pre-existing outside combigrid: `example_learnerSGDE.java`, thesis
+  comparison templates (2 args), numpy only in `.venv`. RP-1 prompt issued.
 
 ## Archive
 
-- 2026-10-24 setup (WP-00, fed2cdb4e); boost off, baseline re-recorded (931158248); D-1 → WP-09,
-  D-3 → WP-10, `-fPIC` question answered (D-2). 2026-10-25 WP-01 accepted (5281e0b7d, quad/sg
-  22.3 → 9.4 s); WP-11 toolchain measurement requested by the owner and issued.
-- 2026-10-25 WP-11 processed: gcc-nosi adopted via site_scons (→ WP-13; baseline unchanged),
-  Clang not adopted, `toolchain.py` kept, WARN-case tolerance stays, plain `scons -c` fine;
-  SWIG/`-fno-strict-aliasing` researched (Java yes, Python 3 no) → WP-14; owner installed a JDK.
+- 2026-10-24 setup (WP-00, fed2cdb4e); baseline re-recorded boost off (931158248); D-1 → WP-09,
+  D-3 → WP-10, D-2 answered. 2026-10-25 WP-01 accepted (5281e0b7d); WP-11 processed (gcc-nosi →
+  WP-13, Clang not adopted; strict aliasing researched → WP-14). 2026-10-26 WP-11 committed
+  (9ab8f642d); WP-13 accepted (a16733d65); WP-14 issued (TySan step after the owner's nosi ×
+  strict-aliasing question), checkpoint 50d552f00. Progress report for the owner's supervisor
+  (`results/progress-2026-10-26/`, 044d2794d): 28 cases 51.1 s (master) → 41.9 s → 25.3 s (WP-13);
+  mivec generation d15/d20 faster on master (1.56/1.66 s) than at baseline (1.79/1.90 s) → RP-1.

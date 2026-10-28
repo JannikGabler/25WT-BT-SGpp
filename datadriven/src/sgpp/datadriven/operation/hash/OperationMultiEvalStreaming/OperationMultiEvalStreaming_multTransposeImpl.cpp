@@ -7,6 +7,7 @@
 #include <sgpp/globaldef.hpp>
 
 #include <algorithm>
+#include <bit>
 
 #if defined(__SSE3__) && !defined(__AVX__)
 #include <pmmintrin.h>
@@ -42,8 +43,7 @@ void OperationMultiEvalStreaming::multTransposeImpl(
     size_t grid_inc = std::min<size_t>(
         static_cast<size_t>(getChunkGridPoints()), (end_index_grid - k));
 
-    uint64_t imask = 0x7FFFFFFFFFFFFFFF;
-    double* fmask = reinterpret_cast<double*>(&imask);
+    const double fmask = std::bit_cast<double>(uint64_t{0x7FFFFFFFFFFFFFFF});
 
     for (size_t i = start_index_data; i < end_index_data; i += 12) {
       for (size_t j = k; j < k + grid_inc; j++) {
@@ -54,7 +54,7 @@ void OperationMultiEvalStreaming::multTransposeImpl(
         __m128d support_4 = _mm_load_pd(&(ptrSource[i + 8]));
         __m128d support_5 = _mm_load_pd(&(ptrSource[i + 10]));
 
-        __m128d mask = _mm_set1_pd(*fmask);
+        __m128d mask = _mm_set1_pd(fmask);
         __m128d one = _mm_set1_pd(1.0);
         __m128d zero = _mm_set1_pd(0.0);
 
@@ -136,8 +136,7 @@ void OperationMultiEvalStreaming::multTransposeImpl(
        k += std::min<size_t>(getChunkGridPoints(), (end_index_grid - k))) {
     size_t grid_inc = std::min<size_t>((size_t)getChunkGridPoints(), (end_index_grid - k));
 
-    int64_t imask = 0x7FFFFFFFFFFFFFFF;
-    double* fmask = reinterpret_cast<double*>(&imask);
+    const double fmask = std::bit_cast<double>(int64_t{0x7FFFFFFFFFFFFFFF});
 
     for (size_t i = start_index_data; i < end_index_data; i += 24) {
       for (size_t j = k; j < k + grid_inc; j++) {
@@ -148,7 +147,7 @@ void OperationMultiEvalStreaming::multTransposeImpl(
         __m256d support_4 = _mm256_load_pd(&(ptrSource[i + 16]));
         __m256d support_5 = _mm256_load_pd(&(ptrSource[i + 20]));
 
-        __m256d mask = _mm256_broadcast_sd(fmask);
+        __m256d mask = _mm256_broadcast_sd(&fmask);
         __m256d one = _mm256_set1_pd(1.0);
         __m256d zero = _mm256_set1_pd(0.0);
 

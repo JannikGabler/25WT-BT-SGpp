@@ -1,0 +1,35 @@
+{
+ "level": 2,
+ "tus": 1134,
+ "failed": [],
+ "warnings": [
+  [
+   "datadriven/src/sgpp/datadriven/operation/hash/OperationMultiEvalStreaming/OperationMultiEvalStreaming_multImpl.cpp",
+   175,
+   49,
+   "dereferencing type-punned pointer will break strict-aliasing rules",
+   "datadriven/src/sgpp/datadriven/operation/hash/OperationMultiEvalStreaming/OperationMultiEvalStreaming_multImpl.cpp"
+  ],
+  [
+   "datadriven/src/sgpp/datadriven/operation/hash/OperationMultiEvalStreaming/OperationMultiEvalStreaming_multTransposeImpl.cpp",
+   140,
+   47,
+   "dereferencing type-punned pointer will break strict-aliasing rules",
+   "datadriven/src/sgpp/datadriven/operation/hash/OperationMultiEvalStreaming/OperationMultiEvalStreaming_multTransposeImpl.cpp"
+  ],
+  [
+   "datadriven/src/sgpp/datadriven/operation/hash/OperationMultipleEvalSubspace/combined/OperationMultipleEvalSubspaceCombined.hpp",
+   119,
+   33,
+   "dereferencing type-punned pointer will break strict-aliasing rules",
+   "datadriven/src/sgpp/datadriven/DatadrivenOpFactory.cpp"
+  ],
+  [
+   "datadriven/src/sgpp/datadriven/operation/hash/OperationMultipleEvalSubspace/combined/OperationMultipleEvalSubspaceCombined.hpp",
+   244,
+   33,
+   "dereferencing type-punned pointer will break strict-aliasing rules",
+   "datadriven/src/sgpp/datadriven/DatadrivenOpFactory.cpp"
+  ]
+ ]
+}

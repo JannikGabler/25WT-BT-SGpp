@@ -19,10 +19,13 @@ import os
 import re
 from pathlib import Path
 
-HEAD_RX = re.compile(r"ERROR: TypeSanitizer: (\S+) on address")
-ACCESS_RX = re.compile(r"(READ|WRITE) of size (\d+) at \S+ with type (.+?) accesses an existing "
-                       r"object of type (.+)$")
-FRAME_RX = re.compile(r"^\s+#(\d+) 0x[0-9a-f]+ in (.+?) (/\S+?)(?::(\d+)(?::\d+)?)?$")
+HEAD_RX = re.compile(r"ERROR: TypeSanitizer: (\S+) on address (0x[0-9a-f]+)")
+ACCESS_RX = re.compile(r"(READ|WRITE) of size (\d+) at \S+ with type (.+?) accesses "
+                       r"(?:part of )?an existing object of type (.+)$")
+# paths may contain spaces (the repository path does), function names do not contain " /";
+# uninstrumented frames look like "in func (/usr/lib/libx.so+0x123)"
+FRAME_RX = re.compile(r"^\s+#(\d+) 0x[0-9a-f]+ in (.*?) \(?(/[^:()]+?)(?:\+0x[0-9a-f]+\))?"
+                      r"(?::(\d+)(?::\d+)?)?$")
 MODULES = ("base", "combigrid", "datadriven", "misc", "optimization", "pde", "quadrature",
            "solver")
 
@@ -39,29 +42,63 @@ def area(path, root):
     return "other (" + "/".join(Path(path).parts[:4]) + ")"
 
 
+def pattern(report, sgpp):
+    """Known TySan false-positive classes; only "heap/other" needs a manual review.
+    - vptr: base-class constructor/destructor writes its vtable pointer into an object TySan
+      typed as the derived class;
+    - static-init: member stores while a global is constructed (its shadow holds the whole type);
+    - stack: stack slot that held another object before (TySan does not reset the shadow when a
+      lifetime ends; uninstrumented writers such as libomp's loop bounds are not seen)."""
+    access = report.get("access") or ("?",) * 4
+    # substring: reports of concurrent OpenMP threads interleave, which garbles the lines
+    if "vtable pointer" in access[2] or "vtable pointer" in access[3]:
+        return "vptr"
+    if sgpp and sgpp[0].startswith(("__cxx_global_var_init", "_GLOBAL__sub_I")):
+        return "static-init"
+    if report["address"] >= 0x7ff000000000:
+        return "stack"
+    return "heap/other"
+
+
+def summarize(report, root, n_frames):
+    frames = report["frames"]
+    first = frames[0] if frames else ("?", "?", "?")
+    sgpp = next((f for f in frames if area(f[1], root).split("/")[0] in MODULES), None)
+    return {"kind": report["kind"], "access": report.get("access"), "first": first,
+            "pattern": pattern(report, sgpp), "area": area(first[1], root), "sgpp": sgpp,
+            "sgpp_area": area(sgpp[1], root) if sgpp else "-", "frames": frames[:n_frames]}
+
+
 def parse(log, root, n_frames):
-    reports, current = [], None
-    for line in Path(log).read_text(errors="replace").splitlines():
-        if HEAD_RX.search(line):
-            current = {"kind": HEAD_RX.search(line).group(1), "frames": []}
-            reports.append(current)
-        elif current is not None and (m := ACCESS_RX.search(line)):
-            current["access"] = m.groups()
-        elif current is not None and (m := FRAME_RX.match(line)):
-            if len(current["frames"]) < 40:
-                current["frames"].append((m.group(2), m.group(3), m.group(4) or "?"))
-        elif current is not None and current["frames"] and not line.strip():
-            current = None
-    out = []
-    for r in reports:
-        frames = r["frames"]
-        first = frames[0] if frames else ("?", "?", "?")
-        sgpp = next((f for f in frames if area(f[1], root).split("/")[0] in MODULES), None)
-        out.append({"kind": r["kind"], "access": r.get("access"), "first": first,
-                    "area": area(first[1], root),
-                    "sgpp": sgpp, "sgpp_area": area(sgpp[1], root) if sgpp else "-",
-                    "frames": frames[:n_frames]})
-    return out
+    """Streams the log (TySan does not deduplicate: logs reach several GB) and aggregates the
+    reports per access/object type pair (offsets removed) and triggering location (the first
+    SG++ frame, else the first frame). Returns (number of reports, {key: entry with count})."""
+    unique, total, current = {}, 0, None
+
+    def finish(report):
+        r = summarize(report, root, n_frames)
+        acc = tuple(re.sub(r" (that starts )?at offset -?\d+", "", a)
+                    for a in (r["access"] or ("?",) * 4))
+        where = r["sgpp"] or r["first"]
+        key = (r["pattern"], acc[0], acc[2], acc[3], where[1], where[2])
+        unique.setdefault(key, {**r, "count": 0})["count"] += 1
+
+    with open(log, errors="replace") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if m := HEAD_RX.search(line):
+                if current is not None:
+                    finish(current)
+                total += 1
+                current = {"kind": m.group(1), "address": int(m.group(2), 16), "frames": []}
+            elif current is not None and (m := ACCESS_RX.search(line)):
+                current["access"] = m.groups()
+            elif current is not None and (m := FRAME_RX.match(line)):
+                if len(current["frames"]) < 40:
+                    current["frames"].append((m.group(2), m.group(3), m.group(4) or "?"))
+    if current is not None:
+        finish(current)
+    return total, unique
 
 
 def short(frame, root):
@@ -79,21 +116,17 @@ def main():
     parser.add_argument("--frames", type=int, default=4)
     args = parser.parse_args()
     for log in args.log:
-        reports = parse(log, args.root, args.frames)
-        unique = {}
-        for r in reports:
-            key = (r["access"], r["first"])
-            unique.setdefault(key, {**r, "count": 0})["count"] += 1
+        total, unique = parse(log, args.root, args.frames)
         by_area = {}
         for u in unique.values():
-            k = f"{u['area']} <- {u['sgpp_area']}"
+            k = f"{u['pattern']}: {u['area']} <- {u['sgpp_area']}"
             by_area[k] = by_area.get(k, 0) + 1
-        print(f"\n## {log}: {len(reports)} reports, {len(unique)} unique "
+        print(f"\n## {log}: {total} reports, {len(unique)} unique "
               f"(first frame <- first SG++ frame: {by_area})")
-        for u in sorted(unique.values(), key=lambda u: (u["area"], -u["count"])):
+        for u in sorted(unique.values(), key=lambda u: (u["pattern"], u["area"], -u["count"])):
             acc = u["access"] or ("?", "?", "?", "?")
-            print(f"- [{u['area']}] {u['count']}x {acc[0]} size {acc[1]} as `{acc[2]}` of "
-                  f"`{acc[3]}`")
+            print(f"- [{u['pattern']}; {u['area']}] {u['count']}x {acc[0]} size {acc[1]} as "
+                  f"`{acc[2]}` of `{acc[3]}`")
             for f in u["frames"]:
                 print(f"    {short(f, args.root)}")
             if u["sgpp"] and u["sgpp"] not in u["frames"]:

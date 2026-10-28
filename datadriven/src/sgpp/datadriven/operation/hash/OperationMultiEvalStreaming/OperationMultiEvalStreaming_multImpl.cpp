@@ -4,6 +4,7 @@
 // sgpp.sparsegrids.org
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 
 #if defined(__SSE3__) && !defined(__AVX__)
@@ -50,8 +51,7 @@ void OperationMultiEvalStreaming::multImpl(
       size_t grid_inc = std::min<size_t>(
           static_cast<size_t>(getChunkGridPoints()), (end_index_grid - m));
 
-      uint64_t imask = 0x7FFFFFFFFFFFFFFF;
-      double* fmask = reinterpret_cast<double*>(&imask);
+      const double fmask = std::bit_cast<double>(uint64_t{0x7FFFFFFFFFFFFFFF});
 
       for (size_t i = c; i < c + getChunkDataPoints(); i += 12) {
         for (size_t j = m; j < m + grid_inc; j++) {
@@ -62,7 +62,7 @@ void OperationMultiEvalStreaming::multImpl(
           __m128d support_4 = _mm_loaddup_pd(&(ptrAlpha[j]));
           __m128d support_5 = _mm_loaddup_pd(&(ptrAlpha[j]));
 
-          __m128d mask = _mm_set1_pd(*fmask);
+          __m128d mask = _mm_set1_pd(fmask);
           __m128d one = _mm_set1_pd(1.0);
           __m128d zero = _mm_set1_pd(0.0);
 
@@ -171,8 +171,7 @@ void OperationMultiEvalStreaming::multImpl(
          m += std::min<size_t>((size_t)getChunkGridPoints(), (end_index_grid - m))) {
       size_t grid_inc = std::min<size_t>((size_t)getChunkGridPoints(), (end_index_grid - m));
 
-      int64_t imask = 0x7FFFFFFFFFFFFFFF;
-      double* fmask = reinterpret_cast<double*>(&imask);
+      const double fmask = std::bit_cast<double>(int64_t{0x7FFFFFFFFFFFFFFF});
 
       for (size_t i = c; i < c + getChunkDataPoints(); i += 24) {
         for (size_t j = m; j < m + grid_inc; j++) {
@@ -183,7 +182,7 @@ void OperationMultiEvalStreaming::multImpl(
           __m256d support_4 = _mm256_broadcast_sd(&(ptrAlpha[j]));
           __m256d support_5 = _mm256_broadcast_sd(&(ptrAlpha[j]));
 
-          __m256d mask = _mm256_broadcast_sd(fmask);
+          __m256d mask = _mm256_broadcast_sd(&fmask);
           __m256d one = _mm256_set1_pd(1.0);
           __m256d zero = _mm256_set1_pd(0.0);
 

@@ -6,6 +6,8 @@ re-recorded 2026-10-24), judged configuration, 16 threads unless stated; e2e med
 `baseline/e2e_t16.jsonl`, micro from `baseline/micro_t1.jsonl`. WP-13 adds
 `-fno-semantic-interposition` to GCC `OPT=1` builds via site_scons; the baseline (built from
 fed2cdb4e with its own site_scons) stays without it, so the flag counts as an optimization.
+WP-14 turns strict aliasing on (GCC default; `-fno-strict-aliasing` only for the SWIG Java
+wrapper); the baseline keeps `-fno-strict-aliasing`. Numbers below predate RP-1.
 
 **Ranking rule**: expected absolute time saved on the e2e suite, cases with d ≥ 7 first (they
 run longest and the owner prioritizes high dimensions), then all cases; ties broken by operator
@@ -23,18 +25,18 @@ generation 5.1 s).
 | – | WP-01 | SG quadrature: per-grid-point work | accepted (2026-10-25) | measured: 15.8 s saved; quad/sg 22.3 → 9.4 s (2.4x), mivec 9.3 → 6.4 s |
 | – | WP-11 | Toolchain measurement: GCC flags, Clang ThinLTO, Clang full LTO (measurement only) | accepted (2026-10-25): gcc-nosi → WP-13 | measured: gcc-nosi e2e 54.20 → 52.91 s (1.024x); Clang not adopted |
 | – | WP-13 | `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`, all modules) | accepted (2026-10-26) | measured: e2e 54.03 → 52.79 s (1.023x, 1.24 s) |
-| 1 | WP-14 | `-fno-strict-aliasing`: measure its cost, restrict its scope (complete SG++ build) | in progress (prompt 2026-10-26) | unknown (measurement first); judged builds lose the flag if the restriction holds |
-| 2 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 | ready (after WP-14) | re-ranks everything below |
-| 4 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
-| 5 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~4.8 s, generation ≥ 10x at d ≥ 10 |
-| 6 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
-| 7 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | 1.5–3 s (d ≥ 7) |
-| 8 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready | 0.5–1.5 s; low d and many small grids |
-| 9 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | ~1.3 s |
-| 10 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
-| 11 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s |
-| 12 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
-| 13 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
+| – | WP-14 | `-fno-strict-aliasing` only for the SWIG Java wrapper; datadriven punning → `std::bit_cast` | accepted (2026-10-28) | measured: e2e 52.77 → 53.42 s (0.988x, −0.65 s); interp/interplin 1.10x, quad/dsg 0.970x, mivec 0.886x |
+| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 | in progress (prompt 2026-10-28) | re-ranks everything below |
+| 2 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
+| 3 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~5.4 s (WP-14 made the closure 11–19 % slower), generation ≥ 10x at d ≥ 10 |
+| 4 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
+| 5 | WP-04 | DSG quadrature: row loop | ready (after WP-02) | 1.5–3 s (d ≥ 7) |
+| 6 | WP-05 | SG quadrature: per-tensor-grid costs (1D weights, allocations) | ready | 0.5–1.5 s; low d and many small grids |
+| 7 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | ~1.3 s (before WP-13/WP-14, which gave interp 1.06x · 1.10x) |
+| 8 | WP-07 | Generic barycentric formula: cache the weights | ready | ~0.2 s e2e (100x per 1D call) |
+| 9 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ~1.1 s (before WP-14: interplin 1.10x) |
+| 10 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | cold process start only (5–18 % of cold samples) |
+| 11 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides) | decision data only |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10 | – |
@@ -100,6 +102,10 @@ generation 5.1 s).
 - **From WP-11**: with gcc-nosi `appendSubTrieChildren` is still 64 % of `quad/dsg/equi-exp/b1/d20/L6`
   (16 threads; Clang ThinLTO 66 %, 11 % more cycles there); quad/dsg is the largest group
   (26.3 s with gcc-nosi), so WP-02 stays the top optimization candidate.
+- **From WP-14** (strict aliasing on): the dsg trie functions are uniformly ~5 % slower
+  (quad/dsg 0.970x; `quad/dsg/equi-exp/b1/d20/L6` 6.67 → 7.03 s). Measure the rewrite under the
+  final flags; fix code generation at the source level (re-adding `-fno-strict-aliasing` per file
+  would be a flag change → owner).
 
 ## WP-03 — Downwards closure of multi-index sets
 - **Location**: `tools/downwards_closedness.hpp` (`genMIVecDownwardsClosure`), helpers in
@@ -126,6 +132,12 @@ generation 5.1 s).
   1.60x/1.47x/1.29x; micro `downwards_closure` 1.23–1.42x, `complete_mis_with_coeffs` 1.57x).
   Compare the generated code of the dominance/closure loops: a source-level change may give GCC
   the same (in addition to the algorithmic change).
+- **From the progress report (2026-10-26)**: mivec `generation` at d15/d20 was faster on the old
+  master 3ffe4d382 (1.56/1.66 s) than at baseline (1.79/1.90 s); RP-1 locates the cause.
+- **From WP-14** (strict aliasing on): `genMIVecDownwardsClosure` 11–19 % slower (instructions
+  +3.9 %, cycles +23 %, IPC 2.07 → 1.75; micro `downwards_closure` 0.94–0.96x; e2e generation
+  d15 1.68 → 2.07 s, d20 1.88 → 2.07 s; mivec 0.886x). The rewrite replaces this loop anyway;
+  measure under the final flags (flag changes → owner).
 
 ## WP-04 — DSG quadrature: row loop
 - **Location**: `deltas_sparse_grid_quadrature.hpp` (`forEachGPWithGlobalWeight`,
@@ -421,6 +433,25 @@ generation 5.1 s).
 - **Functional change**: build configuration, approved by the owner 2026-10-25 (restrict the
   flag's scope; fallback: only when bindings are compiled). **Dependencies**: WP-13 accepted
   (same function in site_scons; complete-project test runs of WP-13 serve as the reference).
+- **Result (2026-10-28, accepted)**: preferred restriction holds: flag dropped globally, added to
+  `javaEnv` only (every compiler); pysgpp needs none. Owner also chose to fix datadriven's 8
+  pointer-cast punning sites with `std::bit_cast` (results bitwise identical). e2e 0.988x
+  (−0.65 s; interp 1.097x, interplin 1.101x, quad/sg 0.995x, quad/dsg 0.970x, mivec 0.886x),
+  micro geomean 1.033x, refcheck OK (6 CC values ±1–9 ulp via FMA in Eigen's kissfft), complete
+  project pass/fail identical. Follow-ups → WP-02, WP-03.
+
+## RP-1 — Re-profiling after WP-01/WP-13/WP-14
+- **Source**: rule 7 (WP-01 changed quad/sg by 2.4x; three accepted changes since the setup
+  profile; WP-14 shifted mivec generation and the dsg trie).
+- **Content** (no source changes): `calibrate`; snapshot `rp-1` of HEAD (`baseline` exists);
+  `ab e2e baseline rp-1` (cumulative progress, all cases); `profile` of the top cases by absolute
+  time (high d first, ≥ 1 per operator group); micro runs of the hot spots; mivec generation
+  d15/d20 `report-master` vs. `rp-1` (cause of the old master's advantage, input to WP-03);
+  section "Re-profiling RP-1" in ANALYSIS.md; re-ranked expected savings in the summary.
+- **Questions**: is `appendSubTrieChildren` still ~63 % at `quad/dsg/*/b1/d20`; what dominates
+  the largest b0 dsg cases (`cc-uq`/`equi-exp` d10 L7, WP-04); quad/sg split integrand vs.
+  per-tensor-grid costs (WP-05); closure share at d10/d15/d20 (WP-03); `denormalizeDataVector`,
+  `getGridPoint`, libgomp spinning in interp (WP-06, WP-07) and interplin (WP-08).
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where

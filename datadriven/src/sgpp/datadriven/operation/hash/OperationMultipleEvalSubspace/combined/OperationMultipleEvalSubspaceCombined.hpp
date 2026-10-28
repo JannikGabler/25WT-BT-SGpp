@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <immintrin.h>
 #include <omp.h>
+#include <bit>
 #include <iostream>
 #include <map>
 #include <vector>
@@ -115,9 +116,8 @@ class OperationMultipleEvalSubspaceCombined : public AbstractOperationMultipleEv
       double doubleValue[4];
     } avxUnion;
 
-    int64_t absIMask = 0x7FFFFFFFFFFFFFFF;
-    double* fabsMask = (double*)&absIMask;
-    __m256d absMask = _mm256_broadcast_sd(fabsMask);
+    const double fabsMask = std::bit_cast<double>(int64_t{0x7FFFFFFFFFFFFFFF});
+    __m256d absMask = _mm256_broadcast_sd(&fabsMask);
     __m256d one = _mm256_set1_pd(1.0);
     //__m256d zero = _mm256_set1_pd(0.0);
 
@@ -240,9 +240,8 @@ class OperationMultipleEvalSubspaceCombined : public AbstractOperationMultipleEv
       double doubleValue[4];
     } avxUnion;
 
-    int64_t absIMask = 0x7FFFFFFFFFFFFFFF;
-    double* fabsMask = (double*)&absIMask;
-    __m256d absMask = _mm256_broadcast_sd(fabsMask);
+    const double fabsMask = std::bit_cast<double>(int64_t{0x7FFFFFFFFFFFFFFF});
+    __m256d absMask = _mm256_broadcast_sd(&fabsMask);
     __m256d one = _mm256_set1_pd(1.0);
     __m256d zero = _mm256_set1_pd(0.0);
 

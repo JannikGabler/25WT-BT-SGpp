@@ -1,0 +1,35 @@
+{
+ "tag": "head",
+ "git": {
+  "repo": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/worktrees/wp14-head",
+  "head": "a16733d65",
+  "diff_build_files": "combigrid/build/jsgpp/combigrid.i | 58 +++++++++++++++++++--------------------\n 1 file changed, 29 insertions(+), 29 deletions(-)",
+  "python": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/.venv/bin/python3 2.5.4"
+ },
+ "steps": [],
+ "java": {
+  "tutorial": {
+   "javac": 0,
+   "exit": 0,
+   "seconds": 0.5
+  },
+  "refinement": {
+   "javac": 0,
+   "exit": 0,
+   "seconds": 0.5
+  },
+  "optimization": {
+   "javac": 0,
+   "exit": 0,
+   "seconds": 0.6
+  },
+  "example_learnerSGDE": {
+   "javac": 1
+  },
+  "JsgppSmoke": {
+   "javac": 0,
+   "exit": 0,
+   "seconds": 0.8
+  }
+ }
+}

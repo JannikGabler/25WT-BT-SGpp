@@ -1,0 +1,105 @@
+{
+ "tag": "head",
+ "git": {
+  "repo": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/worktrees/wp14-head",
+  "head": "a16733d65",
+  "diff_build_files": "combigrid/build/jsgpp/combigrid.i | 58 +++++++++++++++++++--------------------\n 1 file changed, 29 insertions(+), 29 deletions(-)",
+  "python": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/.venv/bin/python3 2.5.4"
+ },
+ "steps": [
+  {
+   "name": "build",
+   "exit": "earlier run",
+   "seconds": null,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/head/build.log"
+  },
+  {
+   "name": "run-cpp",
+   "exit": "interrupted (PC shutdown 2026-10-28 00:32)",
+   "seconds": null,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/head/run-cpp.log"
+  },
+  {
+   "name": "run-cpp-2",
+   "exit": 0,
+   "seconds": 544,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/head/run-cpp-2.log"
+  },
+  {
+   "name": "run-python",
+   "exit": 0,
+   "seconds": 352,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/head/run-python.log"
+  },
+  {
+   "name": "run-pytests",
+   "exit": 0,
+   "seconds": 318,
+   "log": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/logs/wp14/head/run-pytests.log"
+  }
+ ],
+ "boost": {
+  "base": {
+   "exit": 0,
+   "seconds": 7.7,
+   "cases": "190/190",
+   "assertions": "3613802/3613802"
+  },
+  "combigrid": {
+   "exit": 0,
+   "seconds": 31.2,
+   "cases": "390/390",
+   "assertions": "1881199/1881199"
+  },
+  "datadriven": {
+   "exit": 0,
+   "seconds": 81.9,
+   "cases": "135/135",
+   "assertions": "854763/854763"
+  },
+  "misc": {
+   "exit": 0,
+   "seconds": 0.0,
+   "cases": "1/1",
+   "assertions": "1/1"
+  },
+  "optimization": {
+   "exit": 0,
+   "seconds": 1.4,
+   "cases": "45/45",
+   "assertions": "277725/277725"
+  },
+  "pde": {
+   "exit": 0,
+   "seconds": 89.7,
+   "cases": "48/48",
+   "assertions": "58929/58929"
+  },
+  "quadrature": {
+   "exit": 0,
+   "seconds": 0.2,
+   "cases": "2/2",
+   "assertions": "9/9"
+  },
+  "solver": {
+   "exit": 0,
+   "seconds": 21.0,
+   "cases": "5/5",
+   "assertions": "47/47"
+  }
+ },
+ "resumed": [
+  {
+   "repo": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/worktrees/wp14-head",
+   "head": "a16733d65",
+   "diff_build_files": "combigrid/build/jsgpp/combigrid.i | 58 +++++++++++++++++++--------------------\n 1 file changed, 29 insertions(+), 29 deletions(-)",
+   "python": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/.venv/bin/python3 2.5.4"
+  },
+  {
+   "repo": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/worktrees/wp14-head",
+   "head": "a16733d65",
+   "diff_build_files": "combigrid/build/jsgpp/combigrid.i | 58 +++++++++++++++++++--------------------\n 1 file changed, 29 insertions(+), 29 deletions(-)",
+   "python": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/.venv/bin/python3 2.5.4"
+  }
+ ]
+}

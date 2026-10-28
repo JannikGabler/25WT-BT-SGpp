@@ -1,0 +1,35 @@
+{
+ "tag": "after",
+ "git": {
+  "repo": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp",
+  "head": "044d2794d",
+  "diff_build_files": "",
+  "python": "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/.venv/bin/python3 2.5.4"
+ },
+ "steps": [],
+ "java": {
+  "tutorial": {
+   "javac": 0,
+   "exit": 0,
+   "seconds": 0.5
+  },
+  "refinement": {
+   "javac": 0,
+   "exit": 0,
+   "seconds": 0.5
+  },
+  "optimization": {
+   "javac": 0,
+   "exit": 0,
+   "seconds": 0.7
+  },
+  "example_learnerSGDE": {
+   "javac": 1
+  },
+  "JsgppSmoke": {
+   "javac": 0,
+   "exit": 0,
+   "seconds": 0.8
+  }
+ }
+}

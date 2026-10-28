@@ -11,7 +11,11 @@ Re-runs every entry of a compile_commands.json (or the given source files of it)
 -fsyntax-only sees all of them) and lists the unique warnings per area and file.
 `--no-w` removes `-w` (the SWIG wrappers are compiled with it).
 
-  sascan.py COMPILE_DB --level 2 [--level 3] [--match RE] [--no-w] [--save STEM]
+  sascan.py COMPILE_DB|BUILD_LOG --level 2 [--level 3] [--match RE] [--no-w] [--save STEM]
+
+A SCons build log (*.log) is accepted instead of a compile_commands.json (SCons does not write
+one here): its compile lines (`<compiler> -o X.os -c ... file.cpp`) become the entries, run in
+the tree given by --directory.
 """
 
 import argparse
@@ -24,6 +28,18 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 WARN_RX = re.compile(r"^(.*?):(\d+):(\d+): warning: (.*?) \[-Wstrict-aliasing(?:=\d)?\]$")
+
+
+COMPILE_RX = re.compile(r"^(g\+\+|gcc|clang\+\+|clang|\S*g\+\+-sa) -o \S+ -c .*\.(cpp|cc|c)$")
+
+
+def entries_from_log(log, directory):
+    entries = []
+    for line in log.read_text(errors="replace").splitlines():
+        if COMPILE_RX.match(line):
+            args = shlex.split(line)
+            entries.append({"directory": str(directory), "arguments": args, "file": args[-1]})
+    return entries
 
 
 def arguments(entry):
@@ -70,15 +86,22 @@ def area(path, root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("db", type=Path)
+    parser.add_argument("db", type=Path, help="compile_commands.json or SCons build log")
+    parser.add_argument("--directory", type=Path,
+                        help="tree in which the compile lines of a build log are run")
     parser.add_argument("--level", type=int, action="append", required=True)
     parser.add_argument("--match", default=".", help="regex on the source file path")
     parser.add_argument("--no-w", action="store_true", help="drop -w (SWIG wrappers)")
     parser.add_argument("--jobs", type=int, default=16)
     parser.add_argument("--save", help="write STEM-L<level>.json with all warnings")
     args = parser.parse_args()
-    entries = [e for e in json.loads(args.db.read_text()) if re.search(args.match, e["file"])]
-    root = args.db.resolve().parent
+    if args.db.suffix == ".log":
+        root = args.directory.resolve()
+        entries = entries_from_log(args.db, root)
+    else:
+        root = args.db.resolve().parent
+        entries = json.loads(args.db.read_text())
+    entries = [e for e in entries if re.search(args.match, e["file"])]
     for level in args.level:
         with ThreadPoolExecutor(args.jobs) as pool:
             results = list(pool.map(lambda e: scan(e, level, args.no_w), entries))

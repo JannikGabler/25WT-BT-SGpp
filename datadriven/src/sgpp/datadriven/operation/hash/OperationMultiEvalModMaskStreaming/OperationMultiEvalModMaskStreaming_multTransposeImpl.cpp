@@ -18,6 +18,7 @@
 #include <immintrin.h>  // NOLINT(build/include)
 #endif
 
+#include <bit>
 #include <vector>
 #include <algorithm>
 
@@ -505,9 +506,9 @@ void OperationMultiEvalModMaskStreaming::multTransposeImpl(
         for (size_t d = 0; d < dims; d++) {
           double eval = ((ptrLevel[(j * dims) + d]) * (ptrData[(d * sourceSize) + i])) -
                         (ptrIndex[(j * dims) + d]);
-          uint64_t maskresult = *reinterpret_cast<uint64_t*>(&eval) |
-                                *reinterpret_cast<uint64_t*>(&(ptrMask[(j * dims) + d]));
-          double masking = *reinterpret_cast<double*>(&maskresult);
+          uint64_t maskresult = std::bit_cast<uint64_t>(eval) |
+                                std::bit_cast<uint64_t>(ptrMask[(j * dims) + d]);
+          double masking = std::bit_cast<double>(maskresult);
           double last = masking + ptrOffset[(j * dims) + d];
           double localSupport = std::max<double>(last, 0.0);
           curSupport *= localSupport;
