@@ -14,6 +14,9 @@ run longest and the owner prioritizes high dimensions), then all cases; ties bro
 weight quadrature (SG, DSG) > global interpolation > linear interpolation > generation. WPs that
 need a functional/interface/flag change are marked **needs decision** and are not scheduled
 before the owner decided. Re-rank after every re-profiling (rule 7).
+**Memory** (owner 2026-10-28): runtime stays the ranking metric; peak memory (max RSS per e2e
+process, from WP-15 on) is monitored, reported with every runtime change and weighed in
+decisions. Memory reduction is a valid secondary goal where profiles show potential.
 
 Baseline e2e time per operator group (sum of `total` medians, `baseline/e2e_t16.jsonl`;
 generation ≤ 1–2 % except MIVec; boost off, total 70.0 s): quad/sg 22.3 s (18.5 s at d ≥ 7) ·
@@ -22,11 +25,12 @@ generation 5.1 s).
 
 | Rank | ID | Title | Status | Expected saving (e2e) |
 |---|---|---|---|---|
-| – | WP-01 | SG quadrature: per-grid-point work | accepted (2026-10-25) | measured: 15.8 s saved; quad/sg 22.3 → 9.4 s (2.4x), mivec 9.3 → 6.4 s |
+| – | WP-01 | SG quadrature: per-grid-point work | accepted (2026-10-25) | measured: 15.8 s saved; quad/sg 22.3 → 9.4 s (2.4x), mivec 9.3 → 6.4 s; memory (WP-15): `quad/sg/cc-uq/b0/d2/L20` 806 → 1076 MiB (1.335x) |
 | – | WP-11 | Toolchain measurement: GCC flags, Clang ThinLTO, Clang full LTO (measurement only) | accepted (2026-10-25): gcc-nosi → WP-13 | measured: gcc-nosi e2e 54.20 → 52.91 s (1.024x); Clang not adopted |
 | – | WP-13 | `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`, all modules) | accepted (2026-10-26) | measured: e2e 54.03 → 52.79 s (1.023x, 1.24 s) |
 | – | WP-14 | `-fno-strict-aliasing` only for the SWIG Java wrapper; datadriven punning → `std::bit_cast` | accepted (2026-10-28) | measured: e2e 52.77 → 53.42 s (0.988x, −0.65 s); interp/interplin 1.10x, quad/dsg 0.970x, mivec 0.886x |
-| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 | in progress (prompt 2026-10-28) | re-ranks everything below |
+| – | WP-15 | Peak-memory measurement in the benchmark harness (owner's request; protected `perf.py`) | accepted (2026-10-28) | measured: runtime impact nil (full suite 1.0002x, 0 SLOWER); floor 10.2 MiB |
+| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | in progress (prompt 2026-10-28, with memory) | re-ranks everything below |
 | 2 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | 4–6.5 s (b1 d15/d20) |
 | 3 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ~5.4 s (WP-14 made the closure 11–19 % slower), generation ≥ 10x at d ≥ 10 |
 | 4 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only: interp ≥ 2x, interplin unknown; old API must not regress |
@@ -452,6 +456,54 @@ generation 5.1 s).
   the largest b0 dsg cases (`cc-uq`/`equi-exp` d10 L7, WP-04); quad/sg split integrand vs.
   per-tensor-grid costs (WP-05); closure share at d10/d15/d20 (WP-03); `denormalizeDataVector`,
   `getGridPoint`, libgomp spinning in interp (WP-06, WP-07) and interplin (WP-08).
+- **Memory (after WP-15)**: cumulative peak memory baseline → rp-1 per case; cases with the
+  largest peak above the process floor and what dominates them (diagnostic heap profile in
+  separate runs, never during timing); memory-reduction WP proposals only where the potential
+  is material. From WP-15: `quad/sg/cc-uq/b0/d2/L20` 806 → 1076 MiB since WP-01 (snapshots
+  `WP-01-before`/`WP-01-after` exist): find the cause; does `quad/sg/equi-exp/b0/d2/L20`
+  (620 MiB) follow the same pattern.
+
+## WP-15 — Peak-memory measurement in the benchmark harness
+- **Source**: owner 2026-10-28: "The benchmarks are currently only tracking runtime and not
+  memory usage. [...] The most relevant value is the maximum memory usage. The memory
+  measurements should ideally have no or only a very tiny impact on the performance
+  measurements." Runtime stays the plan's metric; memory is monitored, reported with runtime
+  changes and weighed in decisions; memory reduction is a valid secondary goal.
+- **Location**: `combigrid/perf/scripts/perf.py` (**protected**; process launch of `run`/`ab`
+  e2e, report tables, saved JSON, footer); docs: `combigrid/perf/README.md`,
+  `summaries/TEMPLATE.md`, `.claude/skills/perf-work/SKILL.md`, `.claude/skills/perf-master/SKILL.md`.
+- **Approach**: peak RSS of each e2e benchmark process measured by the kernel outside the
+  process: no code in the measured binary, timings (taken inside the binary) unaffected, works
+  for every existing snapshot incl. `baseline` (cumulative memory in RP-1). Per case: median per
+  snapshot, ratio B/A, flag beyond a threshold from an A/A check; footer: geomean ratio, largest
+  increase. Document the process floor (libraries, OpenMP, OpenBLAS) so values read as
+  floor + case memory. e2e only (micro processes are dominated by the harness).
+- **Pitfall (verified by the master 2026-10-28)**: `ru_maxrss` of a child includes the hiwater
+  of its pre-exec image; a child spawned from Python reports **the driver's own peak**
+  (`/bin/true` from a 300 MiB Python process: 319432 KiB via `os.wait4`). GNU time
+  (`/usr/bin/time -f %M`, installed) forks from a small process and reports 1536 KiB. So:
+  launch through such a small launcher (GNU time with `-o FILE`, or equivalent) or another
+  method that measures only the benchmark's own image; never `RUSAGE_CHILDREN` (running
+  maximum over all children).
+- **Not now (proposal only)**: per-phase peaks inside `perf_e2e.cpp` (`VmHWM`, reset via
+  `/proc/self/clear_refs` "5" between phases): changes protected C++ files, and the `baseline`
+  snapshot binary lacks it.
+- **Validation**: values vs. a manual `/usr/bin/time -v` run of one case; A/A
+  `ab e2e WP-14-after WP-14-after` over a selection (≥ 1 case per group, high d): runtime ≈ 1.000
+  within noise (no impact), memory spread → threshold.
+- **Protected files**: only `perf.py` may change (owner's authorization 2026-10-28). The owner
+  disables the hook for this session; afterwards reviews the diff, re-enables the hook, runs
+  `perf.py protect --authorized-by-owner`. No change to `baseline/`, `reference/`, the C++
+  benchmark files, timing, case order, rounds, noise model or verdict logic.
+- **Expected gain**: none (infrastructure). **Risk**: low. **Dependencies**: WP-14 committed.
+- **Result (2026-10-28, accepted)**: GNU time launcher (`-f %M -o .work/peak_rss.txt`) for the
+  e2e processes of `run`/`ab`; `peak_rss_kib` per JSON record, `process_floor_kib` (`perf_e2e
+  --list`, 10.1–10.3 MiB). Runtime impact nil (full suite on/off 1.0002x, 0 SLOWER; ≈ 1.2 ms per
+  process outside the timed region). Flag `MEM±` = |B/A − 1| > 3 % and no overlap of rounds (A/A:
+  ≤ 0.8 % false flags per case). Owner: `run e2e` stays at one process per case (per-case times
+  differ from the one-process `baseline/e2e_t16.jsonl` for a few small cases; compare within one
+  mode). 22/38 cases < 20 MiB (floor-dominated); largest `quad/sg/cc-uq/b0/d2/L20` 1.07 GiB.
+  Per-phase peaks: option for a later memory WP.
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where

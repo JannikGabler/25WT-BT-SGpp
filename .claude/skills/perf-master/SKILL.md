@@ -29,7 +29,8 @@ make finding them part of a work package.
      says "accept WP-NN"; a summary committed without the code changes means rejected). Never
      assume acceptance.
    - Accepted: WP status `accepted`, result column = headline gain (e.g. "quad/sg d10: 2.1x"),
-     add the commit hash to the log.
+     plus the peak-memory change if the summary reports `MEM+`/`MEM-` cases; add the commit hash
+     to the log.
    - Rejected: status `rejected`; add a "Do not retry" line: `WP-NN <idea>: <numbers>, <why>`.
      Make sure the code was reverted (`git status --short` clean except summaries/results; the
      owner uses `perf.py reject --apply`). Remind the owner to commit the summary.
@@ -46,14 +47,16 @@ make finding them part of a work package.
    - the next candidates' expected gains depend on profile shares that are now stale.
    RP-k content: `perf.py calibrate` (machine state vs. baseline), snapshot `baseline` (if missing: `perf.py snapshot baseline --commit <baseline
    commit from STATUS>`) and the current HEAD (`perf.py snapshot rp-k`), `perf.py ab e2e
-   baseline rp-k` (cumulative progress), `perf.py profile` of the top cases (by absolute time,
+   baseline rp-k` (cumulative progress incl. peak memory), `perf.py profile` of the top cases (by absolute time,
    high d first), micro runs of the hot spots, then append a section "Re-profiling RP-k" to
    ANALYSIS.md and propose re-ranked/new WPs in its summary. RP packages change no source code.
 4. **Choose the next WP**: highest expected absolute time saving with priority on high-dimensional
    cases, operator weighting quadrature (SG, DSG) > global interpolation > linear interpolation >
    generation, status `ready`, dependencies accepted. A WP marked "needs decision" is only
    scheduled after the owner decided — present the decision first (2–4 lines, options + expected
-   gain) and wait.
+   gain) and wait. Runtime ranks the plan; peak memory (from `ab e2e` reports) is reported to the
+   owner with every runtime change and weighed in decisions; memory reduction is a valid
+   secondary goal.
 5. **Update the files**: STATUS.md (table, next action, open decisions, do-not-retry, re-profiling
    counter, "Last processed", log line with date) and PLAN.md. Keep STATUS.md ≤ ~120 lines: move
    old log lines to the bottom section "Archive" when it grows. These two files are yours;

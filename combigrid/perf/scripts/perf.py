@@ -103,6 +103,20 @@ NOISE_FILES = {"e2e": PERF / "baseline" / "noise_e2e.json",
 NOISE_FLOOR = 0.003  # minimum std of the per-round log speedup
 T_QUANTILE = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306,
               9: 2.262, 10: 2.228, 12: 2.179, 15: 2.131, 20: 2.086, 30: 2.042}
+# Peak memory (max RSS) of the e2e processes, measured outside the benchmark: GNU time forks it
+# from its own small image, waits for it and writes the child's ru_maxrss (KiB) to a file, so
+# stdout/stderr and the timings taken inside the benchmark stay untouched. Reading ru_maxrss of a
+# child spawned directly from Python (os.wait4) would report this driver's own peak: the kernel
+# counts the high-water mark of the image a process replaced at exec, and subprocess uses vfork.
+# RUSAGE_CHILDREN is no option either (a maximum over all children).
+TIME_EXE = Path("/usr/bin/time")
+PEAK_RSS_FILE = WORK / "peak_rss.txt"
+# `ab` flags a peak-memory change when |median B / median A - 1| exceeds MEM_THRESHOLD and all
+# rounds of B lie above (below) all rounds of A. Peaks vary from process to process (presumably
+# thread-dependent malloc arenas; one case is bimodal, 12 % spread), so in the A/A comparison of
+# WP-15 a ratio threshold alone would flag up to 57 % of the 5/5 splits; with both conditions
+# at most 0.8 % (2/252, the chance that two equal 5-round samples do not overlap)
+MEM_THRESHOLD = 0.03
 
 
 # --------------------------------------------------------------------------------------------
@@ -459,14 +473,44 @@ def cmd_test(args):
 # running benchmarks
 # --------------------------------------------------------------------------------------------
 
-def run_exe(exe, lib, threads, extra, timeout=None):
+def launch(cmd, env, timeout=None, peak_rss=False):
+    """subprocess.run(cmd); with peak_rss through GNU time. Returns (result, peak RSS of the
+    process in KiB, or None if not measured)."""
+    if not peak_rss:
+        return subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=timeout), None
+    if not TIME_EXE.exists():
+        print(f"WARN: {TIME_EXE} (GNU time) not installed: peak memory not measured", flush=True)
+        return launch(cmd, env, timeout), None
+    PEAK_RSS_FILE.unlink(missing_ok=True)
+    result = subprocess.run([str(TIME_EXE), "-f", "%M", "-o", str(PEAK_RSS_FILE), *cmd], env=env,
+                            capture_output=True, text=True, timeout=timeout)
+    # GNU time writes notes such as "Command exited with non-zero status 1" before the value
+    lines = read_file(PEAK_RSS_FILE).splitlines()
+    return result, int(lines[-1]) if lines and lines[-1].isdigit() else None
+
+
+def run_exe(exe, lib, threads, extra, timeout=None, peak_rss=False):
+    """Runs a benchmark binary and returns its JSON records. With peak_rss, every record gets the
+    peak RSS of the process (KiB) as "peak_rss_kib"."""
     env = omp_env(threads)
     env["LD_LIBRARY_PATH"] = str(lib)
-    cmd = [str(exe), "--json", *extra]
-    result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=timeout)
+    result, kib = launch([str(exe), "--json", *extra], env, timeout, peak_rss)
     if result.returncode != 0:
         die(f"{exe.name} {' '.join(extra)} failed (exit {result.returncode}):\n{result.stderr}")
-    return [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
+    records = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
+    if peak_rss:
+        for rec in records:
+            rec["peak_rss_kib"] = kib
+    return records
+
+
+def process_floor(exe, lib, threads):
+    """Peak RSS (KiB) of `exe --list`: libraries loaded, no case run. Peaks of e2e cases read as
+    this floor + the memory of the case (the smallest cases peak ~1.7 MiB higher: OpenMP threads,
+    data)."""
+    env = omp_env(threads)
+    env["LD_LIBRARY_PATH"] = str(lib)
+    return launch([str(exe), "--list"], env, peak_rss=True)[1]
 
 
 def list_cases(exe, lib, pattern):
@@ -502,15 +546,31 @@ def fmt_time(seconds):
     return f"{seconds * 1e9:.1f}ns"
 
 
+def fmt_mem(kib):
+    return "-" if kib is None else f"{kib / 1024:.1f} MiB"
+
+
 def cmd_run(args):
     require_env(args)
     bins, lib = snapshot_paths(args.snapshot)
     threads, extra = suite_args(args.suite, args)
-    if args.filter:
-        extra += ["--filter", args.filter]
+    floor = None
+    if args.suite == "e2e":
+        cases = list_cases(bins["e2e"], lib, args.filter)
+        if not cases:
+            die("no case matches the filter")
     meter = ForeignLoad()
     with BenchLock():
-        records = run_exe(bins[args.suite], lib, threads, extra)
+        if args.suite == "e2e":
+            # One process per case (as in `ab`): the peak RSS of a process is the peak of its case
+            records = [rec for case in cases
+                       for rec in run_exe(bins["e2e"], lib, threads,
+                                          extra + ["--filter", "^" + re.escape(case) + "$"],
+                                          peak_rss=True)]
+            floor = process_floor(bins["e2e"], lib, threads)
+        else:
+            records = run_exe(bins[args.suite], lib, threads,
+                              extra + (["--filter", args.filter] if args.filter else []))
     foreign = meter.fraction()
     rows = []
     for rec in records:
@@ -523,19 +583,24 @@ def cmd_run(args):
             rel = abs(rec["result"] - rec["exact"]) / abs(rec["exact"]) if rec.get("exact") else float("nan")
             rows.append(f"| {rec['case']} | {fmt_time(med['total'])} | "
                         f"{fmt_time(med.get('generation'))} | {fmt_time(med.get('operator'))} | "
-                        f"{rel:.2e} |")
+                        f"{rel:.2e} | {fmt_mem(rec.get('peak_rss_kib'))} |")
     if args.suite == "micro":
         print("| case | time/call | time/item |\n|---|---|---|")
     else:
-        print(f"| case ({threads} threads) | total | generation | operator | rel. error |\n"
-              "|---|---|---|---|---|")
+        print(f"| case ({threads} threads) | total | generation | operator | rel. error | peak RSS |\n"
+              "|---|---|---|---|---|---|")
     print("\n".join(rows))
+    if args.suite == "e2e":
+        print(f"\npeak RSS: max resident set size of the case's process (one process per case, "
+              f"measured outside it by GNU time); process floor (`{EXES['e2e']} --list`, libraries "
+              f"only): {fmt_mem(floor)}")
     print(f"\nforeign CPU load during the run: {foreign:.1%}" +
           (" - WARN: distorted, repeat" if foreign > ForeignLoad.THRESHOLD else ""))
     save = Path(args.save) if args.save else WORK / "runs" / f"{now_tag()}-{args.suite}.json"
     save.parent.mkdir(parents=True, exist_ok=True)
     save.write_text(json.dumps({"suite": args.suite, "snapshot": args.snapshot, "threads": threads,
-                                "environment": environment_info(), "records": records}, indent=1))
+                                "environment": environment_info(), "records": records,
+                                "process_floor_kib": floor}, indent=1))
     print(f"\nraw results: {save}")
 
 
@@ -601,6 +666,52 @@ def verdict(lo, hi):
     return "~ (noise)"
 
 
+def memory_section(common, only_b, data, floors):
+    """Peak-RSS table and footer of an e2e A/B report: per case the medians over the rounds, the
+    ratio B/A (> 1: B needs more memory) and a flag for changes beyond the process noise."""
+    def peaks(side, case):
+        values = [r.get("peak_rss_kib") for r in data[(side, case)]]
+        return None if None in values else values
+
+    def spread(values):
+        return f"{max(values) / min(values) - 1:.1%}"
+
+    lines = [f"Peak memory (max RSS of each benchmark process, measured outside it by GNU time; "
+             f"median over the rounds; B/A > 1: B needs more; spread = max/min - 1 over the "
+             f"rounds; flag MEM+/MEM- if |B/A - 1| > {MEM_THRESHOLD:.0%} and the rounds of A "
+             f"and B do not overlap):", "",
+             "| case | A | B | B/A | spread A / B | flag |", "|---|---|---|---|---|---|"]
+    ratios = []
+    for case in common:
+        a, b = peaks("A", case), peaks("B", case)
+        if a is None or b is None:
+            lines.append(f"| {case} | - | - | - | - | not measured |")
+            continue
+        med_a, med_b = statistics.median(a), statistics.median(b)
+        ratio = med_b / med_a
+        flag = ("MEM+" if ratio > 1 + MEM_THRESHOLD and min(b) > max(a) else
+                "MEM-" if ratio < 1 - MEM_THRESHOLD and max(b) < min(a) else "~")
+        ratios.append((case, med_a, med_b, ratio, flag))
+        lines.append(f"| {case} | {fmt_mem(med_a)} | {fmt_mem(med_b)} | {ratio:.3f} | "
+                     f"{spread(a)} / {spread(b)} | {flag} |")
+    for case in only_b:
+        b = peaks("B", case)
+        lines.append(f"| {case} | (not in A) | {fmt_mem(b and statistics.median(b))} | - | - | "
+                     "new case |")
+    lines.append("")
+    if ratios:
+        geomean = math.exp(statistics.fmean(math.log(r[3]) for r in ratios))
+        worst = max(ratios, key=lambda r: r[3])
+        n_up = sum(1 for r in ratios if r[4] == "MEM+")
+        n_down = sum(1 for r in ratios if r[4] == "MEM-")
+        lines.append(f"Peak memory (common cases): geomean B/A = {geomean:.3f}; largest B/A: "
+                     f"`{worst[0]}` {fmt_mem(worst[1])} -> {fmt_mem(worst[2])} ({worst[3]:.3f}x); "
+                     f"{n_up} MEM+, {n_down} MEM-")
+    lines.append(f"Process floor (`{EXES['e2e']} --list`, libraries only; case peaks read as floor "
+                 f"+ case memory): A {fmt_mem(floors['A'])}, B {fmt_mem(floors['B'])}")
+    return lines
+
+
 def cmd_ab(args):
     require_env(args)
     suite = args.suite
@@ -619,7 +730,10 @@ def cmd_ab(args):
     start = time.time()
     foreign, durations = [], []
     meter = ForeignLoad()
+    peak_rss = suite == "e2e"
     with BenchLock():
+        floors = {"A": process_floor(bins_a[suite], lib_a, threads),
+                  "B": process_floor(bins_b[suite], lib_b, threads)} if peak_rss else {}
         for rnd in range(args.rounds):
             meter.start()
             for i, case in enumerate(common + only_b):
@@ -629,7 +743,8 @@ def cmd_ab(args):
                 for side in sides:
                     bins, lib = (bins_a, lib_a) if side == "A" else (bins_b, lib_b)
                     recs = run_exe(bins[suite], lib, threads,
-                                   extra + ["--filter", "^" + re.escape(case) + "$"])
+                                   extra + ["--filter", "^" + re.escape(case) + "$"],
+                                   peak_rss=peak_rss)
                     data.setdefault((side, case), []).append(recs[0])
             foreign.append(meter.fraction())
             durations.append(time.time() - meter.t0)
@@ -682,6 +797,8 @@ def cmd_ab(args):
         worst = max(result_dev, key=lambda t: t[2] / max(t[1], 1e-300))
         lines.append(f"Result sanity (rel. error vs exact): worst growth in `{worst[0]}`: "
                      f"A {worst[1]:.2e} -> B {worst[2]:.2e} (the binding check is `refcheck`)")
+    if peak_rss:
+        lines += [""] + memory_section(common, only_b, data, floors)
     lines.append("Foreign CPU load per round (other processes, share of all CPUs): " +
                  ", ".join(f"{f:.1%}" for f in foreign))
     lines.append("Round durations (s): " + ", ".join(f"{d:.0f}" for d in durations) +
@@ -707,7 +824,7 @@ def cmd_ab(args):
     raw = {f"{side}|{case}": recs for (side, case), recs in data.items()}
     (save_dir / f"{stem}.json").write_text(json.dumps(
         {"suite": suite, "a": args.a, "b": args.b, "threads": threads, "rounds": args.rounds,
-         "environment": environment_info(), "data": raw}))
+         "environment": environment_info(), "data": raw, "process_floor_kib": floors}))
     print(f"\nsaved: {save_dir / (stem + '.md')} (+ .json)")
 
 

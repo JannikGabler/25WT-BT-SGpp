@@ -67,8 +67,8 @@ contains spaces, always quote it). `-h` shows all options.
 | `test [--repeat N] [--run-test FILTER]` | runs `combigrid/tests/test_combigrid_boost` of the current build (tests are time-seeded: repeat) |
 | `snapshot NAME` | copies the current **normal** build (libs + perf binaries) to `.work/snapshots/NAME` |
 | `snapshot NAME --commit REV` | builds REV in a temporary git worktree and snapshots it (e.g. the baseline commit) |
-| `run e2e\|micro [--snapshot NAME] [--filter RE]` | one run, table + raw JSON in `.work/runs/` |
-| `ab e2e\|micro A B [--filter RE] [--save DIR --name STEM]` | interleaved A/B comparison (below) |
+| `run e2e\|micro [--snapshot NAME] [--filter RE]` | one run, table + raw JSON in `.work/runs/`; e2e: one process per case, with its peak memory (below) |
+| `ab e2e\|micro A B [--filter RE] [--save DIR --name STEM]` | interleaved A/B comparison (below); e2e: plus peak memory per case |
 | `refcheck [--snapshot NAME] [--threads 1,16]` | reference check (below); exit code 1 on FAIL |
 | `profile CASE_REGEX [--suite e2e\|micro] [--threads N] [--children]` | `perf record -g` of one case, prints the top functions; data in `.work/profiles/` |
 | `verify` | checksums of the protected files |
@@ -128,6 +128,37 @@ session: unattended upgrades after a reboot slowed 16-thread runs by 1.6x for 30
 Rules: compare against a **fresh "before" snapshot built in the same session** (never against
 old stored numbers: the laptop drifts). Do not build or run anything else while measuring.
 Results of a work session go to `combigrid/perf/results/WP-NN/` (`--save`).
+
+## Peak memory
+
+Runtime ranks the plan; peak memory is monitored, reported with every runtime change and weighed
+in decisions (owner, 2026-10-28). `run e2e` and `ab e2e` record the **peak resident set size**
+(max RSS) of every benchmark process: GNU time (`/usr/bin/time -f %M -o .work/peak_rss.txt`)
+launches the benchmark, waits for it and writes the kernel's `ru_maxrss` of its child. Nothing
+runs inside the measured process and the timings are taken inside the binary as before, so the
+runtime is unaffected (WP-15, full suite, launcher on vs. off: 0 `SLOWER`, sum of medians
+1.0002x; the launcher adds ≈ 1.2 ms per process outside the timed region); it works for every
+snapshot incl. `baseline`. Every case runs in its own process (since WP-15 also in `run
+e2e`), so a peak is that of one case, warm-ups and samples included. The CPU time of GNU time
+and of the benchmark below it still counts as own, not foreign load (`RUSAGE_CHILDREN` includes
+waited-for grandchildren).
+
+- Peaks read as **process floor + case memory**. Floor: `perf_e2e --list` (libraries loaded, no
+  case run) 10.1–10.3 MiB; the smallest cases peak at 11.5–12.2 MiB (+ OpenMP threads, data);
+  22 of the 38 cases stay below 20 MiB, the largest reaches ~1.07 GiB
+  (`quad/sg/cc-uq/b0/d2/L20`). Reports print the floor of each snapshot.
+- **Noise**: peaks vary from process to process (presumably thread-dependent malloc arenas):
+  spread over 5 rounds mostly 2–6 %, `quad/sg/equi-exp/b1/d20/L5` is bimodal (53.7 vs.
+  57–60 MiB, 12 %).
+- `ab e2e` reports per case the medians over the rounds, B/A (> 1: B needs more), the spread
+  (max/min − 1) and the flag `MEM+`/`MEM-` if **|B/A − 1| > 3 % and the rounds of A and B do not
+  overlap** (`MEM_THRESHOLD` in `perf.py`). In the WP-15 A/A over all 5/5 splits of the rounds, a
+  ratio threshold alone flagged up to 57 % (bimodal case), the combined rule ≤ 0.8 % per case.
+  Changes inside the spread of a case stay unflagged; the table still shows them. Footer:
+  geomean B/A, largest B/A, number of flags, process floors.
+- e2e only: a micro process runs many cases and is dominated by the harness.
+- Saved JSON: every e2e record gains `peak_rss_kib`, the file gains `process_floor_kib`; existing
+  fields are unchanged.
 
 ## Reference check
 
@@ -208,6 +239,15 @@ It must compile against the unoptimized code (it is part of the "before" snapsho
 - Snapshots are copies of `lib/libsgpp{base,combigrid}.so` + perf binaries, run via
   `LD_LIBRARY_PATH`; they stay valid while the working tree changes.
 - The Boost tests seed from the clock; run them several times (`--repeat 3`).
+- **`run e2e` runs one process per case** since WP-15 (like `ab`); before, one process ran all
+  cases, as when `baseline/e2e_t16.jsonl` was recorded. The suite sum is the same (53.4 vs.
+  53.5 s), but a few small cases differ systematically between the two modes:
+  `quad/dsg/equi-exp/b0/d3/L16` 96 vs. 82 ms, `interp/sg/cheb1/b0/d5/L4/p64` 337 vs. 385 ms
+  (`results/WP-15/run-process-structure.md`). Compare per-case numbers only within one mode.
+- **Peak memory of a child**: never read `ru_maxrss` of a process spawned directly from Python
+  (`os.wait4`) or `RUSAGE_CHILDREN`: the kernel includes the high-water mark of the image the
+  child replaced at exec, i.e. the driver (subprocess uses vfork). `/bin/true` from a Python
+  process holding 300 MiB reports 330472 KiB that way, 1536 KiB through GNU time (WP-15).
 - The repository path contains spaces; quote paths in shell commands.
 - **Throttling (why boost is off)**: with boost on, the laptop throttled under sustained full
   load depending on the conditions (setup session: a 26-minute A/B ran 1.6x slower at noon than

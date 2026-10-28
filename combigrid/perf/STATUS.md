@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-14 (2026-10-28) · Next free WP number: 15 · Re-profilings done: 0 (RP-0 = setup; RP-1 in progress)
+Last processed: WP-15 (2026-10-28) · Next free WP number: 16 · Re-profilings done: 0 (RP-0 = setup; RP-1 in progress)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), 16
   threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (all cores at
@@ -12,6 +12,10 @@ Last processed: WP-14 (2026-10-28) · Next free WP number: 15 · Re-profilings d
   `perf.py snapshot baseline --commit fed2cdb4e`). Numbers: `baseline/`, ANALYSIS.md. It keeps its
   own site_scons flags (no nosi, with `-fno-strict-aliasing`); flag changes count towards the
   cumulative progress (WP-13 1.023x, WP-14 0.988x). No re-recording.
+- **Memory** (WP-15): `run e2e`/`ab e2e` report the peak RSS of every e2e process (GNU time
+  launcher, outside the process, runtime impact nil); process floor 10.2 MiB; flag `MEM+`/`MEM-`
+  = |B/A − 1| > 3 % and no overlap of the rounds. `run e2e` runs one process per case (owner
+  2026-10-28); `baseline/e2e_t16.jsonl` was one process → compare per-case times within one mode.
 - **Machine note**: boost off since 2026-10-24 (throttling up to 1.6x with boost on); a reboot
   re-enables it, the owner disables it manually — if `envcheck` fails on boost, ask the owner.
   Full e2e A/B ≈ 18–23 min (sessions filter). `scons -c` is fine (owner 2026-10-25). Sanitizer
@@ -21,7 +25,9 @@ Last processed: WP-14 (2026-10-28) · Next free WP number: 15 · Re-profilings d
 - **Owner's rules**: acceptance by the owner only; minimal gains may be proposed but must be
   labelled and weighed against API/functionality/maintainability/readability; functional/
   interface/flag changes only after consulting the owner; errors stay in the same order of
-  magnitude (refcheck OK/WARN/FAIL); high dimensions first.
+  magnitude (refcheck OK/WARN/FAIL); high dimensions first. **Memory** (2026-10-28): runtime
+  ranks the plan; peak memory is reported to the owner with every runtime change and weighed in
+  decisions; memory reduction is a valid secondary goal where potential exists.
 - **Refcheck WARN case** (owner 2026-10-25: tolerance stays): `interp/sg/equi/b0/d2/L5/cos-shifted`
   (65 equidistant nodes, Lebesgue constant ~1e16) WARNs whenever FMA placement in
   `BarycentricFormula::evaluateFormula` changes; the summary explains it, the owner judges.
@@ -34,11 +40,12 @@ Last processed: WP-14 (2026-10-28) · Next free WP number: 15 · Re-profilings d
 | Rank | ID | Title | Status | Result | Summary |
 |---|---|---|---|---|---|
 | – | WP-00 | Setup: infrastructure, baseline, analysis, plan | done (committed by the setup session) | – | [WP-00](summaries/WP-00-setup.md) |
-| – | WP-01 | SG quadrature: per-grid-point work | accepted | quad/sg 2.4x (22.3 → 9.4 s), mivec 1.45x; 15.8 s saved; b1 d20 4.7x | [WP-01](summaries/WP-01-sg-quad-per-point.md) |
+| – | WP-01 | SG quadrature: per-grid-point work | accepted | quad/sg 2.4x (22.3 → 9.4 s), mivec 1.45x; 15.8 s saved; b1 d20 4.7x. Memory (found by WP-15): `quad/sg/cc-uq/b0/d2/L20` 806 → 1076 MiB (1.335x) | [WP-01](summaries/WP-01-sg-quad-per-point.md) |
 | – | WP-11 | Toolchain measurement: GCC flags, Clang ThinLTO, Clang full LTO | accepted (gcc-nosi → WP-13) | gcc-nosi e2e 1.024x (interp 1.065x, mivec 1.043x, quad 1.02x); Clang not adopted | [WP-11](summaries/WP-11-toolchain.md) |
 | – | WP-13 | `-fno-semantic-interposition` in site_scons (GCC, `OPT=1`) | accepted | e2e 1.023x (54.03 → 52.79 s), interp 1.062x, 0 SLOWER; all 8 modules' tests pass | [WP-13](summaries/WP-13-nosi-scons.md) |
-| – | WP-14 | `-fno-strict-aliasing` only for the SWIG Java wrapper; datadriven punning → `std::bit_cast` | accepted (owner 2026-10-28) | e2e 0.988x (52.77 → 53.42 s): interp 1.10x, interplin 1.10x, quad/sg 0.995x, quad/dsg 0.970x, mivec 0.886x; refcheck OK; complete project identical | [WP-14](summaries/WP-14-strict-aliasing.md) |
-| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 | in progress (prompt 2026-10-28) | | |
+| – | WP-14 | `-fno-strict-aliasing` only for the SWIG Java wrapper; datadriven punning → `std::bit_cast` | accepted | e2e 0.988x (52.77 → 53.42 s): interp 1.10x, interplin 1.10x, quad/sg 0.995x, quad/dsg 0.970x, mivec 0.886x; refcheck OK; complete project identical | [WP-14](summaries/WP-14-strict-aliasing.md) |
+| – | WP-15 | Peak-memory measurement in the benchmark harness (owner's request) | accepted | infrastructure: runtime impact nil (full suite 1.0002x, 0 SLOWER); floor 10.2 MiB; MEM± rule 3 % + no overlap | [WP-15](summaries/WP-15-memory-measurement.md) |
+| 1 | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | in progress (prompt 2026-10-28) | | |
 | 2 | WP-02 | DSG quadrature: per-delta-tensor-grid overhead at high d | ready | | |
 | 3 | WP-03 | Downwards closure of MI sets | ready | | |
 | 4 | WP-09 | Multi-point interpolation API (proposal; from D-1) | ready | | |
@@ -57,11 +64,10 @@ Ranks 2–11 are re-ranked by RP-1.
 
 ## Next action
 
-Owner: commit WP-14 ("Accept WP-14: …": `site_scons`/`jsgpp` part is already in 50d552f00; add
-the datadriven fix, `results/WP-14/`, the summary, STATUS/PLAN), so the tree is clean. Then start
-RP-1 (prompt 2026-10-28; `baseline` snapshot exists). Next master start: process the RP-1
-summary, re-rank PLAN.md, issue the top optimization WP (currently WP-02). WP-06/WP-08 only after
-the owner decided on adopting WP-09's API.
+Owner: commit WP-15 ("Accept WP-15: …": `perf.py` + rehashed `protected.sha256`, README,
+TEMPLATE, both skills, `results/WP-15/`, the summary, STATUS/PLAN). Then start RP-1 (prompt
+2026-10-28, with memory). Next master start: process the RP-1 summary, re-rank PLAN.md, issue the
+top optimization WP (currently WP-02). WP-06/WP-08 only after the owner decided on WP-09's API.
 
 ## Open decisions for the owner
 
@@ -72,52 +78,46 @@ the owner decided on adopting WP-09's API.
 ## Do not retry
 
 (one line per rejected attempt or dropped variant: `WP-NN <idea>: <numbers>, <why>`)
-- WP-00 noise: bootstrap over samples within rounds (3×2): 18/114 false positives, noise is
-  between processes → paired per-round t-interval over many short processes.
-- WP-00 refcheck: error-ratio tolerance above a 16-unit round-off floor missed 5x error growth near
-  round-off → explicit `e_new ≤ ratio·e_ref + 4 units`.
-- WP-00 noise model from plain std: throttling-onset rounds inflated it (up to 20 %) → MAD.
-- WP-00 recording order: micro right after the 16-thread e2e run was 10–25 % slow (throttled) →
-  idle settle, calibrate, micro, e2e.
-- WP-01 rows always along dimension 0: b1 much slower (process_all_tgs/equi/b1/d20/L4 47.2 vs.
-  27.9 ns/point, cc/b1/d10/L5 30.7 vs. 23.9), every row walks the leading 1-node dimensions →
-  iterate only the multi-node dimensions.
-- WP-01 row helpers reading scratch data per row (`QuadratureScratch&` parameters 2–7 % slower,
-  local class with pointer members 4–9 % slower): the opaque `SourceFunc::evaluate` call forces
-  reloads after every call → copy scratch data into locals before the hot loop.
-- WP-11 `-fno-plt -Wl,-Bsymbolic-functions` on top of nosi: e2e 1.015x vs. 1.024x for nosi
-  alone; GOT-indirect calls into libm/base/libgomp do not pay.
+- WP-00 noise: bootstrap within rounds (18/114 false positives; noise is between processes) →
+  paired per-round t-interval; plain std inflated by throttling onsets (20 %) → MAD; micro right
+  after 16-thread e2e 10–25 % slow → idle settle, calibrate, micro, e2e.
+- WP-00 refcheck: ratio tolerance above a 16-unit round-off floor missed 5x error growth →
+  explicit `e_new ≤ ratio·e_ref + 4 units`.
+- WP-01 rows always along dimension 0: b1 slower (equi/b1/d20/L4 47.2 vs. 27.9 ns/point), rows
+  walk the leading 1-node dimensions → iterate only the multi-node dimensions.
+- WP-01 row helpers reading scratch data per row (2–9 % slower): the opaque `SourceFunc::evaluate`
+  forces reloads → copy scratch data into locals before the hot loop.
+- WP-11 `-fno-plt -Wl,-Bsymbolic-functions` on top of nosi: e2e 1.015x vs. 1.024x (nosi alone).
 - WP-11 Clang ThinLTO: e2e 1.034x but quad/sg 0.964x, quad/dsg 0.980x, 14/38 SLOWER, refcheck
-  WARN, 612 warnings → GCC kept (owner 2026-10-25); full LTO 1.018x (quadrature 0.94–0.95x);
-  + nosi 1.033x (no effect).
-- WP-11 Clang without explicit `CC/CXX/LINK`: SConstruct's configure checks run with g++, which
-  rejects `-flto=thin` → pass `CC=clang CXX=clang++ LINK=clang++` (and `-O3` at link for lld).
+  WARN, 612 warnings → GCC kept (owner 2026-10-25); full LTO 1.018x; + nosi 1.033x. Clang builds
+  need explicit `CC=clang CXX=clang++ LINK=clang++` (configure checks otherwise run g++).
 - WP-14 TySan (Clang 21 `-fsanitize=type`) over SG++: OpenBLAS × shadow memory > 12 GB per binary
   (crashed the PC uncapped), runtime crash in `isAliasingLegal` aborted 21/74 combigrid suites,
   all report classes false positives (vptr, OpenMP bounds, mt19937, layout), ~3 h → use the
   `-Wstrict-aliasing=3/2` scan instead; if ever rerun: `OPENBLAS_NUM_THREADS=1` + cgroup cap.
+- WP-15 memory flag by ratio only (±2 %, ±3 %): false flags in 5 of 9 A/A cases, up to 57 % of
+  the 5/5 round splits (bimodal `quad/sg/equi-exp/b1/d20/L5` 53.7 vs. 57–60 MiB) → 3 % + no
+  overlap of rounds (≤ 0.8 %). `os.wait4`/`RUSAGE_CHILDREN` from Python: reports the driver's peak.
 
 ## Re-profiling
 
-Accepted changes since the last profile: 3 (WP-01, WP-13, WP-14). Trigger met: WP-01 changed
-quad/sg by 2.4x (≥ 1.3x) and shifted its hot spots (integrand now ≈ 60 %); WP-14 shifted mivec
-generation (0.864x) and the dsg trie (~0.95x). RP-1 in progress (prompt 2026-10-28). Last
-profile: setup (ANALYSIS.md).
+Accepted since the last profile (setup): WP-01, WP-13, WP-14 (+ WP-15, measurement). Trigger
+met (WP-01 quad/sg 2.4x; WP-14 mivec 0.886x, dsg trie ~0.95x). RP-1 in progress, incl. memory.
 
 ## Log
 
-- 2026-10-28 WP-14 accepted by the owner (recorded in the summary; commit pending): flag only on
-  `javaEnv`; datadriven's 8 punning sites → `std::bit_cast` (owner's choice; bitwise identical);
-  complete project identical to HEAD. e2e 0.988x: operators gain, closure and dsg trie lose →
-  notes in WP-03/WP-02. Pre-existing outside combigrid: `example_learnerSGDE.java`, thesis
-  comparison templates (2 args), numpy only in `.venv`. RP-1 prompt issued.
+- 2026-10-28 WP-14 committed (3dc286c3d). WP-15 accepted by the owner (asked; `perf.py` rehashed,
+  only its hash changed, `verify` OK; commit pending). Memory first look (baseline vs. WP-14,
+  9 cases): geomean 1.034, one `MEM+`: `quad/sg/cc-uq/b0/d2/L20` +240 MiB since WP-01 → RP-1
+  finds the cause (memory-reduction candidate). 22/38 cases are floor-dominated (< 20 MiB);
+  per-phase peaks (`VmHWM` in `perf_e2e.cpp`, protected) stay an option for a later memory WP.
+  RP-1 prompt issued (with memory).
 
 ## Archive
 
-- 2026-10-24 setup (WP-00, fed2cdb4e); baseline re-recorded boost off (931158248); D-1 → WP-09,
-  D-3 → WP-10, D-2 answered. 2026-10-25 WP-01 accepted (5281e0b7d); WP-11 processed (gcc-nosi →
-  WP-13, Clang not adopted; strict aliasing researched → WP-14). 2026-10-26 WP-11 committed
-  (9ab8f642d); WP-13 accepted (a16733d65); WP-14 issued (TySan step after the owner's nosi ×
-  strict-aliasing question), checkpoint 50d552f00. Progress report for the owner's supervisor
-  (`results/progress-2026-10-26/`, 044d2794d): 28 cases 51.1 s (master) → 41.9 s → 25.3 s (WP-13);
-  mivec generation d15/d20 faster on master (1.56/1.66 s) than at baseline (1.79/1.90 s) → RP-1.
+- 2026-10-24 setup (fed2cdb4e), baseline re-recorded boost off (931158248). 2026-10-25 WP-01
+  (5281e0b7d); WP-11 → WP-13, strict aliasing → WP-14. 2026-10-26 WP-11 (9ab8f642d), WP-13
+  (a16733d65), WP-14 issued (checkpoint 50d552f00); supervisor progress report 044d2794d (28
+  cases: 51.1 s master → 41.9 s baseline → 25.3 s WP-13; mivec generation d15/d20 faster on
+  master → RP-1). 2026-10-28 WP-14 accepted (datadriven → `std::bit_cast`); owner requested
+  peak-memory monitoring before RP-1 → WP-15 (first RP-1 prompt superseded).

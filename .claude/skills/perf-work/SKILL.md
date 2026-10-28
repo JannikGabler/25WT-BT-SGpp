@@ -29,7 +29,8 @@ reference and methodology: `combigrid/perf/README.md` (read it first). `perf.py`
    identified) and **pass on the unchanged code** before you change it. New code gets new tests.
 6. **Evidence at every level**: L1 micro-benchmark at the optimized spot, L2 phase (`operator`
    or `generation` metric) and L3 end-to-end (`total`, 16 threads) for all e2e cases that
-   exercise the changed code. Acceptance is decided by the owner, never by you.
+   exercise the changed code. Acceptance is decided by the owner, never by you. `ab e2e` also
+   reports the peak memory (max RSS) per case: report it alongside the runtime.
 7. **Honest reporting**: speedups inside the CI noise band are "within noise". Even minimal gains
    may be proposed, but say that they are minimal and weigh them against the costs (API,
    functionality, maintainability, readability).
@@ -98,6 +99,8 @@ reference and methodology: `combigrid/perf/README.md` (read it first). `perf.py`
 **7. Assess**
 - Gain vs. cost: absolute time saved (sum line), high-d cases first; API/functionality impact;
   maintainability/readability.
+- Memory: peak-RSS change from the `ab e2e` report (geomean B/A, `MEM+`/`MEM-` cases) is weighed
+  in the decision; runtime stays the ranking metric, a memory reduction is a valid secondary gain.
 - If no variant gains beyond noise on any relevant case: status `NO-GAIN`, recommend reject, but
   leave the final variant in the tree for the owner's review (the owner runs `perf.py reject`).
 

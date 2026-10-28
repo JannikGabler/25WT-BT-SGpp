@@ -11,6 +11,8 @@ Machine: `perf.py calibrate` ratios <e2e x.xxx, micro x.xxx> (1.000 = as at base
 ## Gain vs. cost
 - Gain: <headline: e2e speedups of the main cases at 16 threads, absolute time saved; say
   explicitly if the gain is minimal or within noise>
+- Memory: <peak RSS from the `ab e2e` report: geomean B/A, `MEM+`/`MEM-` cases with values, or
+  "unchanged (no flag)">
 - API / functionality: none | <description — must have been agreed with the owner>
 - Maintainability / readability: <added complexity, code size, clarity>
 
@@ -35,6 +37,13 @@ L2/L3 e2e (16 threads; `total` and the changed phase):
 |---|---|---|---|---|---|
 
 Sum of medians (compared cases): A = …, B = …, saved = … · Full reports: `combigrid/perf/results/WP-NN/`
+
+Peak memory (max RSS per process, same report; flagged cases and the largest ones):
+
+| case | A | B | B/A | flag |
+|---|---|---|---|---|
+
+Geomean B/A = … · process floor A = …, B = …
 
 ## Attempts not kept
 - <variant: numbers: why dropped> | none
