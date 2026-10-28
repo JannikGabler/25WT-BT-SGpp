@@ -40,15 +40,25 @@ namespace misc {
  *
  * <b>Purpose.</b> The tensor grids @f$\vec{\ell} \geq \vec{m}@f$ (component-wise) are found by a
  * depth-first search that only descends into children with @f$\ell_k \geq m_k@f$, i.e. into
- * suffixes of the sorted child ranges. Sums over them of products
- * @f$c_{\vec{\ell}} \prod_k g_k(\ell_k)@f$ can be factorized along the trie (one factor per
- * depth), which the delta quadrature uses to compute the global quadrature weights.
+ * suffixes of the sorted child ranges, and with
+ * @f$\mathrm{maxSuffixLvlSum} \geq m_{k+1} + \ldots + m_{d-1}@f$. The latter is necessary for a
+ * tensor grid @f$\vec{\ell} \geq \vec{m}@f$ below the node and sufficient for complete sparse
+ * grids (below a prefix @f$\vec{p}@f$, they contain a multi-index @f$\geq (\vec{p}, \vec{s})@f$
+ * for every @f$\vec{s}@f$ with @f$|\vec{p}|_1 + |\vec{s}|_1 \leq L@f$); without it, the search
+ * visits every prefix @f$\geq@f$ the prefix of @f$\vec{m}@f$, most of which have no tensor grid
+ * @f$\geq \vec{m}@f$ below them if the levels of @f$\vec{m}@f$ lie in the last dimensions. Sums
+ * over the tensor grids found of products @f$c_{\vec{\ell}} \prod_k g_k(\ell_k)@f$ can be
+ * factorized along the trie (one factor per depth), which the delta quadrature uses to compute the
+ * global quadrature weights.
  */
 class CTCoeffTrie {
  public:
   /// @brief Node of the trie (see the class description).
   struct Node {
-    LvlType lvl;           ///< Last component @f$\ell_k@f$ of the prefix of the node.
+    LvlType lvl;  ///< Last component @f$\ell_k@f$ of the prefix of the node.
+    /// Maximum of @f$\ell_{k+1} + \ldots + \ell_{d-1}@f$ over the multi-indices below the node
+    /// (@c 0 for leaves). Fills the padding before @c childEnd.
+    LvlType maxSuffixLvlSum;
     std::size_t childEnd;  ///< End of the children in the next depth (@c 0 for leaves).
 
     bool operator==(const Node& other) const = default;

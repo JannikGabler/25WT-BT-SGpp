@@ -18,6 +18,7 @@
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/projected_sub_trie_builder.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -68,62 +69,6 @@ Internal operations
 ******************/
 
 namespace delta_quadrature_operator {
-
-namespace {
-
-/**
- * Appends the children of a node of depth dim - 1 (the nodes [childBegin, childEnd) of depth dim
- * of the coefficient trie) with a level >= deltaTGMI[dim] to scratch.trieNodes[dim], each followed
- * by its own sub-trie (recursively). Children without a leaf below them are removed again.
- * Returns whether a child was appended.
- */
-bool appendSubTrieChildren(const DeltaQuadratureContext& context, const LvlMI& deltaTGMI,
-                           DeltaQuadratureScratch& scratch, const size_t dim,
-                           const size_t childBegin, const size_t childEnd) {
-  const CTCoeffTrie& coeffTrie = context.coeffTrie;
-  const std::span<const CTCoeffTrie::Node> nodesOfDim = coeffTrie.nodesOfDepth(dim);
-  const std::span<const CTCoeffTrie::Node> children =
-      nodesOfDim.subspan(childBegin, childEnd - childBegin);
-  const bool isLeafDepth = (dim + 1 == coeffTrie.nDim());
-  const double* const leafCoeffs = coeffTrie.leafCoeffs().data();
-
-  // The children are sorted by level, so the ones with a level >= deltaTGMI[dim] are a suffix
-  const LvlType deltaLvl = deltaTGMI[dim];
-  const auto firstChild = std::ranges::lower_bound(children, deltaLvl, {}, &CTCoeffTrie::Node::lvl);
-
-  const auto weights1DOfDim = context.weights1D[dim];
-  // The delta nodes of level deltaLvl follow the ones of the levels 0, ..., deltaLvl - 1
-  const size_t deltaNodesStart = (deltaLvl == 0) ? 0 : weights1DOfDim[deltaLvl - 1].size();
-
-  std::vector<DeltaQuadratureScratch::TrieNode>& subTrieNodes = scratch.trieNodes[dim];
-  bool appended = false;
-
-  for (auto child = firstChild; child != children.end(); ++child) {
-    const size_t childIdx = childBegin + static_cast<size_t>(child - children.begin());
-    const double* const weights = weights1DOfDim[child->lvl].data() + deltaNodesStart;
-
-    if (isLeafDepth) {
-      subTrieNodes.push_back({weights, 0, leafCoeffs[childIdx]});
-      appended = true;
-    } else {
-      subTrieNodes.push_back({weights, 0, 0.0});
-      // = coeffTrie.childBegin(dim, childIdx), from the local span
-      const size_t grandChildBegin = (childIdx == 0) ? 0 : nodesOfDim[childIdx - 1].childEnd;
-
-      if (appendSubTrieChildren(context, deltaTGMI, scratch, dim + 1, grandChildBegin,
-                                child->childEnd)) {
-        subTrieNodes.back().childEnd = scratch.trieNodes[dim + 1].size();
-        appended = true;
-      } else {  // No tensor grid >= deltaTGMI below the child
-        subTrieNodes.pop_back();
-      }
-    }
-  }
-
-  return appended;
-}
-
-}  // namespace
 
 std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const DeltasSparseGrid& deltasSparseGrid) {
   const size_t nDim = deltasSparseGrid.nDim();
@@ -237,14 +182,7 @@ void compSubTrie(const DeltaQuadratureContext& context, const LvlMI& deltaTGMI,
                  DeltaQuadratureScratch& scratch) {
   assert(deltaTGMI.size() == context.coeffTrie.nDim());
 
-  for (std::vector<DeltaQuadratureScratch::TrieNode>& nodes : scratch.trieNodes) {
-    nodes.clear();
-  }
-
-  if (context.coeffTrie.nDim() > 0) {
-    appendSubTrieChildren(context, deltaTGMI, scratch, 0, 0,
-                          context.coeffTrie.nodesOfDepth(0).size());
-  }
+  tools::ProjectedSubTrieBuilder(context, deltaTGMI, scratch).build();
 }
 
 void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
@@ -262,6 +200,7 @@ void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
   // Maps the nodes onto the domain once, instead of every grid point (same arithmetic as
   // tools::denormalizeDataVector)
   size_t offset = 0;
+  size_t projDepth = 0;
 
   for (size_t dim = 0; dim < nDim; dim++) {
     const double lower = context.domain[dim].first;
@@ -272,10 +211,15 @@ void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
       nodes[nodeIdx] = nodesPerDim[offset + nodeIdx] * width + lower;
     }
 
-    scratch.nodesOfDim[dim] = nodes;
-    scratch.gpMI[dim] = 0;
     scratch.gp[dim] = nodes[0];
     offset += nGPPerDim[dim];
+
+    if (projDepth < scratch.projDims.size() && scratch.projDims[projDepth] == dim) {
+      scratch.nodesOfProjDepth[projDepth] = nodes;
+      scratch.gpCntOfProjDepth[projDepth] = nGPPerDim[dim];
+      scratch.gpMI[projDepth] = 0;
+      projDepth++;
+    }
   }
 }
 

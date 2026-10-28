@@ -49,6 +49,17 @@ Internal operations
  * Iterating over the grid points of @f$\Delta_{\vec{m}}@f$ with dimension 0 fastest, the partial
  * sums of depth @f$k@f$ only change with @f$i_{k+1}@f$, so they are updated only then.
  *
+ * <b>Projection.</b> In a dimension @f$k@f$ in which @f$\Delta_{\vec{m}}@f$ has a single node
+ * (e.g. level 0 for a boundary level offset @f$\geq 1@f$, i.e. most dimensions of most delta
+ * tensor grids at high @f$d@f$), the factor @f$w_{k,\ell_k}(0)@f$ does not change from grid point
+ * to grid point. These factors are multiplied into the coefficients, and the tensor grids are
+ * merged by their levels in the other dimensions @f$P@f$ (the projected dimensions; dimension 0
+ * if there are none): @f$W = \sum_{\vec{\ell}_P} C(\vec{\ell}_P) \prod_{k \in P}
+ * w_{k,\ell_k}(i_k)@f$ with the projected coefficients
+ * @f$C(\vec{\ell}_P) = \sum c_{\vec{\ell}} \prod_{k \notin P} w_{k,\ell_k}(0)@f$. The trie
+ * over @f$\vec{\ell}_P@f$ (the projected sub-trie) has only @f$|P|@f$ depths and far fewer nodes,
+ * and the grid points are iterated over the dimensions in @f$P@f$ only (rows along the first one).
+ *
  * <b>1D weights in delta order.</b> For nested nodes, the regular nodes of level @f$\ell@f$ are the
  * delta nodes of the levels @f$0, \ldots, \ell@f$. Listing the 1D weights of level @f$\ell@f$ in
  * this order (delta level by delta level, see @ref comp1DWeights) makes @f$w_{k,\ell}(\cdot)@f$ a
@@ -101,9 +112,17 @@ double processDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
                               misc::DeltaQuadratureScratch& scratch);
 
 /**
- * @brief Fills @c scratch.trieNodes with the sub-trie of @c context.coeffTrie that contains the
- * tensor grids @f$\vec{\ell} \geq@f$ @p deltaTGMI, pruned to the nodes with a leaf below them,
- * and sets the weight pointers and the coefficients of the leaves.
+ * @brief Fills @c scratch.trieNodes with the projected sub-trie of the tensor grids
+ * @f$\vec{\ell} \geq@f$ @p deltaTGMI of @c context.coeffTrie (see the namespace description):
+ * sets @c scratch.projDims to the dimensions in which the delta tensor grid of level @p deltaTGMI
+ * has more than one node (dimension 0 if there are none); the nodes of projected depth @c t are
+ * the distinct prefixes of the levels of these tensor grids in @c projDims[0], ..., projDims[t],
+ * pruned to the nodes with a leaf below them; sets the weight pointers and, for the leaves, the
+ * projected coefficients (leaves whose projected coefficient is 0 are left out). Leaves
+ * @c scratch.trieNodes empty if there is no tensor grid @f$\vec{\ell} \geq@f$ @p deltaTGMI.
+ *
+ * The projected coefficients are sums of many products that cancel; they are accumulated in
+ * double-double arithmetic, so that they are correct to about one rounding.
  */
 void compSubTrie(const misc::DeltaQuadratureContext& context, const LvlMI& deltaTGMI,
                  misc::DeltaQuadratureScratch& scratch);
@@ -118,8 +137,8 @@ void prepareDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
                             misc::DeltaQuadratureScratch& scratch);
 
 /**
- * @brief Recomputes the partial sums @c coeffSum of the sub-trie nodes of the depths
- * @c 0, ..., maxDepth-1, i.e. the ones that depend on the node indices of the dimensions
+ * @brief Recomputes the partial sums @c coeffSum of the sub-trie nodes of the (projected) depths
+ * @c 0, ..., maxDepth-1, i.e. the ones that depend on the node indices of the projected depths
  * @c 1, ..., maxDepth.
  */
 inline void updateCoeffSums(misc::DeltaQuadratureScratch& scratch, const size_t maxDepth) {
@@ -142,7 +161,7 @@ inline void updateCoeffSums(misc::DeltaQuadratureScratch& scratch, const size_t 
 
 /**
  * @brief Computes the global weights of the current row of grid points (all @p nGP0 node indices
- * of dimension 0) into @c scratch.rowWeights.
+ * of dimension @c scratch.projDims[0]) into @c scratch.rowWeights.
  */
 inline void compRowWeights(misc::DeltaQuadratureScratch& scratch, const GPCntType nGP0) {
   double* const rowWeights = scratch.rowWeights.data();
@@ -165,56 +184,67 @@ inline void compRowWeights(misc::DeltaQuadratureScratch& scratch, const GPCntTyp
  * domain).
  *
  * The grid points are visited in the order of the tensor grid (dimension 0 fastest).
+ *
+ * @note Aligned to 64 bytes, the fetch window of the op cache, in order to reduce op-cache misses
+ * Unaligned, moving unrelated code within the module changed the deltas sparse grid quadrature by
+ * up to 4 % at identical instructions (+18 % op-cache misses).
  */
 template <typename Func>
-void forEachGPWithGlobalWeight(const misc::DeltaQuadratureContext& context,
-                               const TensorGridCTData& deltaTGData,
-                               misc::DeltaQuadratureScratch& scratch, Func&& func) {
-  const TensorGrid& deltaTG = deltaTGData.tensorGrid;
-  const size_t nDim = deltaTG.nDim();
-
-  if (deltaTG.nGP() == 0) {
+[[gnu::aligned(64)]] void forEachGPWithGlobalWeight(const misc::DeltaQuadratureContext& context,
+                                                    const TensorGridCTData& deltaTGData,
+                                                    misc::DeltaQuadratureScratch& scratch,
+                                                    Func&& func) {
+  if (deltaTGData.tensorGrid.nGP() == 0) {
     return;
   }
 
   prepareDeltaTensorGrid(context, deltaTGData, scratch);
 
-  const GPCntType* const nGPPerDim = deltaTG.getGPCntPerDim().data();
-  const double* const* const nodesOfDim = scratch.nodesOfDim.data();
+  // Only the projected dimensions are iterated over: the other ones have a single node, whose
+  // coordinate prepareDeltaTensorGrid sets
+  const size_t nProjDepths = scratch.projDims.size();
+  const size_t* const projDims = scratch.projDims.data();
+  const GPCntType* const gpCntOfProjDepth = scratch.gpCntOfProjDepth.data();
+  const double* const* const nodesOfProjDepth = scratch.nodesOfProjDepth.data();
   const double* const rowWeights = scratch.rowWeights.data();
   GPCntType* const gpMI = scratch.gpMI.data();
   double* const gp = scratch.gp.data();
   const base::DataVector& gpVec = scratch.gp;
+  const size_t rowDim = projDims[0];
+  const GPCntType nGPPerRow = gpCntOfProjDepth[0];
+  const double* const rowNodes = nodesOfProjDepth[0];
 
-  updateCoeffSums(scratch, nDim - 1);
+  updateCoeffSums(scratch, nProjDepths - 1);
 
   while (true) {
-    compRowWeights(scratch, nGPPerDim[0]);
+    compRowWeights(scratch, nGPPerRow);
 
-    for (GPCntType idx0 = 0; idx0 < nGPPerDim[0]; idx0++) {
-      gp[0] = nodesOfDim[0][idx0];
-      func(gpVec, rowWeights[idx0]);
+    for (GPCntType idx = 0; idx < nGPPerRow; idx++) {
+      gp[rowDim] = rowNodes[idx];
+      func(gpVec, rowWeights[idx]);
     }
 
-    // Advances to the next row: increments the node index of the first dimension >= 1 that does
-    // not wrap around
-    size_t dim = 1;
+    // Advances to the next row: increments the node index of the first projected depth >= 1 that
+    // does not wrap around
+    size_t depth = 1;
 
-    for (; dim < nDim; dim++) {
-      if (++gpMI[dim] < nGPPerDim[dim]) {
-        gp[dim] = nodesOfDim[dim][gpMI[dim]];
+    for (; depth < nProjDepths; depth++) {
+      double& coord = gp[projDims[depth]];
+
+      if (++gpMI[depth] < gpCntOfProjDepth[depth]) {
+        coord = nodesOfProjDepth[depth][gpMI[depth]];
         break;
       }
 
-      gpMI[dim] = 0;
-      gp[dim] = nodesOfDim[dim][0];
+      gpMI[depth] = 0;
+      coord = nodesOfProjDepth[depth][0];
     }
 
-    if (dim == nDim) {  // Wrapped around in every dimension: all rows are done
+    if (depth == nProjDepths) {  // Wrapped around in every projected depth: all rows are done
       return;
     }
 
-    updateCoeffSums(scratch, dim);
+    updateCoeffSums(scratch, depth);
   }
 }
 

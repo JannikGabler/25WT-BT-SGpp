@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstddef>
+#include <limits>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -24,30 +25,44 @@ namespace misc {
  * processed by a thread (see @c delta_quadrature_operator::forEachGPWithGlobalWeight).
  *
  * Holds the sub-trie of the @c CTCoeffTrie that contains the tensor grids
- * @f$\vec{\ell} \geq \vec{m}@f$ (where @f$\vec{m}@f$ is the level of the delta tensor grid) with
- * the partial sums of the global weights, the grid-point coordinates and the global weights of
- * the current row of grid points. Its size does not depend on the number of grid points of the
- * sparse grid.
+ * @f$\vec{\ell} \geq \vec{m}@f$ (where @f$\vec{m}@f$ is the level of the delta tensor grid),
+ * projected onto the dimensions in which the delta tensor grid has more than one node (see
+ * @c delta_quadrature_operator::compSubTrie), with the partial sums of the global weights, the
+ * grid-point coordinates and the global weights of the current row of grid points. Its size does
+ * not depend on the number of grid points of the sparse grid.
  */
 struct DeltaQuadratureScratch {
   /**
-   * @brief Node of the sub-trie of the tensor grids @f$\vec{\ell} \geq \vec{m}@f$.
+   * @brief Node of the projected sub-trie.
    *
-   * For a node of depth @c k with level @f$\ell_k@f$, @c weights[i] is the weight of the
-   * @c i-th delta node of level @f$m_k@f$ in the 1D quadrature rule of level @f$\ell_k@f$ (in
-   * dimension @c k). The children of a node are a contiguous range of the next depth, like in the
-   * @c CTCoeffTrie.
+   * For a node of projected depth @c t with level @f$\ell_k@f$, where @f$k@f$ =
+   * @c projDims[t], @c weights[i] is the weight of the @c i-th delta node of level @f$m_k@f$ in
+   * the 1D quadrature rule of level @f$\ell_k@f$ (in dimension @f$k@f$). The children of a node
+   * are a contiguous range of the next projected depth, like in the @c CTCoeffTrie.
    */
   struct TrieNode {
     const double* weights;  ///< 1D weights of the delta nodes of the node's dimension.
-    std::size_t childEnd;   ///< End of the children in the next depth (@c 0 for leaves).
+    std::size_t childEnd;   ///< End of the children in the next projected depth (@c 0 for leaves).
     /**
-     * @brief Leaves: the CT coefficient. Inner nodes of depth @c k: the sum of
-     * @c weights[gpMI[k+1]] * @c coeffSum over the children, i.e. the global weight with the
-     * dimensions @c 0, ..., k factored out.
+     * @brief Leaves: the projected coefficient (see @c delta_quadrature_operator::compSubTrie).
+     * Inner nodes of projected depth @c t: the sum of @c weights[gpMI[t+1]] * @c coeffSum over the
+     * children, i.e. the global weight with the projected depths @c 0, ..., t factored out.
      */
     double coeffSum;
   };
+
+  /**
+   * @brief Slot of the last projected depth while the projected sub-trie is built (see
+   * @ref projChildBlocks): the projected coefficient accumulated so far, as the unevaluated sum
+   * @c hi + @c lo (double-double, see @c delta_quadrature_operator::compSubTrie).
+   */
+  struct ProjLeafSlot {
+    double hi;
+    double lo;
+  };
+
+  /// @brief Entry of @ref projChildBlocks for a slot without children (yet).
+  static constexpr std::size_t NO_BLOCK = std::numeric_limits<std::size_t>::max();
 
   /**
    * @brief Allocates the buffers.
@@ -57,25 +72,46 @@ struct DeltaQuadratureScratch {
    */
   DeltaQuadratureScratch(const size_t nDim, const size_t maxTGSumOverGPCntsPerDim)
       : trieNodes(nDim),
+        projChildBlocks(nDim),
         nodesPerDim(maxTGSumOverGPCntsPerDim),
-        nodesOfDim(nDim),
+        nodesOfProjDepth(nDim),
+        gpCntOfProjDepth(nDim),
         gp(nDim),
         gpMI(nDim),
-        rowWeights(maxTGSumOverGPCntsPerDim) {}
+        rowWeights(maxTGSumOverGPCntsPerDim) {
+    projDims.reserve(nDim);
+  }
 
-  /// @brief @c trieNodes[depth][idx]: the sub-trie (pruned to nodes with a leaf below them).
+  /// @brief @c projDims[t]: dimension of the projected depth @c t (ascending).
+  std::vector<std::size_t> projDims;
+  /// @brief @c trieNodes[t]: the projected sub-trie (pruned to nodes with a leaf below them). Only
+  /// the first @c projDims.size() entries are used.
   std::vector<std::vector<TrieNode>> trieNodes;
+  /**
+   * @brief Slots of the projected sub-trie while it is built. The slots of projected depth @c t
+   * form blocks, one per slot of depth @c t - 1 (one for @c t = 0) for its children: slot @c i of
+   * a block stands for the level @f$m_k + i@f$ of the dimension @f$k@f$ = @c projDims[t].
+   * @c projChildBlocks[t] (for @c t < projDims.size() - 1) holds, per slot, the start of the
+   * block of its children in the next projected depth, or @ref NO_BLOCK.
+   */
+  std::vector<std::vector<std::size_t>> projChildBlocks;
+  /// @brief The slots of the last projected depth (see @ref projChildBlocks).
+  std::vector<ProjLeafSlot> projLeafSlots;
   /// @brief Node positions of the delta tensor grid, mapped onto the domain (per dimension
   /// back-to-back).
   base::DataVector nodesPerDim;
-  /// @brief @c nodesOfDim[dim]: start of the nodes of dimension @c dim in @ref nodesPerDim.
-  std::vector<const double*> nodesOfDim;
+  /// @brief @c nodesOfProjDepth[t]: start of the nodes of dimension @c projDims[t] in
+  /// @ref nodesPerDim.
+  std::vector<const double*> nodesOfProjDepth;
+  /// @brief @c gpCntOfProjDepth[t]: number of nodes of dimension @c projDims[t].
+  GPMI gpCntOfProjDepth;
   /// @brief Current grid point (in domain coordinates).
   base::DataVector gp;
-  /// @brief Node indices of the current grid point (entry 0 is unused).
+  /// @brief @c gpMI[t]: node index of the current grid point in dimension @c projDims[t] (entry 0
+  /// is unused).
   GPMI gpMI;
   /// @brief Global weights of the grid points of the current row (all node indices of
-  /// dimension 0, the other ones fixed by @ref gpMI).
+  /// dimension @c projDims[0], the other ones fixed by @ref gpMI).
   base::DataVector rowWeights;
 };
 

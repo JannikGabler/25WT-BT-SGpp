@@ -348,6 +348,46 @@ void addSubTries(Suite& suite, const std::string& nodes, const LvlType boundary,
       });
 }
 
+/// delta_quadrature_operator::processDeltaTensorGrid (sub-trie, global weights, integrand
+/// perf::expSum) for every @p stride -th delta tensor grid: the whole per-delta-tensor-grid work
+/// of the operator at 1 thread, as opposed to process_delta_tg on the largest grid only.
+void addProcessDeltaTGs(Suite& suite, const std::string& nodes, const LvlType boundary,
+                        const size_t nDim, const LvlType maxLvl, const size_t stride) {
+  suite.addMicro("micro/dsg/process_delta_tgs/" + cfg(nodes, boundary, nDim, maxLvl) + "/s" +
+                     std::to_string(stride),
+                 [=](MicroRun& run) {
+                   CompleteSGGenInstr genInstr(maxLvl, nDim);
+                   perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
+                   const DeltasSparseGrid dsg(genInstr);
+                   const SourceFunc sourceFunc(perf::expSum);
+                   const cg::misc::FlatNestedVec<double, 3> weights1D =
+                       cg::delta_quadrature_operator::comp1DWeights(dsg);
+                   const cg::misc::CTCoeffTrie coeffTrie(dsg.getTensorGrids(), nDim);
+                   const cg::misc::DeltaQuadratureContext context{
+                       .deltasSparseGrid = dsg,
+                       .sourceFunc = sourceFunc,
+                       .domain = dsg.getGenInstr().getDomain(),
+                       .weights1D = weights1D,
+                       .coeffTrie = coeffTrie};
+                   cg::misc::DeltaQuadratureScratch scratch(nDim,
+                                                            dsg.getMaxTGSumOverGPCntsPerDim());
+
+                   size_t nGP = 0;
+                   for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
+                     nGP += dsg.getTensorGrid(tg).tensorGrid.nGP();
+                   }
+                   run.setItems(static_cast<double>(nGP));
+                   run.measure([&]() {
+                     double result = 0.0;
+                     for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
+                       result += cg::delta_quadrature_operator::processDeltaTensorGrid(
+                           context, dsg.getTensorGrid(tg), scratch);
+                     }
+                     doNotOptimize(result);
+                   });
+                 });
+}
+
 /*******************************************************************************
 Interpolation
 *******************************************************************************/
@@ -510,6 +550,9 @@ int main(int argc, char** argv) {
   addDeltaPrep(suite, "equi", 1, 20, 6);
   addSubTries(suite, "equi", 1, 20, 6, 256);  // WP-20: FlatNestedVec reads of the trie work
   addSubTries(suite, "equi", 0, 10, 7, 16);
+  addProcessDeltaTGs(suite, "equi", 1, 20, 6, 256);  // WP-02: sub-tries + per-row updates
+  addProcessDeltaTGs(suite, "equi", 1, 15, 7, 128);
+  addProcessDeltaTGs(suite, "equi", 0, 10, 6, 64);
 
   // Interpolation
   addInterpTG(suite, "cc", 5, 6);

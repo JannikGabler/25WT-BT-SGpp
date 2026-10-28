@@ -29,7 +29,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <mutex>
+#include <numeric>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
@@ -88,11 +90,26 @@ double runQuadrature(const SourceFunc& sourceFunc, const SGGenInstr& genInstr) {
   return quadrature(sourceFunc, sg);
 }
 
-/// Checks |result - expected| <= TOL * max(1, |expected|) and prints both values otherwise.
-void checkQuadResult(const double result, const double expected) {
-  BOOST_CHECK_MESSAGE(std::abs(result - expected) <= TOL * std::max(1.0, std::abs(expected)),
+/// Checks |result - expected| <= tol * max(1, |expected|) and prints both values otherwise.
+void checkQuadResult(const double result, const double expected, const double tol = TOL) {
+  BOOST_CHECK_MESSAGE(std::abs(result - expected) <= tol * std::max(1.0, std::abs(expected)),
                       "quadratureDelta: " << result << ", expected: " << expected
                                           << ", difference: " << result - expected);
+}
+
+/**
+ * Relative tolerance for comparing two quadratures of the sparse grid of @p genInstr: the
+ * combination cancels, so round-off grows with the sum of the absolute coefficients (> 10^4 for
+ * d = 12, level 4). TOL or 64 round-off units per unit of that sum, whichever is larger.
+ */
+double combinationTol(const SGGenInstr& genInstr) {
+  double sumOfAbsCoeffs = 0.0;
+
+  for (const CTCoeffType coeff : genInstr.genFullMIVecWithCoeffs().second) {
+    sumOfAbsCoeffs += std::abs(static_cast<double>(coeff));
+  }
+
+  return std::max(TOL, 64.0 * 0x1p-52 * sumOfAbsCoeffs);
 }
 
 std::string nameOf(const NodeGenFunc* nodeGenFunc) {
@@ -101,14 +118,18 @@ std::string nameOf(const NodeGenFunc* nodeGenFunc) {
   return "unknown";
 }
 
-std::string toString(const LvlMI& mi) {
+std::string toString(const std::vector<LvlType>& levels) {
   std::string result = "(";
 
-  for (size_t dim = 0; dim < mi.size(); dim++) {
-    result += (dim == 0 ? "" : ", ") + std::to_string(mi[dim]);
+  for (size_t dim = 0; dim < levels.size(); dim++) {
+    result += (dim == 0 ? "" : ", ") + std::to_string(levels[dim]);
   }
 
   return result + ")";
+}
+
+std::string toString(const LvlMI& mi) {
+  return toString(std::vector<LvlType>(mi.begin(), mi.end()));
 }
 
 /*************
@@ -323,7 +344,9 @@ std::vector<MIWithCoeff> nonZeroCoeffMIs(const DeltasSparseGrid& deltasSG,
 /**
  * The leaves of @p trie (multi-indices with coefficients) in the order of a depth-first
  * traversal. Checks on the way that the children of every node are non-empty, sorted by level
- * (strictly ascending) and that the child ranges of each depth partition the next depth.
+ * (strictly ascending), that the child ranges of each depth partition the next depth and that
+ * the maxSuffixLvlSum of every node of depth k is the maximum of l_{k+1} + ... + l_{d-1} over the
+ * leaves l below it.
  */
 std::vector<MIWithCoeff> trieLeaves(const misc::CTCoeffTrie& trie) {
   std::vector<MIWithCoeff> result;
@@ -338,6 +361,7 @@ std::vector<MIWithCoeff> trieLeaves(const misc::CTCoeffTrie& trie) {
           if (idx > begin) BOOST_CHECK_LT(nodes[idx - 1].lvl, nodes[idx].lvl);
 
           prefix.push_back(nodes[idx].lvl);
+          const size_t firstLeaf = result.size();
 
           if (depth + 1 == trie.nDim()) {
             result.emplace_back(prefix, trie.leafCoeffs()[idx]);
@@ -346,6 +370,15 @@ std::vector<MIWithCoeff> trieLeaves(const misc::CTCoeffTrie& trie) {
             BOOST_CHECK_LT(trie.childBegin(depth, idx), trie.childEnd(depth, idx));
             visit(depth + 1, trie.childBegin(depth, idx), trie.childEnd(depth, idx));
           }
+
+          LvlType maxSuffixLvlSum = 0;
+          for (size_t leaf = firstLeaf; leaf < result.size(); leaf++) {
+            const std::vector<LvlType>& mi = result[leaf].first;
+            const auto suffixBegin = mi.begin() + static_cast<std::ptrdiff_t>(depth + 1);
+            maxSuffixLvlSum =
+                std::max(maxSuffixLvlSum, std::accumulate(suffixBegin, mi.end(), LvlType{0}));
+          }
+          BOOST_CHECK_EQUAL(nodes[idx].maxSuffixLvlSum, maxSuffixLvlSum);
 
           prefix.pop_back();
         }
@@ -366,37 +399,285 @@ std::vector<MIWithCoeff> trieLeaves(const misc::CTCoeffTrie& trie) {
 }
 
 /**
- * Brute-force global weight of the grid point @p point: the sum of c_l * w_l(point) over all
- * tensor grids of @p sg containing it, where w_l is the tensor product of the 1D quadrature
- * weights of the tensor grid.
+ * The leaves (levels in the projected dimensions, with the projected coefficients) of the
+ * projected sub-trie that compSubTrie computed into @c data.scratch for the delta tensor grid of
+ * level @p m, in depth-first order. Checks on the way that every inner node has a child (pruned),
+ * that every node of projected depth t with level l_k (k = projDims[t]) points to the weights of
+ * the delta nodes of level m_k in the rule of level l_k, and that the child ranges of each
+ * projected depth partition the next one.
  */
-double bruteForceGlobalWeight(const SparseGrid& sg, const DataVector& point) {
-  const std::vector<NodeGenFunc*>& nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs();
-  double result = 0.0;
+std::vector<MIWithCoeff> subTrieLeaves(const DeltaQuadratureData& data, const LvlMI& m) {
+  const std::vector<size_t>& projDims = data.scratch.projDims;
+  std::vector<MIWithCoeff> leaves;
+  std::vector<LvlType> prefix;
 
-  for (const TensorGridCTData& tg : sg) {
-    const GPMI& gpCntPerDim = tg.tensorGrid.getGPCntPerDim();
-    const DataVector& nodesPerDim = tg.tensorGrid.getNodesPerDim();
+  const std::function<void(size_t, size_t, size_t)> visit = [&](const size_t depth,
+                                                                const size_t begin,
+                                                                const size_t end) {
+    const size_t dim = projDims[depth];
+    const auto& nodes = data.scratch.trieNodes[depth];
+    const auto weightsOfDim = data.weights1D[dim];
+    const size_t deltaStart = m[dim] == 0 ? 0 : weightsOfDim[m[dim] - 1].size();
 
-    double weight = tg.coefficient;
-    size_t offset = 0;
+    BOOST_REQUIRE_LE(end, nodes.size());
 
-    for (size_t dim = 0; dim < sg.nDim() && weight != 0.0; dim++) {
-      const GPCntType nNodes = gpCntPerDim[dim];
-      const auto nodesBegin = nodesPerDim.begin() + static_cast<std::ptrdiff_t>(offset);
-      const DataVector nodes(std::vector<double>(nodesBegin, nodesBegin + nNodes));
-      const std::optional<GPCntType> nodeIdx = findNode(nodes, point[dim]);
-
-      if (nodeIdx) {
-        weight *= nodeGenFuncs[dim]->getQuadRule(nNodes)->genWeights(nNodes)[*nodeIdx];
-      } else {
-        weight = 0.0;  // The tensor grid does not contain the grid point
+    for (size_t idx = begin; idx < end; idx++) {
+      // Level of the node: the one whose weights the node points to
+      std::optional<LvlType> lvl;
+      for (LvlType l = m[dim]; l < weightsOfDim.size(); l++) {
+        if (nodes[idx].weights == weightsOfDim[l].data() + deltaStart) lvl = l;
       }
-      offset += nNodes;
+      BOOST_REQUIRE(lvl.has_value());
+
+      prefix.push_back(*lvl);
+
+      if (depth + 1 == projDims.size()) {
+        leaves.emplace_back(prefix, nodes[idx].coeffSum);
+      } else {
+        const size_t childBegin = idx == 0 ? 0 : nodes[idx - 1].childEnd;
+        BOOST_CHECK_LT(childBegin, nodes[idx].childEnd);  // pruned
+        visit(depth + 1, childBegin, nodes[idx].childEnd);
+      }
+
+      prefix.pop_back();
+    }
+  };
+
+  visit(0, 0, data.scratch.trieNodes[0].size());
+
+  for (size_t depth = 0; depth + 1 < projDims.size(); depth++) {
+    const auto& nodes = data.scratch.trieNodes[depth];
+    BOOST_CHECK_EQUAL(nodes.empty() ? 0 : nodes.back().childEnd,
+                      data.scratch.trieNodes[depth + 1].size());
+  }
+
+  return leaves;
+}
+
+/**
+ * Brute-force projected sub-trie of the delta tensor grid @p deltaTG of @p deltasSG (see
+ * compSubTrie): the projected dimensions P (those in which @p deltaTG has more than one node, or
+ * dimension 0 if there are none) and the leaves: the levels l_P of the tensor grids l >= m with a
+ * non-zero coefficient, with the projected coefficients sum_l c_l prod_{k not in P} w_k(l_k),
+ * where w_k(l_k) is the weight of the single delta node of level m_k in the regular 1D rule of
+ * level l_k, sorted lexicographically. The weights are computed from regularNodes and
+ * expectedDeltaNodes, independently of comp1DWeights.
+ */
+std::pair<std::vector<size_t>, std::vector<MIWithCoeff>> expectedProjectedSubTrie(
+    const DeltasSparseGrid& deltasSG, const TensorGridCTData& deltaTG) {
+  const SGGenInstr& genInstr = deltasSG.getGenInstr();
+  const size_t nDim = deltasSG.nDim();
+  const LvlMI& m = deltaTG.mi;
+
+  std::vector<size_t> projDims;
+  for (size_t dim = 0; dim < nDim; dim++) {
+    if (deltaTG.tensorGrid.getGPCntPerDim()[dim] > 1) projDims.push_back(dim);
+  }
+  if (projDims.empty()) projDims.push_back(0);
+
+  const auto singleNodeWeight = [&](const size_t dim, const LvlType lvl) {
+    const DataVector nodes = regularNodes(genInstr, dim, lvl);
+    const GPCntType nNodes = static_cast<GPCntType>(nodes.size());
+    const std::optional<GPCntType> idx =
+        findNode(nodes, expectedDeltaNodes(genInstr, dim, m[dim])[0]);
+    BOOST_REQUIRE(idx.has_value());
+    return genInstr.getNodeGenFuncForDim(dim)->getQuadRule(nNodes)->genWeights(nNodes)[*idx];
+  };
+
+  std::map<std::vector<LvlType>, double> leaves;
+
+  for (const auto& [mi, coeff] : nonZeroCoeffMIs(deltasSG, m)) {
+    std::vector<LvlType> key;
+    double value = coeff;
+
+    for (size_t dim = 0; dim < nDim; dim++) {
+      if (std::ranges::find(projDims, dim) != projDims.end()) {
+        key.push_back(mi[dim]);
+      } else {
+        value *= singleNodeWeight(dim, mi[dim]);
+      }
     }
 
-    result += weight;
+    leaves[key] += value;
   }
+
+  return {projDims, std::vector<MIWithCoeff>(leaves.begin(), leaves.end())};
+}
+
+/**
+ * Checks the projected sub-trie that compSubTrie computes for @p deltaTG against
+ * expectedProjectedSubTrie: the same projected dimensions, and the same leaves with projected
+ * coefficients equal up to round-off, except that leaves whose projected coefficient vanishes (up
+ * to round-off) may be left out.
+ */
+void checkProjectedSubTrie(const DeltasSparseGrid& deltasSG, DeltaQuadratureData& data,
+                           const TensorGridCTData& deltaTG) {
+  delta_quadrature_operator::compSubTrie(data.context, deltaTG.mi, data.scratch);
+
+  const auto [projDims, expectedLeaves] = expectedProjectedSubTrie(deltasSG, deltaTG);
+  BOOST_REQUIRE(data.scratch.projDims == projDims);
+
+  const std::vector<MIWithCoeff> leaves = subTrieLeaves(data, deltaTG.mi);
+  auto leaf = leaves.begin();
+
+  for (const auto& [key, expectedCoeff] : expectedLeaves) {
+    BOOST_TEST_CONTEXT("Projected levels " << toString(key)) {
+      if (leaf != leaves.end() && leaf->first == key) {
+        BOOST_CHECK_SMALL(leaf->second - expectedCoeff,
+                          EPS * std::max(1.0, std::abs(expectedCoeff)));
+        BOOST_CHECK_NE(leaf->second, 0.0);
+        ++leaf;
+      } else {
+        BOOST_CHECK_SMALL(expectedCoeff, EPS);  // Left out: has to vanish
+      }
+    }
+  }
+
+  BOOST_CHECK(leaf == leaves.end());  // No other leaves
+}
+
+/**
+ * Levels that are not in the (downwards closed) level set of @p deltasSG but whose components
+ * exceed the maximum level of their dimension by at most one: for every dimension k, a level of
+ * the set with the maximum k-th component, raised by one in dimension k + 1 (cyclically). Their
+ * sub-tries are empty.
+ */
+std::vector<LvlMI> levelsOutside(const DeltasSparseGrid& deltasSG) {
+  const size_t nDim = deltasSG.nDim();
+  std::vector<LvlMI> result;
+
+  for (size_t dim = 0; dim < nDim; dim++) {
+    const TensorGridCTData* maxTG = &deltasSG.getTensorGrids()[0];
+
+    for (const TensorGridCTData& tg : deltasSG) {
+      if (tg.mi[dim] > maxTG->mi[dim]) maxTG = &tg;
+    }
+
+    LvlMI mi = maxTG->mi;
+    mi[(dim + 1) % nDim]++;
+
+    if (std::ranges::none_of(deltasSG.getTensorGrids(),
+                             [&](const TensorGridCTData& tg) { return tg.mi == mi; })) {
+      result.push_back(mi);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Checks the projected sub-trie of every delta tensor grid of @p deltasSG (checkProjectedSubTrie)
+ * and that the sub-tries of the levels outside the level set (@ref levelsOutside) are empty.
+ */
+void checkSubTries(const DeltasSparseGrid& deltasSG) {
+  const SourceFunc sourceFunc = genConstantFunc(1.0);
+  DeltaQuadratureData data(deltasSG, sourceFunc);
+
+  for (const TensorGridCTData& deltaTG : deltasSG) {
+    BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaTG.mi)) {
+      checkProjectedSubTrie(deltasSG, data, deltaTG);
+    }
+  }
+
+  for (const LvlMI& outsideMI : levelsOutside(deltasSG)) {
+    BOOST_TEST_CONTEXT("Level outside the level set " << toString(outsideMI)) {
+      BOOST_REQUIRE(nonZeroCoeffMIs(deltasSG, outsideMI).empty());
+      delta_quadrature_operator::compSubTrie(data.context, outsideMI, data.scratch);
+
+      for (const auto& nodes : data.scratch.trieNodes) {
+        BOOST_CHECK(nodes.empty());
+      }
+    }
+  }
+}
+
+/**
+ * Brute-force global weights of grid points of a sparse grid @p sg: the global weight of a grid
+ * point is the sum of c_l * w_l(point) over all tensor grids of @p sg containing it, where w_l is
+ * the tensor product of the 1D quadrature weights of the tensor grid. The 1D nodes and weights of
+ * the tensor grids are precomputed once.
+ */
+class BruteForceGlobalWeights {
+ public:
+  explicit BruteForceGlobalWeights(const SparseGrid& sg) {
+    const std::vector<NodeGenFunc*>& nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs();
+
+    for (const TensorGridCTData& tg : sg) {
+      const GPMI& gpCntPerDim = tg.tensorGrid.getGPCntPerDim();
+      const DataVector& nodesPerDim = tg.tensorGrid.getNodesPerDim();
+      TG& entry = tgs.emplace_back(TG{static_cast<double>(tg.coefficient), {}, {}});
+      size_t offset = 0;
+
+      for (size_t dim = 0; dim < sg.nDim(); dim++) {
+        const GPCntType nNodes = gpCntPerDim[dim];
+        const auto nodesBegin = nodesPerDim.begin() + static_cast<std::ptrdiff_t>(offset);
+
+        entry.nodes.emplace_back(std::vector<double>(nodesBegin, nodesBegin + nNodes));
+        entry.weights.push_back(nodeGenFuncs[dim]->getQuadRule(nNodes)->genWeights(nNodes));
+        offset += nNodes;
+      }
+    }
+  }
+
+  double operator()(const DataVector& point) const {
+    double result = 0.0;
+
+    for (const TG& tg : tgs) {
+      double weight = tg.coeff;
+
+      for (size_t dim = 0; dim < tg.nodes.size() && weight != 0.0; dim++) {
+        const std::optional<GPCntType> nodeIdx = findNode(tg.nodes[dim], point[dim]);
+        // 0 if the tensor grid does not contain the grid point
+        weight = nodeIdx ? weight * tg.weights[dim][*nodeIdx] : 0.0;
+      }
+
+      result += weight;
+    }
+
+    return result;
+  }
+
+ private:
+  struct TG {
+    double coeff;
+    std::vector<DataVector> nodes;    // nodes[dim]: the 1D nodes, ascending
+    std::vector<DataVector> weights;  // weights[dim][i]: the 1D quadrature weight of nodes[dim][i]
+  };
+
+  std::vector<TG> tgs;
+};
+
+/**
+ * The downwards closed anisotropic level set {l : sum_k a_k * l_k <= @p maxWeightedSum} with the
+ * weights a_k = 1 + k / 2 (@p increasing) or a_k = 1 + (nDim - 1 - k) / 2 (integer division).
+ * The 1-norm of the levels below a prefix does not determine which levels lie below it.
+ */
+LvlMIVec anisotropicLevels(const size_t nDim, const LvlType maxWeightedSum, const bool increasing) {
+  std::vector<LvlType> weights(nDim);
+  LvlMI upper(nDim);
+
+  for (size_t dim = 0; dim < nDim; dim++) {
+    weights[dim] = static_cast<LvlType>(1 + (increasing ? dim : nDim - 1 - dim) / 2);
+    upper[dim] = maxWeightedSum / weights[dim];
+  }
+
+  std::vector<LvlMI> levels;
+
+  forEachMIInBox(upper, [&](const LvlMI& mi) {
+    LvlType weightedSum = 0;
+    for (size_t dim = 0; dim < nDim; dim++) weightedSum += weights[dim] * mi[dim];
+    if (weightedSum <= maxWeightedSum) levels.push_back(mi);
+  });
+
+  return LvlMIVec(levels);
+}
+
+/// Permutation of 0, ..., n - 1 drawn with randGen (Fisher-Yates).
+std::vector<size_t> randomPermutation(const size_t n) {
+  std::vector<size_t> result(n);
+
+  for (size_t i = 0; i < n; i++) result[i] = i;
+  for (size_t i = n; i > 1; i--) std::swap(result[i - 1], result[randGen.getUniformIndexRN(i)]);
 
   return result;
 }
@@ -555,6 +836,55 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Higher_Dimensions) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(Matches_Quadrature_High_Dimensions_Boundary_Offsets) {
+  // Deep tries in which most dimensions of most delta tensor grids have a single node (boundary
+  // level offset >= 1): complete sparse grids and anisotropic level sets. (With offset 0, every
+  // tensor grid has at least 3^nDim grid points.)
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+      for (const LvlType boundaryLvlOffset : {1u, 2u}) {
+        for (const size_t nDim : {8, 10, 12}) {
+          for (LvlType maxLvl = 2; maxLvl <= 4; maxLvl++) {
+            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                               << " nodes, complete, boundary level offset " << boundaryLvlOffset
+                               << ", nDim " << nDim << ", max. level " << maxLvl) {
+              CompleteSGGenInstr genInstr(maxLvl, nDim);
+              genInstr.setNodeGenFunc(nodeGenFunc);
+              genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
+
+              checkQuadResult(runQuadratureDelta(genGaussianFunc(), genInstr),
+                              runQuadrature(genGaussianFunc(), genInstr), combinationTol(genInstr));
+            }
+          }
+        }
+
+        for (const size_t nDim : {8, 10}) {
+          for (const LvlType maxWeightedSum : {4u, 6u}) {
+            for (const bool increasing : {true, false}) {
+              BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                                 << " nodes, anisotropic, boundary level offset "
+                                 << boundaryLvlOffset << ", nDim " << nDim
+                                 << ", max. weighted sum " << maxWeightedSum
+                                 << (increasing ? ", increasing" : ", decreasing") << " weights") {
+                const LvlMIVec levels = anisotropicLevels(nDim, maxWeightedSum, increasing);
+                MIVecSGGenInstr genInstr(levels);
+                genInstr.setNodeGenFunc(nodeGenFunc);
+                genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
+                genInstr.setDomain(randomDomain(nDim));
+
+                checkQuadResult(runQuadratureDelta(genProductFunc(), genInstr),
+                                runQuadrature(genProductFunc(), genInstr),
+                                combinationTol(genInstr));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 BOOST_AUTO_TEST_CASE(Matches_Quadrature_Full_Grid) {
   // A single input multi-index: the sparse grid is one full tensor grid of a non-zero level
   const LvlMIVec mis{{3, 2}};
@@ -692,10 +1022,10 @@ BOOST_AUTO_TEST_CASE(Coefficient_Trie_Structure) {
 
   const misc::CTCoeffTrie trie(tgs, 2);
 
-  // Lexicographic order: (0, 0), (0, 1), (1, 0)
+  // Lexicographic order: (0, 0), (0, 1), (1, 0). Nodes: {lvl, maxSuffixLvlSum, childEnd}
   using Node = misc::CTCoeffTrie::Node;
-  const std::vector<Node> expectedDepth0{{0, 2}, {1, 3}};
-  const std::vector<Node> expectedDepth1{{0, 0}, {1, 0}, {0, 0}};
+  const std::vector<Node> expectedDepth0{{0, 1, 2}, {1, 0, 3}};
+  const std::vector<Node> expectedDepth1{{0, 0, 0}, {1, 0, 0}, {0, 0, 0}};
   const std::vector<double> expectedCoeffs{-1.0, 1.0, 1.0};
 
   BOOST_CHECK_EQUAL(trie.nDim(), size_t{2});
@@ -741,6 +1071,33 @@ BOOST_AUTO_TEST_CASE(Coefficient_Trie_Of_Sparse_Grids) {
         const misc::CTCoeffTrie trie(deltasSG.getTensorGrids(), nDim);
 
         BOOST_CHECK(trieLeaves(trie) == nonZeroCoeffMIs(deltasSG, LvlMI(nDim, LvlType{0})));
+      }
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(Coefficient_Trie_Independent_Of_Input_Order) {
+  // The trie is built from the tensor grids in any order: shuffled input gives the same trie
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    const LvlMIVec anisotropic = anisotropicLevels(8, 6, true);
+    const DeltasSparseGrid complete{CompleteSGGenInstr(4, 6)};
+    const DeltasSparseGrid miVec{MIVecSGGenInstr(anisotropic)};
+
+    for (const DeltasSparseGrid* const deltasSG : {&complete, &miVec}) {
+      BOOST_TEST_CONTEXT((deltasSG == &complete ? "Complete" : "Anisotropic")) {
+        const std::span<const TensorGridCTData> tgs = deltasSG->getTensorGrids();
+        std::vector<TensorGridCTData> shuffled;
+        for (const size_t idx : randomPermutation(tgs.size())) shuffled.push_back(tgs[idx]);
+
+        const misc::CTCoeffTrie trie(tgs, deltasSG->nDim());
+        const misc::CTCoeffTrie shuffledTrie(shuffled, deltasSG->nDim());
+
+        for (size_t depth = 0; depth < trie.nDim(); depth++) {
+          BOOST_CHECK(
+              std::ranges::equal(trie.nodesOfDepth(depth), shuffledTrie.nodesOfDepth(depth)));
+        }
+        BOOST_CHECK(std::ranges::equal(trie.leafCoeffs(), shuffledTrie.leafCoeffs()));
       }
     }
   }
@@ -807,65 +1164,77 @@ BOOST_AUTO_TEST_CASE(One_Dimensional_Weights) {
 }
 
 BOOST_AUTO_TEST_CASE(Sub_Trie_Of_Delta_Tensor_Grids) {
-  // compSubTrie: the leaves of the sub-trie are the tensor grids l >= m with a non-zero
-  // coefficient, every inner node has a child, and every node of depth k with level l_k points to
-  // the weights of the delta nodes of level m_k in the rule of level l_k
+  // compSubTrie: the leaves of the projected sub-trie are the levels of the tensor grids l >= m
+  // with a non-zero coefficient in the dimensions in which the delta tensor grid has more than one
+  // node, with the projected coefficients; every inner node has a child, and every node of a
+  // projected depth with level l_k points to the weights of the delta nodes of level m_k in the
+  // rule of level l_k
   for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
     for (size_t nDim = 1; nDim <= 4; nDim++) {
       for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-        CompleteSGGenInstr genInstr(maxLvl, nDim);
-        genInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
-        genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
-        const DeltasSparseGrid deltasSG(genInstr);
-        const SourceFunc sourceFunc = genConstantFunc(1.0);
-        DeltaQuadratureData data(deltasSG, sourceFunc);
+        BOOST_TEST_CONTEXT("Boundary level offset " << boundaryLvlOffset << ", nDim " << nDim
+                                                    << ", max. level " << maxLvl) {
+          CompleteSGGenInstr genInstr(maxLvl, nDim);
+          genInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
+          genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
-        for (const TensorGridCTData& deltaTG : deltasSG) {
-          const LvlMI& m = deltaTG.mi;
+          checkSubTries(DeltasSparseGrid(genInstr));
+        }
+      }
+    }
+  }
+}
 
-          BOOST_TEST_CONTEXT("Boundary level offset " << boundaryLvlOffset << ", nDim " << nDim
-                                                      << ", max. level " << maxLvl
-                                                      << ", delta tensor grid " << toString(m)) {
-            delta_quadrature_operator::compSubTrie(data.context, m, data.scratch);
+BOOST_AUTO_TEST_CASE(Sub_Trie_Of_Delta_Tensor_Grids_High_Dimensions) {
+  // As Sub_Trie_Of_Delta_Tensor_Grids for deep tries: complete sparse grids (where all tensor
+  // grids below a prefix have the same maximum level sum), anisotropic and random level sets
+  // (where they do not), with the boundary on level 0, 1 or 2
+  for (const LvlType boundaryLvlOffset : {0u, 1u, 2u}) {
+    for (const size_t nDim : {8, 10}) {
+      for (const LvlType maxLvl : {2u, 3u}) {
+        BOOST_TEST_CONTEXT("Complete, boundary level offset "
+                           << boundaryLvlOffset << ", nDim " << nDim << ", max. level " << maxLvl) {
+          CompleteSGGenInstr genInstr(maxLvl, nDim);
+          genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+          genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
-            std::vector<MIWithCoeff> leaves;
-            std::vector<LvlType> prefix;
+          checkSubTries(DeltasSparseGrid(genInstr));
+        }
+      }
 
-            const std::function<void(size_t, size_t, size_t)> visit =
-                [&](const size_t depth, const size_t begin, const size_t end) {
-                  const auto& nodes = data.scratch.trieNodes[depth];
-                  const auto weightsOfDim = data.weights1D[depth];
-                  const size_t deltaStart = m[depth] == 0 ? 0 : weightsOfDim[m[depth] - 1].size();
+      for (const LvlType maxWeightedSum : {4u, 6u}) {
+        for (const bool increasing : {true, false}) {
+          BOOST_TEST_CONTEXT("Anisotropic, boundary level offset "
+                             << boundaryLvlOffset << ", nDim " << nDim << ", max. weighted sum "
+                             << maxWeightedSum << (increasing ? ", increasing" : ", decreasing")
+                             << " weights") {
+            const LvlMIVec levels = anisotropicLevels(nDim, maxWeightedSum, increasing);
+            MIVecSGGenInstr genInstr(levels);
+            genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+            genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
-                  BOOST_REQUIRE_LE(end, nodes.size());
-
-                  for (size_t idx = begin; idx < end; idx++) {
-                    // Level of the node: the one whose weights the node points to
-                    std::optional<LvlType> lvl;
-                    for (LvlType l = m[depth]; l < weightsOfDim.size(); l++) {
-                      if (nodes[idx].weights == weightsOfDim[l].data() + deltaStart) lvl = l;
-                    }
-                    BOOST_REQUIRE(lvl.has_value());
-
-                    prefix.push_back(*lvl);
-
-                    if (depth + 1 == nDim) {
-                      leaves.emplace_back(prefix, nodes[idx].coeffSum);
-                    } else {
-                      const size_t childBegin = idx == 0 ? 0 : nodes[idx - 1].childEnd;
-                      BOOST_CHECK_LT(childBegin, nodes[idx].childEnd);  // pruned
-                      visit(depth + 1, childBegin, nodes[idx].childEnd);
-                    }
-
-                    prefix.pop_back();
-                  }
-                };
-
-            visit(0, 0, data.scratch.trieNodes[0].size());
-
-            BOOST_CHECK(leaves == nonZeroCoeffMIs(deltasSG, m));
+            checkSubTries(DeltasSparseGrid(genInstr));
           }
         }
+      }
+    }
+  }
+
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    for (size_t run = 0; run < 10; run++) {
+      const size_t nDim = 8 + randGen.getUniformIndexRN(2);
+      std::vector<LvlMI> inputMIs;
+      for (size_t i = 0; i < 1 + randGen.getUniformIndexRN(4); i++) {
+        inputMIs.push_back(randomMI(nDim, 2));
+      }
+      const LvlMIVec mis(inputMIs);
+
+      BOOST_TEST_CONTEXT("MIVec, run " << run << ", nDim " << nDim) {
+        MIVecSGGenInstr genInstr(mis);
+        genInstr.setBoundaryLevelOffset(static_cast<LvlType>(randGen.getUniformIndexRN(3)));
+
+        checkSubTries(DeltasSparseGrid(genInstr));
       }
     }
   }
@@ -948,6 +1317,7 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
 
               // The regular sparse grid is only used for the brute-force reference
               const SparseGrid sg(genInstr);
+              const BruteForceGlobalWeights bruteForceGlobalWeight(sg);
               const DeltasSparseGrid deltasSG(genInstr);
               const SourceFunc sourceFunc = genConstantFunc(1.0);
               DeltaQuadratureData data(deltasSG, sourceFunc);
@@ -978,7 +1348,7 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
                       BOOST_CHECK_SMALL(gp[dim] - (point.gp[dim] * width + domain[dim].first), EPS);
                     }
 
-                    BOOST_CHECK_SMALL(globalWeight - bruteForceGlobalWeight(sg, point.gp), EPS);
+                    BOOST_CHECK_SMALL(globalWeight - bruteForceGlobalWeight(point.gp), EPS);
                   }
 
                   sumOfGlobalWeights += globalWeight;
@@ -986,6 +1356,133 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
               }
 
               BOOST_CHECK_SMALL(sumOfGlobalWeights - 1.0, EPS);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points_High_Dimensions) {
+  // As Global_Weights_Of_Delta_Grid_Points for deep tries (most dimensions of most delta tensor
+  // grids have a single node if the boundary level offset is >= 1), complete and anisotropic
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    constexpr size_t nDim = 8;
+    const LvlMIVec anisotropic = anisotropicLevels(nDim, 6, true);
+
+    for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+      for (const LvlType boundaryLvlOffset : {1u, 2u}) {
+        CompleteSGGenInstr complete2(2, nDim);
+        CompleteSGGenInstr complete3(3, nDim);
+        MIVecSGGenInstr miVec(anisotropic);
+
+        for (SGGenInstr* const genInstr : {static_cast<SGGenInstr*>(&complete2),
+                                           static_cast<SGGenInstr*>(&complete3),
+                                           static_cast<SGGenInstr*>(&miVec)}) {
+          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                             << " nodes, boundary level offset " << boundaryLvlOffset << ", "
+                             << (genInstr == &miVec ? "anisotropic"
+                                 : genInstr == &complete2 ? "complete, max. level 2"
+                                                          : "complete, max. level 3")) {
+            genInstr->setNodeGenFunc(nodeGenFunc);
+            genInstr->setBoundaryLevelOffset(boundaryLvlOffset);
+            genInstr->setDomain(randomDomain(nDim));
+            const HyperCubeArea& domain = genInstr->getDomain();
+
+            const SparseGrid sg(*genInstr);
+            const BruteForceGlobalWeights bruteForceGlobalWeight(sg);
+            const DeltasSparseGrid deltasSG(*genInstr);
+            const SourceFunc sourceFunc = genConstantFunc(1.0);
+            DeltaQuadratureData data(deltasSG, sourceFunc);
+
+            double sumOfGlobalWeights = 0.0;
+            size_t nChecked = 0;
+            size_t nGP = 0;
+
+            for (const TensorGridCTData& deltaTG : deltasSG) {
+              nGP += deltaTG.tensorGrid.nGP();
+              delta_quadrature_operator::forEachGPWithGlobalWeight(
+                  data.context, deltaTG, data.scratch,
+                  [&](const DataVector& gp, const double globalWeight) {
+                    // Back onto the unit domain, where the tensor grids of sg are
+                    DataVector unitGP(nDim);
+                    for (size_t dim = 0; dim < nDim; dim++) {
+                      unitGP[dim] = (gp[dim] - domain[dim].first) /
+                                    (domain[dim].second - domain[dim].first);
+                    }
+
+                    if (std::abs(globalWeight - bruteForceGlobalWeight(unitGP)) > EPS) {
+                      BOOST_ERROR("Delta tensor grid " << toString(deltaTG.mi) << ", grid point "
+                                                       << unitGP.toString() << ": global weight "
+                                                       << globalWeight << ", expected "
+                                                       << bruteForceGlobalWeight(unitGP));
+                    }
+
+                    sumOfGlobalWeights += globalWeight;
+                    nChecked++;
+                  });
+            }
+
+            BOOST_CHECK_EQUAL(nChecked, nGP);
+            BOOST_CHECK_SMALL(sumOfGlobalWeights - 1.0, EPS);
+          }
+        }
+      }
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Independent_Of_Visit_Order) {
+  // The scratch is reused across the delta tensor grids a thread processes, in an order that
+  // depends on the scheduling: the grid points, their global weights and the result of every
+  // delta tensor grid must be bitwise the same as with a fresh scratch
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    constexpr size_t nDim = 8;
+    const LvlMIVec anisotropic = anisotropicLevels(nDim, 6, false);
+
+    for (const LvlType boundaryLvlOffset : {0u, 1u, 2u}) {
+      // Offset 0: every delta tensor grid has >= 3^nDim grid points
+      CompleteSGGenInstr complete(boundaryLvlOffset == 0 ? 2 : 3, nDim);
+      MIVecSGGenInstr miVec(anisotropic);
+
+      for (SGGenInstr* const genInstr :
+           {static_cast<SGGenInstr*>(&complete), static_cast<SGGenInstr*>(&miVec)}) {
+        BOOST_TEST_CONTEXT("Boundary level offset "
+                           << boundaryLvlOffset
+                           << (genInstr == &miVec ? ", anisotropic" : ", complete")) {
+          genInstr->setNodeGenFunc(clenshawCurtisNodeGenFunc);
+          genInstr->setBoundaryLevelOffset(boundaryLvlOffset);
+          genInstr->setDomain(randomDomain(nDim));
+
+          const DeltasSparseGrid deltasSG(*genInstr);
+          const SourceFunc sourceFunc = genGaussianFunc();
+          DeltaQuadratureData shared(deltasSG, sourceFunc);
+
+          using Visited = std::vector<std::pair<std::vector<double>, double>>;
+          const auto visit = [&](const TensorGridCTData& deltaTG,
+                                 misc::DeltaQuadratureScratch& scratch) {
+            Visited visited;
+            delta_quadrature_operator::forEachGPWithGlobalWeight(
+                shared.context, deltaTG, scratch,
+                [&](const DataVector& gp, const double globalWeight) {
+                  visited.emplace_back(std::vector<double>(gp.begin(), gp.end()), globalWeight);
+                });
+            return visited;
+          };
+
+          for (const size_t tgIdx : randomPermutation(deltasSG.nTG())) {
+            const TensorGridCTData& deltaTG = deltasSG.getTensorGrid(tgIdx);
+            misc::DeltaQuadratureScratch fresh(nDim, deltasSG.getMaxTGSumOverGPCntsPerDim());
+
+            BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaTG.mi)) {
+              BOOST_CHECK(visit(deltaTG, shared.scratch) == visit(deltaTG, fresh));
+              BOOST_CHECK_EQUAL(delta_quadrature_operator::processDeltaTensorGrid(
+                                    shared.context, deltaTG, shared.scratch),
+                                delta_quadrature_operator::processDeltaTensorGrid(
+                                    shared.context, deltaTG, fresh));
             }
           }
         }
