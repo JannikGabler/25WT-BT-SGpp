@@ -22,6 +22,8 @@ module.generatePythonDocstrings()
 module.buildExamples()
 module.runExamples()
 
+module.buildExamples("/benchmarks/*")
+
 module.buildBoostTests()
 module.runBoostTests()
 
