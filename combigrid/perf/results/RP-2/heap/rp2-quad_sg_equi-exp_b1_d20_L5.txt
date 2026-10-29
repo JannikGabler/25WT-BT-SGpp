@@ -1,0 +1,15 @@
+# heaptrack summary: rp2-quad_sg_equi-exp_b1_d20_L5 (snapshot rp-2, 16 threads, --samples 1 --warmups 0, run under systemd-run --user --scope -p MemoryMax=8G)
+calls to allocation functions: 159969 (138142/s)
+peak heap memory consumption: 35.84M
+peak RSS (including heaptrack overhead): 61.94M
+
+Owners at the heap peak (heaptrack_print -F --flamegraph-cost-type peak, condensed to the innermost SG++ frames; MB = 1e6 bytes):
+peak heap (sum of stacks): 35.84 MB
+     15.53 MB  tools::sparse_grid_generation::getNodesPerDimForTG
+      6.26 MB  SparseGrid::SparseGrid
+      4.25 MB  CompleteSGGenInstr::genReducedMIVecWithCoeffs <- MIVec<>::MIVec
+      3.94 MB  (other: sgpp::combigrid::tools::sparse_grid_gene)
+      3.94 MB  tools::sparse_grid_generation::getGPCntPerDim
+      1.26 MB  tools::sparse_grid_generation::getNodesPerDimForTG <- SparseGrid::SparseGrid
+      0.31 MB  tools::sparse_grid_generation::getGPCntPerDim <- SparseGrid::SparseGrid
+      0.21 MB  CompleteSGGenInstr::genReducedMIVecWithCoeffs <- SparseGrid::SparseGrid

@@ -1,0 +1,12 @@
+# heaptrack summary: rp2-quad_sg_cc-uq_b0_d2_L20 (snapshot rp-2, 16 threads, --samples 1 --warmups 0, run under systemd-run --user --scope -p MemoryMax=8G)
+calls to allocation functions: 2082 (1465/s)
+peak heap memory consumption: 998.39M
+peak RSS (including heaptrack overhead): 1.05G
+
+Owners at the heap peak (heaptrack_print -F --flamegraph-cost-type peak, condensed to the innermost SG++ frames; MB = 1e6 bytes):
+peak heap (sum of stacks): 998.39 MB
+    503.32 MB  quadrature
+    360.71 MB  quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT <- quadrature_rules::ClenshawCurtisQuadRule::genWeights
+     85.98 MB  tools::sparse_grid_generation::getNodesPerDimForTG
+     33.55 MB  quadrature <- quadrature
+     14.68 MB  tools::sparse_grid_generation::getNodesPerDimForTG <- SparseGrid::SparseGrid

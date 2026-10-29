@@ -1,0 +1,5 @@
+profile of `^mivec/sg/cc-exp/b1/d20/S7/n300$` (e2e, 16 threads, self time)
+    97.17%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::MIVec<unsigned int> sgpp::combigrid::tools::genMIVecDownwardsClosure<unsigned int>
+     1.03%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261029-100839-_mivec_sg_cc_exp_b1_d20_S7_n300_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

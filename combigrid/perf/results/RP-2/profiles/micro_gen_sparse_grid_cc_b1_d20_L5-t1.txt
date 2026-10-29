@@ -1,0 +1,27 @@
+profile of `^micro/gen/sparse_grid/cc/b1/d20/L5$` (micro, 1 threads, self time)
+    16.79%  perf_micro  libm.so.6             [.] __cos_fma
+     9.07%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary
+     6.09%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::tools::sparse_grid_generation::getNodesPerDimForTG
+     5.57%  perf_micro  libc.so.6             [.] _int_malloc
+     4.23%  perf_micro  [unknown]             [k] 0xffffffff818011b2
+     3.68%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim
+     3.50%  perf_micro  libc.so.6             [.] _int_free_merge_chunk
+     3.14%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::doublingLvl2GPCntFunction
+     2.82%  perf_micro  libc.so.6             [.] _int_free_maybe_trim
+     2.57%  perf_micro  [unknown]             [k] 0xffffffff8202e90a
+     2.26%  perf_micro  libc.so.6             [.] _int_memalign
+     1.76%  perf_micro  libsgppbase.so        [.] sgpp::base::DataVector::DataVector
+     1.76%  perf_micro  libc.so.6             [.] unlink_chunk.isra.0
+     1.75%  perf_micro  libsgppcombigrid.so   [.] cos@plt
+     1.64%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::tools::complete_sg_gen::addBarPosAsMI
+     1.57%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::NodeGenFunc::genNodesWithBoundary
+     0.89%  perf_micro  [unknown]             [k] 0xffffffff8190410b
+     0.88%  perf_micro  libc.so.6             [.] cfree@GLIBC_2.2.5
+     0.87%  perf_micro  libc.so.6             [.] _mid_memalign
+     0.70%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::tools::sparse_grid_generation::genTGData
+     0.53%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::tools::sparse_grid_generation::genTGData
+     0.53%  perf_micro  libsgppbase.so        [.] operator new
+     0.52%  perf_micro  libc.so.6             [.] __posix_memalign
+     0.51%  perf_micro  [unknown]             [k] 0xffffffff81801268
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261029-101920-_micro_gen_sparse_grid_cc_b1_d20_L5_-t1.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

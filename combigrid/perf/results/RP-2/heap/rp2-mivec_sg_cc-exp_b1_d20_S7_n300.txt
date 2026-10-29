@@ -1,0 +1,8 @@
+# heaptrack summary: rp2-mivec_sg_cc-exp_b1_d20_S7_n300 (snapshot rp-2, 16 threads, --samples 1 --warmups 0, run under systemd-run --user --scope -p MemoryMax=8G)
+calls to allocation functions: 23143 (11046/s)
+peak heap memory consumption: 425.20K
+peak RSS (including heaptrack overhead): 18.49M
+
+Owners at the heap peak (heaptrack_print -F --flamegraph-cost-type peak, condensed to the innermost SG++ frames; MB = 1e6 bytes):
+peak heap (sum of stacks): 0.43 MB
+      0.10 MB  tools::sparse_grid_generation::getNodesPerDimForTG

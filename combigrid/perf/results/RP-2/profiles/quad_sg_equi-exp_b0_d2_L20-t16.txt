@@ -1,0 +1,21 @@
+profile of `^quad/sg/equi-exp/b0/d2/L20$` (e2e, 16 threads, self time)
+    16.30%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+    13.82%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+    12.28%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_operator::processTensorGrid
+    11.05%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+     7.35%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     3.98%  perf_e2e  [unknown]                [k] 0xffffffff8202e90a
+     3.39%  perf_e2e  perf_e2e                 [.] exp@plt
+     2.78%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     2.67%  perf_e2e  libsgppbase.so           [.] sgpp::base::DataVector::DataVector
+     2.08%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     1.83%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     1.79%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     1.52%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     1.29%  perf_e2e  [unknown]                [k] 0xffffffff818011b2
+     0.93%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     0.87%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.53%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_rules::SimpsonQuadRule::genWeightsInplace
+     0.50%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a82
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261029-100837-_quad_sg_equi_exp_b0_d2_L20_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

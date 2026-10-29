@@ -1,0 +1,14 @@
+profile of `^micro/dsg/prepare/equi/b1/d20/L6$` (micro, 1 threads, self time)
+    35.83%  perf_micro  libsgppcombigrid.so      [.] sgpp::combigrid::misc::CTCoeffTrie::CTCoeffTrie
+     7.86%  perf_micro  libsgppcombigrid.so      [.] sgpp::combigrid::delta_quadrature_operator::comp1DWeights
+     4.08%  perf_micro  [unknown]                [k] 0xffffffff818011b2
+     3.72%  perf_micro  libc.so.6                [.] __memset_avx2_unaligned_erms
+     3.26%  perf_micro  [unknown]                [k] 0xffffffff8202e90a
+     2.39%  perf_micro  libc.so.6                [.] __memmove_avx_unaligned_erms
+     1.03%  perf_micro  [unknown]                [k] 0xffffffff81904109
+     0.93%  perf_micro  [unknown]                [k] 0xffffffff8190410b
+     0.89%  perf_micro  [unknown]                [k] 0xffffffff81801268
+     0.88%  perf_micro  [unknown]                [k] 0xffffffff81800b90
+     0.51%  perf_micro  libsgppcombigrid.so      [.] sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261029-102152-_micro_dsg_prepare_equi_b1_d20_L6_-t1.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

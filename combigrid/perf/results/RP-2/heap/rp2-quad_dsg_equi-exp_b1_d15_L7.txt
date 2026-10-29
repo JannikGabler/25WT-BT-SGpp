@@ -1,0 +1,15 @@
+# heaptrack summary: rp2-quad_dsg_equi-exp_b1_d15_L7 (snapshot rp-2, 16 threads, --samples 1 --warmups 0, run under systemd-run --user --scope -p MemoryMax=8G)
+calls to allocation functions: 513364 (116145/s)
+peak heap memory consumption: 111.22M
+peak RSS (including heaptrack overhead): 161.50M
+
+Owners at the heap peak (heaptrack_print -F --flamegraph-cost-type peak, condensed to the innermost SG++ frames; MB = 1e6 bytes):
+peak heap (sum of stacks): 111.22 MB
+     40.16 MB  tools::deltas_sparse_grid_generation::getNodesPerDimForTG
+     19.87 MB  DeltasSparseGrid::DeltasSparseGrid
+     16.88 MB  misc::appendNodesOfDepth <- quadrature
+     11.60 MB  misc::copyNonZeroCoeffTGs <- quadrature
+      9.47 MB  (other: sgpp::combigrid::tools::deltas_sparse_gr)
+      9.47 MB  tools::deltas_sparse_grid_generation::getGPCntPerDim
+      2.82 MB  tools::deltas_sparse_grid_generation::getNodesPerDimForTG <- DeltasSparseGrid::DeltasSparseGrid
+      0.77 MB  tools::deltas_sparse_grid_generation::getGPCntPerDim <- DeltasSparseGrid::DeltasSparseGrid

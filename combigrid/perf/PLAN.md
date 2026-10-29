@@ -8,8 +8,8 @@ re-recorded 2026-10-24), judged configuration, 16 threads unless stated; e2e med
 fed2cdb4e with its own site_scons) stays without it, so the flag counts as an optimization.
 WP-14 turns strict aliasing on (GCC default; `-fno-strict-aliasing` only for the SWIG Java
 wrapper); the baseline keeps `-fno-strict-aliasing`. Entry bodies keep their setup numbers;
-the "From RP-1" lines and the table's expected savings are RP-1's (snapshot `rp-1` = f48d2bbc1,
-ANALYSIS.md "Re-profiling RP-1", `results/RP-1/`).
+the "From RP-1" / "From RP-2" lines carry the re-profiling numbers; the table's expected savings
+are RP-2's (snapshot `rp-2` = 5215417ea, ANALYSIS.md "Re-profiling RP-2", `results/RP-2/`).
 
 **Ranking rule**: expected absolute time saved on the e2e suite, cases with d ≥ 7 first (they
 run longest and the owner prioritizes high dimensions), then all cases; ties broken by operator
@@ -38,8 +38,9 @@ quad/dsg 26.8 s (26.2 s at d ≥ 7) · interp 6.6 s · interplin 5.0 s · mivec 
 generation 5.1 s).
 At RP-1 (rp-1, total 53.4 s): quad/sg 9.2 s (6.9 s at d ≥ 7) · quad/dsg **27.1 s (51 %;
 26.5 s at d ≥ 7)** · interp 5.7 s · interplin 4.5 s · mivec 6.9 s (of which generation 5.65 s).
-After WP-20/WP-02 (their summaries; RP-2 measures): quad/dsg ≈ 17.9 s (b0 ≈ 15.5 s, b1 d15/d20
-2.45 s) → suite ≈ 44 s; quad/dsg ≈ 40 %, mivec generation ≈ 13 %.
+At RP-2 (rp-2 = 5215417ea, total 43.65 s; baseline → rp-2 1.604x, 0 SLOWER): quad/sg 9.18 s ·
+quad/dsg **17.74 s (41 %**; b1 d15/d20 2.44 s) · interp 5.73 s · interplin 4.65 s · mivec 6.35 s
+(of which generation **5.10 s**, closure 77–97 %). Peak memory geomean baseline → rp-2 1.017.
 
 | Rank | ID | Title | Status | Expected saving (e2e) |
 |---|---|---|---|---|
@@ -52,21 +53,21 @@ After WP-20/WP-02 (their summaries; RP-2 measures): quad/dsg ≈ 17.9 s (b0 ≈ 
 | – | RP-1 | Re-profiling after WP-01/WP-13/WP-14 (+ cumulative memory) | accepted (2026-10-28) | measured: baseline → rp-1 e2e 69.95 → 53.41 s (1.31x; d ≥ 7 1.28x); memory geomean 1.028, 3 `MEM+` (quad/sg d2/d3, WP-01 scratch) |
 | – | WP-20 | `FlatNestedVector` under strict aliasing: UB check, obsolete workarounds, code generation (owner's request) | accepted (2026-10-28) | measured: no UB; quad/dsg 27.08 → 26.10 s (1.037x, −0.98 s; b1 d20 1.076x, b1 d15 1.068x, b0 1.01–1.02x); `^quad/` 1.027x; bitwise identical; memory geomean 1.001, 0 flags |
 | – | WP-02 | DSG quadrature: per-delta-tensor-grid trie work at high d | accepted (2026-10-29) | measured: quad/dsg 26.14 → 17.91 s (1.46x, −8.23 s); b1 d20 5.34x, b1 d15 3.14x, b0 1.01–1.05x; memory b1 d20 328 → 217 MiB, d15 233 → 152 MiB, 6 b0 `MEM+` (+1.9…+6.4 MiB), geomean 0.981 |
-| 1 | RP-2 | Re-profiling after WP-20/WP-02 (+ cumulative memory) | in progress (prompt issued 2026-10-29) | decision data: re-ranking |
-| 2 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | ready | ≈ 5.1 s (generation ≥ 10x, d ≥ 10); first step −1.55 s |
-| 3 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready | 1.5–3 s (b0 d7/d10); memory b0 −2…−6 MiB |
-| 4 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04) | ≈ 1–1.5 s (quad/sg + quad/dsg kernels); interface |
-| 5 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only (integrand 67–71 % per query point); gates WP-06/WP-08 |
-| 6 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | 0.6–0.7 s (d ≥ 7 ≈ 0.4 s) |
-| 7 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ≈ 0.5 s (d ≥ 7 ≈ 0.45 s) |
-| 8 | WP-21 | DSG b1: reuse projected sub-tries per single-node-dimension set (from WP-02) | planned (RP-2 sizes it) | ≈ 0.1–0.3 s (b1 d15/d20; projection DFS 12 % at d20) |
-| 9 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | ready | 0.5–0.8 s (d ≤ 3); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1079 → ≈ 280–730 MiB |
+| – | RP-2 | Re-profiling after WP-20/WP-02 (+ cumulative memory, WP-21/WP-22 sizing) | accepted (2026-10-29) | measured: baseline → rp-2 e2e 70.03 → 43.65 s (1.604x; d ≥ 7 1.61x), 0 SLOWER; memory geomean 1.017, 8 `MEM+` (sg d2 WP-01 scratch, 6 dsg b0 WP-02 slots), 2 `MEM−` (dsg b1 d15/d20) |
+| – | WP-22 | Tensor grids of a sparse grid as struct of arrays (owner's idea) | dropped (2026-10-29): merged into WP-18 (RP-2) | – |
+| 1 | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | in progress (prompt issued 2026-10-29) | ≈ 4.5 s (closure ≈ 5.06 s, d ≥ 10); first step ≈ −1.0 s; memory nil |
+| 2 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready | 1.5–2.5 s (b0 d7/d10); memory ≈ −3 MiB per b0 case |
+| 3 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04) | ≈ 1–1.5 s (dispatch: DSG b0 ≈ 0.9 s, b1 0.13 s, quad/sg ≈ 0.4 s); interface |
+| 4 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only (integrand 67–71 % per query point); gates WP-06/WP-08 |
+| 5 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | 0.6–0.7 s (d ≥ 7 ≈ 0.4 s); + alignment check of `interpolateFirstDim` |
+| 6 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ≈ 0.5 s (d ≥ 7 ≈ 0.45 s); + alignment check of the corner loop |
+| 7 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready (after WP-04) | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
+| 8 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
+| 9 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | ready | 0.5–0.8 s (d ≤ 3); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1072 → ≈ 280–730 MiB; + `DeltaQuadratureScratch` on demand |
 | 10 | WP-07 | Generic barycentric formula: cache the weights | ready | ≈ 0.2 s (d < 7) |
 | 11 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | 0.1–0.3 s (d2) |
-| 12 | WP-22 | Tensor grids of a sparse grid as struct of arrays (owner's idea; proposal) | planned (RP-2 sizes it) | memory ≤ ≈ 37 MB at b1 d20 (per-TG `LvlMI`s) + fewer allocations; runtime unknown (RP-2) |
-| 13 | WP-18 | Shared 1D node arrays per (dimension, level) (from D-5; memory; proposal for the owner) | ready | memory −64 / −101 / −17 MiB (dsg b1 d20 / sg d2 L20 / sg b1 d20); runtime small |
-| 14 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | warm e2e nil; cold start; floor −1…−4.5 MiB per process |
-| 15 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides after WP-03) | decision data only |
+| 12 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | warm e2e nil; cold start; floor −1…−4.5 MiB per process |
+| 13 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | planned (owner decides after WP-03) | decision data only |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10 | – |
@@ -83,6 +84,13 @@ After WP-02 (2026-10-29): RP-2 is due (rule 7: two accepted optimizations since 
 changed ≥ 1.3x, b1 hot-spot ranking shifted); pre-RP-2 order WP-03 (≈ 5.1 s) > WP-04 (1.5–3 s).
 WP-21 ranks before WP-05 because its saving is at d ≥ 7. WP-22 (owner 2026-10-29) is ranked
 provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime part.
+After RP-2 (accepted 2026-10-29): WP-03 (≈ 4.5 s) clearly first; WP-04 re-estimated at 1.5–2.5 s.
+WP-21 sized (0.1–0.2 s) → ready, after WP-04 (same files). WP-22 merged into WP-18 (same storage
+and accessors; RP-2's proposal, accepted with RP-2). By the d ≥ 7 rule WP-18 (runtime ≈ 0.05 s,
+memory −96…−114 MB at b1 d20) ranks before WP-05 (0.5–0.8 s at d ≤ 3, the largest memory lever);
+the owner may move WP-05 up for its memory weight (2026-10-28: runtime rank kept). Code-placement
+candidates (front-end stall cycles: closure loop 4.1 %, `computeNeighborGPWithWeight` up to
+5.7 %, `interpolateFirstDim` 2.8 %) are checked inside WP-03 / WP-08 / WP-06.
 
 ---
 
@@ -215,6 +223,16 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
   (`results/RP-1/mivec-master-vs-rp-1.md`). First step / fallback: a scalar early-exit dominance
   test (or `#pragma GCC novector`) restores master speed, **−1.55 s** (d10 0.48, d15 0.52, d20
   0.55 s), a few lines. Expected total **≈ 5.1 s**. Memory nil.
+- **From RP-2** (accepted): `genMIVecDownwardsClosure` **77.5 / 96.1 / 97.2 %** at d10/d15/d20;
+  mivec 6.35 s, generation 5.10 s, closure ≈ 5.06 s; e2e totals d10/d15/d20 1.90 / 1.89 / 1.83 s.
+  Generation is 1.06–1.13x faster than at rp-1 with unchanged source: LTO compiled the OpenMP
+  closure function differently (8.3 → 11.0 KB, −2 % instructions, IPC 1.76 → 1.94; same AVX2
+  alignment-dispatch loop), i.e. the vectorized dominance test is fragile (13 % swing from
+  unrelated changes). Expected **≈ 4.5 s**; the scalar early-exit first step ≈ −1.0 s and makes
+  the speed independent of LTO decisions elsewhere. Front-end stall cycles 4.1 % of the closure
+  loop (alignment candidate; upper bound = stall share). Micro (1 thread):
+  `micro/mivec/downwards_closure/d10/S10/n300` 621 ms, `.../d20/S6/n100` 21.1 ms,
+  `micro/mivec/ct_coeffs/d10/S12/n1000` 15.6 ms. Memory nil.
 
 ## WP-04 — DSG quadrature: row loop
 - **Location**: `deltas_sparse_grid_quadrature.hpp` (`forEachGPWithGlobalWeight`,
@@ -252,6 +270,15 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
   `childEnd`) should offset most of it and may help the row loop's cache use. A 32-bit `order`
   array in the serial `CTCoeffTrie` construction would also help. Include both and report
   memory per case.
+- **From RP-2** (accepted): shares unchanged. b0/d10/L7 row loop vs. integrand: equi-exp
+  **43.1 / 52.5 %**, cc-uq **32.8 / 63.6 %** (d7 row loop 42.9 / 33.9 %). Inside the loop (equi /
+  cc): `updateCoeffSums` 14.4 / 10.9, `compRowWeights` 11.6 / 8.3, row + advance 9.4 / 7.4,
+  `std::function` call 5.3 / 4.4 (+ `_M_invoke` 1.4 / 1.2), lambda 2.4 / 1.9 %. The row loop
+  costs 5.53 s over the b0 d7/d10 cases, of which per-row trie work ≈ 3.3 s. Micro
+  `micro/dsg/process_delta_tg/equi/b0/d10/L7` 26.12 vs. SG kernel `process_tg/equi/b0/d10/L4`
+  21.84 ns/point → parity ≈ 2.1 s. **Expected 1.5–2.5 s.** Not front-end-bound (0.7 % stall
+  cycles). Memory: per-thread builder arrays 13.5 MB of the 24 MB heap at b0 d10 → `TrieNode`
+  24 → 16 B ≈ −3 MB per b0 case (vs. baseline 6 b0 `MEM+`, +1.2…+5.8 MiB).
 
 ## WP-05 — SG quadrature at low d: CC 1D weights and per-thread scratch (incl. RP-1 NEW-A)
 - **Scope after RP-1** (owner 2026-10-28: NEW-A merged into WP-05, runtime rank kept): (a) CC 1D
@@ -292,6 +319,10 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
   memory equi d2 620 → ≈ 120–270 MiB, cc d2 1079 → ≈ 580–730 MiB (before the weights part),
   cc d3 −4 MiB; a few lines, no API change.
 - **E2E filter (RP-1)**: `^quad/|^mivec/`; report the `MEM-` cases.
+- **From RP-2** (accepted): shares unchanged (CC d2 weights ≈ 24 % + kernel 21.9 %). Peaks: sg cc
+  d2 1072, sg equi d2 620 MiB (scratch 537 + CC FFT 361 + nodes 101 MB; nodes → WP-18). The same
+  on-demand pattern applies to `DeltaQuadratureScratch` (15.7 MB zero-filled per thread; dsg b0 d3
+  peak 63 MiB): include it. Expected 0.5–0.8 s (d ≤ 3) unchanged; the largest memory lever.
 
 ## WP-06 — Global interpolation: operator overhead
 - **Location**: `operators/global_interpolation/global_interpolation.cpp`.
@@ -319,6 +350,8 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
   `denormalizeDataVector` 6.8 %, `getGridPoint` 7.8 % (+ 2.8 % vector access), `hasTrivialResult`
   + `nearlyEqual` 2.4 %, libgomp 4.8 %; `.../d10/L2/p8` (1.99 s): 8.4 / 5.0 / 1.3 / 3.9 %;
   integrand 67–71 %. Expected 0.6–0.7 s (d ≥ 7 ≈ 0.4 s).
+- **From RP-2**: unchanged (`interpolateFirstDim` 18.9 / 19.9 %). Alignment candidate:
+  `interpolateFirstDim` at d10 has 2.8 % front-end stall cycles (upper bound of an alignment gain).
 
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
@@ -344,6 +377,7 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
 - **From RP-1**: `interp/sg/cheb1/b0/d5/L4/p64`: `barycentricFormulaWeights` 9.0 + `log` 13.9 +
   `exp` 2.9 % + their allocations 5.5 %; libgomp 21.3 %; 1 thread: weights 34.3 % + allocations
   8.2 %. Expected ≈ 0.2 s (d < 7).
+- **From RP-2**: unchanged (cheb1 weights 24.0 % [RP-1 25.8 %]).
 
 ## WP-08 — Linear interpolation: corner loop
 - **Location**: `operators/linear_interpolation/linear_interpolation.cpp`, `TensorGrid::getNeighborsForLinInterpolation`.
@@ -362,6 +396,9 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
 - **From RP-1**: `interplin/sg/equi/b1/d8/L5/p256`: `computeNeighborGPWithWeight` 16.6 %,
   `denormalizeDataVector` 5.0 %; `.../d10/L5/p32` (2.47 s): 19.8 / 4.3 %; integrand 68–69 %.
   Expected ≈ 0.5 s (d ≥ 7 ≈ 0.45 s).
+- **From RP-2**: unchanged (`computeNeighborGPWithWeight` d10 19.9 %, d8 16.5 %). Alignment
+  candidate: front-end stall cycles 2.9 / 5.7 % of the interplin cases (4.6–6.3 % of the
+  function's own cycles) → try `[[gnu::aligned(64)]]` on the corner loop (as WP-02's row loop).
 
 ## WP-09 — Multi-point interpolation API (from D-1; proposal, owner decides after the results)
 - **Source**: D-1. Owner, 2026-10-24: "Approve it as a work package. A new API can be considered
@@ -703,8 +740,10 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
 - **Dependencies**: after WP-02 and WP-04 (same DSG row loop). Coordinate with WP-09.
 - **From WP-02**: at `quad/dsg/equi-exp/b1/d20/L6` the integrand (`expSum` + libm `exp` +
   `std::function`) is now ≈ 55–60 % of the time (16 threads), and the row loop is 21 %.
+- **From RP-2**: dispatch ≈ 0.9 s at DSG b0, 0.13 s at b1, ≈ 0.4 s in quad/sg (DSG b0 d10 L7
+  `std::function` call 5.3 / 4.4 % + `_M_invoke` 1.4 / 1.2 %, equi / cc). Expected unchanged.
 
-## WP-18 — Shared 1D node arrays per (dimension, level) (from D-5; memory; proposal)
+## WP-18 — Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal)
 - **Source**: RP-1 summary (NEW-D). Owner, 2026-10-28: include in the plan as a candidate WP;
   the change of the public `TensorGrid` storage is a proposal, adoption decided after the results.
 - **Location**: `grids/tensor_grid.{hpp,cpp}` (per-dimension node lists), `grids/sparse_grid.{hpp,cpp}`,
@@ -730,9 +769,28 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
   `DataVector`s 64 MB and per-tensor-grid `LvlMI`s 37 MB. WP-18's −64 MiB is therefore ≈ 30 % of
   that peak (d15: RSS 152 MiB, node lists 43 MiB). The per-TG `LvlMI` storage is a further lever
   outside WP-18's scope (RP-2 assesses it; → WP-22).
-- **Coordinate with WP-22** (struct-of-arrays layout of the tensor grids): both change how a
+- **Coordinate with WP-22** (merged into this WP at RP-2, see below): both change how a
   sparse grid stores its tensor grids; design them together or in sequence so the storage and
   its public access change once.
+- **From RP-2** (accepted; `results/RP-2/wp22-sizing.md`): **WP-22 merged into this WP** (same
+  storage and accessors); its locations and hypothesis (entry WP-22 below) are part of the scope.
+  Per entry of `std::vector<TensorGridCTData>`: 112 B inline + 3 allocations (level MI 4d B,
+  counts 4d B, nodes); b1 d20: 25.8 + 18.4 + 18.4 + 63.8 MB (690 690 of the process's 692 268
+  allocations). SoA (contiguous levels taken over from the generation, coefficient array, derived
+  counts, flat nodes): −50 MB (d20; heap peak 178 MB), −36 MB (d15), −12 MB (sg b1 d20 L5), nil at
+  sg d2 and mivec. Combined with shared node arrays: dsg b1 d20 **−96…−114 MB** (RSS 217 →
+  ≈ 110–125 MiB), d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB. Runtime: tensor-grid-list
+  walks ≈ 18 ms of the serial DSG preparation (level copy + `comp1DWeights` max-level scan: 16.5 %
+  of its samples, 40 % of its cache misses) + 3 allocations per grid in generation; per-grid
+  operator setup ≤ 0.4 %. About half of the warm b1 generation is page faults of the grid (d20
+  generation 51 → 61 ms rp-1 → rp-2 from what the previous phase freed; 30.5–31 ms with glibc
+  trim/mmap thresholds disabled). Expected ≈ 0.03–0.07 s + node generation (≈ 35 % of CC SG
+  generation). Public access affected: `getTensorGrid(idx/mi)`, `getTensorGrids()` span,
+  iterators incl. a mutable one, `TensorGrid::getGPCntPerDim/getNodesPerDim` by reference, Python
+  `mi` / `tensorGrid` properties and `TensorGridCTDataVector`. **Constraint**: the protected
+  `perf_e2e.cpp:81` / `perf_reference.cpp:136-144` use `tgData.mi`, `.coefficient`,
+  `.tensorGrid.*` → a proxy must keep these names, or the owner adapts the protected files (owner
+  decides before the prompt).
 
 ## WP-19 — SG quadrature: load balancing at low d
 - **Source**: RP-1 summary (NEW-C).
@@ -816,6 +874,9 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
   during timing). b1 d20: the DSG itself (node lists 64 MB → WP-18; per-TG `LvlMI`s 37 MB →
   separate lever?). b0 dsg: WP-02's `MEM+` (→ WP-04 `TrieNode`). sg d2 L20: unchanged since
   RP-1 (→ WP-05)?
+- **Result** (accepted 2026-10-29; `summaries/RP-2-reprofiling.md`): baseline → rp-2 e2e 70.03 →
+  43.65 s (1.604x, 0 SLOWER; since RP-1 1.224x); memory geomean 1.017. Re-ranking applied above:
+  WP-03 first, WP-04 1.5–2.5 s, WP-21 0.1–0.2 s, WP-22 merged into WP-18. No new hot spots.
 
 ## WP-21 — DSG b1: reuse projected sub-tries per single-node-dimension set
 - **Source**: WP-02 summary (follow-ups).
@@ -841,8 +902,22 @@ provisionally next to WP-18 (same storage, interface): RP-2 sizes its runtime pa
 - **Micro**: `micro/dsg/sub_tries/equi/b1/d20/L6/s256`, `micro/dsg/process_delta_tgs/equi/{b1/d20/L6/s256, b1/d15/L7/s128}`.
 - **E2E filter**: `^quad/dsg/` · **Functional change**: none.
 - **Dependencies**: after RP-2; same files as WP-04 (run after WP-04 if both are scheduled).
+- **From RP-2** (accepted; `results/RP-2/wp21-sizing.md`): `quad/dsg/equi-exp/b1/d20/L6` (1.23 s):
+  integrand 52.8 %, row loop 21.3 %, projection builder **13.6 %** (`addChildren` 12.0) + memset
+  1.0; serial preparation 65.7 ms (5.4 % of the wall time; radix pass 64 % of the `CTCoeffTrie`
+  constructor, level copy from `TensorGridCTData` 24 %); generation 61 ms. `.../b1/d15/L7`
+  (1.22 s): 55.6 / 24.8 / 9.6 %. Single-node-dimension sets vs. delta grids: d20 60 460 vs.
+  230 230 (3.8 per set), d15 16 384 vs. 170 544 (10.4). A per-set cache saves only 35 / 50 % of
+  the 6.2e7 / 4.8e7 DFS visits (each set's smallest member must still be built). The DFS rejects
+  44 / 42 % of its child iterations with `continue`; a slack bound with `break` removes them and
+  is valid for any set. Levers: (a) slack `break` in `addChildren` (first), (b) per-set cache or a
+  visit order grouping delta grids by set. Optional: serial preparation (radix pass, max levels
+  from the instruction, exact trie-node reservation) ≤ 0.03–0.05 s and −8 MB at the b1 d20 peak.
+  **Expected 0.1–0.2 s** (builder ≈ 0.31 s). Status: ready.
 
-## WP-22 — Tensor grids of a sparse grid as struct of arrays (owner's idea; proposal)
+## WP-22 — Tensor grids of a sparse grid as struct of arrays (owner's idea; dropped: merged into WP-18)
+- **Status**: dropped 2026-10-29 — merged into WP-18 (RP-2: runtime ≈ 0.03–0.07 s, memory
+  −50 MB at dsg b1 d20; same storage and accessors as WP-18). The entry stays as WP-18's scope.
 - **Source**: owner, 2026-10-29. `SparseGridBase` stores its tensor grids as an array of structs
   (`std::vector<TensorGridCTData>`: level multi-index, CT coefficient, `TensorGrid` per entry).
   A struct-of-arrays layout would avoid pointer chasing and improve memory locality.

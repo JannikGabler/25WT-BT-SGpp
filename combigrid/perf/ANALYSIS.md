@@ -15,6 +15,7 @@ AC, idle; e2e at 16 threads, micro at 1 thread. Raw data: `baseline/` (protected
 7. [Further findings](#further-findings)
 8. [From findings to work packages](#from-findings-to-work-packages)
 9. [Re-profiling RP-1](#re-profiling-rp-1) (after WP-01, WP-13, WP-14; incl. peak memory)
+10. [Re-profiling RP-2](#re-profiling-rp-2) (after WP-20, WP-02; WP-21/WP-22 sizing, code placement, peak memory)
 
 ## Measurement noise
 
@@ -462,3 +463,277 @@ follow-ups"). New in RP-1: quadrature scratch zero-fill (memory + page faults), 
 MI dominance test (mivec generation 1.33–1.46x slower than master), `std::function` dispatch per
 grid point (4–9 % of the quadrature kernels; interface), load imbalance of quad/sg at low d,
 shared node arrays (memory; interface).
+
+## Re-profiling RP-2
+
+Work session RP-2, 2026-10-29. Code: 5215417ea (= `rp-2` snapshot; since RP-1 the accepted WP-20
+and WP-02). Judged configuration, boost off, `calibrate` OK (e2e 1.003 burst / 0.999 sustained,
+micro 0.994 / 0.998). Reports in `results/RP-2/`:
+- A/Bs: `e2e.md/.json` (full suite baseline → rp-2), `e2e-rp-1-vs-rp-2-*.md` (direct checks of
+  shifts in unchanged code); `micro-run.json`.
+- derived data: `groups.md`, `profile-splits.md`, `wp21-sizing.md`, `wp22-sizing.md`,
+  `frontend-per-symbol.md`, `perfstat-frontend-rp-2.txt`, `mivec-rp-1-vs-rp-2.md`,
+  `generation-page-faults.md`;
+- top lists and summaries: `profiles/`, `heap/`.
+
+Method change: shares of inlined helpers come from the inline chain (`addr2line -i`) of every
+sampled address instead of RP-1's `--sort srcline` (STL lines count for the helper that inlined
+them; see `profile-splits.md`).
+
+### Cumulative progress baseline → rp-2
+
+Full e2e A/B (`ab e2e baseline rp-2`, 38 cases, 5 rounds, foreign load ≤ 1.5 %). rp-1 = the RP-1
+report (other session); per-group rp-1 → rp-2 from those numbers:
+
+| group | baseline | rp-1 | rp-2 | baseline → rp-2 | rp-1 → rp-2 | d ≥ 7: baseline → rp-2 | peak RSS geomean | verdicts (total) |
+|---|---|---|---|---|---|---|---|---|
+| quad/sg | 22.29 s | 9.19 s | 9.18 s | 2.43x | 1.001x | 18.53 → 6.93 s (2.67x) | 1.064 (2 MEM+) | 13 faster |
+| quad/dsg | 26.73 s | 27.10 s | **17.74 s** | 1.51x | **1.528x** | 26.13 → 17.20 s (1.52x) | 0.979 (6 MEM+, 2 MEM−) | 9 faster |
+| interp | 6.64 s | 5.70 s | 5.73 s | 1.16x | 0.993x | 3.72 → 3.27 s (1.14x) | 0.999 | 5 faster, 3 ~ |
+| interplin | 5.09 s | 4.52 s | 4.65 s | 1.09x | 0.971x (drift; direct A/B: noise) | 4.41 → 4.10 s (1.08x) | 1.009 | 3 faster, 1 ~ |
+| mivec | 9.28 s | 6.91 s | 6.35 s | 1.46x | 1.088x | 7.08 → 5.61 s (1.26x) | 1.004 | 3 faster, 1 ~ |
+| **all** | **70.03 s** | **53.41 s** | **43.65 s** | **1.604x** | **1.224x** | 59.87 → 37.10 s (1.61x) | **1.017** | 33 faster, 5 ~, 0 SLOWER |
+
+- mivec phases: generation 5.11 → 5.10 s (rp-1 5.65 s), operator 4.18 → 1.24 s.
+- quad/dsg b0 15.30 s, b1 2.44 s (rp-1: 15.97 / 11.13 s).
+- Direct rp-1 → rp-2 A/Bs of unchanged code:
+  - mivec generation d10/d15/d20 1.063 / 1.131 / 1.130x faster (code generation, below);
+  - interplin all noise;
+  - quad/dsg b1 `generation` 0.843 / 0.851x (page faults, below).
+- Peak memory: 8 `MEM+`.
+  - WP-01 scratch: `quad/sg/equi-exp/b0/d2/L20` 363.7 → 619.7 MiB, `quad/sg/cc-uq/b0/d2/L20`
+    833.3 → 1072.2 MiB.
+  - WP-02 slot arrays: the six quad/dsg b0 cases +1.2…+5.8 MiB (1.05–1.16x).
+- 2 `MEM−`: `quad/dsg/equi-exp/b1/d20/L6` 330.6 → 217.1 MiB, `.../b1/d15/L7` 230.7 → 150.9 MiB.
+- Floors: 10.4 / 10.1 MiB. Per-case table: `results/RP-2/groups.md`.
+
+### Where the time goes (rp-2)
+
+| group | share of the suite | of which |
+|---|---|---|
+| quad/dsg | 40.6 % | b0 35.1 % · b1 5.6 % |
+| quad/sg | 21.0 % | |
+| mivec | 14.5 % | generation 11.7 % |
+| interp | 13.1 % | |
+| interplin | 10.7 % | |
+
+Longest cases:
+
+| case | total |
+|---|---|
+| `quad/dsg/cc-uq/b0/d10/L7` | 6.77 s |
+| `quad/dsg/equi-exp/b0/d10/L7` | 5.41 s |
+| `interplin/sg/equi/b1/d10/L5/p32` | 2.52 s |
+| `quad/sg/equi-sin/b0/d7/L7` | 2.42 s |
+| `interp/sg/cc/b0/d10/L2/p8` | 1.99 s |
+| mivec d10 / d15 / d20 | 1.90 / 1.89 / 1.83 s |
+| `interplin/sg/equi/b1/d8/L5/p256` | 1.58 s |
+| `interp/sg/cc/b0/d5/L6/p64` | 1.48 s |
+| `quad/dsg/cc-uq/b0/d7/L10` | 1.44 s |
+| `quad/sg/cc-uq/b0/d10/L4` | 1.31 s |
+| `quad/dsg/equi-exp/b1/d20/L6`, `.../b1/d15/L7` | 1.23, 1.22 s |
+
+The two b0 d10 DSG cases alone are 28 % of the suite.
+
+### Hot spots per operator (profiles, 16 threads; RP-1 values in brackets)
+
+| case (rp-2 total) | top shares |
+|---|---|
+| `quad/dsg/equi-exp/b0/d10/L7` (5.41 s) | row loop **43.1 %** [44.8] = `updateCoeffSums` 14.4 · `compRowWeights` 11.6 · row + advance 9.4 · `std::function` call 5.3 · lambda 2.4 · integrand **52.5 %** [50.5] · memset 2.1 % |
+| `quad/dsg/cc-uq/b0/d10/L7` (6.77 s) | row loop **32.8 %** [35.0] = 10.9 / 8.3 / 7.4 / 4.4 / 1.9 · integrand **63.6 %** [61.1] |
+| `quad/dsg/equi-exp/b0/d7/L10`, `cc-uq/b0/d7/L10` (1.14, 1.44 s) | row loop 42.9 / 33.9 % (as d10; first measurement at d7) · integrand 48.5 / 58.5 % |
+| `quad/dsg/equi-exp/b1/d20/L6` (1.23 s) | integrand **52.8 %** · row loop 21.3 % (4.8 / 5.9 / 5.4 / 3.5 / 1.7) · projection builder **13.6 %** (`addChildren` 12.0) + memset 1.0 · libgomp 2.0, OpenBLAS 1.7 · not in the samples: serial preparation 65.7 ms (5.4 % of the wall time) and generation 61 ms (5 %) |
+| `quad/dsg/equi-exp/b1/d15/L7` (1.22 s) | integrand **55.6 %** · row loop 24.8 % (5.5 / 6.6 / 6.2 / 4.5 / 2.0) · projection builder **9.6 %** (`addChildren` 8.3) + memset 1.0 · generation 43 ms |
+| `quad/sg/*` | unchanged within ≈ 1 point: equi-exp/b0/d10/L4 integrand 71.1 %, `processTensorGrid` 24.9 % [25.2]; equi-sin/b0/d7/L7 91.1 / 6.4 %; cc-uq/b0/d10/L4 77.9 / 18.7 %; b1/d20/L5 64.6 / 12.4 % + libgomp/OpenBLAS ≈ 15 %; cc-uq/b0/d2/L20 CC weights ≈ 24 % + kernel 21.9 % [22.7]; equi-exp/b0/d2/L20 kernel 17.9 % [18.1] |
+| `interp/*`, `interplin/*` | unchanged: `interpolateFirstDim` 18.9 % (cc d10) / 19.9 % (cc d5) [19.1 / 20.2]; cheb1 d5 generic weights + `log`/`exp` 24.0 % [25.8], libgomp 18.9 % [21.3]; `computeNeighborGPWithWeight` 19.9 / 16.5 % [19.8 / 16.6] (d10 / d8) |
+| `mivec/...` d10 / d15 / d20 | `genMIVecDownwardsClosure` **77.5 / 96.1 / 97.2 %** [78.6 / 96.6 / 97.6] |
+
+Observations:
+- **DSG b0 is unchanged in structure.** The row loop lost 1.7–2.2 points (WP-02/WP-20's
+  1.4–4.6 %), and d7 matches d10.
+  - The per-row trie work (`updateCoeffSums` + `compRowWeights`) is 26 % (equi) / 19 % (cc) of
+    the b0 cases ≈ 3.3 s in absolute time (b0 d7/d10).
+  - The row loop costs 5.53 s over b0 d7/d10.
+- **DSG b1: the framework is no longer the main cost.** The integrand is 53–56 %, the row loop
+  21–25 %, the projection builder 10–14 % (≈ 0.31 s over d15 + d20).
+  - The single-threaded parts (serial preparation 66 ms, the parallel generation 61 ms) are each
+    ≈ 5 % of the d20 wall time.
+- quad/sg, interp, interplin and mivec: no change since RP-1 (no code of theirs changed).
+
+### Micro-benchmarks (rp-2, `run micro`, 1 thread)
+
+| case | rp-1 | rp-2 |
+|---|---|---|
+| micro/quad/process_tg/equi/b0/d10/L4 vs. micro/sol/quad_tg/equi/b0/d10/L4 | 21.8 vs. 24.1 ns/point | 21.84 vs. 24.10 ns/point (0.91x) |
+| micro/dsg/process_delta_tg/equi/b0/d10/L7 | 27.8 ns/point (1.28x the SG kernel) | **26.12 ns/point (1.20x the SG kernel)** |
+| micro/dsg/process_delta_tgs/equi/b0/d10/L6/s64 | – | 28.3 ns/point |
+| micro/dsg/process_delta_tg/equi/b1/d20/L6 | 693 ns/point | **30.2 ns/point** |
+| micro/dsg/process_delta_tgs/equi/b1/d20/L6/s256 · b1/d15/L7/s128 | – | 48.5 · 33.3 ns/point |
+| micro/dsg/sub_tries/equi/b1/d20/L6/s256 · b0/d10/L7/s16 | – | 19.65 · 9.17 ms |
+| micro/dsg/prepare/equi/b1/d20/L6 (serial) | 292 ms | **65.7 ms** (WP-02's 113 ms = 0-warm-up `ab micro`) |
+| micro/mivec/downwards_closure/d10/S10/n300 · d20/S6/n100 | 637 · 21.0 ms | 621 · 21.1 ms |
+| micro/mivec/ct_coeffs/d10/S12/n1000 | – | 15.6 ms |
+| micro/interp/global_tg/cc/b0/d5/L6 · cheb1/b0/d5/L4 | 107.6 · 190.3 ns/point | 107.7 · 192.1 ns/point |
+| micro/interp/barycentric_1d/generic/n65 vs. opt_cc/n65 | 576 vs. 3.0 ns/node | 577 vs. 3.0 ns/node |
+| micro/interplin/tg/equi/b1/d8/L5 | 166.0 ns/corner | 169.3 ns/corner |
+| micro/gen/complete_mis_with_coeffs/d20/L6 · gen/sparse_grid/cc/b1/d20/L5 | 9.4 · 65.7 ms | 9.4 · 68.4 ms |
+
+Thread scaling was not re-measured: no code that RP-1 measured there changed.
+
+### DSG b1: WP-21 sizing (`results/RP-2/wp21-sizing.md`)
+
+Delta grids with the same single-node-dimension set P share the projected coefficient function.
+
+| | d20 L6 | d15 L7 |
+|---|---|---|
+| distinct sets P vs. delta grids | 60 460 vs. 230 230 (3.8 per set) | 16 384 vs. 170 544 (10.4 per set) |
+| DFS node visits (exact count for complete grids, reproduces WP-02's 6.2e7) | 6.20e7 | 4.84e7 |
+| per-set cache | −34.5 % | −49.8 % |
+
+The cache saves this little because each set's smallest member (m = 1_P), which has the
+largest sub-trie, must still be built.
+
+The DFS also rejects 4.8e7 / 3.6e7 children with `continue` (44 % / 42 % of its child
+iterations). A slack bound `lvl ≤ deltaLvl + remaining slack` (children are sorted, so it can
+`break`) is valid for every set and removes them.
+
+Builder time ≈ 0.31 s (d15 + d20) → expected **0.1–0.2 s** for both levers.
+
+The serial preparation (65.7 ms at d20) can be added to the same WP:
+- radix pass 64 % of the trie constructor;
+- the two tensor-grid scans ≈ 18 ms;
+- `FlatNestedVec` doubling +8.4 MB at the d20 heap peak.
+
+### Tensor grids as struct of arrays: WP-22 sizing (`results/RP-2/wp22-sizing.md`)
+
+Each `TensorGridCTData` entry is 112 B inline plus three heap allocations (level MI 4d B, counts
+4d B, node list). At d20, 690 690 of the process's 692 268 allocations belong to the 230 230
+tensor grids.
+
+**Memory**: the b1 d20 DSG holds 126.4 MB (requested; ≈ 137 MB with glibc chunk overhead):
+
+| part | size |
+|---|---|
+| struct array | 25.8 MB |
+| level MIs | 18.4 MB |
+| counts | 18.4 MB |
+| node lists | 63.8 MB |
+
+The heap peak (178.4 MB) occurs in the operator's `CTCoeffTrie` construction, which adds
+51.7 MB of transients: the column-major level copy 18.4 MB, the node `FlatNestedVec` doubling
+16.8 + 8.4 MB, the order arrays 6.3 MB.
+
+Savings:
+- SoA (levels in one `LvlMIVec` taken over from the generation, coefficients in one array,
+  counts derived, nodes flat): −50 MB at d20, −36 MB at d15, −12 MB at sg b1 d20 L5.
+- Together with WP-18 (shared node arrays): −96…−114 / −68…−78 / −25…−29 MB, and −101 MB at
+  sg d2 L20.
+- mivec cases: nil (heap 0.4 MB).
+
+**Runtime**: walking the tensor-grid list shows up in three places:
+- the serial preparation: level copy 8.6 % of its samples / 22.4 % of its cache misses,
+  `comp1DWeights`' max-level scan 7.9 / 18.0 %; ≈ 18 ms per call at d20;
+- generation: 3 allocations per tensor grid; malloc/free ≈ 18 % of the SG generation micro;
+- the per-tensor-grid operator setup: ≤ 0.4 %.
+
+Expected **≈ 0.03–0.07 s** on the suite (minimal), mostly in the generation of the b1 cases.
+
+**Interface**: `TensorGridCTData` and its members are exposed by reference in many places:
+- `SparseGridBase::getTensorGrid(idx)`, `getTensorGrid(mi)` (iterator), `getTensorGrids()`
+  (`std::span`), the iterators incl. a mutable one;
+- `TensorGrid::getGPCntPerDim()` / `getNodesPerDim()`;
+- internal operator helpers in public headers;
+- Python: read-only `mi` / `tensorGrid` properties with `_owner`, `getTensorGrids()` as
+  `TensorGridCTDataVector`;
+- the protected `perf_e2e.cpp:81` and `perf_reference.cpp:136-144`. They need a proxy with the
+  same member names (`.mi`, `.coefficient`, `.tensorGrid.nGP()/getGPCntPerDim()/getNodesPerDim()`),
+  or the owner adapts them.
+
+**Merge with WP-18**: yes, it is the same storage and accessors; doing them separately would
+change the public access twice.
+
+### Code placement (`results/RP-2/frontend-per-symbol.md`)
+
+Process-wide op-cache misses are 2.5–4.3 per 1000 accesses in the b0 / interp / interplin /
+mivec cases, and 10–15 at b1 high d. Front-end stall cycles:
+
+| loop / case | front-end stalls | assessment |
+|---|---|---|
+| quad/sg `processTensorGrid` | 0.5 % | not front-end-bound |
+| DSG b0 row loop (aligned since WP-02) | 0.7 % | not front-end-bound |
+| interp cc d5 | 0.9 % | not front-end-bound |
+| interp cc d10 | 2.8 % | candidate |
+| interplin d8 / d10 | 2.9 / 5.7 % | candidate (`computeNeighborGPWithWeight` 4.6–6.3 % of its own cycles) |
+| mivec closure | 4.1 % | candidate |
+
+The per-symbol split comes from non-precise samples (skid toward the callees), so it is only
+indicative.
+
+Alignment candidates (propose only):
+- `linear_interpolation::computeNeighborGPWithWeight` / the corner loop (WP-08);
+- the closure's dominance loop (WP-03 rewrites it);
+- `interpolateFirstDim` at d10 (WP-06).
+
+Their upper bound is the stall share (≤ 3–6 % of those cases).
+
+### Unchanged code, changed timings
+
+- **mivec generation 1.06–1.13x faster since rp-1** (direct A/B), with the closure's source
+  unchanged.
+  - LTO compiled the OpenMP function differently: 8.3 → 11.0 KB, −2.1 % instructions, −11.5 %
+    cycles, IPC 1.76 → 1.94. Op-cache miss rates are equal, so it is not placement.
+  - The hot loop still has RP-1's structure (alignment test `test $0x1f` 7.3 %, `vptest`
+    early-break loop, per-test `imul`).
+  - The vectorized dominance test is fragile. WP-03's scalar early-exit first step now saves ≈ 1.0 s
+    (to master speed 1.03 / 1.55 / 1.52 s) instead of 1.55 s.
+- **quad/dsg b1 `generation` 0.84–0.85x since rp-1** (WP-02's 50.97 → 59.54 ms persists:
+  50.9 → 60.9 ms).
+  - Cause: page faults. With glibc trimming and the mmap threshold disabled (diagnostic
+    `GLIBC_TUNABLES`), warm generation is 30.5–31 ms in both builds.
+  - The warm-up's freed operator memory was larger in rp-1 (154 MB of sub-trie vectors), so the
+    next generation reused more mapped pages.
+  - Not a regression; about half of the warm b1 d20 generation is faulting in the grid's 126 MB,
+    which WP-22/WP-18 reduce.
+
+### Peak memory (rp-2)
+
+Largest peaks above the floor (10.1 MiB):
+
+| case | peak RSS |
+|---|---|
+| `quad/sg/cc-uq/b0/d2/L20` | 1072 MiB |
+| `quad/sg/equi-exp/b0/d2/L20` | 620 MiB |
+| `quad/dsg/equi-exp/b1/d20/L6` | 217 MiB |
+| `.../b1/d15/L7` | 151 MiB |
+| `quad/dsg/equi-exp/b0/d3/L16` | 62.6 MiB |
+| `quad/sg/equi-exp/b1/d20/L5` | 56.9 MiB |
+| `.../b1/d15/L6` | 52.8 MiB |
+
+All other cases are ≤ 43 MiB. heaptrack (16 threads, capped at 8 GiB, `results/RP-2/heap/`):
+
+| case (peak RSS) | heap peak | owners at the peak |
+|---|---|---|
+| quad/sg/cc-uq/b0/d2/L20 (1072 MiB) | 998 MB | as in RP-1: per-thread `QuadratureScratch` 503 + 34 MB · CC FFT temporaries 361 MB · node lists 101 MB (→ WP-05, WP-18) |
+| quad/sg/equi-exp/b0/d2/L20 (620 MiB) | 638 MB | scratch 537 MB · node lists 101 MB (→ WP-05, WP-18) |
+| quad/dsg/equi-exp/b1/d20/L6 (217 MiB) | 178 MB | DSG 126 MB (node lists 64, struct array 26, level MIs 18, counts 18) + `CTCoeffTrie` construction 52 MB (→ WP-22 + WP-18; trie reservation → WP-21) |
+| quad/dsg/equi-exp/b1/d15/L7 (151 MiB) | 111 MB | DSG 83 MB (nodes 43, struct 19, MIs 10, counts 10) + trie construction 28 MB |
+| quad/dsg/equi-exp/b0/d10/L7 (42 MiB) | 24 MB | per-thread projected trie nodes 8.9 MB + slot blocks 4.6 MB (the WP-02 `MEM+`; `TrieNode` 24 → 16 B in WP-04: ≈ −3 MB) · node lists 4.8 MB |
+| quad/dsg/equi-exp/b0/d3/L16 (63 MiB) | 39 MB | `DeltaQuadratureScratch` 15.7 MB (zero-filled per thread, → WP-05's on-demand pattern) · node lists 12.6 MB · 1D weights 8.4 MB |
+| quad/sg/equi-exp/b1/d20/L5 (57 MiB) | 36 MB | node lists 16.8 MB · struct array 6.0 · MIs 4.3 · counts 4.3 · generated `LvlMIVec` 4.3 MB |
+
+Material reductions (unchanged from RP-1 unless stated):
+- WP-05: −350…−500 MiB on the d2 cases.
+- WP-22 + WP-18: b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB (new
+  sizing above).
+- Trie node reservation: −8 MB at the b1 d20 peak.
+- WP-04 `TrieNode`: −3 MB per b0 case.
+
+### Findings → work packages (RP-2)
+
+Re-ranking with expected savings: summary `summaries/RP-2-reprofiling.md` ("Profile shift /
+follow-ups"). In short:
+- WP-03 (≈ 4.5 s, first step ≈ 1.0 s) now clearly ranks first, before WP-04 (1.5–2.5 s).
+- WP-21 is sized at 0.1–0.2 s.
+- WP-22 is minimal in runtime and material in memory; it should be merged with WP-18.
+- No new hot spots. New small findings: the slack break in the sub-trie DFS, trie node
+  reservation, generation page faults, and the fragile closure code generation.

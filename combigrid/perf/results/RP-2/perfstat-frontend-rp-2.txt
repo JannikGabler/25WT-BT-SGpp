@@ -1,0 +1,56 @@
+### quad/dsg/equi-exp/b0/d10/L7
+1170084121028,instructions
+519528636672,cycles
+175565401523,op_cache_hit_miss.all_op_cache_accesses
+490314034,op_cache_hit_miss.op_cache_miss
+97905658,ic_tag_hit_miss.instruction_cache_miss
+3608893740,stalled-cycles-frontend
+### quad/dsg/equi-exp/b1/d20/L6
+197506836831,instructions
+109691157402,cycles
+29500650793,op_cache_hit_miss.all_op_cache_accesses
+456087838,op_cache_hit_miss.op_cache_miss
+69328128,ic_tag_hit_miss.instruction_cache_miss
+1566183602,stalled-cycles-frontend
+### quad/sg/equi-exp/b0/d10/L4
+194601800802,instructions
+92152988047,cycles
+29660600278,op_cache_hit_miss.all_op_cache_accesses
+83598537,op_cache_hit_miss.op_cache_miss
+16254154,ic_tag_hit_miss.instruction_cache_miss
+474561408,stalled-cycles-frontend
+### quad/sg/equi-exp/b1/d20/L5
+38257536970,instructions
+25870885385,cycles
+5874498420,op_cache_hit_miss.all_op_cache_accesses
+58702937,op_cache_hit_miss.op_cache_miss
+14872988,ic_tag_hit_miss.instruction_cache_miss
+240902919,stalled-cycles-frontend
+### interp/sg/cc/b0/d5/L6/p64
+278932971334,instructions
+142632184366,cycles
+36323728008,op_cache_hit_miss.all_op_cache_accesses
+156511790,op_cache_hit_miss.op_cache_miss
+34397288,ic_tag_hit_miss.instruction_cache_miss
+1262126589,stalled-cycles-frontend
+### interp/sg/cc/b0/d10/L2/p8
+316870032703,instructions
+185727907754,cycles
+47434540261,op_cache_hit_miss.all_op_cache_accesses
+185052483,op_cache_hit_miss.op_cache_miss
+35328346,ic_tag_hit_miss.instruction_cache_miss
+5238648650,stalled-cycles-frontend
+### interplin/sg/equi/b1/d8/L5/p256
+274878999929,instructions
+152445786218,cycles
+41601711732,op_cache_hit_miss.all_op_cache_accesses
+139148115,op_cache_hit_miss.op_cache_miss
+27505721,ic_tag_hit_miss.instruction_cache_miss
+4360544041,stalled-cycles-frontend
+### interplin/sg/equi/b1/d10/L5/p32
+399656902225,instructions
+240785195707,cycles
+69655357334,op_cache_hit_miss.all_op_cache_accesses
+215343664,op_cache_hit_miss.op_cache_miss
+41283934,ic_tag_hit_miss.instruction_cache_miss
+13605013451,stalled-cycles-frontend
