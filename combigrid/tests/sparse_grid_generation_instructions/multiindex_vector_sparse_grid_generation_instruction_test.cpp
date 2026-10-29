@@ -10,7 +10,9 @@
 #include <boost/test/tools/old/interface.hpp>
 #include <boost/test/unit_test.hpp>
 
+#include <algorithm>
 #include <functional>
+#include <map>
 #include <set>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
@@ -18,7 +20,10 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/extensive_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <string>
+#include <utility>
 #include <vector>
 
 using namespace sgpp::combigrid;
@@ -86,7 +91,76 @@ LvlMIVec computeDownwardClosure(const LvlMIVec& input) {
   return out;
 }
 
+// Colexicographic order (last dimension most significant): the output order of the closure.
+bool colexLess(const std::vector<LvlType>& a, const std::vector<LvlType>& b) {
+  return std::lexicographical_compare(a.rbegin(), a.rend(), b.rbegin(), b.rend());
+}
+
+// Expected output of genFull/ReducedMIVecWithCoeffs: the closure in colexicographic order, its
+// coefficients, optionally without zero coefficients, stably partitioned (zero coefficients first).
+std::pair<LvlMIVec, std::vector<CTCoeffType>> expectedGeneratorOutput(const LvlMIVec& input,
+                                                                      const bool includeZeros) {
+  const LvlMIVec setClosure = computeDownwardClosure(input);
+  std::vector<std::vector<LvlType>> sorted;
+  for (size_t i = 0; i < setClosure.nMI(); ++i) sorted.push_back(toStdVec(setClosure[i]));
+  std::sort(sorted.begin(), sorted.end(), colexLess);
+
+  LvlMIVec closure(input.nDim(), sorted.size());
+  for (size_t i = 0; i < sorted.size(); ++i) closure.setMI(i, sorted[i]);
+  const std::vector<CTCoeffType> coeffs = tools::computeCTCoeffs(closure);
+
+  LvlMIVec mis(input.nDim(), 0);
+  std::vector<CTCoeffType> kept;
+  for (size_t i = 0; i < closure.nMI(); ++i) {
+    if (includeZeros || coeffs[i] != 0) {
+      mis.push_back(closure[i]);
+      kept.push_back(coeffs[i]);
+    }
+  }
+  tools::extensive_sparse_grid_generation::partitionForExtensiveSG(mis, kept);
+  return {std::move(mis), std::move(kept)};
+}
+
+// Checks MIs (including their order) and coefficients of a generator output.
+void checkSameSequence(const std::pair<LvlMIVec, std::vector<CTCoeffType>>& actual,
+                       const std::pair<LvlMIVec, std::vector<CTCoeffType>>& expected) {
+  BOOST_REQUIRE_EQUAL(actual.first.nDim(), expected.first.nDim());
+  BOOST_REQUIRE_EQUAL(actual.first.nMI(), expected.first.nMI());
+  BOOST_REQUIRE_EQUAL(actual.second.size(), expected.second.size());
+  for (size_t i = 0; i < expected.first.nMI(); ++i) {
+    BOOST_REQUIRE_MESSAGE(actual.first[i] == expected.first[i], "MI differs at position " << i);
+    BOOST_REQUIRE_MESSAGE(actual.second[i] == expected.second[i],
+                          "Coefficient differs at position " << i);
+  }
+}
+
 }  // namespace
+
+// The order of the generated multi-indices (and thus of the tensor grids) is observable: pin it.
+BOOST_AUTO_TEST_CASE(OutputOrderIsColexClosureOrder) {
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    for (size_t rep = 0; rep < 5; ++rep) {
+      const size_t nDim = 1 + randGen.getUniformIndexRN(6);
+      const size_t nInput = 1 + randGen.getUniformIndexRN(12);
+      const LvlType maxComp = static_cast<LvlType>(randGen.getUniformIndexRN(5));
+
+      LvlMIVec input(nDim, nInput);
+      for (size_t i = 0; i < nInput; ++i) {
+        for (size_t d = 0; d < nDim; ++d) {
+          input(i, d) = static_cast<LvlType>(randGen.getUniformIndexRN(maxComp + 1));
+        }
+      }
+
+      BOOST_TEST_CONTEXT("nDim = " << nDim << ", nInput = " << nInput) {
+        const MIVecSGGenInstr instr(input);
+        checkSameSequence(instr.genFullMIVecWithCoeffs(), expectedGeneratorOutput(input, true));
+        checkSameSequence(instr.genReducedMIVecWithCoeffs(),
+                          expectedGeneratorOutput(input, false));
+      }
+    }
+  }
+}
 
 BOOST_AUTO_TEST_CASE(FullInputIsFixedPoint) {
   randGen.setSeed();

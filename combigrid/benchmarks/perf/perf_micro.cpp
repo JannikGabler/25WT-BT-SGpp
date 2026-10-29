@@ -505,6 +505,20 @@ void addClosure(Suite& suite, const size_t nDim, const LvlType maxSum, const siz
                  });
 }
 
+/// Pareto maxima of a not downwards-closed anisotropic set (fresh copy per call: no cached data).
+void addParetoMaxima(Suite& suite, const size_t nDim, const LvlType maxSum, const size_t nMI) {
+  suite.addMicro("micro/mivec/pareto_maxima/d" + std::to_string(nDim) + "/S" +
+                     std::to_string(maxSum) + "/n" + std::to_string(nMI),
+                 [=](MicroRun& run) {
+                   const LvlMIVec pristine = perf::anisotropicMIs(nDim, nMI, maxSum, 2000 + nDim);
+                   run.setItems(static_cast<double>(nMI));
+                   run.measure([&]() {
+                     const LvlMIVec copy(pristine);
+                     doNotOptimize(copy.paretoMaxima()->size());
+                   });
+                 });
+}
+
 /// Combination coefficients of a downwards-closed set (fresh copy per call: no cached lookup).
 void addCTCoeffs(Suite& suite, const size_t nDim, const LvlType maxSum, const size_t nMI) {
   suite.addMicro("micro/mivec/ct_coeffs/d" + std::to_string(nDim) + "/S" +
@@ -568,6 +582,12 @@ int main(int argc, char** argv) {
   addSparseGridConstruction(suite, "cc", 1, 20, 5);
   addClosure(suite, 10, 10, 300);
   addClosure(suite, 20, 6, 100);
+  addClosure(suite, 5, 16, 1000);  // WP-03: the MI sets of the mivec e2e cases
+  addClosure(suite, 10, 12, 1000);
+  addClosure(suite, 15, 10, 300);
+  addClosure(suite, 20, 7, 300);
+  addParetoMaxima(suite, 10, 12, 1000);
+  addParetoMaxima(suite, 20, 7, 300);
   addCTCoeffs(suite, 10, 12, 1000);
 
   return suite.main(argc, argv);

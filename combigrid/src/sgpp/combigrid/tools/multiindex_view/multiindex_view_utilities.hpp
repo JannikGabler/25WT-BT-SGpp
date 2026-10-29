@@ -129,6 +129,12 @@ bool lessInEveryDim(const MIView<T> a, const MIView<T> b) {
 template <typename T>
 bool lessEqualInEveryDim(const MIView<T> a, const MIView<T> b) {
   checkSameSize(a.size(), b.size());
+  // Dominance tests usually exit after a few dimensions: GCC's vectorized early-break loop (index
+  // multiply, alignment test of both operands, remainder dispatch per call) is slower than this
+  // scalar loop.
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 14
+#pragma GCC novector
+#endif
   for (size_t dim = 0; dim < a.size(); dim++) {
     if (a.data()[dim] > b.data()[dim]) return false;
   }

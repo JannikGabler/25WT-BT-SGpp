@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: RP-2 (2026-10-29) · Next free WP number: 23 · Re-profilings done: 2 (RP-1 2026-10-28, RP-2 2026-10-29; RP-0 = setup)
+Last processed: WP-03 (2026-10-29) · Next free WP number: 32 · Re-profilings done: 2 (RP-1 2026-10-28, RP-2 2026-10-29; RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), 16
   threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (all cores at
@@ -35,7 +35,9 @@ Last processed: RP-2 (2026-10-29) · Next free WP number: 23 · Re-profilings do
   OK/WARN/FAIL); high dimensions first. **Memory** (2026-10-28): runtime ranks; peak memory is
   reported with every runtime change and weighed; reduction is a valid secondary goal. **Strict
   aliasing** (2026-10-28): every code-changing WP prompt carries the PLAN.md header note. STATUS.md
-  may exceed the ~120-line limit slightly (owner 2026-10-29: many WPs).
+  may exceed the ~120-line limit slightly (owner 2026-10-29: many WPs). **Dimension-adaptive
+  refinement** (2026-10-29): planned later, not yet a WP; prompts of API-designing / -changing WPs
+  carry the PLAN.md header note.
 - **Refcheck WARN case** (owner 2026-10-25: tolerance stays): `interp/sg/equi/b0/d2/L5/cos-shifted`
   (Lebesgue constant ~1e16) WARNs on any FMA-placement change in `BarycentricFormula::evaluateFormula`.
 - **Commits**: the owner commits after every session (one per WP: code, summary, `results/WP-NN/`,
@@ -49,25 +51,33 @@ Last processed: RP-2 (2026-10-29) · Next free WP number: 23 · Re-profilings do
 | – | WP-01 | SG quadrature: per-grid-point work | accepted | quad/sg 2.4x (22.3 → 9.4 s), mivec 1.45x; 15.8 s saved; b1 d20 4.7x. Memory (found by WP-15): `quad/sg/cc-uq/b0/d2/L20` 806 → 1076 MiB (1.335x) | [WP-01](summaries/WP-01-sg-quad-per-point.md) |
 | – | WP-02 | DSG quadrature: per-delta-tensor-grid trie work at high d | accepted | quad/dsg 1.46x (26.14 → 17.91 s, −8.23 s): b1 d20 5.34x, b1 d15 3.14x, b0 1.01–1.05x; memory b1 d20 328 → 217 MiB, d15 233 → 152 MiB (MEM−), 6 b0 MEM+ (+1.9…+6.4 MiB), geomean 0.981; refcheck OK | [WP-02](summaries/WP-02-dsg-trie-work.md) |
 | – | RP-1, RP-2 | Re-profilings (+ cumulative memory; RP-2: WP-21/WP-22 sizing, WP-22 merged into WP-18) | accepted | rp-1 1.31x (53.41 s). **rp-2 1.604x** (70.03 → 43.65 s; d ≥ 7 1.61x), 0 SLOWER; quad/sg 2.43x, quad/dsg 1.51x, interp 1.16x, interplin 1.09x, mivec 1.46x; memory geomean 1.017, 8 MEM+ / 2 MEM− | [RP-1](summaries/RP-1-reprofiling.md), [RP-2](summaries/RP-2-reprofiling.md) |
-| 1 | WP-03 | Downwards closure of MI sets | in progress (prompt issued 2026-10-29) | | |
-| 2 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready | | |
-| 3 | WP-17 | Batched source-function evaluation (from D-4; proposal) | ready (after WP-04) | | |
-| 4 | WP-09 | Multi-point interpolation API (proposal; from D-1) | ready | | |
-| 5 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09) | | |
-| 6 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09) | | |
-| 7 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (from WP-02) | ready (after WP-04) | | |
-| 8 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (D-5 + WP-22; memory; proposal) | ready (owner decides the protected-benchmark constraint first) | | |
-| 9 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. NEW-A) | ready | | |
-| 10 | WP-07 | Generic barycentric formula: cache the weights | ready | | |
-| 11 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
-| 12 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3; measure first) | ready | | |
-| 13 | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional) | planned (owner decides after WP-03) | | |
+| – | WP-03 | Downwards closure of MI sets | accepted | mivec 5.08x (6.32 → 1.24 s, −5.08 s): d10 3.87x, d15 71x, d20 531x; same closure and order; memory geomean 0.992, 0 flags; refcheck OK | [WP-03](summaries/WP-03-downwards-closure.md) |
+| – | WP-12 | Toolchain re-measurement (optional) | dropped (owner 2026-10-29) | Clang's lead (closure) gone with WP-03 | |
+| 1 | WP-23 | Cross-library calls into `libsgppbase` (`DataVector`): measurement (owner's question) | in progress (prompt issued 2026-10-29) | | |
+| 2 | WP-24 | Vector-valued source functions: exploration (owner's request) | ready (after WP-23) | | |
+| 3 | WP-25 | `SourceFunc` caching: design exploration (owner's request) | ready (after WP-24) | | |
+| 4 | RP-3 | Re-profiling after WP-03 (rule 7: mivec 5.08x) | ready (after WP-25, before the next code-changing WP) | | |
+| 5 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready (after RP-3) | | |
+| 6 | WP-17 | Batched source-function evaluation (from D-4; proposal) | ready (after WP-04; design follows WP-24/WP-25) | | |
+| 7 | WP-09 | Multi-point interpolation API (proposal; from D-1) | ready | | |
+| 8 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09) | | |
+| 9 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09) | | |
+| 10 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (from WP-02) | ready (after WP-04) | | |
+| 11 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (D-5 + WP-22; memory; proposal) | ready (owner decides the protected-benchmark constraint first) | | |
+| 12 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. NEW-A) | ready | | |
+| 13 | WP-07 | Generic barycentric formula: cache the weights | ready | | |
+| 14 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
+| 15 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3; measure first) | ready | | |
+| 16 | WP-31 | MI-set cleanups after WP-03: O(n·d) `isMIVecDownwardsClosed`, dead helpers | ready (low; e2e nil) | | |
+| 17–21 | WP-26–30 | Caching: in-memory + none/always + limit (26), adaptive (27), disk (28); vector-valued implementation (29), vector optimizations (30) | planned (owner places them after WP-24/WP-25) | | |
 
 ## Next action
 
-Owner: commit RP-2 ("Accept RP-2: …": `ANALYSIS.md`, summary, `results/RP-2/`, STATUS/PLAN);
-commit or ignore the still untracked `compile{ASan,Debug,Normal}.sh` (clean tree). Then start
-WP-03 (prompt issued 2026-10-29). Next master start: process the WP-03 summary; ask about WP-12.
+WP-23 is running (prompt issued 2026-10-29). Owner: commit WP-03 ("Accept WP-03: …": code,
+summary, `results/WP-03/`, STATUS/PLAN incl. the WP-23–WP-31 / RP-3 changes); the untracked
+`compile{ASan,Debug,Normal}.sh` still need committing or ignoring. CLAUDE.md §2/§8 still describe
+the caching prototype removed in 6dfcf971a (owner's file). Next master start: enter WP-03's commit
+hash in the log, process the WP-23 summary, issue WP-24.
 
 ## Open decisions for the owner
 
@@ -77,7 +87,11 @@ WP-03 (prompt issued 2026-10-29). Next master start: process the WP-03 summary; 
   adapts the protected files.
 - Optional: by the d ≥ 7 rule WP-18 (≈ 0.05 s; −96…−114 MB at dsg b1 d20) precedes WP-05
   (0.5–0.8 s at d ≤ 3; −350…−800 MiB at sg d2); the owner may move WP-05 up.
-- WP-10 (after its summary): implement only if worth it. WP-12 (after WP-03): run it or not.
+- WP-23 (after its summary): options (b) inline members in the base header, (c) static linking.
+- WP-24 / WP-25 (after their summaries): vector design (one or two paths); cache design (key,
+  libraries, limit behavior, default policy, `SourceFunc` into base); placement of WP-26–WP-29
+  (RP-3 runs before the first code-changing WP after WP-25).
+- WP-10 (after its summary): implement only if worth it.
 
 ## Do not retry
 
@@ -105,19 +119,25 @@ WP-03 (prompt issued 2026-10-29). Next master start: process the WP-03 summary; 
 - WP-02 projected coefficients in plain double: round-off 9x larger at b1/d15 → double-double
   (≤ 1–2 %). Slot blocks of global width with 24 B slots: b0/d10 RSS 36.5 → 65 MiB →
   1-norm-bounded blocks, split 8 B / 16 B arrays (41.9 MiB).
+- WP-03 Pareto maxima as closure generators: recursion d5/d10/d15/d20 0.27/1.26/0.08/0.03 vs.
+  0.55/1.44/0.10/0.04 ms, but the Pareto maxima (non-DWC) cost 0.32/1.08/0.14/0.14 ms → slower in
+  total everywhere. Exact sizing (counting pass + one `reserve`): 0.79/1.48/0.11/0.055 vs.
+  geometric growth 0.57/1.24/0.091/0.041 ms.
 - WP-02 builder split without hidden visibility (`sub_tries` 0.987/0.973) or with an unaligned
   row loop (e2e 0.972x, b0 1.3–4 % SLOWER, +18 % op-cache misses) → hidden + aligned. Linear
   scan instead of `lower_bound` for the first child ≥ m_k: `sub_tries` b1/d20 0.948.
 
 ## Re-profiling
 
-Last: RP-2 (2026-10-29, accepted). Accepted optimizations since RP-2: 0.
+Last: RP-2 (2026-10-29, accepted). Accepted optimizations since RP-2: 1 (WP-03, mivec 5.08x ≥
+1.3x, hot-spot ranking changed) → **RP-3 due** before the next code-changing WP (after WP-25).
 
 ## Log
 
-- 2026-10-29 RP-2 accepted (owner; commit pending): baseline → rp-2 1.604x (43.65 s), 0 SLOWER,
-  memory geomean 1.017. Re-ranked: WP-03 (≈ 4.5 s) first, WP-04 1.5–2.5 s; WP-21 sized
-  (0.1–0.2 s) → ready after WP-04; WP-22 merged into WP-18 (dropped). WP-03 prompt issued.
+- 2026-10-29 WP-03 accepted (owner; commit pending): mivec 5.08x (6.32 → 1.24 s, −5.08 s; d20
+  531x), suite ≈ 38.6 s; memory 0.992; novector pragma kept. WP-12 dropped (owner). Follow-ups
+  → WP-31; RP-3 scheduled after WP-25. Owner commit 6dfcf971a removed the caching prototype
+  (→ WP-25/WP-26 notes). WP-23 prompt issued.
 - A once-seen debug test failure (WP-02; output lost, 0/150 reruns; the test prints its seed
   now): report recurrences.
 
@@ -129,4 +149,5 @@ Last: RP-2 (2026-10-29, accepted). Accepted optimizations since RP-2: 0.
   666b3c601 → WP-16 (f48d2bbc1), RP-1 (b0b7faac7: re-ranked; NEW-A → WP-05, D-4 → WP-17, D-5 →
   WP-18, NEW-C → WP-19; owner: WP-20 before WP-02), WP-20 (29ade3a58; owner: strict-aliasing
   note in every code-changing WP prompt). 10-29 WP-02 (5215417ea; follow-ups WP-21, `TrieNode`
-  → WP-04; owner's idea WP-22).
+  → WP-04; owner's idea WP-22), RP-2 (50a8737e0: 1.604x, 43.65 s; WP-03 first, WP-21 sized,
+  WP-22 → WP-18; owner: WP-23 measurement, WP-24–WP-30 vector-valued / caching track before WP-04).
