@@ -1,0 +1,31 @@
+# raw: perf c2c record (AMD IBS) of interplin/sg/equi/b1/d8/L5/p256, WP-23-nonew, 16 threads
+## c2c_1 (slow process: total 2.205 s)
+### perf report --mem-mode --sort=mem,sym (cross-core / L2 rows)
+    15.68%           375  core, same node Any cache hit            [.] sgpp::combigrid::linear_interpolation::computeNeighborGPWithWeight(unsigned long, sgpp::b
+    10.29%           353  L2 hit                                   [.] sgpp::combigrid::linear_interpolation::computeNeighborGPWithWeight(unsigned long, sgpp::b
+     0.71%            12  core, same node Any cache hit            [k] 0xffffffff81c056ac
+     0.59%            12  L2 hit                                   [k] 0xffffffff81c056ac
+     0.43%            10  core, same node Any cache hit            [.] sgpp::combigrid::perf::cosProd(sgpp::base::DataVector const&)
+     0.29%             5  L2 hit                                   [k] 0xffffffff81d79f4e
+### perf report --mem-mode --sort=mem,dcacheline
+     8.79%           209  core, same node Any cache hit            [.] 0x00005b8cc43af100
+     7.58%           189  core, same node Any cache hit            [.] 0x00005b8cc43a3a80
+     5.22%           181  L2 hit                                   [.] 0x00005b8cc43a3a80
+     5.08%           164  L2 hit                                   [.] 0x00005b8cc43af100
+     0.76%            13  core, same node Any cache hit            [X] 0xffffffff84208000
+     0.59%            12  L2 hit                                   [X] 0xffffffff84208000
+## c2c_2 (fast process: total 1.577 s)
+### perf report --mem-mode --sort=mem,sym (cross-core / L2 rows)
+     2.44%             1  L2 hit                                   [k] 0xffffffff82f2980f
+     1.76%            15  core, same node Any cache hit            [k] 0xffffffff81c056ac
+     0.36%             5  core, same node Any cache hit            [k] 0xffffffff81d79f4e
+     0.34%             3  L2 hit                                   [k] 0xffffffff81d79f4e
+     0.24%             4  L2 hit                                   [.] 0x0000000000026c7b
+     0.22%             3  L2 hit                                   [k] 0xffffffff81c056ac
+### perf report --mem-mode --sort=mem,dcacheline
+     2.44%             1  L2 hit                                   [X] 0xffffd20257d57f00
+     1.76%            15  core, same node Any cache hit            [X] 0xffffffff84208000
+     0.43%             6  core, same node Any cache hit            [X] 0xffffffff84d05700
+     0.40%             4  L2 hit                                   [X] 0xffffffff84d05700
+     0.23%             3  L2 hit                                   [.] 0x000059324f539040
+     0.22%             3  L2 hit                                   [X] 0xffffffff84208000

@@ -121,7 +121,7 @@ using NodeIdxLvlMapFunc = GPCntType (*)(GPCntType, LvlType, LvlType);
 /**
  * @brief Identifier type for cache entries.
  */
-using CacheId = uint64_t;
+// using CacheId = uint64_t;
 
 }  // namespace combigrid
 }  // namespace sgpp

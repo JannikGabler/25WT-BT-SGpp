@@ -52,7 +52,8 @@ At RP-2 (rp-2 = 5215417ea, total 43.65 s; baseline → rp-2 1.604x, 0 SLOWER): q
 quad/dsg **17.74 s (41 %**; b1 d15/d20 2.44 s) · interp 5.73 s · interplin 4.65 s · mivec 6.35 s
 (of which generation **5.10 s**, closure 77–97 %). Peak memory geomean baseline → rp-2 1.017.
 After WP-03 (accepted 2026-10-29; not re-profiled): mivec 6.32 → 1.24 s (generation ≤ 7.5 ms per
-case, operator-bound) → suite ≈ 38.6 s, quad/dsg ≈ 46 %.
+case, operator-bound) → suite ≈ 38.6 s, quad/dsg ≈ 46 %. WP-23-before (0273aa1d7): suite sum
+38.42 s (38 cases, one process per case).
 
 | Rank | ID | Title | Status | Expected saving (e2e) |
 |---|---|---|---|---|
@@ -69,27 +70,29 @@ case, operator-bound) → suite ≈ 38.6 s, quad/dsg ≈ 46 %.
 | – | WP-22 | Tensor grids of a sparse grid as struct of arrays (owner's idea) | dropped (2026-10-29): merged into WP-18 (RP-2) | – |
 | – | WP-03 | Downwards closure of MI sets (MIVecSGGenInstr) | accepted (2026-10-29) | measured: mivec 6.32 → 1.24 s (5.08x, −5.08 s); d10 3.87x, d15 71x, d20 531x; generation d10/d15/d20 ≤ 7.5 ms; same closure and order; memory geomean 0.992, 0 flags |
 | – | WP-12 | Toolchain re-measurement after WP-02/WP-03 (optional, from WP-11) | dropped (owner 2026-10-29): Clang's lead (closure) is gone with WP-03 | – |
-| 1 | WP-23 | Cross-library calls into `libsgppbase` (`base::DataVector`): inventory, share, upper bound (owner's question; measurement) | in progress (prompt issued 2026-10-29) | unknown (no base symbol among the hot spots so far); decision data for WP-04/WP-05/WP-17 |
-| 2 | WP-24 | Vector-valued source functions: exploration (owner's request) | ready (after WP-23) | decision data: design, scalar regression ≈ 0?, vector gain vs. m scalar runs |
-| 3 | WP-25 | `SourceFunc` caching: design exploration (policies, memory limit, disk tier, libraries, base module) (owner's request) | ready (after WP-24) | decision data; judged suite unchanged; expensive functions up to the duplicate-evaluation ratio |
-| 4 | RP-3 | Re-profiling after WP-03 (+ cumulative memory; re-rank with the WP-23–WP-25 results) | ready (after WP-25, before the next code-changing WP) | – (rule 7: mivec 5.08x) |
-| 5 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready (after RP-3) | 1.5–2.5 s (b0 d7/d10); memory ≈ −3 MiB per b0 case |
-| 6 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04; design follows the WP-24/WP-25 decisions) | ≈ 1–1.5 s (dispatch: DSG b0 ≈ 0.9 s, b1 0.13 s, quad/sg ≈ 0.4 s); interface |
-| 7 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only (integrand 67–71 % per query point); gates WP-06/WP-08 |
-| 8 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | 0.6–0.7 s (d ≥ 7 ≈ 0.4 s); + alignment check of `interpolateFirstDim` |
-| 9 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ≈ 0.5 s (d ≥ 7 ≈ 0.45 s); + alignment check of the corner loop |
-| 10 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready (after WP-04) | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
-| 11 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
-| 12 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | ready | 0.5–0.8 s (d ≤ 3); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1072 → ≈ 280–730 MiB; + `DeltaQuadratureScratch` on demand |
-| 13 | WP-07 | Generic barycentric formula: cache the weights | ready | ≈ 0.2 s (d < 7) |
-| 14 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | 0.1–0.3 s (d2) |
-| 15 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | warm e2e nil; cold start; floor −1…−4.5 MiB per process; OpenBLAS 5.5 % of mivec d10 after WP-03 |
-| 16 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
-| 17 | WP-26 | `SourceFunc` caching: in-memory cache, policies none / always, soft memory limit | planned (owner places it after WP-24/WP-25) | feature; judged suite must not regress |
-| 18 | WP-27 | `SourceFunc` caching: adaptive policy | planned (after WP-26) | feature; overhead on cheap functions ≈ 0 |
-| 19 | WP-28 | `SourceFunc` caching: disk tier (temporary / persistent) | planned (after WP-26) | feature |
-| 20 | WP-29 | Vector-valued source functions: implementation (all operators, bindings) | planned (owner places it after WP-24) | feature; scalar path must not regress |
-| 21 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
+| – | WP-23 | Cross-library calls into `libsgppbase` (`base::DataVector`): inventory, share, upper bound (owner's question; measurement) | rejected (owner 2026-10-29): NO-GAIN | measured: base share ≤ 0.09 % at d ≥ 7, no base call per point; inline-ctor upper bound of (b)/(c) e2e 38.42 → 38.46 s (0.999x), memory 0.998; variant without base's `operator new` replacement 0.982x (false sharing), memory 0.952 / 16 `MEM−` → WP-32 / WP-33 |
+| 1 | WP-24 | Vector-valued source functions: exploration (owner's request) | in progress (prompt issued 2026-10-29) | decision data: design, scalar regression ≈ 0?, vector gain vs. m scalar runs |
+| 2 | WP-25 | `SourceFunc` caching: design exploration (policies, memory limit, disk tier, libraries, base module) (owner's request) | ready (after WP-24) | decision data; judged suite unchanged; expensive functions up to the duplicate-evaluation ratio |
+| 3 | RP-3 | Re-profiling after WP-03 (+ cumulative memory; re-rank with the WP-23–WP-25 results, rank WP-32 / WP-33) | ready (after WP-25, before the next code-changing WP) | – (rule 7: mivec 5.08x) |
+| 4 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready (after RP-3) | 1.5–2.5 s (b0 d7/d10); memory ≈ −3 MiB per b0 case |
+| 5 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04; design follows the WP-24/WP-25 decisions) | ≈ 1–1.5 s (dispatch: DSG b0 ≈ 0.9 s, b1 0.13 s, quad/sg ≈ 0.4 s); interface |
+| 6 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only (integrand 67–71 % per query point); gates WP-06/WP-08 |
+| 7 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | 0.6–0.7 s (d ≥ 7 ≈ 0.4 s); + alignment check of `interpolateFirstDim` |
+| 8 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ≈ 0.5 s (d ≥ 7 ≈ 0.45 s); + alignment check of the corner loop |
+| 9 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready (after WP-04) | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
+| 10 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
+| 11 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | ready | 0.5–0.8 s (d ≤ 3); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1072 → ≈ 280–730 MiB; + `DeltaQuadratureScratch` on demand |
+| 12 | WP-07 | Generic barycentric formula: cache the weights | ready | ≈ 0.2 s (d < 7) |
+| 13 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | 0.1–0.3 s (d2) |
+| 14 | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | ready | warm e2e nil; cold start; floor −1…−4.5 MiB per process; OpenBLAS 5.5 % of mivec d10 after WP-03 |
+| 15 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (RP-3 confirms the rank) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
+| 16 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
+| 17 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
+| 18 | WP-26 | `SourceFunc` caching: in-memory cache, policies none / always, soft memory limit | planned (owner places it after WP-24/WP-25) | feature; judged suite must not regress |
+| 19 | WP-27 | `SourceFunc` caching: adaptive policy | planned (after WP-26) | feature; overhead on cheap functions ≈ 0 |
+| 20 | WP-28 | `SourceFunc` caching: disk tier (temporary / persistent) | planned (after WP-26) | feature |
+| 21 | WP-29 | Vector-valued source functions: implementation (all operators, bindings) | planned (owner places it after WP-24) | feature; scalar path must not regress |
+| 22 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10 | – |
@@ -129,6 +132,14 @@ MIs). RP-3 is due (rule 7: mivec 5.08x, changed hot-spot ranking) before the nex
 WP; the WP-23–WP-25 measurements and explorations do not depend on the stale mivec shares, so RP-3
 follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03's follow-ups
 (O(n·d) `isMIVecDownwardsClosed`, dead helpers) → WP-31, low rank (no e2e effect).
+After WP-23 (rejected 2026-10-29, NO-GAIN): `libsgppbase` costs ≤ 0.09 % at d ≥ 7, no base call
+per point; options (b) header-inline members and (c) static / cross-module LTO dropped (upper
+bound 0.999x). The WP-04 / WP-05 / WP-17 estimates stand (no cross-library share on their paths;
+WP-05's sg d2 `DataVector(n, 0.0)` share is zero-fill + page faults). New (owner 2026-10-29):
+WP-32 aligns combigrid's per-thread data itself (≈ 0 in the judged build, robustness for
+allocators without 64-byte alignment), then the owner decides WP-33 (base's allocator: memory
+−5 % geomean). Both rank below the runtime WPs (memory / robustness; RP-3 confirms); WP-32 ranks
+before WP-31 because it unlocks WP-33's memory gain.
 
 ---
 
@@ -326,6 +337,7 @@ follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03
   21.84 ns/point → parity ≈ 2.1 s. **Expected 1.5–2.5 s.** Not front-end-bound (0.7 % stall
   cycles). Memory: per-thread builder arrays 13.5 MB of the 24 MB heap at b0 d10 → `TrieNode`
   24 → 16 B ≈ −3 MB per b0 case (vs. baseline 6 b0 `MEM+`, +1.2…+5.8 MiB).
+- **From WP-23**: no cross-library (`libsgppbase`) cost on the DSG row path; estimate unchanged.
 
 ## WP-05 — SG quadrature at low d: CC 1D weights and per-thread scratch (incl. RP-1 NEW-A)
 - **Scope after RP-1** (owner 2026-10-28: NEW-A merged into WP-05, runtime rank kept): (a) CC 1D
@@ -370,6 +382,10 @@ follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03
   d2 1072, sg equi d2 620 MiB (scratch 537 + CC FFT 361 + nodes 101 MB; nodes → WP-18). The same
   on-demand pattern applies to `DeltaQuadratureScratch` (15.7 MB zero-filled per thread; dsg b0 d3
   peak 63 MiB): include it. Expected 0.5–0.8 s (d ≤ 3) unchanged; the largest memory lever.
+- **From WP-23**: the sg d2 `DataVector(n, 0.0)` samples (2.2 / 3.0 %, cc-uq / equi-exp L20) are
+  zero-fill + page faults of the per-thread scratch, not call overhead (part (b)). Allocate the
+  scratch per thread on its own cache lines (WP-32's rule) so it stays safe if WP-33 changes
+  base's allocator.
 
 ## WP-06 — Global interpolation: operator overhead
 - **Location**: `operators/global_interpolation/global_interpolation.cpp`.
@@ -796,6 +812,8 @@ follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03
   lookups (WP-25: look up a batch, evaluate the misses as a batch) and for vector-valued outputs
   (WP-24: batch × m). Design WP-17 after the owner's decisions on WP-24 / WP-25 so the
   `SourceFunc` interface changes once.
+- **From WP-23**: per point only the `std::function` indirect call (`SourceFunc::evaluate` is
+  LTO-inlined; no base call per point) → the dispatch estimate stands.
 
 ## WP-18 — Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal)
 - **Source**: RP-1 summary (NEW-D). Owner, 2026-10-28: include in the plan as a candidate WP;
@@ -1052,6 +1070,14 @@ follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03
 - **Dependencies**: none; scheduled after WP-03 (owner 2026-10-29). Its result feeds WP-25's
   question whether `SourceFunc` (and the cache) can move into the base module without losing
   inlining.
+- **Result** (rejected, owner 2026-10-29: NO-GAIN; [summary](summaries/WP-23-cross-library-calls.md)):
+  combigrid imports only `DataVector()`, `DataVector(n)`, `DataVector(init_list)`, `DataMatrix(r,c)`
+  and base's global `operator new/delete`; no call per point or row (integrands use only
+  `x.size()` / `x[k]`, inline). Share ≤ 0.09 % at d ≥ 7; sg d2 `DataVector(n, 0.0)` 2.2 / 3.0 % =
+  zero-fill + page faults (→ WP-05). Upper bound (4 ctors inline): e2e 38.423 → 38.462 s (0.999x),
+  micro 1.000x, `tg/iterate_mutable` micro 0.937 → (b)/(c) dropped. Variant without base's
+  `operator new` replacement: 0.982x (false sharing in `computeNeighborGPWithWeight`), memory
+  0.952 → WP-32, WP-33.
 
 ## WP-24 — Vector-valued source functions: exploration (owner's request; decision data)
 - **Source**: owner, 2026-10-29. Support f: Ω → ℝ^m. Today `SourceFunc` wraps
@@ -1092,6 +1118,9 @@ follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03
 - **Functional change**: none in this WP; WP-29 is an agreed interface extension whose form the
   owner decides after this WP.
 - **Dependencies**: after WP-23 (owner 2026-10-29: before WP-04). Coordinate with WP-17, WP-25.
+- **From WP-23**: `SourceFunc::evaluate` is LTO-inlined into all kernels; per point only the
+  `std::function` indirect call remains; the integrands touch the `DataVector` only through inline
+  `std::vector` members (no base call per point).
 
 ## WP-25 — `SourceFunc` caching: design exploration (owner's request; decision data)
 - **Source**: owner, 2026-10-29. The e2e functions are cheap, so caching is slower than
@@ -1163,6 +1192,11 @@ follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03
   2026-10-29) whose design the owner decides after this WP.
 - **Dependencies**: after WP-24 (record layout) and WP-23 (cross-library inlining); before WP-04
   (owner 2026-10-29). Coordinate with WP-17.
+- **From WP-23** (rejected; finding): `SourceFunc::evaluate` is LTO-inlined into all kernels (per
+  point only the `std::function` indirect call). Moving `SourceFunc` (or a per-point cache lookup)
+  into base keeps this only if those functions stay header-inline; otherwise every point gets a
+  non-inlinable cross-library call. Base's global `operator new` replacement (64-byte aligned,
+  whole process) affects the bytes per cache entry; WP-33 may change it.
 
 ## WP-26 — `SourceFunc` caching: in-memory cache, policies none / always, soft memory limit
 - **Source**: owner, 2026-10-29; design per the owner's decision on WP-25.
@@ -1230,8 +1264,9 @@ follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03
     tensor-grid materialization); OpenBLAS start-up share of the short d15/d20 processes (WP-10).
   - quad/dsg, quad/sg, interp, interplin: shares unchanged since RP-2 (no code change there, but
     LTO may recompile unchanged code)? Confirm WP-04 (1.5–2.5 s), WP-17, WP-06/WP-08, WP-05.
-  - Fold in the WP-23 result (share of `libsgppbase` calls per group, owner's choice among its
-    options) and the owner's decisions on WP-24/WP-25 (placement of WP-26–WP-29) into the ranking.
+  - Fold in the owner's decisions on WP-24/WP-25 (placement of WP-26–WP-29) into the ranking;
+    confirm the ranks of WP-32 / WP-33 (WP-23: base share ≤ 0.09 % at d ≥ 7, options (b)/(c)
+    rejected; nothing else to fold in).
 - **Memory**: cumulative peak memory baseline → rp-3 per case (expected unchanged except mivec).
 - **Dependencies**: WP-25 summary processed.
 
@@ -1252,6 +1287,65 @@ follows WP-25 and also re-ranks with their results. WP-12 dropped (owner). WP-03
 - **Functional change**: none (same results). If a removed header is part of the umbrella header
   or the SWIG interface → BLOCKED with options.
 - **Dependencies**: WP-03 (accepted). Low priority (rank after WP-10).
+
+## WP-32 — Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23)
+- **Source**: WP-23 summary (follow-up); owner 2026-10-29: plan it, then decide on base's
+  allocator (WP-33).
+- **Location**: per-thread scratches (`tools/operators/*` incl. `QuadratureScratch`,
+  `miscellaneous/data_scratches/*` incl. `DeltaQuadratureScratch`), linear interpolation
+  (`operators/linear_interpolation/*`, `computeNeighborGPWithWeight`), global interpolation, and
+  data shared or written per thread inside one operator call (query point, per-thread result
+  slots). Base's replacement `base/src/sgpp/base/tools/AlignedMemory.cpp` (read only; compiled out
+  only for the measurement variant, as WP-23's V2).
+- **Hypothesis**: base replaces the global `operator new/delete` with `posix_memalign(64)` for
+  the whole process, so every allocation starts on its own cache line, and combigrid's per-thread
+  data relies on this implicitly. With the standard allocator small per-thread objects of
+  different threads share lines in the main thread's heap → false sharing. Align / pad
+  combigrid's per-thread and per-thread-written data itself (`alignas(64)` /
+  `std::hardware_destructive_interference_size`, padded per-thread slots, allocation inside the
+  parallel region), independent of the global allocator. Also check for per-thread data packed
+  into one allocation today (arrays of per-thread structs, vectors of scratch objects) that shares
+  lines even with base's allocator.
+- **Evidence** (WP-23 V2, without the replacement, vs. WP-23-before): e2e 38.50 → 39.22 s
+  (0.982x); bimodal: interplin d8 1.53 → 2.20 s in 3/5 rounds (re-run 5/8 processes +20–25 %),
+  interp cc d3 SLOWER 0.878, interplin d10 one round 3.0 s. `perf c2c` (IBS): in a slow process
+  `computeNeighborGPWithWeight` has 375 cross-core cache loads vs. 1 in a fast one, on 2 cache
+  lines of the main-thread heap (`results/WP-23/c2c-nonew-interplin-raw.txt`); the objects on the
+  2 lines are not identified yet.
+- **Content**: (1) identify the objects on the shared lines (c2c data addresses → allocation
+  sites) and check every operator's per-thread data for the same pattern; (2) align / pad them in
+  combigrid; (3) A/B in the judged build (no regression; report memory) and A/B on the V2 variant
+  (bimodality gone; repeat the bimodal cases over ≥ 8 processes) → decision data for WP-33.
+- **Expected gain**: ≈ 0 in the judged build; removes the false-sharing risk for allocators
+  without 64-byte alignment (MinGW builds compile base's replacement out, WP-23); prerequisite of
+  WP-33.
+- **Risk**: low (padding; + ≤ 64 B per padded object). **Tests**: operator tests; results bitwise
+  identical. **Micro**: the existing micro cases of the affected per-thread kernels
+  (interp / interplin; case list in README.md).
+  **E2E filter**: full suite (judged build); V2 variant: `^interplin/|^interp/` + the bimodal cases
+  repeated.
+- **Functional change**: none. The V2 variant is a measurement variant and is reverted; changing
+  base's allocator is WP-33 (owner).
+- **Dependencies**: WP-23 (finding). Rank confirmed by RP-3.
+
+## WP-33 — Base's global `operator new` replacement: drop / restrict / keep (from WP-23; needs decision)
+- **Source**: WP-23 summary (V2); owner 2026-10-29: decide after WP-32's summary.
+- **Location**: `base/src/sgpp/base/tools/AlignedMemory.cpp` (global `operator new/delete` →
+  `posix_memalign(64)` for the whole process; compiled out on MinGW). Known dependent: datadriven's
+  aligned AVX loads (WP-23); further dependents to be inventoried.
+- **Options**: (a) drop the replacement; (b) restrict alignment to the types / modules that need
+  it (aligned allocator or `operator new(std::size_t, std::align_val_t)` in datadriven); (c)
+  align only large allocations; (d) keep it.
+- **Evidence** (WP-23 V2, before WP-32): memory geomean 0.952, 16 `MEM−` (dsg b1 d15 151.1 →
+  127.4 MiB, d20 217.3 → 194.0 MiB, sg b1 d10 25.9 → 22.4 MiB); generation 1.1–1.4x faster (mivec
+  d10 7.6 → 5.6 ms); the e2e loss 0.982x came from false sharing (→ WP-32).
+- **Expected gain**: memory ≈ −5 % geomean (secondary goal); ms in generation; runtime ≈ 0 after
+  WP-32 (to be measured).
+- **Risk**: medium — base module, allocation behavior of the whole process, every module
+  (datadriven alignment, implicit reliance elsewhere).
+- **Functional change**: yes (base module) → **needs decision**: the owner picks an option after
+  WP-32's summary; then the prompt.
+- **Dependencies**: WP-32 accepted.
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where
