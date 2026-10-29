@@ -21,7 +21,6 @@
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
@@ -206,9 +205,9 @@ BOOST_AUTO_TEST_CASE(fft_weights_match_naive_weights) {
     const DataVector fft = rule.genWeightsFFT(nNodes);
     BOOST_REQUIRE_EQUAL(fft.size(), nNodes);
     for (size_t i = 0; i < nNodes; ++i) {
-      BOOST_CHECK_MESSAGE(std::abs(fft[i] - naive[i]) <= 1e-14,
-                          "nNodes = " << nNodes << ", i = " << i << ": " << fft[i]
-                                      << " != " << naive[i]);
+      BOOST_CHECK_MESSAGE(
+          std::abs(fft[i] - naive[i]) <= 1e-14,
+          "nNodes = " << nNodes << ", i = " << i << ": " << fft[i] << " != " << naive[i]);
     }
   }
 }

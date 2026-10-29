@@ -7,7 +7,6 @@
 
 #include <functional>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -18,8 +17,7 @@ namespace combigrid {
  * @f$f : \mathbb{R}^d \to \mathbb{R}@f$ used by all sparse-grid operators.
  *
  * Beyond plain forwarding, the wrapper can transform a normalized
- * @f$[0,1]^d@f$ point into the actual problem domain before evaluating
- * (and may cache results, see @c constants::source_func::USE_CACHE).
+ * @f$[0,1]^d@f$ point into the actual problem domain before evaluating.
  */
 class SourceFunc {
  public:
@@ -39,7 +37,6 @@ class SourceFunc {
    * @brief Evaluates the source function at @p point in problem coordinates.
    * @param point Evaluation point in problem coordinates.
    * @return Function value.
-   * @note This overload bypasses the cache.
    */
   double evaluate(const base::DataVector& point) const;
 
@@ -71,8 +68,6 @@ class SourceFunc {
 
  private:
   std::function<double(const base::DataVector&)> func;  ///< Wrapped user callable.
-  /// @brief Cache for normalized-point evaluations (only used if enabled).
-  mutable misc::SourceFunctionCache cache;
 };
 
 }  // namespace combigrid

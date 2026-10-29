@@ -26,7 +26,6 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/source_function_caching/source_function_cache.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -1038,8 +1037,9 @@ NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGr
   std::vector<DataVector> weights1D(nDim);
   for (size_t dim = 0; dim < nDim; dim++) {
     weights1D[dim].resize(nGPPerDim[dim]);
-    genInstr.getNodeGenFuncForDim(dim)->getQuadRule(nGPPerDim[dim])->genWeightsInplace(
-        weights1D[dim]);
+    genInstr.getNodeGenFuncForDim(dim)
+        ->getQuadRule(nGPPerDim[dim])
+        ->genWeightsInplace(weights1D[dim]);
   }
 
   NaiveTGQuadrature result{0.0, 0.0, {}};
@@ -1130,10 +1130,9 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
 
   const double volume = genInstr.getVolumeOfDomain();
   const double result = quadrature(sourceFunc, sg);
-  BOOST_CHECK_MESSAGE(
-      std::abs(result - volume * expectedTotal) <= volume * roundOffTol(absTotal),
-      "quadrature: " << result << ", naive: " << volume * expectedTotal
-                     << ", difference: " << result - volume * expectedTotal);
+  BOOST_CHECK_MESSAGE(std::abs(result - volume * expectedTotal) <= volume * roundOffTol(absTotal),
+                      "quadrature: " << result << ", naive: " << volume * expectedTotal
+                                     << ", difference: " << result - volume * expectedTotal);
 }
 
 }  // namespace
@@ -1178,14 +1177,12 @@ BOOST_AUTO_TEST_CASE(Process_Tensor_Grid_Matches_Naive_Sum) {
                 genInstr->setDomain(unitDomain ? HyperCubeArea(nDim, {0.0, 1.0})
                                                : randomDomain(nDim));
 
-                BOOST_TEST_CONTEXT(nodes
-                                   << " nodes, "
-                                   << (lvl2GPCntFunc == &doublingLvl2GPCntFunction ? "doubling"
-                                                                                   : "linear")
-                                   << " growth, boundary level offset " << boundaryLvlOffset
-                                   << ", nDim " << nDim
-                                   << (unitDomain ? ", unit domain" : ", random domain")
-                                   << (genInstr == &completeGenInstr ? ", complete" : ", MIVec")) {
+                BOOST_TEST_CONTEXT(
+                    nodes << " nodes, "
+                          << (lvl2GPCntFunc == &doublingLvl2GPCntFunction ? "doubling" : "linear")
+                          << " growth, boundary level offset " << boundaryLvlOffset << ", nDim "
+                          << nDim << (unitDomain ? ", unit domain" : ", random domain")
+                          << (genInstr == &completeGenInstr ? ", complete" : ", MIVec")) {
                   checkAgainstNaiveSum(*genInstr);
                 }
               }
