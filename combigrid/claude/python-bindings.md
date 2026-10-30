@@ -1,7 +1,7 @@
 # Python bindings of the combigrid module (pysgpp)
 
 Detailed reference for the SWIG bindings of the combination technique (CT) module. The essentials are
-summarized in §11 of the top-level [CLAUDE.md](../../CLAUDE.md). Read this file before changing the
+summarized in §7 of the top-level [CLAUDE.md](../../CLAUDE.md). Read this file before changing the
 `.i` files or a bound C++ API, and when answering questions about the Python API.
 
 Links are relative to this file; paths in backticks are relative to the repository root.

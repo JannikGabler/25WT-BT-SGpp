@@ -91,9 +91,10 @@ RP-3 is running (prompt issued 2026-10-30). Owner: commit WP-25 before RP-3 star
 WP-25: …": summary, `results/WP-25/`, `benchmarks/perf/perf_cache_proto.hpp`,
 `benchmarks/perf/perf_cache_counts.cpp`, `benchmarks/perf/perf_micro.cpp`,
 `tests/functions/source_functions/source_function_test.cpp`, STATUS/PLAN; no production code);
-`compile{ASan,Debug,Normal}.sh` are still untracked. CLAUDE.md caching lines corrected
-(2026-10-30, owner's request; commit with WP-25); §8 "No native vector-valued source functions"
-becomes outdated with WP-29, §8 "No source-function caching" with WP-26 (remind the owner).
+`compile{ASan,Debug,Normal}.sh` are still untracked. CLAUDE.md compacted 410 → 171 lines
+(2026-10-30, owner's request; details moved to `combigrid/claude/module-reference.md` and
+`build-and-ci.md`; commit with WP-25). The "Not implemented" items (CLAUDE.md §6, module
+reference "Known limitations") become outdated with WP-29 (vector-valued) and WP-26 (caching).
 Next master start: process the RP-3 summary (re-rank), then issue WP-29a.
 
 ## Open decisions for the owner

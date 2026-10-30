@@ -49,13 +49,7 @@ constexpr size_t DWC_MIN_MI_FOR_CONCURRENCY = 10000;
 /**
  * @brief Constants controlling source-function evaluation behavior.
  */
-namespace source_func {
-
-/// If @c true, source-function evaluations are routed through the cache;
-/// disable to avoid hashing overhead when caching is not beneficial.
-constexpr bool USE_CACHE = false;
-
-}  // namespace source_func
+namespace source_func {}  // namespace source_func
 
 /**
  * @brief Constants controlling sparse-grid generation instructions.

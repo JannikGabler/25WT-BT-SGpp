@@ -32,7 +32,7 @@ with identical instructions (op-cache misses depend on where the loop starts in 
 line). The DSG row loop `forEachGPWithGlobalWeight` is `[[gnu::aligned(64)]]` since WP-02. If
 unchanged code shifts in an A/B, check op-cache misses before attributing the shift.
 **Future feature: dimension-adaptive refinement** (owner 2026-10-29; not planned, no WP yet):
-the owner intends to add a dimension-adaptive CT later (CLAUDE.md §8: today the caller builds the
+the owner intends to add a dimension-adaptive CT later (CLAUDE.md §6: today the caller builds the
 adaptive loop on `MIVecSGGenInstr`). Every WP that designs or changes an API (`SourceFunc` and
 caching, batched / vector-valued evaluation, sparse-grid storage, generation instructions,
 operators) keeps it in mind and must not block it: refinement grows the MI set step by step
@@ -628,7 +628,7 @@ places it), the prototype's dead leftovers → WP-26, WP-17 gets `findBatch` / `
 - **Location**: `site_scons/SGppConfigure.py`, `configureGNUCompiler` (covers `gnu`, `openmpi`,
   `mpich`); the generic `OPT` branch at line ~43 applies to every compiler, so not there. Not on
   `win32`/`cygwin` (as `-fPIC` at line ~106). Compile and link flags (WP-11 passed it in
-  CPPFLAGS and LINKFLAGS; the LTO link step optimizes). CLAUDE.md §4: what `OPT=1` adds.
+  CPPFLAGS and LINKFLAGS; the LTO link step optimizes). CLAUDE.md §3: what `OPT=1` adds.
 - **Expected**: as gcc-nosi in WP-11: e2e 54.20 → 52.91 s (1.024x; quad/sg 1.017x, quad/dsg
   1.018x, interp 1.065x, interplin 1.000x, mivec 1.043x), micro geomean 1.062x, refcheck OK
   (100/104 bitwise, 4 uq ≤ 1.1e-15 relative); PLT calls 2090 → 1709, local aliases 7 → 85.
@@ -1119,7 +1119,7 @@ places it), the prototype's dead leftovers → WP-26, WP-17 gets `findBatch` / `
 ## WP-24 — Vector-valued source functions: exploration (owner's request; decision data)
 - **Source**: owner, 2026-10-29. Support f: Ω → ℝ^m. Today `SourceFunc` wraps
   `double(const DataVector&)` only; multi-output problems need m separate operator runs
-  (CLAUDE.md §8). First explore (this WP), then implement (WP-29); vector-specific optimizations
+  (CLAUDE.md §6). First explore (this WP), then implement (WP-29); vector-specific optimizations
   later (WP-30). Owner: avoid two separate code paths (scalar vs. vector) if possible, but decide
   after the options and their performance impact are known.
 - **Location** (read; prototypes only): `functions/source_functions/source_function.{hpp,cpp}`;
@@ -1191,7 +1191,7 @@ places it), the prototype's dead leftovers → WP-26, WP-17 gets `findBatch` / `
   External libraries are preferred over writing from scratch where they fit.
 - **Questions**:
   - Gain bound: per e2e case, total evaluations vs. distinct points (duplicate evaluations of the
-    CT; reduced representations such as Tasmanian/SGMK evaluate each point once, CLAUDE.md §8) and
+    CT; reduced representations such as Tasmanian/SGMK evaluate each point once, combigrid/claude/module-reference.md) and
     across operators on one sparse grid; break-even evaluation cost (ns) per design at 1 and 16
     threads.
   - **Prototype removed** (owner commit 6dfcf971a, 2026-10-29): `miscellaneous/caching/`
@@ -1370,8 +1370,8 @@ places it), the prototype's dead leftovers → WP-26, WP-17 gets `findBatch` / `
   A/B `^interp/|^interplin/`; **(d)** Python bindings (`pysgpp.VectorSourceFunc(callable, nOutputs)`,
   callable(tuple) → sequence of m floats, length checked; exception registry +
   `COMBIGRID_SOURCE_FUNC_EXCEPTION` for the new overloads; overloads return a `DataVector`), Python
-  example, `python-bindings.md`, `SG_PYTHON=1` build (CLAUDE.md §8 "No native vector-valued source
-  functions" is the owner's file → note in the summary).
+  example, `python-bindings.md`, `SG_PYTHON=1` build (CLAUDE.md §6 "Not implemented" and combigrid/claude/module-reference.md "No vector-valued source
+  functions" are the owner's files → note in the summary).
 - **Measurement**: standard A/B per step on its filter (scalar path: no regression; WP-24's
   prototype: 1.009x, 0 SLOWER); vector gain in the kept comparison benchmark
   (`combigrid/benchmarks/perf/perf_vector_proto.hpp`, `micro/vec/...`) or new production-kernel

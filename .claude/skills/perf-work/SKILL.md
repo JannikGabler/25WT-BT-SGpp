@@ -59,7 +59,7 @@ reference and methodology: `combigrid/perf/README.md` (read it first). `perf.py`
 
 **1. Pin the behavior** (before changing source code)
 - Identify existing tests covering the code; add or extend Boost tests in `combigrid/tests/`
-  (mirror the src layout; CLAUDE.md §5) so that the results/structure of the code you change are
+  (mirror the src layout; CLAUDE.md §4) so that the results/structure of the code you change are
   pinned, including edge cases (d = 1, boundary offsets 0/1, non-unit domains, empty/size-1
   grids where applicable).
 - `perf.py build debug` then `perf.py test --repeat 3` on the **unchanged** source: must pass.
