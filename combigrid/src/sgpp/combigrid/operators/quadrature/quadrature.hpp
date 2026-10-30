@@ -15,10 +15,13 @@
  */
 #pragma once
 
+#include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <span>
 
 namespace sgpp {
 namespace combigrid {
@@ -39,6 +42,31 @@ namespace combigrid {
  * @return Approximated integral value.
  */
 double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
+
+/**
+ * @brief Vector-valued counterpart of @ref quadrature(const SourceFunc&, const SparseGrid&):
+ * approximates the integrals of the m outputs of @p sourceFunc, evaluating it once per grid
+ * point.
+ *
+ * Output k equals the scalar quadrature of output k (as a @c SourceFunc) up to round-off.
+ *
+ * @param sourceFunc Vector-valued source function to integrate (m = @c sourceFunc.nOutputs()).
+ * @param sparseGrid Sparse grid with attached generation instruction.
+ * @param result     Output: the m approximated integrals.
+ * @throws base::data_exception if the size of @p result is not m.
+ */
+void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
+                std::span<double> result);
+
+/**
+ * @brief Variant of @ref quadrature(const VectorSourceFunc&, const SparseGrid&, std::span<double>)
+ * that returns the m approximated integrals.
+ *
+ * @param sourceFunc Vector-valued source function to integrate.
+ * @param sparseGrid Sparse grid with attached generation instruction.
+ * @return The m approximated integrals.
+ */
+base::DataVector quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid);
 
 /******************
 Internal operations
@@ -65,15 +93,31 @@ namespace quadrature_operator {
  * of the weights of the other dimensions. The source function is evaluated at the grid points in
  * domain coordinates.
  *
- * @param context Read-only data of the quadrature call (source function, domain and
- *                per-dimension node-generation functions, which provide the quadrature rules).
- * @param tg      Tensor grid (at least one dimension).
- * @param scratch Per-thread scratch space; reused across calls.
+ * @param context    Read-only data of the quadrature call (domain and per-dimension
+ *                   node-generation functions, which provide the quadrature rules).
+ * @param sourceFunc Source function.
+ * @param tg         Tensor grid (at least one dimension).
+ * @param scratch    Per-thread scratch space; reused across calls.
  * @return Quadrature estimate on the unit hypercube
  *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
  */
 double processTensorGrid(const sgpp::combigrid::misc::QuadratureContext& context,
-                         const TensorGrid& tg, sgpp::combigrid::misc::QuadratureScratch& scratch);
+                         const SourceFunc& sourceFunc, const TensorGrid& tg,
+                         sgpp::combigrid::misc::QuadratureScratch& scratch);
+
+/**
+ * @brief @ref processTensorGrid for a vector-valued source function: the same row loop with m
+ * values per grid point.
+ *
+ * @param context    Read-only data of the quadrature call.
+ * @param sourceFunc Vector-valued source function (m outputs).
+ * @param tg         Tensor grid (at least one dimension).
+ * @param scratch    Per-thread scratch space, constructed with m outputs; reused across calls.
+ * @param out        Output: the m quadrature estimates on the unit hypercube (size m).
+ */
+void processTensorGrid(const sgpp::combigrid::misc::QuadratureContext& context,
+                       const VectorSourceFunc& sourceFunc, const TensorGrid& tg,
+                       sgpp::combigrid::misc::QuadratureScratch& scratch, std::span<double> out);
 
 /**
  * TODO: Document (update)

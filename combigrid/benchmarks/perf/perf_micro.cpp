@@ -26,6 +26,7 @@
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
@@ -46,6 +47,7 @@
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -104,7 +106,6 @@ void addProcessTG(Suite& suite, const std::string& nodes, const LvlType boundary
                    const SourceFunc sourceFunc(perf::expSum);
                    const cg::misc::QuadratureContext context{
                        .sparseGrid = sg,
-                       .sourceFunc = sourceFunc,
                        .domain = sg.getGenInstr().getDomain(),
                        .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
                    cg::misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
@@ -112,8 +113,8 @@ void addProcessTG(Suite& suite, const std::string& nodes, const LvlType boundary
 
                    run.setItems(static_cast<double>(tg.nGP()));
                    run.measure([&]() {
-                     doNotOptimize(
-                         cg::quadrature_operator::processTensorGrid(context, tg, scratch));
+                     doNotOptimize(cg::quadrature_operator::processTensorGrid(context, sourceFunc,
+                                                                              tg, scratch));
                    });
                  });
 }
@@ -130,7 +131,6 @@ void addProcessAllTGs(Suite& suite, const std::string& nodes, const LvlType boun
                    const SourceFunc sourceFunc(perf::expSum);
                    const cg::misc::QuadratureContext context{
                        .sparseGrid = sg,
-                       .sourceFunc = sourceFunc,
                        .domain = sg.getGenInstr().getDomain(),
                        .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
                    cg::misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
@@ -142,12 +142,109 @@ void addProcessAllTGs(Suite& suite, const std::string& nodes, const LvlType boun
                    run.measure([&]() {
                      double sum = 0.0;
                      for (const TensorGridCTData& tgData : sg) {
-                       sum += tgData.coefficient * cg::quadrature_operator::processTensorGrid(
-                                                       context, tgData.tensorGrid, scratch);
+                       sum += tgData.coefficient *
+                              cg::quadrature_operator::processTensorGrid(
+                                  context, sourceFunc, tgData.tensorGrid, scratch);
                      }
                      doNotOptimize(sum);
                    });
                  });
+}
+
+/// Tensor grids and context of the vector-valued quadrature cases (addVectorQuad).
+struct VectorQuadSetup {
+  VectorQuadSetup(const std::string& nodes, const LvlType boundary, const size_t nDim,
+                  const LvlType maxLvl, const bool allTGs)
+      : genInstr(maxLvl, nDim) {
+    perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
+    sg.emplace(genInstr);
+    tgs = perf::vec_proto::selectTGs(*sg, allTGs);
+    for (const TensorGridCTData* tgData : tgs) nGP += static_cast<double>(tgData->tensorGrid.nGP());
+  }
+
+  cg::misc::QuadratureContext context() const {
+    return {.sparseGrid = *sg,
+            .domain = sg->getGenInstr().getDomain(),
+            .nodeGenFuncs = sg->getGenInstr().getNodeGenFuncs()};
+  }
+
+  CompleteSGGenInstr genInstr;
+  std::optional<SparseGrid> sg;
+  std::vector<const TensorGridCTData*> tgs;  ///< The largest tensor grid or all of them.
+  double nGP = 0.0;
+};
+
+/**
+ * WP-29a: SG quadrature of a vector-valued source function with the production kernels, ns per
+ * grid point and output: micro/quad/<kernel>_vec/<cfg>/m<m> (one VectorSourceFunc with the m
+ * outputs vec_proto::expSumK) vs. micro/quad/<kernel>_scalar_x_m/<cfg>/m<m> (m scalar runs, one
+ * SourceFunc per output); <kernel> = process_tg (largest tensor grid) or process_all_tgs (all,
+ * serially, with the combination). Counter max_ulp: vector vs. scalar results per tensor grid.
+ */
+void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundary,
+                   const size_t nDim, const LvlType maxLvl, const bool allTGs, const size_t m) {
+  const std::string name = cfg(nodes, boundary, nDim, maxLvl) + "/m" + std::to_string(m);
+  const std::string kernel = allTGs ? "micro/quad/process_all_tgs" : "micro/quad/process_tg";
+
+  suite.addMicro(kernel + "_scalar_x_m/" + name, [=](MicroRun& run) {
+    const VectorQuadSetup s(nodes, boundary, nDim, maxLvl, allTGs);
+    const cg::misc::QuadratureContext context = s.context();
+    cg::misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
+    std::vector<SourceFunc> funcs;
+    for (size_t k = 0; k < m; k++) {
+      funcs.emplace_back([k](const DataVector& x) { return perf::vec_proto::expSumK(x, k); });
+    }
+
+    run.setItems(s.nGP * static_cast<double>(m));
+    run.measure([&]() {
+      for (const SourceFunc& f : funcs) {
+        double sum = 0.0;
+        for (const TensorGridCTData* tgData : s.tgs) {
+          sum += tgData->coefficient * cg::quadrature_operator::processTensorGrid(
+                                           context, f, tgData->tensorGrid, scratch);
+        }
+        doNotOptimize(sum);
+      }
+    });
+  });
+
+  suite.addMicro(kernel + "_vec/" + name, [=](MicroRun& run) {
+    const VectorQuadSetup s(nodes, boundary, nDim, maxLvl, allTGs);
+    const cg::misc::QuadratureContext context = s.context();
+    cg::misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim(), m);
+    const cg::VectorSourceFunc f(
+        [](const DataVector& x, std::span<double> out) {
+          for (size_t k = 0; k < out.size(); k++) out[k] = perf::vec_proto::expSumK(x, k);
+        },
+        m);
+    std::vector<double> tgResult(m), sum(m);
+
+    // Vector vs. scalar results tensor grid by tensor grid (tensor grid-major, output-minor)
+    std::vector<double> vecPerTG, scalarPerTG;
+    for (const TensorGridCTData* tgData : s.tgs) {
+      cg::quadrature_operator::processTensorGrid(context, f, tgData->tensorGrid, scratch, tgResult);
+      vecPerTG.insert(vecPerTG.end(), tgResult.begin(), tgResult.end());
+      cg::misc::QuadratureScratch scalarScratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
+      for (size_t k = 0; k < m; k++) {
+        const SourceFunc fk([k](const DataVector& x) { return perf::vec_proto::expSumK(x, k); });
+        scalarPerTG.push_back(cg::quadrature_operator::processTensorGrid(
+            context, fk, tgData->tensorGrid, scalarScratch));
+      }
+    }
+    perf::vec_proto::compareResults(run, name, vecPerTG, scalarPerTG);
+
+    run.setItems(s.nGP * static_cast<double>(m));
+    run.measure([&]() {
+      std::fill(sum.begin(), sum.end(), 0.0);
+      for (const TensorGridCTData* tgData : s.tgs) {
+        cg::quadrature_operator::processTensorGrid(context, f, tgData->tensorGrid, scratch,
+                                                   tgResult);
+        for (size_t k = 0; k < m; k++) sum[k] += tgData->coefficient * tgResult[k];
+      }
+      doNotOptimize(sum.data());
+      perf::clobberMemory();
+    });
+  });
 }
 
 /**
@@ -594,6 +691,13 @@ int main(int argc, char** argv) {
 
   // WP-24: vector-valued source functions (prototypes, micro/vec/...)
   perf::vec_proto::addVectorProtoCases(suite);
+
+  // WP-29a: vector-valued SG quadrature, production kernels (the WP-24 configurations)
+  for (const size_t m : {1, 2, 4, 8, 32}) {
+    addVectorQuad(suite, "equi", 0, 2, 16, false, m);
+    addVectorQuad(suite, "equi", 0, 10, 4, false, m);
+    addVectorQuad(suite, "equi", 1, 20, 4, true, m);
+  }
 
   // WP-25: source-function cache (prototypes, micro/cache/...)
   perf::cache_proto::addCacheProtoCases(suite);

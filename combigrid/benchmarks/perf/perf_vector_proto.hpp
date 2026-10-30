@@ -1033,9 +1033,8 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
         nGP += static_cast<double>(tgData->tensorGrid.nGP());
       }
     }
-    misc::QuadratureContext context(const SourceFunc& sourceFunc) const {
+    misc::QuadratureContext context() const {
       return {.sparseGrid = *sg,
-              .sourceFunc = sourceFunc,
               .domain = sg->getGenInstr().getDomain(),
               .nodeGenFuncs = sg->getGenInstr().getNodeGenFuncs()};
     }
@@ -1103,7 +1102,7 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
   suite.addMicro("micro/vec/quad/scalar/" + cfg + "/m1", [=](MicroRun& run) {
     const Setup s(nodes, boundary, nDim, maxLvl, allTGs);
     const SourceFunc sourceFunc(perf::expSum);
-    const misc::QuadratureContext context = s.context(sourceFunc);
+    const misc::QuadratureContext context = s.context();
     misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
     const ScalarFunc f(perf::expSum);
     // The copy of the kernel against the production kernel
@@ -1114,9 +1113,10 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
                                  return processTGScalar(c, tg, sc, f);
                                }),
                    scalarPerTG(s, context, scratch,
-                               [](const misc::QuadratureContext& c, const TensorGrid& tg,
-                                  misc::QuadratureScratch& sc) {
-                                 return quadrature_operator::processTensorGrid(c, tg, sc);
+                               [&](const misc::QuadratureContext& c, const TensorGrid& tg,
+                                   misc::QuadratureScratch& sc) {
+                                 return quadrature_operator::processTensorGrid(c, sourceFunc, tg,
+                                                                               sc);
                                }));
     run.setItems(s.nGP);
     run.measure([&]() { doNotOptimize(scalarRun(s, context, scratch, f)); });
@@ -1125,8 +1125,7 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
   // The scalar instantiation of the generic kernel (template on the value type)
   suite.addMicro("micro/vec/quad/tvt_scalar/" + cfg + "/m1", [=](MicroRun& run) {
     const Setup s(nodes, boundary, nDim, maxLvl, allTGs);
-    const SourceFunc sourceFunc(perf::expSum);
-    const misc::QuadratureContext context = s.context(sourceFunc);
+    const misc::QuadratureContext context = s.context();
     misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
     const ScalarFunc f(perf::expSum);
     VecBuffers buf(1);
@@ -1163,8 +1162,7 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
                                cfg + "/m1";
       suite.addMicro(name, [=](MicroRun& run) {
         const Setup s(nodes, boundary, nDim, maxLvl, allTGs);
-        const SourceFunc sourceFunc(perf::expSum);
-        const misc::QuadratureContext context = s.context(sourceFunc);
+        const misc::QuadratureContext context = s.context();
         misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
         const VecFunc f = nested ? VecFunc::wrapNested(perf::expSum)
                                  : VecFunc::wrapDirect(perf::expSum);
@@ -1187,8 +1185,7 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
     suite.addMicro("micro/vec/quad/scalar_x_m/" + cfg + "/m" + std::to_string(m),
                    [=](MicroRun& run) {
                      const Setup s(nodes, boundary, nDim, maxLvl, allTGs);
-                     const SourceFunc sourceFunc(perf::expSum);
-                     const misc::QuadratureContext context = s.context(sourceFunc);
+                     const misc::QuadratureContext context = s.context();
                      misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
                      const std::vector<ScalarFunc> funcs = scalarFuncs(expSumK, m);
                      run.setItems(s.nGP * static_cast<double>(m));
@@ -1204,8 +1201,7 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
           "micro/vec/quad/" + kernelName + "/" + cfg + "/m" + std::to_string(m);
       suite.addMicro(name, [=](MicroRun& run) {
         const Setup s(nodes, boundary, nDim, maxLvl, allTGs);
-        const SourceFunc sourceFunc(perf::expSum);
-        const misc::QuadratureContext context = s.context(sourceFunc);
+        const misc::QuadratureContext context = s.context();
         misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
         const VecFunc f = vecFunc(expSumK, m);
         VecBuffers buf(m);

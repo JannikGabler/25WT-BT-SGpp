@@ -1,0 +1,19 @@
+WP-29a: perf_reference outputs of WP-29a-before vs. WP-29a-after, 1 thread (OMP_NUM_THREADS=1,
+OMP_PLACES={4}), all 104 cases, compared field by field (values, ints, floats, info). Each
+snapshot is deterministic (3 runs each, identical output).
+
+100 cases bitwise identical (every equi case, every interp/interplin case, every mivec case).
+4 cases differ in the value, all Clenshaw-Curtis with >= 65 nodes per dimension and the uq integrand:
+  quad/sg/cc/b0/d2/L10/uq-unit   0.8240524180260891 -> 0.8240524180260882 (8 ulp; exact 0.8240524180260892)
+  quad/dsg/cc/b0/d2/L10/uq-unit  0.8240524180260882 -> 0.8240524180260878 (4 ulp; DSG code unchanged)
+  quad/sg/cc/b0/d5/L6/uq-unit    0.8208920682405527 -> 0.8208920682405526 (1 ulp)
+  quad/dsg/cc/b0/d5/L6/uq-unit   0.8208920682403587 -> 0.8208920682403584 (2 ulp; DSG code unchanged)
+
+Cause: not the SG kernel. The differences follow the library (WP-29a-before's perf_reference
+binary with WP-29a-after's libraries reproduces all 4) and appear in the unchanged DSG operator
+too: the Clenshaw-Curtis weights for n >= 65 nodes (FFT path, source unchanged) differ bitwise
+between the libraries (n = 65: 9 of 65 weights, max 4 ulp; n = 129: 16 of 129, max 16 ulp;
+n = 2049: 138 of 2049, max 16 ulp). Snapshots of identical sources have identical weights
+(rp-3, WP-24-before, WP-25-before, WP-29a-before); every change of the library sources flipped
+them (WP-24-after, WP-25-after, WP-29a-after): LTO re-optimizes the unchanged FFT code.
+`perf.py refcheck`: OK at 1 and 16 threads (refcheck.txt).

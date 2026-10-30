@@ -245,6 +245,11 @@ namespace std {
 %ignore sgpp::combigrid::quadrature_operator::processTensorGrid;
 %ignore sgpp::combigrid::quadrature_operator::getWeights;
 
+// Vector-valued source functions (VectorSourceFunc) are not exposed yet (WP-29d): hide the
+// operator overloads that take one (VectorSourceFunc has no proxy, std::span no typemap).
+%ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&, std::span<double>);
+%ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&);
+
 // Re-raise exceptions of Python source functions after the operator returns (see SourceFunc.i).
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::interpolate)
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::interpolateLinear)

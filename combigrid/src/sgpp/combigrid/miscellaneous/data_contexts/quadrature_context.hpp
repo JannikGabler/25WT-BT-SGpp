@@ -8,7 +8,6 @@
  */
 #pragma once
 
-#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -21,10 +20,12 @@ namespace misc {
 
 /**
  * @brief Read-only data of one quadrature call, shared by all functions and threads.
+ *
+ * The source function (@c SourceFunc or @c VectorSourceFunc) is passed separately, so that the
+ * same context serves both value types of the kernels.
  */
 struct QuadratureContext {
   const SparseGrid& sparseGrid;
-  const SourceFunc& sourceFunc;
 
   const HyperCubeArea& domain;
   const std::vector<NodeGenFunc*>& nodeGenFuncs;

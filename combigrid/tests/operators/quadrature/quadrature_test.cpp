@@ -1103,7 +1103,6 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
   const SourceFunc sourceFunc(gaussianFunc);
 
   const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .sourceFunc = recordingFunc,
                                         .domain = sg.getGenInstr().getDomain(),
                                         .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
   misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
@@ -1116,7 +1115,7 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
 
     evaluatedPoints.clear();
     const double result =
-        quadrature_operator::processTensorGrid(context, tgData.tensorGrid, scratch);
+        quadrature_operator::processTensorGrid(context, recordingFunc, tgData.tensorGrid, scratch);
 
     BOOST_CHECK_EQUAL(evaluatedPoints.size(), tgData.tensorGrid.nGP());
     checkSamePoints(evaluatedPoints, expected.points);
@@ -1223,7 +1222,6 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
     return 1.0;
   });
   const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .sourceFunc = sourceFunc,
                                         .domain = sg.getGenInstr().getDomain(),
                                         .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
   misc::QuadratureScratch scratch(3, sg.getMaxTGSumOverGPCntsPerDim());
@@ -1231,7 +1229,8 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
   for (const GPMI& nGPPerDim : {GPMI{3, 0, 5}, GPMI{0, 3, 5}, GPMI{3, 5, 0}}) {
     const TensorGrid tg(nGPPerDim);
     BOOST_REQUIRE_EQUAL(tg.nGP(), 0u);
-    BOOST_CHECK_EQUAL(quadrature_operator::processTensorGrid(context, tg, scratch), 0.0);
+    BOOST_CHECK_EQUAL(quadrature_operator::processTensorGrid(context, sourceFunc, tg, scratch),
+                      0.0);
   }
 
   BOOST_CHECK_EQUAL(nEvaluations, 0u);
