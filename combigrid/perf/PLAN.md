@@ -47,6 +47,12 @@ the repo's virtual environment `.venv/` (Python 3.14 with NumPy, SciPy, SymPy, m
 with `source .venv/bin/activate` before running `perf.py`, helper scripts, `SG_PYTHON=1` builds and
 the Python examples / bindings, or call `.venv/bin/python` directly. It has all required libraries;
 do not install packages into the system Python. The master copies this note into every prompt.
+**File layout** (owner's restructuring, part of WP-29a, 2026-10-30): the DSG operator internals
+moved from `operators/quadrature/deltas_sparse_grid_quadrature.{hpp,cpp}` (−≈ 400 lines) to
+`tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.{hpp,cpp}`;
+`tools/operators/quadrature/quadrature_utilities.{hpp,cpp}` → `quadrature_tools.{hpp,cpp}` (same
+directory); value types `tools/operators/value_types/` → `miscellaneous/operators/value_types/`.
+Entries written before keep the old paths: functions are located by name.
 
 Baseline e2e time per operator group (sum of `total` medians, `baseline/e2e_t16.jsonl`;
 generation ≤ 1–2 % except MIVec; boost off, total 70.0 s): quad/sg 22.3 s (18.5 s at d ≥ 7) ·
@@ -84,7 +90,8 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | WP-25 | `SourceFunc` caching: design exploration (policies, memory limit, disk tier, libraries, base module) (owner's request) | accepted (owner 2026-10-30): design W, benchmarks `perf_cache_proto.hpp` / `perf_cache_counts.cpp` + pinning test kept; order WP-26 → WP-28 → WP-27 after WP-29 | measured: W costs 0 (plain `SourceFunc` unchanged); run-time branch 0.987x (15/38 SLOWER); break-even SG 120–310 ns (1 t) / 270–630 ns (16 t); Python warm 1925–2502x at 16 t; DSG gain bound 1.00 |
 | – | RP-3 | Re-profiling after WP-03 (+ cumulative memory; re-rank with the WP-23–WP-25 results, rank WP-32 / WP-33) | accepted (2026-10-30) | measured: baseline → rp-3 e2e 69.92 → 38.45 s (1.818x; d ≥ 7 1.87x), 0 SLOWER; since RP-2 1.135x (all mivec 5.05x); memory geomean 1.014, 8 `MEM+` / 3 `MEM−`; shares unchanged, estimates confirmed |
 | – | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | dropped (owner 2026-10-30, on RP-3's data) | measured (RP-3): judged warm suite nil; cold first operator call +63…+130 ms per process, floor +1…4.5 MiB → not worth the build change |
-| 1 | WP-29a–d | Vector-valued source functions: implementation, design T (a SG quad + mivec, b DSG, c interp + interplin, d bindings) | WP-29a in progress (prompt issued 2026-10-30); b–d ready, one session each, in order (owner 2026-10-30: before WP-26 and WP-04) | feature; scalar path ≈ 0 (WP-24 prototype 1.009x); vector at m = 32 1.3–2.8x vs. m scalar runs |
+| – | WP-29a | Vector-valued, design T (a): `VectorSourceFunc`, value types, SG quadrature + mivec | accepted (owner 2026-10-30; incl. the owner's file restructuring) | measured: scalar `^quad/sg/\|^mivec/` 10.482 → 10.457 s (1.002x, 0 SLOWER), memory geomean 1.002, refcheck OK; vector vs. m scalar runs at m = 32: d10 2.68x, b1 d20 2.48x, d2 L16 1.29x; m = 1 0.66–0.93x |
+| 1 | WP-29b–d | Vector-valued source functions: implementation, design T (b DSG, c interp + interplin, d bindings) | WP-29b in progress (prompt issued 2026-10-30); c–d ready, one session each, in order (owner 2026-10-30: before WP-26 and WP-04) | feature; scalar path ≈ 0 (WP-29a 1.002x); vector at m = 32 1.3–2.8x vs. m scalar runs (DSG b0 largest, WP-24: 2.77x) |
 | 2 | WP-26 | Caching: wrapper W, in-memory table, none / always, soft limit, end-of-operator hook, unified domain mapping, `pysgpp.CachedSourceFunc` | needs decision (API details 1–6 from WP-25, before its prompt; after WP-29a–d) | feature; judged suite 0 by construction (plain `SourceFunc` unchanged); expensive / Python functions up to the gain bound (SG 2.8–13.6, interp 34–499 over p calls) |
 | 3 | WP-28 | Caching: disk tier (temporary / persistent flat file) | needs decision (disk fields of `CacheConfig`; after WP-26) | feature; warm runs skip all evaluations |
 | 4 | WP-27 | Caching: adaptive policy (decided per operator call at the hook) | needs decision (adaptive fields; after WP-28) | feature; only matters for functions near break-even |
@@ -101,8 +108,9 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | 15 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
 | 16 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
 | 17 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
-| 18 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
-| 19 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x); not in the judged suite |
+| 18 | WP-35 | Flaky time-seeded tests: `equidistant_nodes/sin_func_random_cube_3D` + seed audit (test-only; from WP-29a) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
+| 19 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
+| 20 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x); not in the judged suite |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10; WP-10 dropped 2026-10-30 | – |
@@ -178,6 +186,10 @@ process +63…+130 ms (15 pool threads spin; OpenMP barrier wake-ups then wait f
 is operator-bound (operator 98.9 %, generation 13.8 ms; CT coefficients 64–71 % of the generation,
 scaling 1.7–3.8x from 1 to 16 threads) → no WP; relevant later for dimension-adaptive refinement
 (incremental CT-coefficient update). WP-29's "before" picture: entry WP-29 "From RP-3".
+After WP-29a (accepted 2026-10-30, incl. the owner's file restructuring): a feature (scalar 1.002x,
+memory 1.002) → no re-profiling trigger, ranks unchanged; WP-29b next. Follow-ups: WP-35 (flaky
+time-seeded test, test-only, new, low rank), WP-30 (small-m costs), WP-05 (CC weights not bitwise
+reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 
 ---
 
@@ -424,6 +436,11 @@ scaling 1.7–3.8x from 1 to 16 threads) → no WP; relevant later for dimension
   zero-fill + page faults of the per-thread scratch, not call overhead (part (b)). Allocate the
   scratch per thread on its own cache lines (WP-32's rule) so it stays safe if WP-33 changes
   base's allocator.
+- **From WP-29a**: `quadrature_utilities.cpp` is now `tools/operators/quadrature/quadrature_tools.cpp`.
+  The CC FFT weights (n ≥ 65) change bitwise (up to 16 ulp in some weights) whenever LTO recompiles
+  them after an unrelated library change (WP-24/25/29a); identical sources give identical weights.
+  If (a) rewrites the weight computation, note whether explicit FMA / unfused code there would make
+  them reproducible (optional; no requirement). `micro/quadrule/cc_weights/n1025` is the stick.
 
 ## WP-06 — Global interpolation: operator overhead
 - **Location**: `operators/global_interpolation/global_interpolation.cpp`.
@@ -1414,7 +1431,29 @@ scaling 1.7–3.8x from 1 to 16 threads) → no WP; relevant later for dimension
   `interpolateFirstDim` + barycentric 22.6 / 22.6 / 26.0 % (cc d10 / d7 / d5), cheb1 d5 generic weights
   24.8 % + allocations 7.2 %; corner loop 28.1 / 25.8 % (d10 / d8). Dispatch inside these kernels 5–10 %
   (SG, DSG), ≤ 2.5 % (interp, interplin). Largest vector gain expected in DSG b0.
-- **Status**: WP-29a in progress (prompt issued 2026-10-30); WP-29b–d ready, one session each after it.
+- **From WP-29a** (accepted 2026-10-30, [summary](summaries/WP-29a-vector-sg-quadrature.md)):
+  `VectorSourceFunc(std::function<void(const DataVector&, std::span<double>)>, nOutputs)` in
+  `functions/source_functions/vector_source_function.{hpp,cpp}` (defined in the `.cpp`, LTO-inlined;
+  `out.size()` is an `assert`, `nOutputs = 0` throws `base::data_exception`); value types
+  `ScalarValues` (`Acc = double`) / `VectorValues` (`Acc = double*`, runtime m, values + accumulator
+  slots in a caller buffer of `bufferSize(m, nAccs)`; `zeroAcc`, `evaluate`, `addScaled`, `store`;
+  header-inline, by value) in `miscellaneous/operators/value_types/` (owner's restructuring); SG
+  `sumOverRows` one template; `processTensorGrid(context, SourceFunc|VectorSourceFunc, tg, scratch[,
+  out])`; `misc::QuadratureContext` without the function; `QuadratureScratch(nDim, maxSum, nOutputs
+  = 0)` holds `valueBuffer` + slot constants; overloads `quadrature(const VectorSourceFunc&, const
+  SparseGrid&, std::span<double>)` (wrong size → `base::data_exception`) + `DataVector` variant;
+  per-thread m-vectors combined in a critical section; both overloads `%ignore`d in `combigrid.i`.
+  Tests `vector_source_function_test.cpp`, `vector_quadrature_test.cpp` (per TG same points in the
+  same order as scalar, |Δ| ≤ 16 eps·|TG sum|). Measured: scalar 1.002x; vector (1 t, m =
+  1/2/4/8/32) d10 L4 0.89/1.37/1.74/2.23/2.68, b1 d20 0.93/1.45/1.71/2.15/2.48, d2 L16
+  0.66/0.78/1.02/1.18/1.29. Bitwise: 4 cc/uq reference cases (2 unchanged DSG) differ 1–8 ulp
+  (LTO recompiles the CC FFT weights). For **(b)**: drop `sourceFunc` from `DeltaQuadratureContext`
+  the same way, slots in `DeltaQuadratureScratch`. **(c)**: value types gain
+  `evaluateNormalizedInPlace` / interpolation operations. **(d)**: remove the two `%ignore`s,
+  `%ignore` the `std::function` ctors, add the `PyObject*` ctor, exception registry keyed by
+  `VectorSourceFunc*`; Python gets the `DataVector` overload.
+- **Status**: WP-29a accepted (2026-10-30); WP-29b in progress (prompt issued 2026-10-30); WP-29c–d
+  ready, one session each after it.
 
 ## WP-30 — Vector-valued source functions: specific optimizations (later)
 - **Source**: owner, 2026-10-29 (low relevance, for later).
@@ -1424,6 +1463,10 @@ scaling 1.7–3.8x from 1 to 16 threads) → no WP; relevant later for dimension
   at m = 2–8 by ≤ 5 %, batch was worst at m = 32; interp m-innermost per node ("inner") had the best
   gain at m = 32 but ulp differences to the scalar run (innerk chosen); SG d2 L16 gains only
   0.82–1.33x (short rows). Measuring stick: `micro/vec/...` (`perf_vector_proto.hpp`).
+- **From WP-29a**: production SG path at small m: m = 1 0.66–0.93x of a scalar run, d2 L16 m = 2
+  0.78x (memory accumulators + m-loop per point); WP-24's rowbuf was ≤ 5 % better at m = 2–8. A
+  single output belongs in `SourceFunc` (document); candidates: register accumulators for small m,
+  rowbuf.
 
 ## RP-3 — Re-profiling after WP-03
 - **Source**: rule 7: WP-03 changed the mivec group by 5.08x (6.32 → 1.24 s) and its hot-spot
@@ -1552,6 +1595,24 @@ scaling 1.7–3.8x from 1 to 16 threads) → no WP; relevant later for dimension
 - **Functional change**: (a) changes the thread count used for Python callables → **needs
   decision** on the mechanism; Python bindings and `SG_PYTHON=1` build only.
 - **Dependencies**: none for (a); (b) after WP-17. Status: planned; the owner places it.
+
+## WP-35 — Flaky time-seeded tests: near-zero relative tolerance + seed audit (from WP-29a)
+- **Source**: WP-29a summary (follow-ups; test runs).
+- **Finding**: 2 of 16 normal `perf.py test` runs in WP-29a failed one time-seeded test each: one
+  uncaptured; the other the pre-existing `equidistant_nodes/sin_func_random_cube_3D` (seed
+  1793379453: expected −1.7e-4 with a 1e-12 *relative* tolerance, b ≈ −a makes the exact value near
+  0; `WP-29a-before` fails that seed 200/200). WP-02 saw one lost debug failure (log "Debug/normal
+  test failures").
+- **Scope** (tests only): give that test an absolute floor (e.g. tolerance relative to the
+  integrand's magnitude / the cube volume) and pin the failing seed as a fixed case; audit all
+  time- or random-seeded tests in `combigrid/tests/` for the same pattern (relative tolerance on a
+  possibly near-zero expected value) and for printing their seed on failure; run the full suite
+  repeatedly (e.g. 200× the seeded suites, normal + debug) to catch the uncaptured failure.
+- **Expected gain**: e2e nil; reliable `perf.py test` in every work session.
+- **Risk**: low; tolerances must stay tight enough to catch real errors (justify each new floor
+  from the rule's error bound or measured round-off). **Micro / E2E**: none (no source change).
+- **Functional change**: none (tests only). **Dependencies**: none. Status: ready (low rank; the
+  owner may move it up).
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where

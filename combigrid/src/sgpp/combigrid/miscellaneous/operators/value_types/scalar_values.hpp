@@ -27,7 +27,7 @@
 
 namespace sgpp {
 namespace combigrid {
-namespace tools {
+namespace misc {
 
 /**
  * @brief Value type of the operator kernels for a scalar source function (one value per grid
@@ -69,6 +69,6 @@ class ScalarValues {
   const SourceFunc* sourceFunc;  ///< Viewed source function.
 };
 
-}  // namespace tools
+}  // namespace misc
 }  // namespace combigrid
 }  // namespace sgpp

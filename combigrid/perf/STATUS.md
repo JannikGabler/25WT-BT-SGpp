@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: RP-3 (2026-10-30) · Next free WP number: 35 · Re-profilings done: 3 (RP-1 2026-10-28, RP-2 2026-10-29, RP-3 2026-10-30; RP-0 = setup)
+Last processed: WP-29a (2026-10-30) · Next free WP number: 36 · Re-profilings done: 3 (RP-1 2026-10-28, RP-2 2026-10-29, RP-3 2026-10-30; RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), 16
   threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (all cores at
@@ -65,7 +65,8 @@ Last processed: RP-3 (2026-10-30) · Next free WP number: 35 · Re-profilings do
 | – | WP-23 | Cross-library calls into `libsgppbase` (`DataVector`): measurement (owner's question) | rejected (owner 2026-10-29): NO-GAIN | base share ≤ 0.09 % at d ≥ 7, no base call per point; inline-ctor upper bound e2e 0.999x (38.42 → 38.46 s), memory 0.998; without base's `operator new` replacement memory 0.952 (16 MEM−) but 0.982x (false sharing) → WP-32 / WP-33 | [WP-23](summaries/WP-23-cross-library-calls.md) |
 | – | WP-24 | Vector-valued source functions: exploration (owner's request) | accepted (owner 2026-10-30): design T, round-off, WP-29 after RP-3; benchmark `perf_vector_proto.hpp` kept | T scalar cost ≈ 0 (prototype e2e 1.009x, 0 SLOWER, memory 1.002, refcheck OK); one path SG +28…48 %; vector vs. m scalar runs at m = 32: SG 1.33–2.56x, DSG 1.89–2.77x, interp 1.27–2.08x | [WP-24](summaries/WP-24-vector-valued-exploration.md) |
 | – | WP-25 | `SourceFunc` caching: design exploration (owner's request) | accepted (owner 2026-10-30): design W; benchmarks `perf_cache_proto.hpp` / `perf_cache_counts.cpp` + `source_function_test.cpp` kept | W costs 0 (plain `SourceFunc` unchanged; run-time branch 0.987x, 15/38 SLOWER); break-even SG 120–310 ns (1 t) / 270–630 ns (16 t); Python warm 1925–2502x at 16 t; DSG gain bound 1.00; memory n/a (no production code) | [WP-25](summaries/WP-25-caching-exploration.md) |
-| 1 | WP-29a–d | Vector-valued implementation, design T: (a) SG quad + mivec, (b) DSG, (c) interp + interplin, (d) bindings | **WP-29a in progress** (prompt issued 2026-10-30); b–d ready, one session each (owner: before WP-26 and WP-04) | | |
+| – | WP-29a | Vector-valued, design T (a): `VectorSourceFunc`, value types, SG quadrature + mivec | accepted (owner 2026-10-30; incl. the owner's file restructuring, part of WP-29a) | scalar `^quad/sg/\|^mivec/` 1.002x (10.482 → 10.457 s, 0 SLOWER), memory 1.002 (1 MEM+ = noise), refcheck OK; vector vs. m scalar runs (m = 2/4/8/32): d10 1.37/1.74/2.23/2.68, b1 d20 1.45/1.71/2.15/2.48, d2 L16 0.78–1.29; m = 1 0.66–0.93 | [WP-29a](summaries/WP-29a-vector-sg-quadrature.md) |
+| 1 | WP-29b–d | Vector-valued implementation, design T: (b) DSG, (c) interp + interplin, (d) bindings | **WP-29b in progress** (prompt issued 2026-10-30); c–d ready, one session each (owner: before WP-26 and WP-04) | | |
 | 2 | WP-26 | Caching: wrapper W, in-memory table, none / always, soft limit, hook, unified mapping, `pysgpp.CachedSourceFunc` | needs decision (API details 1–6, before its prompt; after WP-29a–d) | | |
 | 3 | WP-28 | Caching: disk tier (temporary / persistent flat file) | needs decision (disk fields; after WP-26) | | |
 | 4 | WP-27 | Caching: adaptive policy | needs decision (adaptive fields; after WP-28) | | |
@@ -82,17 +83,19 @@ Last processed: RP-3 (2026-10-30) · Next free WP number: 35 · Re-profilings do
 | 15 | WP-32 | Cache-line-align combigrid's per-thread scratch / shared query data (from WP-23) | ready (rank confirmed by RP-3: ≈ 0 in the judged build) | | |
 | 16 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (base module) | needs decision (after WP-32's summary) | | |
 | 17 | WP-31 | MI-set cleanups after WP-03: O(n·d) `isMIVecDownwardsClosed`, dead helpers | ready (low; e2e nil) | | |
-| 18 | WP-30 | Vector-valued: specific optimizations (later) | planned (after WP-29) | | |
-| 19 | WP-34 | Python source functions: GIL contention at 16 threads (36x; from WP-25) | planned (owner places it; mechanism needs decision) | | |
+| 18 | WP-35 | Flaky time-seeded tests: `equidistant_nodes/sin_func_random_cube_3D` (relative tolerance near 0) + seed audit (test-only; from WP-29a) | ready (low; e2e nil; the owner may move it up) | | |
+| 19 | WP-30 | Vector-valued: specific optimizations (later) | planned (after WP-29; WP-29a: m = 1 0.66–0.93x) | | |
+| 20 | WP-34 | Python source functions: GIL contention at 16 threads (36x; from WP-25) | planned (owner places it; mechanism needs decision) | | |
 
 ## Next action
 
-WP-29a is running (prompt issued 2026-10-30). Owner: commit RP-3 before WP-29a starts ("Accept
-RP-3: …": summary, `results/RP-3/`, ANALYSIS.md, STATUS/PLAN; no code); `compile{ASan,Debug,
-Normal}.sh` are still untracked (snapshots report "dirty" because of them: commit or ignore them).
-The "Not implemented" items (CLAUDE.md §6, module reference "Known limitations") become outdated
-with WP-29 (vector-valued) and WP-26 (caching); the WP-29 summaries list the lines. Next master
-start: process the WP-29a summary, then issue WP-29b (DSG).
+WP-29b (DSG) is running (prompt issued 2026-10-30). Owner: commit WP-29a before WP-29b starts
+("Accept WP-29a: …": the restructuring in the working tree, STATUS/PLAN; the tree must be clean);
+`compile{ASan,Debug,Normal}.sh` are still untracked (snapshots report "dirty": commit or ignore).
+Owner's files outdated since WP-29a (WP-29a summary): CLAUDE.md §6 "Not implemented … vector-valued"
+(line 144) and §2 "User functions are wrapped in `SourceFunc`", module-reference.md:154,
+python-bindings.md "Deliberately not exposed" (until WP-29d); caching lines with WP-26. Next master
+start: process the WP-29b summary, then issue WP-29c (interp + interplin).
 
 ## Open decisions for the owner
 
@@ -111,6 +114,8 @@ start: process the WP-29a summary, then issue WP-29b (DSG).
   WP-27 (before their prompts): disk / adaptive fields of `CacheConfig`.
 - WP-34 (Python GIL contention, 36x at 16 t): placement and mechanism (serial operator for Python
   callables vs. WP-17 batches vs. document only).
+- Optional: WP-35 (flaky time-seeded tests, test-only, small) ranks low by e2e saving; every work
+  session's repeated test runs hit it (WP-29a: 2 of 16 runs) → the owner may move it up.
 
 ## Do not retry
 
@@ -172,20 +177,25 @@ start: process the WP-29a summary, then issue WP-29b (DSG).
 
 ## Re-profiling
 
-Last: RP-3 (2026-10-30, accepted; rp-3 = 0c6ecfc4b). Accepted optimizations since RP-3: 0.
+Last: RP-3 (2026-10-30, accepted; rp-3 = 0c6ecfc4b). Accepted optimizations since RP-3: 0 (WP-29a
+is a feature: scalar 1.002x, no group ≥ 1.3x, no ranking shift).
 WP-29a–d and WP-26–WP-28 are features (scalar path / judged suite ≈ 0): they count only if a
 group changes by ≥ 1.3x or a hot-spot ranking shifts (template kernels: watch code placement).
 RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another rule-7 trigger.
 
 ## Log
 
-- 2026-10-30 RP-3 accepted (owner; measurement, commit pending): baseline → rp-3 1.818x (69.92 →
-  38.45 s), 0 SLOWER, memory geomean 1.014; shares unchanged since RP-2, all estimates confirmed
-  (WP-04 1.5–2.5 s, WP-17 1–1.5 s, WP-06 0.6–0.7 s, WP-08 ≈ 0.5 s, WP-05 0.5–0.8 s), ranks kept;
-  mivec generation 13.8 ms (CT coefficients 64–71 %) → no WP. WP-10 dropped (owner: cold-call
-  latency not worth the build change). WP-29a prompt issued.
-- A once-seen debug test failure (WP-02; output lost, 0/150 reruns; the test prints its seed
-  now): report recurrences.
+- 2026-10-30 WP-29a accepted (owner; checkpoint 6dad1b375, accept commit pending incl. the owner's
+  restructuring: value types → `miscellaneous/operators/value_types/`, `quadrature_utilities` →
+  `tools/operators/quadrature/quadrature_tools`, DSG internals → `deltas_sparse_grid_quadrature_tools`):
+  `VectorSourceFunc` + 2 SG `quadrature` overloads, scalar 1.002x, memory 1.002, refcheck OK; vector
+  gain at m = 32 2.48–2.68x (d2 L16 1.29x). Follow-ups: WP-35 (flaky test, new), WP-30 (small m),
+  WP-05 (CC weights not bitwise reproducible under LTO), WP-29b–d details → PLAN.md. No RP-4.
+  WP-29b prompt issued.
+- Debug/normal test failures: once-seen (WP-02; output lost, 0/150 reruns; seed printed now);
+  WP-29a: 2 of 16 normal runs failed one time-seeded test each, one uncaptured, one
+  `equidistant_nodes/sin_func_random_cube_3D` seed 1793379453 (pre-existing) → WP-35. Report
+  recurrences.
 
 ## Archive
 
@@ -203,4 +213,5 @@ RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another rule-7 trigge
   10-30 WP-24 accepted (8118ea9a2: design T, round-off, WP-29 split a–d; owner: every work
   session uses `.venv/`). 10-30 WP-25 accepted (5ced35885: design W; order RP-3 → WP-29a–d →
   WP-26 → WP-28 → WP-27 → WP-04 → WP-17; API details 1–6 before WP-26; WP-34 new); CLAUDE.md
-  compacted 410 → 171 lines (0c6ecfc4b).
+  compacted 410 → 171 lines (0c6ecfc4b). 10-30 RP-3 (e1257538d: 1.818x, 38.45 s, memory 1.014;
+  shares unchanged, ranks kept; WP-10 dropped).

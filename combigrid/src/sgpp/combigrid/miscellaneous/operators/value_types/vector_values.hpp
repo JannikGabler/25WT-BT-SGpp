@@ -19,7 +19,7 @@
 
 namespace sgpp {
 namespace combigrid {
-namespace tools {
+namespace misc {
 
 /**
  * @brief Value type of the operator kernels for a vector-valued source function (m values per
@@ -95,6 +95,6 @@ class VectorValues {
   double* buffer;                      ///< Values at the current point, then the accumulators.
 };
 
-}  // namespace tools
+}  // namespace misc
 }  // namespace combigrid
 }  // namespace sgpp

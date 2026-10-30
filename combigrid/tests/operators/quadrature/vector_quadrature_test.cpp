@@ -23,7 +23,6 @@
 #include <cmath>
 #include <limits>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/base/exception/data_exception.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
@@ -39,8 +38,10 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -124,8 +125,8 @@ std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs
   for (const TensorGridCTData& tgData : sg) {
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
-    quadrature_operator::processTensorGrid(context, vectorFunc, tgData.tensorGrid, vectorScratch,
-                                           out);
+    tools::quadrature::processTensorGrid(context, vectorFunc, tgData.tensorGrid, vectorScratch,
+                                         out);
     BOOST_CHECK_EQUAL(vectorPoints.size(), tgData.tensorGrid.nGP());
 
     for (size_t k = 0; k < nOutputs; k++) {
@@ -134,8 +135,8 @@ std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs
         return component(x, k);
       });
       scalarPoints.clear();
-      const double scalar = quadrature_operator::processTensorGrid(
-          context, scalarFunc, tgData.tensorGrid, scalarScratch);
+      const double scalar = tools::quadrature::processTensorGrid(context, scalarFunc,
+                                                                 tgData.tensorGrid, scalarScratch);
 
       BOOST_CHECK(scalarPoints == vectorPoints);
       BOOST_CHECK_MESSAGE(
@@ -240,7 +241,7 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
     const TensorGrid tg(nGPPerDim);
     BOOST_REQUIRE_EQUAL(tg.nGP(), 0u);
     std::vector<double> out(3, std::numeric_limits<double>::quiet_NaN());
-    quadrature_operator::processTensorGrid(context, sourceFunc, tg, scratch, out);
+    tools::quadrature::processTensorGrid(context, sourceFunc, tg, scratch, out);
     for (const double value : out) BOOST_CHECK_EQUAL(value, 0.0);
   }
 
@@ -254,7 +255,7 @@ BOOST_AUTO_TEST_CASE(Wrong_Result_Size_Is_Rejected) {
 
   for (const size_t size : {0u, 2u, 4u}) {
     std::vector<double> result(size);
-    BOOST_CHECK_THROW(quadrature(sourceFunc, sg, result), sgpp::base::data_exception);
+    BOOST_CHECK_THROW(quadrature(sourceFunc, sg, result), std::invalid_argument);
   }
 }
 

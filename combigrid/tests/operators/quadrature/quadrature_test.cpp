@@ -35,6 +35,7 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <string>
@@ -1115,7 +1116,7 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
 
     evaluatedPoints.clear();
     const double result =
-        quadrature_operator::processTensorGrid(context, recordingFunc, tgData.tensorGrid, scratch);
+        tools::quadrature::processTensorGrid(context, recordingFunc, tgData.tensorGrid, scratch);
 
     BOOST_CHECK_EQUAL(evaluatedPoints.size(), tgData.tensorGrid.nGP());
     checkSamePoints(evaluatedPoints, expected.points);
@@ -1136,7 +1137,7 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
 
 }  // namespace
 
-BOOST_AUTO_TEST_SUITE(quadrature_operator_tensor_grids)
+BOOST_AUTO_TEST_SUITE(tools_quadrature_tensor_grids)
 
 BOOST_AUTO_TEST_CASE(Process_Tensor_Grid_Matches_Naive_Sum) {
   // Anisotropic tensor grids (complete and random MI sets), all node families with a quadrature
@@ -1229,8 +1230,7 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
   for (const GPMI& nGPPerDim : {GPMI{3, 0, 5}, GPMI{0, 3, 5}, GPMI{3, 5, 0}}) {
     const TensorGrid tg(nGPPerDim);
     BOOST_REQUIRE_EQUAL(tg.nGP(), 0u);
-    BOOST_CHECK_EQUAL(quadrature_operator::processTensorGrid(context, sourceFunc, tg, scratch),
-                      0.0);
+    BOOST_CHECK_EQUAL(tools::quadrature::processTensorGrid(context, sourceFunc, tg, scratch), 0.0);
   }
 
   BOOST_CHECK_EQUAL(nEvaluations, 0u);

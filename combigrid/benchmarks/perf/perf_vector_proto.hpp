@@ -58,6 +58,8 @@
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <string>
@@ -113,16 +115,15 @@ class VecFunc {
   /// @c std::function call per point, like today.
   template <typename F>
   static VecFunc wrapDirect(F func) {
-    return VecFunc(
-        [func](const DataVector& point, std::span<double> out) { out[0] = func(point); },
-        [func](DataVector& point, const size_t dim, std::span<const double> coords,
-               std::span<double> out) {
-          for (size_t i = 0; i < coords.size(); i++) {
-            point[dim] = coords[i];
-            out[i] = func(point);
-          }
-        },
-        1);
+    return VecFunc([func](const DataVector& point, std::span<double> out) { out[0] = func(point); },
+                   [func](DataVector& point, const size_t dim, std::span<const double> coords,
+                          std::span<double> out) {
+                     for (size_t i = 0; i < coords.size(); i++) {
+                       point[dim] = coords[i];
+                       out[i] = func(point);
+                     }
+                   },
+                   1);
   }
 
   size_t nOutputs() const { return nOutputs_; }
@@ -205,7 +206,7 @@ inline size_t findRowDim(const GPMI& nGPPerDim) {
 /// @brief Copy of quadrature.cpp's getWeights + mapNodesOntoDomain + setUpIterDims.
 inline void prepareTG(const misc::QuadratureContext& context, const TensorGrid& tg,
                       misc::QuadratureScratch& scratch) {
-  quadrature_operator::getWeights(context, tg, scratch);
+  tools::quadrature::getWeights(context, tg, scratch);
 
   const size_t nDim = tg.nDim();
   const GPMI& nGPPerDim = tg.getGPCntPerDim();
@@ -444,8 +445,7 @@ void sumOverRowsT(const Values& values, misc::QuadratureScratch& scratch, double
  * chunk (a register accumulator per output).
  */
 inline void sumOverRowsRowBuffered(const VecFunc& f, misc::QuadratureScratch& scratch,
-                                   VecBuffers& buf, const bool outputsOuter,
-                                   double* const result) {
+                                   VecBuffers& buf, const bool outputsOuter, double* const result) {
   const RowLoop loop(scratch);
   const size_t m = f.nOutputs();
   double* const vals = buf.vals.data();
@@ -520,12 +520,18 @@ enum class QuadKernel { RUNTIME, COMPILE_TIME, ROW_BUFFERED, ROW_BUFFERED_OUTPUT
 inline void sumOverRowsCompileTime(const VecFunc& f, misc::QuadratureScratch& scratch,
                                    VecBuffers& buf, double* const result) {
   switch (f.nOutputs()) {
-    case 1: return sumOverRowsT(FixedValues<1>(f, buf), scratch, result);
-    case 2: return sumOverRowsT(FixedValues<2>(f, buf), scratch, result);
-    case 4: return sumOverRowsT(FixedValues<4>(f, buf), scratch, result);
-    case 8: return sumOverRowsT(FixedValues<8>(f, buf), scratch, result);
-    case 32: return sumOverRowsT(FixedValues<32>(f, buf), scratch, result);
-    default: std::abort();
+    case 1:
+      return sumOverRowsT(FixedValues<1>(f, buf), scratch, result);
+    case 2:
+      return sumOverRowsT(FixedValues<2>(f, buf), scratch, result);
+    case 4:
+      return sumOverRowsT(FixedValues<4>(f, buf), scratch, result);
+    case 8:
+      return sumOverRowsT(FixedValues<8>(f, buf), scratch, result);
+    case 32:
+      return sumOverRowsT(FixedValues<32>(f, buf), scratch, result);
+    default:
+      std::abort();
   }
 }
 
@@ -556,13 +562,16 @@ inline void processTGVec(const misc::QuadratureContext& context, const TensorGri
   }
   prepareTG(context, tg, scratch);
   switch (kernel) {
-    case QuadKernel::RUNTIME: return sumOverRowsT(DynamicValues(f, buf), scratch, result);
-    case QuadKernel::COMPILE_TIME: return sumOverRowsCompileTime(f, scratch, buf, result);
+    case QuadKernel::RUNTIME:
+      return sumOverRowsT(DynamicValues(f, buf), scratch, result);
+    case QuadKernel::COMPILE_TIME:
+      return sumOverRowsCompileTime(f, scratch, buf, result);
     case QuadKernel::ROW_BUFFERED:
       return sumOverRowsRowBuffered(f, scratch, buf, false, result);
     case QuadKernel::ROW_BUFFERED_OUTPUTS_OUTER:
       return sumOverRowsRowBuffered(f, scratch, buf, true, result);
-    case QuadKernel::BATCH: return sumOverRowsBatch(f, scratch, buf, result);
+    case QuadKernel::BATCH:
+      return sumOverRowsBatch(f, scratch, buf, result);
   }
 }
 
@@ -574,7 +583,7 @@ inline double processDeltaTGScalar(const misc::DeltaQuadratureContext& context,
                                    const TensorGridCTData& tgData,
                                    misc::DeltaQuadratureScratch& scratch, const ScalarFunc& f) {
   double result = 0.0;
-  delta_quadrature_operator::forEachGPWithGlobalWeight(
+  tools::dsg_quadrature::forEachGPWithGlobalWeight(
       context, tgData, scratch,
       [&](const base::DataVector& gp, const double w) { result += w * f.evaluate(gp); });
   return result;
@@ -582,22 +591,22 @@ inline double processDeltaTGScalar(const misc::DeltaQuadratureContext& context,
 
 /// @brief Runtime m: the global weight of a point (trie work) is computed once for all outputs.
 inline void processDeltaTGVec(const misc::DeltaQuadratureContext& context,
-                              const TensorGridCTData& tgData,
-                              misc::DeltaQuadratureScratch& scratch, const VecFunc& f,
-                              VecBuffers& buf, double* const result) {
+                              const TensorGridCTData& tgData, misc::DeltaQuadratureScratch& scratch,
+                              const VecFunc& f, VecBuffers& buf, double* const result) {
   const size_t m = f.nOutputs();
   double* const vals = buf.vals.data();
   const std::span<double> out(vals, m);
   std::fill_n(result, m, 0.0);
-  delta_quadrature_operator::forEachGPWithGlobalWeight(
-      context, tgData, scratch, [&](const base::DataVector& gp, const double w) {
-        f.evaluate(gp, out);
-        for (size_t k = 0; k < m; k++) result[k] += w * vals[k];
-      });
+  tools::dsg_quadrature::forEachGPWithGlobalWeight(context, tgData, scratch,
+                                                   [&](const base::DataVector& gp, const double w) {
+                                                     f.evaluate(gp, out);
+                                                     for (size_t k = 0; k < m; k++)
+                                                       result[k] += w * vals[k];
+                                                   });
 }
 
 /**
- * @brief Copy of delta_quadrature_operator::forEachGPWithGlobalWeight that hands whole rows to
+ * @brief Copy of tools::dsg_quadrature::forEachGPWithGlobalWeight that hands whole rows to
  * @p rowFunc(gp, rowDim, rowNodes, rowWeights) (@c gp: the first point of the row, all
  * coordinates but @c rowDim set) instead of single points.
  */
@@ -608,7 +617,7 @@ template <typename RowFunc>
                                                       RowFunc&& rowFunc) {
   if (deltaTGData.tensorGrid.nGP() == 0) return;
 
-  delta_quadrature_operator::prepareDeltaTensorGrid(context, deltaTGData, scratch);
+  tools::dsg_quadrature::prepareDeltaTensorGrid(context, deltaTGData, scratch);
 
   const size_t nProjDepths = scratch.projDims.size();
   const size_t* const projDims = scratch.projDims.data();
@@ -622,10 +631,10 @@ template <typename RowFunc>
   const GPCntType nGPPerRow = gpCntOfProjDepth[0];
   const double* const rowNodes = nodesOfProjDepth[0];
 
-  delta_quadrature_operator::updateCoeffSums(scratch, nProjDepths - 1);
+  tools::dsg_quadrature::updateCoeffSums(scratch, nProjDepths - 1);
 
   while (true) {
-    delta_quadrature_operator::compRowWeights(scratch, nGPPerRow);
+    tools::dsg_quadrature::compRowWeights(scratch, nGPPerRow);
     rowFunc(gpVec, rowDim, std::span<const double>(rowNodes, nGPPerRow),
             std::span<const double>(rowWeights, nGPPerRow));
 
@@ -641,7 +650,7 @@ template <typename RowFunc>
     }
     if (depth == nProjDepths) return;
 
-    delta_quadrature_operator::updateCoeffSums(scratch, depth);
+    tools::dsg_quadrature::updateCoeffSums(scratch, depth);
   }
 }
 
@@ -1071,8 +1080,9 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
     for (size_t k = 0; k < m; k++) {
       const std::vector<double> perTG = scalarPerTG(
           s, context, scratch,
-          [&](const misc::QuadratureContext& c, const TensorGrid& tg,
-              misc::QuadratureScratch& sc) { return processTGScalar(c, tg, sc, funcs[k]); });
+          [&](const misc::QuadratureContext& c, const TensorGrid& tg, misc::QuadratureScratch& sc) {
+            return processTGScalar(c, tg, sc, funcs[k]);
+          });
       for (size_t t = 0; t < s.tgs.size(); t++) results[t * m + k] = perTG[t];
     }
     return results;
@@ -1106,18 +1116,16 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
     misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
     const ScalarFunc f(perf::expSum);
     // The copy of the kernel against the production kernel
-    compareResults(run, "quad/scalar/" + cfg,
-                   scalarPerTG(s, context, scratch,
-                               [&](const misc::QuadratureContext& c, const TensorGrid& tg,
-                                   misc::QuadratureScratch& sc) {
-                                 return processTGScalar(c, tg, sc, f);
-                               }),
-                   scalarPerTG(s, context, scratch,
-                               [&](const misc::QuadratureContext& c, const TensorGrid& tg,
-                                   misc::QuadratureScratch& sc) {
-                                 return quadrature_operator::processTensorGrid(c, sourceFunc, tg,
-                                                                               sc);
-                               }));
+    compareResults(
+        run, "quad/scalar/" + cfg,
+        scalarPerTG(s, context, scratch,
+                    [&](const misc::QuadratureContext& c, const TensorGrid& tg,
+                        misc::QuadratureScratch& sc) { return processTGScalar(c, tg, sc, f); }),
+        scalarPerTG(s, context, scratch,
+                    [&](const misc::QuadratureContext& c, const TensorGrid& tg,
+                        misc::QuadratureScratch& sc) {
+                      return tools::quadrature::processTensorGrid(c, sourceFunc, tg, sc);
+                    }));
     run.setItems(s.nGP);
     run.measure([&]() { doNotOptimize(scalarRun(s, context, scratch, f)); });
   });
@@ -1158,14 +1166,14 @@ inline void addQuadCases(Suite& suite, const std::string& nodes, const LvlType b
   for (const bool nested : {true, false}) {
     for (const auto& [kernelName, kernel] : kernels) {
       if (nested && kernel != QuadKernel::RUNTIME && kernel != QuadKernel::BATCH) continue;
-      const std::string name = "micro/vec/quad/" + kernelName + (nested ? "_nested/" : "_direct/") +
-                               cfg + "/m1";
+      const std::string name =
+          "micro/vec/quad/" + kernelName + (nested ? "_nested/" : "_direct/") + cfg + "/m1";
       suite.addMicro(name, [=](MicroRun& run) {
         const Setup s(nodes, boundary, nDim, maxLvl, allTGs);
         const misc::QuadratureContext context = s.context();
         misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
-        const VecFunc f = nested ? VecFunc::wrapNested(perf::expSum)
-                                 : VecFunc::wrapDirect(perf::expSum);
+        const VecFunc f =
+            nested ? VecFunc::wrapNested(perf::expSum) : VecFunc::wrapDirect(perf::expSum);
         VecBuffers buf(1);
         std::vector<double> sum(1);
         compareResults(run, name, vecPerTG(s, context, scratch, f, buf, kernel),
@@ -1233,7 +1241,7 @@ inline void addDeltaCases(Suite& suite, const std::string& nodes, const LvlType 
         : genInstr(maxLvl, nDim) {
       perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
       dsg.emplace(genInstr);
-      weights1D.emplace(delta_quadrature_operator::comp1DWeights(*dsg));
+      weights1D.emplace(tools::dsg_quadrature::comp1DWeights(*dsg));
       coeffTrie.emplace(dsg->getTensorGrids(), nDim);
       tgData = selectTGs(*dsg, false)[0];
       context.emplace(misc::DeltaQuadratureContext{.deltasSparseGrid = *dsg,
@@ -1257,7 +1265,7 @@ inline void addDeltaCases(Suite& suite, const std::string& nodes, const LvlType 
     Setup s(nodes, boundary, nDim, maxLvl);
     const ScalarFunc f(perf::expSum);
     const double production =
-        delta_quadrature_operator::processDeltaTensorGrid(*s.context, *s.tgData, *s.scratch);
+        tools::dsg_quadrature::processDeltaTensorGrid(*s.context, *s.tgData, *s.scratch);
     compareResults(run, "dsg/scalar/" + cfg,
                    {processDeltaTGScalar(*s.context, *s.tgData, *s.scratch, f)}, {production});
     run.setItems(static_cast<double>(s.tgData->tensorGrid.nGP()));
@@ -1267,8 +1275,7 @@ inline void addDeltaCases(Suite& suite, const std::string& nodes, const LvlType 
 
   // Vector kernels: rt (per point), batch (per row chunk)
   using DeltaKernel = void (*)(const misc::DeltaQuadratureContext&, const TensorGridCTData&,
-                               misc::DeltaQuadratureScratch&, const VecFunc&, VecBuffers&,
-                               double*);
+                               misc::DeltaQuadratureScratch&, const VecFunc&, VecBuffers&, double*);
   const std::vector<std::pair<std::string, DeltaKernel>> kernels = {{"rt", processDeltaTGVec},
                                                                     {"batch", processDeltaTGBatch}};
 
@@ -1305,8 +1312,7 @@ inline void addDeltaCases(Suite& suite, const std::string& nodes, const LvlType 
                    });
 
     for (const auto& [kernelName, kernel] : kernels) {
-      const std::string name =
-          "micro/vec/dsg/" + kernelName + "/" + cfg + "/m" + std::to_string(m);
+      const std::string name = "micro/vec/dsg/" + kernelName + "/" + cfg + "/m" + std::to_string(m);
       suite.addMicro(name, [=](MicroRun& run) {
         Setup s(nodes, boundary, nDim, maxLvl);
         const VecFunc f = vecFunc(expSumK, m);
@@ -1363,9 +1369,8 @@ inline void addInterpCases(Suite& suite, const std::string& nodes, const size_t 
   suite.addMicro("micro/vec/interp/scalar/" + cfg + "/m1", [=](MicroRun& run) {
     const Setup s(nodes, nDim, maxLvl);
     const ScalarFunc f(perf::cosProd);
-    const double production = global_interpolation::interpolate(SourceFunc(perf::cosProd),
-                                                                s.normPoint, s.ctx->tgData,
-                                                                s.sg->getGenInstr());
+    const double production = global_interpolation::interpolate(
+        SourceFunc(perf::cosProd), s.normPoint, s.ctx->tgData, s.sg->getGenInstr());
     compareResults(run, "interp/scalar/" + cfg, {interpTGScalar(f, s.normPoint, *s.ctx)},
                    {production});
     run.setItems(s.nGP());

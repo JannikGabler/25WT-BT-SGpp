@@ -53,7 +53,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
  * @param sourceFunc Vector-valued source function to integrate (m = @c sourceFunc.nOutputs()).
  * @param sparseGrid Sparse grid with attached generation instruction.
  * @param result     Output: the m approximated integrals.
- * @throws base::data_exception if the size of @p result is not m.
+ * @throws std::invalid_argument if the size of @p result is not m.
  */
 void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
                 std::span<double> result);
@@ -67,72 +67,6 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
  * @return The m approximated integrals.
  */
 base::DataVector quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid);
-
-/******************
-Internal operations
-******************/
-
-/**
- * @brief Implementation details of the sparse-grid quadrature operator.
- */
-namespace quadrature_operator {
-
-/*
- * TODO: Add internal helpers from quadrature.cpp with documentation to the header (was skipped to
- * the inlining issues)
- */
-
-/**
- * @brief Tensor-product quadrature on a single tensor grid.
- *
- * Maps the 1D nodes of @p tg onto the domain once and iterates over the grid points row by row.
- * The row dimension (innermost) is the first dimension with more than one node; dimensions with
- * one node are not iterated (constant coordinate and weight factor). A step to the next row
- * updates only the coordinates and the partial weight products of the dimensions that changed.
- * Each row is summed with the 1D weights of the row dimension and multiplied once by the product
- * of the weights of the other dimensions. The source function is evaluated at the grid points in
- * domain coordinates.
- *
- * @param context    Read-only data of the quadrature call (domain and per-dimension
- *                   node-generation functions, which provide the quadrature rules).
- * @param sourceFunc Source function.
- * @param tg         Tensor grid (at least one dimension).
- * @param scratch    Per-thread scratch space; reused across calls.
- * @return Quadrature estimate on the unit hypercube
- *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
- */
-double processTensorGrid(const sgpp::combigrid::misc::QuadratureContext& context,
-                         const SourceFunc& sourceFunc, const TensorGrid& tg,
-                         sgpp::combigrid::misc::QuadratureScratch& scratch);
-
-/**
- * @brief @ref processTensorGrid for a vector-valued source function: the same row loop with m
- * values per grid point.
- *
- * @param context    Read-only data of the quadrature call.
- * @param sourceFunc Vector-valued source function (m outputs).
- * @param tg         Tensor grid (at least one dimension).
- * @param scratch    Per-thread scratch space, constructed with m outputs; reused across calls.
- * @param out        Output: the m quadrature estimates on the unit hypercube (size m).
- */
-void processTensorGrid(const sgpp::combigrid::misc::QuadratureContext& context,
-                       const VectorSourceFunc& sourceFunc, const TensorGrid& tg,
-                       sgpp::combigrid::misc::QuadratureScratch& scratch, std::span<double> out);
-
-/**
- * TODO: Document (update)
- * @brief Populates @p scratch.weights with the 1D quadrature weights for
- * every dimension of @p tg, concatenated dimension by dimension.
- *
- * @param tg            Tensor grid.
- * @param nodeGenFuncs  Per-dimension node-generation functions (each one
- *                      provides the matching quadrature rule).
- * @param scratch       Scratch space; @c weights and @c quadRules are filled in.
- */
-void getWeights(const sgpp::combigrid::misc::QuadratureContext& context, const TensorGrid& tg,
-                sgpp::combigrid::misc::QuadratureScratch& scratch);
-
-}  // namespace quadrature_operator
 
 }  // namespace combigrid
 }  // namespace sgpp

@@ -10,8 +10,8 @@
 #pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/tools/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -68,7 +68,7 @@ struct QuadratureScratch {
         gp(nDim),
         gpMI(nDim),
         weightProducts(nDim + 1),
-        valueBuffer(tools::VectorValues::bufferSize(nOutputs, N_ACCS)) {}
+        valueBuffer(misc::VectorValues::bufferSize(nOutputs, N_ACCS)) {}
 
  public:
   /// @brief Concatenated 1D quadrature weights (per-dimension blocks back-to-back).
