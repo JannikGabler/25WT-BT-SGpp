@@ -1,0 +1,10 @@
+WP-24: perf_reference outputs of WP-24-before vs. WP-24-after (production prototype: SG quadrature
+and global interpolation as templates on the value type), 1 thread (OMP_NUM_THREADS=1,
+OMP_PLACES={4}), all 104 cases: compared field by field (values, ints, floats, info).
+
+102 cases bitwise identical. 2 cases differ by 1 ulp in the value (scalar path):
+  quad/sg/cc/b0/d5/L5/sin-unit  0.020528708434641853 -> 0.020528708434641857 (exact 0.02052870843464207)
+  quad/sg/cc/b1/d5/L5/sin-unit  0.020528708434719493 -> 0.020528708434719496
+Cause: GCC's FMA formation (fp-contract=fast; the Zen tuning avoids FMAs in register accumulator
+chains) is decided per instantiation/inlining context; the refactored scalar kernel performs the
+same source operations. `perf.py refcheck`: OK at 1 and 16 threads (refcheck.txt).

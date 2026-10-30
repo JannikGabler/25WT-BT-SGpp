@@ -1,0 +1,1036 @@
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp
+index 53652f4b3..7ea42669e 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp
+@@ -5,6 +5,7 @@
+ #include <sgpp/base/datatypes/DataVector.hpp>
+ #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
++#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
+ #include <sgpp/combigrid/grids/tensor_grid.hpp>
+ #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+@@ -12,7 +13,9 @@
+ #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
+ #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+ #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
++#include <sgpp/combigrid/tools/operators/source_function_values.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
++#include <span>
+ #include <vector>
+ 
+ namespace sgpp {
+@@ -35,33 +38,50 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
+   return result;
+ }
+ 
+-namespace global_interpolation {
++void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
++                 const SparseGrid& sparseGrid, std::span<double> result) {
++  assert(point.size() == sparseGrid.nDim());
++  assert(result.size() == sourceFunc.nOutputs());
+ 
+-double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
+-                   const TensorGridCTData& tgData, const SGGenInstr& genInstr) {
+-  const size_t nDim = tgData.tensorGrid.nDim();
++  const size_t m = sourceFunc.nOutputs();
++  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
++  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
++  std::fill(result.begin(), result.end(), 0.0);
++
++#pragma omp parallel
++  {
++    tools::VectorValueBuffers buffers(m);
++    std::vector<double> tgResult(m);
++    std::vector<double> threadResult(m, 0.0);
++
++#pragma omp for schedule(guided) nowait
++    for (const TensorGridCTData& tgData : sparseGrid) {
++      global_interpolation::interpolate(sourceFunc, buffers, normPoint, tgData, genInstr,
++                                        tgResult.data());
++      for (size_t k = 0; k < m; k++) threadResult[k] += tgData.coefficient * tgResult[k];
++    }
+ 
+-  if (nDim == 0) {
+-    return 0;
++#pragma omp critical
++    for (size_t k = 0; k < m; k++) result[k] += threadResult[k];
+   }
++}
+ 
+-  const std::vector<size_t> interpolationCntPerDim = getInterpolationCntPerDim(tgData.tensorGrid);
+-
+-  std::vector<double> interpolationResults =
+-      interpolateFirstDim(sourceFunc, point[0], tgData, genInstr, interpolationCntPerDim[0]);
+-
+-  for (size_t dim = 1; dim < nDim; dim++) {
+-    interpolateLaterDim(dim, point[dim], tgData, genInstr, interpolationCntPerDim[dim],
+-                        interpolationResults);
+-  }
++namespace global_interpolation {
+ 
+-  assert(interpolationResults.size() == 1);
+-  return interpolationResults[0];
+-}
++namespace {
+ 
+-std::vector<double> interpolateFirstDim(const SourceFunc& sourceFunc, const double point,
+-                                        const TensorGridCTData& tgData, const SGGenInstr& genInstr,
+-                                        const size_t nInterpolations) {
++/*
++ * WP-24 PROTOTYPE: the kernels as templates on the value type (tools::ScalarValues: today's
++ * double; tools::VectorValues: m values per grid point, node-major). Intermediate results hold m
++ * values per 1D interpolation.
++ */
++
++template <typename Values>
++std::vector<double> interpolateFirstDimT(const Values values, const double point,
++                                         const TensorGridCTData& tgData,
++                                         const SGGenInstr& genInstr,
++                                         const size_t nInterpolations) {
++  const size_t m = values.nOutputs();
+   const HyperCubeArea& bounds = genInstr.getDomain();
+   const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[0];
+   const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(0);
+@@ -70,42 +90,96 @@ std::vector<double> interpolateFirstDim(const SourceFunc& sourceFunc, const doub
+   const InterpolationMethod* method = nodeGenFunc->getInterpolationMethod(nNodes);
+ 
+   base::DataVector gp(tgData.tensorGrid.nDim());
+-  std::vector<double> results(nInterpolations);
+-  std::vector<double> funcValues(nNodes);
++  std::vector<double> results(nInterpolations * m);
++  std::vector<double> funcValues(nNodes * m);
+ 
+   for (size_t i = 0; i < nInterpolations; i++) {
+     const size_t start = i * nNodes;
+     for (size_t j = 0; j < nNodes; j++) {
+       tgData.tensorGrid.getGridPoint(start + j, gp);
+-      funcValues[j] = sourceFunc.evaluateNormalizedInPlace(gp, bounds);
++      values.evaluateNormalizedInPlace(gp, bounds, funcValues.data() + j * m);
+     }
+ 
+-    results[i] = method->interpolate(point, nodes, funcValues);
++    values.interpolate1D(*method, point, nodes, funcValues, results.data() + i * m);
+   }
+ 
+   return results;
+ }
+ 
+-/*
+-Inplace
+-Used for dim >= 1
+-*/
+-void interpolateLaterDim(const size_t dim, const double point, const TensorGridCTData& tgData,
+-                         const SGGenInstr& genInstr, const size_t nInterpolations,
+-                         std::vector<double>& interpolationResults) {
++template <typename Values>
++void interpolateLaterDimT(const Values values, const size_t dim, const double point,
++                          const TensorGridCTData& tgData, const SGGenInstr& genInstr,
++                          const size_t nInterpolations,
++                          std::vector<double>& interpolationResults) {
++  const size_t m = values.nOutputs();
+   const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[dim];
+   const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+   const bool addBoundary = tgData.mi[dim] >= genInstr.getBoundaryLevelOffset();
+   const std::vector<double> nodes = nodeGenFunc->genNodes(nNodes, addBoundary);
+   const InterpolationMethod* method = nodeGenFunc->getInterpolationMethod(nNodes);
+-  std::vector<double> inputValues(nNodes);
++  std::vector<double> inputValues(nNodes * m);
+ 
+   for (size_t i = 0; i < nInterpolations; i++) {
+-    std::copy_n(interpolationResults.data() + i * nNodes, nNodes, inputValues.begin());
++    std::copy_n(interpolationResults.data() + i * nNodes * m, nNodes * m, inputValues.begin());
++
++    values.interpolate1D(*method, point, nodes, inputValues, interpolationResults.data() + i * m);
++  }
++  interpolationResults.resize(nInterpolations * m);
++}
+ 
+-    interpolationResults[i] = method->interpolate(point, nodes, inputValues);
++template <typename Values>
++void interpolateT(const Values values, const base::DataVector& point,
++                  const TensorGridCTData& tgData, const SGGenInstr& genInstr, double* const out) {
++  const size_t nDim = tgData.tensorGrid.nDim();
++
++  if (nDim == 0) {
++    std::fill_n(out, values.nOutputs(), 0.0);
++    return;
+   }
+-  interpolationResults.resize(nInterpolations);
++
++  const std::vector<size_t> interpolationCntPerDim = getInterpolationCntPerDim(tgData.tensorGrid);
++
++  std::vector<double> interpolationResults =
++      interpolateFirstDimT(values, point[0], tgData, genInstr, interpolationCntPerDim[0]);
++
++  for (size_t dim = 1; dim < nDim; dim++) {
++    interpolateLaterDimT(values, dim, point[dim], tgData, genInstr, interpolationCntPerDim[dim],
++                         interpolationResults);
++  }
++
++  assert(interpolationResults.size() == values.nOutputs());
++  std::copy_n(interpolationResults.data(), values.nOutputs(), out);
++}
++
++}  // namespace
++
++double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
++                   const TensorGridCTData& tgData, const SGGenInstr& genInstr) {
++  double result;
++  interpolateT(tools::ScalarValues(sourceFunc), point, tgData, genInstr, &result);
++  return result;
++}
++
++void interpolate(const VectorSourceFunc& sourceFunc, tools::VectorValueBuffers& buffers,
++                 const base::DataVector& point, const TensorGridCTData& tgData,
++                 const SGGenInstr& genInstr, double* const out) {
++  interpolateT(tools::VectorValues(sourceFunc, buffers), point, tgData, genInstr, out);
++}
++
++std::vector<double> interpolateFirstDim(const SourceFunc& sourceFunc, const double point,
++                                        const TensorGridCTData& tgData, const SGGenInstr& genInstr,
++                                        const size_t nInterpolations) {
++  return interpolateFirstDimT(tools::ScalarValues(sourceFunc), point, tgData, genInstr,
++                              nInterpolations);
++}
++
++void interpolateLaterDim(const size_t dim, const double point, const TensorGridCTData& tgData,
++                         const SGGenInstr& genInstr, const size_t nInterpolations,
++                         std::vector<double>& interpolationResults) {
++  // The value type only determines m here (no source function is evaluated)
++  const SourceFunc unused([](const base::DataVector&) { return 0.0; });
++  interpolateLaterDimT(tools::ScalarValues(unused), dim, point, tgData, genInstr, nInterpolations,
++                       interpolationResults);
+ }
+ 
+ std::vector<size_t> getInterpolationCntPerDim(const TensorGrid& tensorGrid) {
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp
+index e13bd71e2..390efbf58 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp
+@@ -12,7 +12,10 @@
+ 
+ #include <sgpp/base/datatypes/DataVector.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
++#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
++#include <sgpp/combigrid/tools/operators/source_function_values.hpp>
++#include <span>
+ 
+ namespace sgpp {
+ namespace combigrid {
+@@ -36,6 +39,13 @@ namespace combigrid {
+ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
+                    const SparseGrid& sparseGrid);
+ 
++/**
++ * @brief WP-24 PROTOTYPE: @ref interpolate for a vector-valued source function: writes the m
++ * interpolated values at @p point to @p result (size m).
++ */
++void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
++                 const SparseGrid& sparseGrid, std::span<double> result);
++
+ /******************
+ Internal operations
+ ******************/
+@@ -64,6 +74,11 @@ namespace global_interpolation {
+ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
+                    const TensorGridCTData& tgData, const SGGenInstr& genInstr);
+ 
++/// @brief WP-24 PROTOTYPE: the m values on a single tensor grid (into @p out, size m).
++void interpolate(const VectorSourceFunc& sourceFunc, tools::VectorValueBuffers& buffers,
++                 const base::DataVector& point, const TensorGridCTData& tgData,
++                 const SGGenInstr& genInstr, double* out);
++
+ /**
+  * @brief Collapses dimension 0 of the tensor grid by 1D interpolation.
+  *
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.cpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.cpp
+index 99ec7b7c9..a8317e327 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.cpp
+@@ -29,6 +29,34 @@ double BarycentricFormula::interpolate(const double pos, const std::vector<doubl
+   return result;
+ }
+ 
++void BarycentricFormula::interpolate(const double pos, const std::vector<double>& nodes,
++                                     const std::vector<double>& values, const size_t m,
++                                     double* const out) const {
++  assert(nodes.size() * m == values.size());
++
++  if (hasTrivialResult(pos, nodes, values, m, out)) {
++    return;
++  }
++
++  // The factors of the nodes once for all outputs, then output by output (the same operations
++  // per output as evaluateFormula)
++  const size_t nNodes = nodes.size();
++  const std::vector<double> weights = tools::barycentricFormulaWeights(nodes);
++  std::vector<double> factors(nNodes);
++  double denominator = 0.0;
++
++  for (size_t i = 0; i < nNodes; i++) {
++    factors[i] = weights[i] / (pos - nodes[i]);
++    denominator += factors[i];
++  }
++
++  for (size_t k = 0; k < m; k++) {
++    double numerator = 0.0;
++    for (size_t i = 0; i < nNodes; i++) numerator += factors[i] * values[i * m + k];
++    out[k] = numerator / denominator;
++  }
++}
++
+ double BarycentricFormula::evaluateFormula(const double pos, const std::vector<double>& nodes,
+                                            const std::vector<double>& values) const {
+   const size_t nNodes = nodes.size();
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.hpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.hpp
+index 71225cf4e..77826697f 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.hpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.hpp
+@@ -37,6 +37,11 @@ class BarycentricFormula : public InterpolationMethod {
+   double interpolate(const double pos, const std::vector<double>& nodes,
+                      const std::vector<double>& values) const override;
+ 
++  /// @copydoc InterpolationMethod::interpolate(double, const std::vector<double>&, const std::vector<double>&, size_t, double*) const
++  void interpolate(const double pos, const std::vector<double>& nodes,
++                   const std::vector<double>& values, size_t nOutputs,
++                   double* out) const override;
++
+  private:
+   // TODO: Optimize (caching) (double long could be used in pre-computation)
+   /**
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.cpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.cpp
+index b66c4cc04..555df85e7 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.cpp
+@@ -4,6 +4,7 @@
+ #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
+ #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
+ #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
++#include <vector>
+ 
+ namespace sgpp {
+ namespace combigrid {
+@@ -26,6 +27,39 @@ double OptBarycentricFormula::interpolate(const double pos, const std::vector<do
+   return result;
+ }
+ 
++void OptBarycentricFormula::interpolate(const double pos, const std::vector<double>& nodes,
++                                        const std::vector<double>& values, const size_t m,
++                                        double* const out) const {
++  assert(nodes.size() * m == values.size());
++
++  if (hasTrivialResult(pos, nodes, values, m, out)) {
++    return;
++  }
++
++  // The factors of the nodes once for all outputs, then output by output (the same operations
++  // per output as barycentricFormula)
++  const size_t nNodes = nodes.size();
++  std::vector<double> factors(nNodes);
++  double curWeight = 1.0;
++  factors[0] = 1.0 / (2.0 * (pos - nodes[0]));
++  double denominator = factors[0];
++
++  for (size_t i = 1; i < nNodes - 1; i++) {
++    curWeight *= -1.0;
++    factors[i] = curWeight / (pos - nodes[i]);
++    denominator += factors[i];
++  }
++
++  factors[nNodes - 1] = -curWeight / (2.0 * (pos - nodes[nNodes - 1]));
++  denominator += factors[nNodes - 1];
++
++  for (size_t k = 0; k < m; k++) {
++    double numerator = values[k] * factors[0];
++    for (size_t i = 1; i < nNodes; i++) numerator += factors[i] * values[i * m + k];
++    out[k] = numerator / denominator;
++  }
++}
++
+ double OptBarycentricFormula::barycentricFormula(const double pos, const std::vector<double>& nodes,
+                                                  const std::vector<double>& values) const {
+   const size_t nNodes = nodes.size();
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.hpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.hpp
+index 3d369225f..32b120af7 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.hpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.hpp
+@@ -29,6 +29,11 @@ class OptBarycentricFormula : public InterpolationMethod {
+   double interpolate(const double pos, const std::vector<double>& nodes,
+                      const std::vector<double>& values) const override;
+ 
++  /// @copydoc InterpolationMethod::interpolate(double, const std::vector<double>&, const std::vector<double>&, size_t, double*) const
++  void interpolate(const double pos, const std::vector<double>& nodes,
++                   const std::vector<double>& values, size_t nOutputs,
++                   double* out) const override;
++
+  private:
+   /**
+    * @brief Evaluates the specialized Clenshaw-Curtis barycentric formula.
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.cpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.cpp
+index cbc1374f5..53d6aff0a 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.cpp
+@@ -1,3 +1,4 @@
++#include <algorithm>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+ #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
+ #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
+@@ -35,5 +36,33 @@ bool InterpolationMethod::hasTrivialResult(const double pos, const std::vector<d
+   return false;
+ }
+ 
++bool InterpolationMethod::hasTrivialResult(const double pos, const std::vector<double>& nodes,
++                                           const std::vector<double>& values, const size_t m,
++                                           double* const out) const {
++  const size_t nNodes = nodes.size();
++
++  if (nNodes == 0) {
++    std::fill_n(out, m, 0.0);
++    return true;
++  } else if (nNodes == 1) {
++    std::copy_n(values.data(), m, out);
++    return true;
++  } else if (nNodes == 2) {
++    for (size_t k = 0; k < m; k++) {
++      out[k] = (values[m + k] - values[k]) / (nodes[1] - nodes[0]) * (pos - nodes[0]) + values[k];
++    }
++    return true;
++  }
++
++  for (size_t i = 0; i < nNodes; i++) {
++    if (tools::nearlyEqual(pos, nodes[i])) {
++      std::copy_n(values.data() + i * m, m, out);
++      return true;
++    }
++  }
++
++  return false;
++}
++
+ }  // namespace combigrid
+ }  // namespace sgpp
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp
+index b4028863b..768e2bc28 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp
+@@ -43,6 +43,19 @@ class InterpolationMethod {
+   virtual double interpolate(double pos, const std::vector<double>& nodes,
+                              const std::vector<double>& values) const = 0;
+ 
++  /**
++   * @brief WP-24 PROTOTYPE: evaluates the 1D interpolants of m outputs at @p pos.
++   *
++   * @param pos      Evaluation position.
++   * @param nodes    1D node positions (size @c n).
++   * @param values   m values per node, node-major (@c values[i * m + k], size @c n * m).
++   * @param nOutputs Number of outputs m.
++   * @param out      The m interpolated values.
++   */
++  virtual void interpolate(double pos, const std::vector<double>& nodes,
++                           const std::vector<double>& values, size_t nOutputs,
++                           double* out) const = 0;
++
+   /// @brief Returns the unique identifier of this method.
+   uint64_t id() const;
+ 
+@@ -65,6 +78,10 @@ class InterpolationMethod {
+   bool hasTrivialResult(double pos, const std::vector<double>& nodes,
+                         const std::vector<double>& values, double& out) const;
+ 
++  /// @brief WP-24 PROTOTYPE: @ref hasTrivialResult for m values per node (node-major).
++  bool hasTrivialResult(double pos, const std::vector<double>& nodes,
++                        const std::vector<double>& values, size_t nOutputs, double* out) const;
++
+  private:
+   const uint64_t id_;  ///< Unique identifier.
+ };
+diff --git a/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp b/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp
+index dcb06d7eb..94590cc63 100644
+--- a/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp
+@@ -4,6 +4,7 @@
+ // sgpp.sparsegrids.org
+ 
+ #include <omp.h>
++#include <algorithm>
+ #include <cassert>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+@@ -16,7 +17,9 @@
+ #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
+ #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+ #include <sgpp/combigrid/tools/operators/quadrature/quadrature_utilities.hpp>
++#include <sgpp/combigrid/tools/operators/source_function_values.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
++#include <span>
+ #include <vector>
+ 
+ using sgpp::combigrid::misc::QuadratureContext;
+@@ -50,6 +53,46 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
+   return genInstr.getVolumeOfDomain() * result;
+ }
+ 
++void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
++                std::span<double> result) {
++  assert(result.size() == sourceFunc.nOutputs());
++
++  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
++  const size_t nDim = sparseGrid.nDim();
++  const size_t m = sourceFunc.nOutputs();
++
++  // PROTOTYPE: the context requires a scalar source function, which the kernel does not use here
++  const SourceFunc unused([](const base::DataVector&) { return 0.0; });
++  const QuadratureContext context{.sparseGrid = sparseGrid,
++                                  .sourceFunc = unused,
++                                  .domain = genInstr.getDomain(),
++                                  .nodeGenFuncs = genInstr.getNodeGenFuncs()};
++
++  std::fill(result.begin(), result.end(), 0.0);
++
++#pragma omp parallel
++  {
++    QuadratureScratch scratch(nDim, sparseGrid.getMaxTGSumOverGPCntsPerDim());
++    tools::VectorValueBuffers buffers(m);
++    const tools::VectorValues values(sourceFunc, buffers);
++    std::vector<double> tgResult(m);
++    std::vector<double> threadResult(m, 0.0);
++
++#pragma omp for schedule(guided) nowait
++    for (const TensorGridCTData& tgData : sparseGrid) {
++      quadrature_operator::processTensorGrid(context, values, tgData.tensorGrid, scratch,
++                                             tgResult.data());
++      for (size_t k = 0; k < m; k++) threadResult[k] += tgData.coefficient * tgResult[k];
++    }
++
++#pragma omp critical
++    for (size_t k = 0; k < m; k++) result[k] += threadResult[k];
++  }
++
++  const double volume = genInstr.getVolumeOfDomain();
++  for (double& value : result) value *= volume;
++}
++
+ // TODO: Reorder internal methods
+ namespace quadrature_operator {
+ 
+@@ -153,13 +196,18 @@ void setUpIterDims(const TensorGrid& tg, QuadratureScratch& scratch) {
+ 
+ /**
+  * Sums the weight times the source function over all grid points, row by row, starting at the
+- * first grid point (set up by mapNodesOntoDomain and setUpIterDims).
++ * first grid point (set up by mapNodesOntoDomain and setUpIterDims), and stores the result(s) to
++ * @p out.
++ *
++ * WP-24 PROTOTYPE: template on the value type (tools::ScalarValues: today's double;
++ * tools::VectorValues: m values per grid point).
+  *
+  * The data of the scratch is copied into locals first: the source function may write to any
+  * memory as far as the compiler knows, so accessing the scratch vectors in the loop would reload
+  * them for every row.
+  */
+-double sumOverRows(const SourceFunc& sourceFunc, QuadratureScratch& scratch) {
++template <typename Values>
++void sumOverRows(const Values values, QuadratureScratch& scratch, double* const out) {
+   const size_t nIterDims = scratch.nIterDims;
+   const size_t* const iterDims = scratch.iterDims.data();
+   const GPCntType* const nGPOfIterDim = scratch.nGPOfIterDim.data();
+@@ -175,19 +223,19 @@ double sumOverRows(const SourceFunc& sourceFunc, QuadratureScratch& scratch) {
+   const double* const rowNodes = nodesOfIterDim[0];
+   const double* const rowWeights = weightsOfIterDim[0];
+ 
+-  double result = 0;
++  typename Values::Acc result = values.zeroResult();
+ 
+   while (true) {
+     // Row of grid points: all node indices of the row dimension, the other ones fixed. The
+     // weights of the other dimensions are the same for the whole row and multiplied in once.
+-    double rowSum = 0;
++    typename Values::Acc rowSum = values.zeroRow();
+ 
+     for (GPCntType rowIdx = 0; rowIdx < nGPOfRow; rowIdx++) {
+       gp[rowDim] = rowNodes[rowIdx];
+-      rowSum += rowWeights[rowIdx] * sourceFunc.evaluate(gpVec);
++      values.addScaled(rowSum, rowWeights[rowIdx], values.evaluate(gpVec));
+     }
+ 
+-    result += weightProducts[1] * rowSum;
++    values.addScaled(result, weightProducts[1], rowSum);
+ 
+     // Advances to the next row: increments the node index of the first iterated dimension
+     // (after the row dimension) that does not wrap around
+@@ -206,7 +254,8 @@ double sumOverRows(const SourceFunc& sourceFunc, QuadratureScratch& scratch) {
+     }
+ 
+     if (j == nIterDims) {  // Wrapped around in every iterated dimension: all rows are done
+-      return result;
++      values.store(result, out);
++      return;
+     }
+ 
+     updateWeightProducts(weightsOfIterDim, gpMI, weightProducts, j);
+@@ -227,7 +276,25 @@ double processTensorGrid(const QuadratureContext& context, const TensorGrid& tg,
+   mapNodesOntoDomain(context, tg, scratch);
+   setUpIterDims(tg, scratch);
+ 
+-  return sumOverRows(context.sourceFunc, scratch);
++  double result;
++  sumOverRows(tools::ScalarValues(context.sourceFunc), scratch, &result);
++  return result;
++}
++
++void processTensorGrid(const QuadratureContext& context, const tools::VectorValues& values,
++                       const TensorGrid& tg, QuadratureScratch& scratch, double* const out) {
++  assert(tg.nDim() == context.sparseGrid.nDim());
++
++  if (tg.nGP() == 0) {
++    std::fill_n(out, values.nOutputs(), 0.0);
++    return;
++  }
++
++  getWeights(context, tg, scratch);
++  mapNodesOntoDomain(context, tg, scratch);
++  setUpIterDims(tg, scratch);
++
++  sumOverRows(values, scratch, out);
+ }
+ 
+ void getWeights(const QuadratureContext& context, const TensorGrid& tg,
+diff --git a/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.hpp b/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.hpp
+index 036ca3a85..921502c73 100644
+--- a/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.hpp
++++ b/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.hpp
+@@ -16,9 +16,12 @@
+ #pragma once
+ 
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
++#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
+ #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+ #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
++#include <sgpp/combigrid/tools/operators/source_function_values.hpp>
++#include <span>
+ 
+ namespace sgpp {
+ namespace combigrid {
+@@ -40,6 +43,13 @@ namespace combigrid {
+  */
+ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
+ 
++/**
++ * @brief WP-24 PROTOTYPE: @ref quadrature for a vector-valued source function: writes the m
++ * integrals to @p result (size m).
++ */
++void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
++                std::span<double> result);
++
+ /******************
+ Internal operations
+ ******************/
+@@ -75,6 +85,14 @@ namespace quadrature_operator {
+ double processTensorGrid(const sgpp::combigrid::misc::QuadratureContext& context,
+                          const TensorGrid& tg, sgpp::combigrid::misc::QuadratureScratch& scratch);
+ 
++/**
++ * @brief WP-24 PROTOTYPE: @ref processTensorGrid for m values per grid point (writes the m
++ * estimates to @p out; @c context.sourceFunc is not used).
++ */
++void processTensorGrid(const sgpp::combigrid::misc::QuadratureContext& context,
++                       const tools::VectorValues& values, const TensorGrid& tg,
++                       sgpp::combigrid::misc::QuadratureScratch& scratch, double* out);
++
+ /**
+  * TODO: Document (update)
+  * @brief Populates @p scratch.weights with the 1D quadrature weights for
+diff --git a/combigrid/src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp b/combigrid/src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp
+new file mode 100644
+index 000000000..1eb111787
+--- /dev/null
++++ b/combigrid/src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp
+@@ -0,0 +1,59 @@
++// Copyright (C) 2008-today The SG++ project
++// This file is part of the SG++ project. For conditions of distribution and
++// use, please see the copyright notice provided with SG++ or at
++// sgpp.sparsegrids.org
++
++/**
++ * @file vector_source_function.hpp
++ * @brief WP-24 PROTOTYPE (reverted after the measurement): wrapper for vector-valued black-box
++ * functions @f$f: \mathbb{R}^d \to \mathbb{R}^m@f$.
++ */
++#pragma once
++
++#include <functional>
++#include <sgpp/base/datatypes/DataVector.hpp>
++#include <sgpp/combigrid/type_defs.hpp>
++#include <span>
++
++namespace sgpp {
++namespace combigrid {
++
++/**
++ * @brief Adapter around a user-supplied function @f$f : \mathbb{R}^d \to \mathbb{R}^m@f$ with a
++ * runtime number of outputs m; the vector counterpart of @c SourceFunc.
++ */
++class VectorSourceFunc {
++ public:
++  /**
++   * @brief Wraps the provided callable.
++   * @param func     Callable writing the m values at a point (problem coordinates) to its
++   *                 second argument (size m).
++   * @param nOutputs Number of outputs m (at least 1).
++   */
++  VectorSourceFunc(std::function<void(const base::DataVector&, std::span<double>)> func,
++                   size_t nOutputs);
++
++  /// @brief Number of outputs m.
++  size_t nOutputs() const;
++
++  /**
++   * @brief Evaluates the function at @p point in problem coordinates.
++   * @param point Evaluation point in problem coordinates.
++   * @param out   The m function values (size m).
++   */
++  void evaluate(const base::DataVector& point, std::span<double> out) const;
++
++  /**
++   * @brief Evaluates the function on a normalized point in @f$[0,1]^d@f$, mapping it onto
++   * @p area first (in place, see @c SourceFunc::evaluateNormalizedInPlace).
++   */
++  void evaluateNormalizedInPlace(base::DataVector& point, const HyperCubeArea& area,
++                                 std::span<double> out) const;
++
++ private:
++  std::function<void(const base::DataVector&, std::span<double>)> func;  ///< Wrapped callable.
++  size_t nOutputs_;                                                       ///< m.
++};
++
++}  // namespace combigrid
++}  // namespace sgpp
+diff --git a/combigrid/src/sgpp/combigrid/functions/source_functions/vector_source_function.cpp b/combigrid/src/sgpp/combigrid/functions/source_functions/vector_source_function.cpp
+new file mode 100644
+index 000000000..6b650d381
+--- /dev/null
++++ b/combigrid/src/sgpp/combigrid/functions/source_functions/vector_source_function.cpp
+@@ -0,0 +1,37 @@
++// Copyright (C) 2008-today The SG++ project
++// This file is part of the SG++ project. For conditions of distribution and
++// use, please see the copyright notice provided with SG++ or at
++// sgpp.sparsegrids.org
++
++#include <cassert>
++#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
++#include <sgpp/combigrid/tools/data_vector/normalization.hpp>
++#include <utility>
++
++namespace sgpp {
++namespace combigrid {
++
++VectorSourceFunc::VectorSourceFunc(
++    std::function<void(const base::DataVector&, std::span<double>)> func, const size_t nOutputs)
++    : func(std::move(func)), nOutputs_(nOutputs) {
++  assert(nOutputs >= 1);
++}
++
++size_t VectorSourceFunc::nOutputs() const { return nOutputs_; }
++
++void VectorSourceFunc::evaluate(const base::DataVector& point, std::span<double> out) const {
++  assert(out.size() == nOutputs_);
++  func(point, out);
++}
++
++void VectorSourceFunc::evaluateNormalizedInPlace(base::DataVector& point, const HyperCubeArea& area,
++                                                 std::span<double> out) const {
++  assert(point.size() == area.size());
++
++  tools::denormalizeDataVector(point, area);
++
++  evaluate(point, out);
++}
++
++}  // namespace combigrid
++}  // namespace sgpp
+diff --git a/combigrid/src/sgpp/combigrid/tools/operators/source_function_values.hpp b/combigrid/src/sgpp/combigrid/tools/operators/source_function_values.hpp
+new file mode 100644
+index 000000000..3bc61eb99
+--- /dev/null
++++ b/combigrid/src/sgpp/combigrid/tools/operators/source_function_values.hpp
+@@ -0,0 +1,142 @@
++// Copyright (C) 2008-today The SG++ project
++// This file is part of the SG++ project. For conditions of distribution and
++// use, please see the copyright notice provided with SG++ or at
++// sgpp.sparsegrids.org
++
++/**
++ * @file source_function_values.hpp
++ * @brief WP-24 PROTOTYPE (reverted after the measurement): value types of the generic operator
++ * kernels ("template on the value type").
++ *
++ * The operator kernels are written once as templates over a value type, which evaluates the
++ * source function at a grid point and accumulates weighted values: @ref ScalarValues (today's
++ * @c double, the scalar instantiation compiles to today's kernels) and @ref VectorValues (m
++ * values per grid point, runtime m, accumulators in per-thread buffers). Both are small views
++ * that are passed by value, so that the kernels hold their data in registers across the opaque
++ * source-function calls.
++ */
++#pragma once
++
++#include <algorithm>
++#include <cstddef>
++#include <sgpp/base/datatypes/DataVector.hpp>
++#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
++#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
++#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
++#include <sgpp/combigrid/type_defs.hpp>
++#include <span>
++#include <vector>
++
++namespace sgpp {
++namespace combigrid {
++namespace tools {
++
++/// @brief Value type "scalar" (today's @c double).
++class ScalarValues {
++ public:
++  using Acc = double;  ///< Accumulator of the values of one output.
++
++  explicit ScalarValues(const SourceFunc& sourceFunc) : sourceFunc(sourceFunc) {}
++
++  static constexpr size_t nOutputs() { return 1; }
++
++  Acc zeroRow() const { return 0.0; }
++  Acc zeroResult() const { return 0.0; }
++
++  double evaluate(const base::DataVector& gp) const { return sourceFunc.evaluate(gp); }
++
++  void evaluateNormalizedInPlace(base::DataVector& gp, const HyperCubeArea& area,
++                                 double* const out) const {
++    *out = sourceFunc.evaluateNormalizedInPlace(gp, area);
++  }
++
++  static void addScaled(Acc& acc, const double weight, const double value) {
++    acc += weight * value;
++  }
++
++  static void store(const Acc& acc, double* const out) { *out = acc; }
++
++  static void interpolate1D(const InterpolationMethod& method, const double pos,
++                            const std::vector<double>& nodes, const std::vector<double>& values,
++                            double* const out) {
++    *out = method.interpolate(pos, nodes, values);
++  }
++
++ private:
++  const SourceFunc& sourceFunc;
++};
++
++/**
++ * @brief Per-thread buffers of @ref VectorValues (m doubles each).
++ */
++struct VectorValueBuffers {
++  explicit VectorValueBuffers(const size_t nOutputs)
++      : values(nOutputs), rowSum(nOutputs), result(nOutputs) {}
++
++  std::vector<double> values;  ///< Values at the current grid point.
++  std::vector<double> rowSum;  ///< Row sums (quadrature).
++  std::vector<double> result;  ///< Result accumulators.
++};
++
++/// @brief Value type "m values per grid point" (runtime m).
++class VectorValues {
++ public:
++  /// @brief Accumulators of the m outputs (in a @ref VectorValueBuffers).
++  struct Acc {
++    double* p;
++  };
++
++  VectorValues(const VectorSourceFunc& sourceFunc, VectorValueBuffers& buffers)
++      : sourceFunc(&sourceFunc),
++        m(sourceFunc.nOutputs()),
++        values(buffers.values.data()),
++        rowSum(buffers.rowSum.data()),
++        result(buffers.result.data()) {}
++
++  size_t nOutputs() const { return m; }
++
++  Acc zeroRow() const {
++    std::fill_n(rowSum, m, 0.0);
++    return {rowSum};
++  }
++  Acc zeroResult() const {
++    std::fill_n(result, m, 0.0);
++    return {result};
++  }
++
++  const double* evaluate(const base::DataVector& gp) const {
++    sourceFunc->evaluate(gp, std::span<double>(values, m));
++    return values;
++  }
++
++  void evaluateNormalizedInPlace(base::DataVector& gp, const HyperCubeArea& area,
++                                 double* const out) const {
++    sourceFunc->evaluateNormalizedInPlace(gp, area, std::span<double>(out, m));
++  }
++
++  void addScaled(const Acc acc, const double weight, const double* const vals) const {
++    for (size_t k = 0; k < m; k++) acc.p[k] += weight * vals[k];
++  }
++  void addScaled(const Acc acc, const double weight, const Acc vals) const {
++    addScaled(acc, weight, vals.p);
++  }
++
++  void store(const Acc acc, double* const out) const { std::copy_n(acc.p, m, out); }
++
++  void interpolate1D(const InterpolationMethod& method, const double pos,
++                     const std::vector<double>& nodes, const std::vector<double>& vals,
++                     double* const out) const {
++    method.interpolate(pos, nodes, vals, m, out);
++  }
++
++ private:
++  const VectorSourceFunc* sourceFunc;
++  size_t m;
++  double* values;
++  double* rowSum;
++  double* result;
++};
++
++}  // namespace tools
++}  // namespace combigrid
++}  // namespace sgpp
+diff --git a/combigrid/tests/operators/vector_source_function_prototype_test.cpp b/combigrid/tests/operators/vector_source_function_prototype_test.cpp
+new file mode 100644
+index 000000000..f708e257b
+--- /dev/null
++++ b/combigrid/tests/operators/vector_source_function_prototype_test.cpp
+@@ -0,0 +1,129 @@
++// Copyright (C) 2008-today The SG++ project
++// This file is part of the SG++ project. For conditions of distribution and
++// use, please see the copyright notice provided with SG++ or at
++// sgpp.sparsegrids.org
++
++/**
++ * @file vector_source_function_prototype_test.cpp
++ * @brief WP-24 PROTOTYPE (reverted after the measurement): component k of a vector-valued
++ * quadrature / global interpolation equals the scalar run of component k (within round-off: the
++ * compiler's FMA contraction may differ between the instantiations, and the thread reductions
++ * combine in a different order).
++ */
++
++#define BOOST_TEST_DYN_LINK
++
++#include <boost/test/unit_test.hpp>
++
++#include <cmath>
++#include <sgpp/base/datatypes/DataVector.hpp>
++#include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
++#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
++#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
++#include <sgpp/combigrid/grids/sparse_grid.hpp>
++#include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
++#include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/type_defs.hpp>
++#include <span>
++#include <vector>
++
++using sgpp::base::DataVector;
++using sgpp::combigrid::CompleteSGGenInstr;
++using sgpp::combigrid::HyperCubeArea;
++using sgpp::combigrid::LvlType;
++using sgpp::combigrid::NodeGenFunc;
++using sgpp::combigrid::SourceFunc;
++using sgpp::combigrid::SparseGrid;
++using sgpp::combigrid::VectorSourceFunc;
++
++namespace {
++
++constexpr size_t N_OUTPUTS = 3;
++
++/// Output k: prod_i sin(x_i + 0.3 k) + k.
++double component(const DataVector& x, const size_t k) {
++  double result = 1.0;
++  for (size_t i = 0; i < x.size(); i++) result *= std::sin(x[i] + 0.3 * static_cast<double>(k));
++  return result + static_cast<double>(k);
++}
++
++VectorSourceFunc vectorFunc() {
++  return VectorSourceFunc(
++      [](const DataVector& x, std::span<double> out) {
++        for (size_t k = 0; k < out.size(); k++) out[k] = component(x, k);
++      },
++      N_OUTPUTS);
++}
++
++SourceFunc scalarFunc(const size_t k) {
++  return SourceFunc([k](const DataVector& x) { return component(x, k); });
++}
++
++HyperCubeArea shiftedDomain(const size_t nDim) {
++  HyperCubeArea domain;
++  for (size_t i = 0; i < nDim; i++) domain.emplace_back(-0.5 + 0.1 * i, 1.0 + 0.2 * i);
++  return domain;
++}
++
++/// All configurations: node families, boundary offsets 0/1, d = 1..4.
++template <typename Check>
++void forEachConfig(const std::vector<NodeGenFunc*>& nodeGenFuncs, Check check) {
++  for (NodeGenFunc* nodeGenFunc : nodeGenFuncs) {
++    for (const LvlType boundary : {0u, 1u}) {
++      for (size_t nDim = 1; nDim <= 4; nDim++) {
++        CompleteSGGenInstr genInstr(static_cast<LvlType>(7 - nDim), nDim);
++        genInstr.setDomain(shiftedDomain(nDim));
++        genInstr.setNodeGenFunc(nodeGenFunc);
++        genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
++        genInstr.setBoundaryLevelOffset(boundary);
++        const SparseGrid sg(genInstr);
++        check(sg, nDim);
++      }
++    }
++  }
++}
++
++}  // namespace
++
++BOOST_AUTO_TEST_SUITE(vector_source_function_prototype)
++
++BOOST_AUTO_TEST_CASE(quadrature_component_equals_scalar) {
++  // (First-kind Chebyshev nodes have no quadrature rule)
++  const std::vector<NodeGenFunc*> nodeGenFuncs = {sgpp::combigrid::getEquidistantNodeGenFunc(),
++                                                  sgpp::combigrid::getClenshawCurtisNodeGenFunc()};
++  forEachConfig(nodeGenFuncs, [](const SparseGrid& sg, size_t) {
++    std::vector<double> result(N_OUTPUTS);
++    sgpp::combigrid::quadrature(vectorFunc(), sg, result);
++    for (size_t k = 0; k < N_OUTPUTS; k++) {
++      const double scalar = sgpp::combigrid::quadrature(scalarFunc(k), sg);
++      BOOST_CHECK_CLOSE_FRACTION(result[k], scalar, 1e-12);
++    }
++  });
++}
++
++BOOST_AUTO_TEST_CASE(interpolation_component_equals_scalar) {
++  const std::vector<NodeGenFunc*> nodeGenFuncs = {
++      sgpp::combigrid::getEquidistantNodeGenFunc(), sgpp::combigrid::getClenshawCurtisNodeGenFunc(),
++      sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc()};
++  forEachConfig(nodeGenFuncs, [](const SparseGrid& sg, const size_t nDim) {
++    const HyperCubeArea domain = shiftedDomain(nDim);
++    for (const double t : {0.0, 0.137, 0.5, 0.91, 1.0}) {
++      DataVector point(nDim);
++      for (size_t i = 0; i < nDim; i++) {
++        point[i] = domain[i].first + t * (domain[i].second - domain[i].first);
++      }
++      std::vector<double> result(N_OUTPUTS);
++      sgpp::combigrid::interpolate(vectorFunc(), point, sg, result);
++      for (size_t k = 0; k < N_OUTPUTS; k++) {
++        const double scalar = sgpp::combigrid::interpolate(scalarFunc(k), point, sg);
++        BOOST_CHECK_SMALL(result[k] - scalar, 1e-10 * (1.0 + std::abs(scalar)));
++      }
++    }
++  });
++}
++
++BOOST_AUTO_TEST_SUITE_END()
