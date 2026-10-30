@@ -1,0 +1,318 @@
+diff --git a/combigrid/src/sgpp/combigrid/functions/source_functions/source_function.cpp b/combigrid/src/sgpp/combigrid/functions/source_functions/source_function.cpp
+index 670b96748..5bf523813 100644
+--- a/combigrid/src/sgpp/combigrid/functions/source_functions/source_function.cpp
++++ b/combigrid/src/sgpp/combigrid/functions/source_functions/source_function.cpp
+@@ -10,7 +10,32 @@ SourceFunc::SourceFunc(const std::function<double(const base::DataVector&)>& fun
+ SourceFunc::SourceFunc(std::function<double(const base::DataVector&)>&& func)
+     : func(std::move(func)) {}
+ 
+-double SourceFunc::evaluate(const base::DataVector& point) const { return func(point); }
++SourceFunc::SourceFunc(std::function<double(const base::DataVector&)> func,
++                       std::shared_ptr<misc::SourceFuncCache> cache)
++    : func(std::move(func)), cache(std::move(cache)) {}
++
++double SourceFunc::evaluate(const base::DataVector& point) const {
++  if (cache != nullptr) [[unlikely]] {
++    return evaluateCached(point);
++  }
++  return func(point);
++}
++
++double SourceFunc::evaluateCached(const base::DataVector& point) const {
++  double value;
++  if (cache->find(point, value)) {
++    return value;
++  }
++  value = func(point);
++  cache->insert(point, value);
++  return value;
++}
++
++void SourceFunc::finishOperatorCall() const {
++  if (cache != nullptr) [[unlikely]] {
++    cache->flush();
++  }
++}
+ 
+ double SourceFunc::evaluateNormalizedInPlace(base::DataVector& point,
+                                              const HyperCubeArea& area) const {
+diff --git a/combigrid/src/sgpp/combigrid/functions/source_functions/source_function.hpp b/combigrid/src/sgpp/combigrid/functions/source_functions/source_function.hpp
+index 78b7c8f29..44e1b5198 100644
+--- a/combigrid/src/sgpp/combigrid/functions/source_functions/source_function.hpp
++++ b/combigrid/src/sgpp/combigrid/functions/source_functions/source_function.hpp
+@@ -6,12 +6,29 @@
+ #pragma once
+ 
+ #include <functional>
++#include <memory>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
+ 
+ namespace sgpp {
+ namespace combigrid {
+ 
++namespace misc {
++
++/// @brief WP-25 prototype: interface of a source-function cache (keys: user-domain points).
++class SourceFuncCache {
++ public:
++  virtual ~SourceFuncCache() = default;
++  /// @brief Looks @p point up; on a hit, writes the cached value to @p value.
++  virtual bool find(const base::DataVector& point, double& value) = 0;
++  /// @brief Stores the value of a miss.
++  virtual void insert(const base::DataVector& point, double value) = 0;
++  /// @brief End of an operator call (deferred writes).
++  virtual void flush() = 0;
++};
++
++}  // namespace misc
++
+ /**
+  * @brief Adapter around a user-supplied function
+  * @f$f : \mathbb{R}^d \to \mathbb{R}@f$ used by all sparse-grid operators.
+@@ -33,6 +50,15 @@ class SourceFunc {
+    */
+   SourceFunc(std::function<double(const base::DataVector&)>&& func);
+ 
++  /**
++   * @brief WP-25 prototype (policy "always"): wraps the callable and looks every point up in
++   * @p cache first.
++   * @param func  Callable mapping a point in problem coordinates to a scalar.
++   * @param cache Cache shared by all copies (nullptr: no caching).
++   */
++  SourceFunc(std::function<double(const base::DataVector&)> func,
++             std::shared_ptr<misc::SourceFuncCache> cache);
++
+   /**
+    * @brief Evaluates the source function at @p point in problem coordinates.
+    * @param point Evaluation point in problem coordinates.
+@@ -66,8 +92,18 @@ class SourceFunc {
+   double evaluateNormalizedOutOfPlace(const base::DataVector& point,
+                                       const HyperCubeArea& area) const;
+ 
++  /**
++   * @brief WP-25 prototype: called once at the end of every operator call (a cache writes its
++   * deferred records to disk there).
++   */
++  void finishOperatorCall() const;
++
+  private:
++  /// @brief Lookup, evaluation of a miss and insertion (out of line).
++  double evaluateCached(const base::DataVector& point) const;
++
+   std::function<double(const base::DataVector&)> func;  ///< Wrapped user callable.
++  std::shared_ptr<misc::SourceFuncCache> cache;          ///< nullptr: policy "none".
+ };
+ 
+ }  // namespace combigrid
+diff --git a/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp b/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp
+index 53652f4b3..a6ae67c3a 100644
+--- a/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.cpp
+@@ -32,6 +32,7 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
+     result += tgData.coefficient * v;
+   }
+ 
++  sourceFunc.finishOperatorCall();
+   return result;
+ }
+ 
+diff --git a/combigrid/src/sgpp/combigrid/operators/linear_interpolation/linear_interpolation.cpp b/combigrid/src/sgpp/combigrid/operators/linear_interpolation/linear_interpolation.cpp
+index 7084d5eb1..ee075113a 100644
+--- a/combigrid/src/sgpp/combigrid/operators/linear_interpolation/linear_interpolation.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/linear_interpolation/linear_interpolation.cpp
+@@ -43,6 +43,7 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
+     }
+   }
+ 
++  sourceFunc.finishOperatorCall();
+   return result;
+ }
+ 
+diff --git a/combigrid/src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.cpp b/combigrid/src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.cpp
+index 30968c4b1..c1c4f90b5 100644
+--- a/combigrid/src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.cpp
+@@ -61,6 +61,7 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
+     }
+   }
+ 
++  sourceFunc.finishOperatorCall();
+   return genInstr.getVolumeOfDomain() * result;
+ }
+ 
+diff --git a/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp b/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp
+index dcb06d7eb..06db7c3ee 100644
+--- a/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp
++++ b/combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.cpp
+@@ -47,6 +47,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
+     }
+   }
+ 
++  sourceFunc.finishOperatorCall();
+   return genInstr.getVolumeOfDomain() * result;
+ }
+ 
+diff --git a/combigrid/tests/functions/source_functions/source_function_cache_prototype_test.cpp b/combigrid/tests/functions/source_functions/source_function_cache_prototype_test.cpp
+new file mode 100644
+index 000000000..c10990f4d
+--- /dev/null
++++ b/combigrid/tests/functions/source_functions/source_function_cache_prototype_test.cpp
+@@ -0,0 +1,157 @@
++// Copyright (C) 2008-today The SG++ project
++// This file is part of the SG++ project. For conditions of distribution and
++// use, please see the copyright notice provided with SG++ or at
++// sgpp.sparsegrids.org
++
++/**
++ * @file source_function_cache_prototype_test.cpp
++ * @brief WP-25 prototype test (removed with the prototype): a cached @c SourceFunc gives bitwise
++ * the uncached results of every operator, calls the flush hook once per operator call, and
++ * values cached by one operator are hits for another one on the same grid.
++ */
++
++#define BOOST_TEST_DYN_LINK
++
++#include <boost/test/tools/old/interface.hpp>
++#include <boost/test/unit_test.hpp>
++#include <boost/test/unit_test_suite.hpp>
++
++#include <omp.h>
++
++#include <cmath>
++#include <map>
++#include <memory>
++#include <mutex>
++#include <sgpp/base/datatypes/DataVector.hpp>
++#include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
++#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
++#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
++#include <sgpp/combigrid/grids/sparse_grid.hpp>
++#include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
++#include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
++#include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
++#include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/type_defs.hpp>
++#include <vector>
++
++using sgpp::base::DataVector;
++using sgpp::combigrid::CompleteSGGenInstr;
++using sgpp::combigrid::DeltasSparseGrid;
++using sgpp::combigrid::HyperCubeArea;
++using sgpp::combigrid::LvlType;
++using sgpp::combigrid::NodeGenFunc;
++using sgpp::combigrid::SourceFunc;
++using sgpp::combigrid::SparseGrid;
++
++namespace {
++
++/// Bitwise-keyed cache (mutex + std::map) with hit / miss / flush counters.
++class MapCache : public sgpp::combigrid::misc::SourceFuncCache {
++ public:
++  bool find(const DataVector& point, double& value) override {
++    const std::lock_guard<std::mutex> guard(mutex_);
++    const auto it = map_.find(point);
++    if (it == map_.end()) {
++      misses++;
++      return false;
++    }
++    hits++;
++    value = it->second;
++    return true;
++  }
++  void insert(const DataVector& point, const double value) override {
++    const std::lock_guard<std::mutex> guard(mutex_);
++    map_.emplace(point, value);
++  }
++  void flush() override { flushes++; }
++
++  size_t hits = 0;
++  size_t misses = 0;
++  size_t flushes = 0;
++
++ private:
++  std::mutex mutex_;
++  std::map<std::vector<double>, double> map_;
++};
++
++double integrand(const DataVector& x) {
++  double result = 1.0;
++  for (size_t k = 0; k < x.size(); k++) result *= std::cos(1.5 * x[k] + 0.2 * static_cast<double>(k)) + 1.2;
++  return result;
++}
++
++CompleteSGGenInstr genInstr(NodeGenFunc* nodes, const LvlType boundary, const size_t nDim,
++                            const HyperCubeArea& domain) {
++  CompleteSGGenInstr instr(4, nDim);
++  instr.setNodeGenFunc(nodes);
++  instr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
++  instr.setBoundaryLevelOffset(boundary);
++  instr.setDomain(domain);
++  return instr;
++}
++
++/// One thread: the OpenMP reductions sum in the same order with and without the cache.
++struct SingleThread {
++  int previous = omp_get_max_threads();
++  SingleThread() { omp_set_num_threads(1); }
++  ~SingleThread() { omp_set_num_threads(previous); }
++};
++
++}  // namespace
++
++BOOST_AUTO_TEST_SUITE(source_function_cache_prototype)
++
++BOOST_AUTO_TEST_CASE(cached_equals_uncached_for_every_operator) {
++  const SingleThread singleThread;
++
++  for (NodeGenFunc* nodes : {sgpp::combigrid::getEquidistantNodeGenFunc(),
++                             sgpp::combigrid::getClenshawCurtisNodeGenFunc()}) {
++    for (const LvlType boundary : {0u, 1u}) {
++      for (const size_t nDim : {1, 3}) {
++        HyperCubeArea domain(nDim);
++        for (size_t k = 0; k < nDim; k++) {
++          const double kd = static_cast<double>(k);
++          domain[k] = {-0.5 + 0.1 * kd, 1.0 + 0.2 * kd};
++        }
++        const CompleteSGGenInstr instr = genInstr(nodes, boundary, nDim, domain);
++        const SparseGrid sg(instr);
++        const DeltasSparseGrid dsg(instr);
++        DataVector point(nDim);
++        for (size_t k = 0; k < nDim; k++) point[k] = domain[k].first + 0.37;
++
++        const SourceFunc plain(integrand);
++        auto cache = std::make_shared<MapCache>();
++        const SourceFunc cached(integrand, cache);
++
++        BOOST_CHECK_EQUAL(quadrature(cached, sg), quadrature(plain, sg));
++        BOOST_CHECK_EQUAL(quadrature(cached, dsg), quadrature(plain, dsg));
++        BOOST_CHECK_EQUAL(interpolate(cached, point, sg), interpolate(plain, point, sg));
++        BOOST_CHECK_EQUAL(interpolateLinear(cached, point, sg),
++                          interpolateLinear(plain, point, sg));
++        BOOST_CHECK_EQUAL(cache->flushes, 4u);
++        BOOST_CHECK(cache->hits > 0);
++      }
++    }
++  }
++}
++
++BOOST_AUTO_TEST_CASE(values_are_reused_across_operators_on_the_unit_domain) {
++  const SingleThread singleThread;  // no concurrent first evaluations of the same point
++  const size_t nDim = 3;
++  const CompleteSGGenInstr instr = genInstr(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 0,
++                                            nDim, HyperCubeArea(nDim, {0.0, 1.0}));
++  const SparseGrid sg(instr);
++  auto cache = std::make_shared<MapCache>();
++  const SourceFunc cached(integrand, cache);
++
++  quadrature(cached, DeltasSparseGrid(instr));  // every point once
++  const size_t distinct = cache->misses;
++  quadrature(cached, sg);
++  interpolate(cached, DataVector{0.1, 0.5, 0.9}, sg);
++  BOOST_CHECK_EQUAL(cache->misses, distinct);  // SG quadrature and interpolation: hits only
++}
++
++BOOST_AUTO_TEST_SUITE_END()

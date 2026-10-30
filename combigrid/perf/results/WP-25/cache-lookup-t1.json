@@ -1,0 +1,859 @@
+{
+ "suite": "micro",
+ "snapshot": "current",
+ "threads": 1,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-38-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "1.38",
+   "2.81",
+   "3.28"
+  ]
+ },
+ "records": [
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/oldproto/d2/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.000983539131147541,
+     0.0009885756885245902
+    ]
+   },
+   "items": 10000,
+   "batch": 61,
+   "counters": {
+    "bytes_per_entry": 122.9776,
+    "entries": 10000,
+    "threads": 1,
+    "shard_imbalance": 256,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_mutex/d2/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00058889957,
+     0.0005760104399999999
+    ]
+   },
+   "items": 10000,
+   "batch": 100,
+   "counters": {
+    "bytes_per_entry": 64.1296,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_spin/d2/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00050474343,
+     0.00050808392
+    ]
+   },
+   "items": 10000,
+   "batch": 100,
+   "counters": {
+    "bytes_per_entry": 62.424,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/boost_cfs/d2/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0004980148416666667,
+     0.0005173130333333333
+    ]
+   },
+   "items": 10000,
+   "batch": 120,
+   "counters": {
+    "bytes_per_entry": 100.3632,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/phmap/d2/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00059861932,
+     0.00060143112
+    ]
+   },
+   "items": 10000,
+   "batch": 100,
+   "counters": {
+    "bytes_per_entry": 102.3584,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sol/d2/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00037972259119496856,
+     0.00037829370440251573
+    ]
+   },
+   "items": 10000,
+   "batch": 159,
+   "counters": {
+    "bytes_per_entry": 117.9728,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/oldproto/d2/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0320181955,
+     0.030866973
+    ]
+   },
+   "items": 65536,
+   "batch": 2,
+   "counters": {
+    "bytes_per_entry": 123.602592,
+    "entries": 1000000,
+    "threads": 1,
+    "shard_imbalance": 256,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_mutex/d2/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.009098483833333334,
+     0.008998518166666667
+    ]
+   },
+   "items": 65536,
+   "batch": 6,
+   "counters": {
+    "bytes_per_entry": 42.304544,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_spin/d2/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.006617902125,
+     0.006526454125
+    ]
+   },
+   "items": 65536,
+   "batch": 8,
+   "counters": {
+    "bytes_per_entry": 42.280608,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/boost_cfs/d2/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00786665675,
+     0.007109014375
+    ]
+   },
+   "items": 65536,
+   "batch": 8,
+   "counters": {
+    "bytes_per_entry": 43.65096,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/phmap/d2/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.013165387,
+     0.01279318775
+    ]
+   },
+   "items": 65536,
+   "batch": 4,
+   "counters": {
+    "bytes_per_entry": 43.128784,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sol/d2/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.006640000571428571,
+     0.0065389508571428575
+    ]
+   },
+   "items": 65536,
+   "batch": 7,
+   "counters": {
+    "bytes_per_entry": 49.418096,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/oldproto/d10/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0016443294444444445,
+     0.001630584361111111
+    ]
+   },
+   "items": 10000,
+   "batch": 36,
+   "counters": {
+    "bytes_per_entry": 186.7552,
+    "entries": 10000,
+    "threads": 1,
+    "shard_imbalance": 256,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_mutex/d10/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0008378828309859156,
+     0.0008383687605633803
+    ]
+   },
+   "items": 10000,
+   "batch": 71,
+   "counters": {
+    "bytes_per_entry": 163.7344,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_spin/d10/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0007810166052631579,
+     0.0007792696710526316
+    ]
+   },
+   "items": 10000,
+   "batch": 76,
+   "counters": {
+    "bytes_per_entry": 163.7344,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/boost_cfs/d10/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0007978856351351352,
+     0.0007940915810810811
+    ]
+   },
+   "items": 10000,
+   "batch": 74,
+   "counters": {
+    "bytes_per_entry": 179.0064,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/phmap/d10/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0009118691846153847,
+     0.0009140944307692308
+    ]
+   },
+   "items": 10000,
+   "batch": 65,
+   "counters": {
+    "bytes_per_entry": 178.7968,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sol/d10/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0006108874646464647,
+     0.0006134059696969697
+    ]
+   },
+   "items": 10000,
+   "batch": 99,
+   "counters": {
+    "bytes_per_entry": 196.616,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/oldproto/d10/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.035888741,
+     0.0356875995
+    ]
+   },
+   "items": 65536,
+   "batch": 2,
+   "counters": {
+    "bytes_per_entry": 187.602592,
+    "entries": 1000000,
+    "threads": 1,
+    "shard_imbalance": 256,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_mutex/d10/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.017319324,
+     0.017148702666666665
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 106.506432,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_spin/d10/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.017146491,
+     0.016027011666666667
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 106.505568,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/boost_cfs/d10/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.017419406000000002,
+     0.016236906666666665
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 107.87624,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/phmap/d10/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.017934994333333332,
+     0.017387535
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 107.353952,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sol/d10/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0095780182,
+     0.0091085618
+    ]
+   },
+   "items": 65536,
+   "batch": 5,
+   "counters": {
+    "bytes_per_entry": 113.643376,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/oldproto/d20/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0021662191785714285,
+     0.0021519990714285713
+    ]
+   },
+   "items": 10000,
+   "batch": 28,
+   "counters": {
+    "bytes_per_entry": 266.7552,
+    "entries": 10000,
+    "threads": 1,
+    "shard_imbalance": 256,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_mutex/d20/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0011793496,
+     0.00116558536
+    ]
+   },
+   "items": 10000,
+   "batch": 50,
+   "counters": {
+    "bytes_per_entry": 296.0992,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_spin/d20/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.001091175574074074,
+     0.0010915777962962963
+    ]
+   },
+   "items": 10000,
+   "batch": 54,
+   "counters": {
+    "bytes_per_entry": 296.0992,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/boost_cfs/d20/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0010513020714285714,
+     0.0010509778035714286
+    ]
+   },
+   "items": 10000,
+   "batch": 56,
+   "counters": {
+    "bytes_per_entry": 277.3104,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/phmap/d20/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0012284164166666666,
+     0.0012280570416666667
+    ]
+   },
+   "items": 10000,
+   "batch": 48,
+   "counters": {
+    "bytes_per_entry": 277.2,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sol/d20/n10000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0008964481492537313,
+     0.0009034218208955224
+    ]
+   },
+   "items": 10000,
+   "batch": 67,
+   "counters": {
+    "bytes_per_entry": 294.92,
+    "entries": 10000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/oldproto/d20/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0397445505,
+     0.037805943
+    ]
+   },
+   "items": 65536,
+   "batch": 2,
+   "counters": {
+    "bytes_per_entry": 267.602592,
+    "entries": 1000000,
+    "threads": 1,
+    "shard_imbalance": 256,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_mutex/d20/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.022214260666666666,
+     0.02283861466666667
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 186.910128,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sharded_spin/d20/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.021945489666666665,
+     0.021544253666666666
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 186.910128,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/boost_cfs/d20/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.021029945999999997,
+     0.021114220666666666
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 188.15784,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/phmap/d20/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.023887298666666668,
+     0.023553389666666664
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 187.635968,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/cache/lookup/sol/d20/n1000000",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.01901804,
+     0.019371807
+    ]
+   },
+   "items": 65536,
+   "batch": 3,
+   "counters": {
+    "bytes_per_entry": 193.924976,
+    "entries": 1000000,
+    "threads": 1,
+    "hit_fraction": 1
+   }
+  }
+ ],
+ "process_floor_kib": null
+}

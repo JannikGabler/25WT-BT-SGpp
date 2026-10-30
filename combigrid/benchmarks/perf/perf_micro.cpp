@@ -51,6 +51,7 @@
 
 #include "perf_harness.hpp"
 #include "perf_problems.hpp"
+#include "perf_cache_proto.hpp"
 #include "perf_vector_proto.hpp"
 
 using sgpp::combigrid::CompleteSGGenInstr;
@@ -593,6 +594,9 @@ int main(int argc, char** argv) {
 
   // WP-24: vector-valued source functions (prototypes, micro/vec/...)
   perf::vec_proto::addVectorProtoCases(suite);
+
+  // WP-25: source-function cache (prototypes, micro/cache/...)
+  perf::cache_proto::addCacheProtoCases(suite);
 
   return suite.main(argc, argv);
 }
