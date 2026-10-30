@@ -1,0 +1,40 @@
+samples: 119863
+
+## per dso
+ 56.23 %  libm.so.6
+ 28.10 %  libsgppcombigrid.so
+ 10.62 %  perf_e2e
+  2.51 %  libgomp.so.1.0.0
+  1.66 %  [unknown]
+  0.87 %  libopenblasp-r0.3.32.so
+  0.01 %  libc.so.6
+  0.00 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 56.23 %  __cos_fma  [libm.so.6]
+ 20.48 %  sgpp::combigrid::linear_interpolation::computeNeighborGPWithWeight  [libsgppcombigrid.so]
+  8.64 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  7.57 %  sgpp::combigrid::linear_interpolation::interpolate  [libsgppcombigrid.so]
+  2.51 %  [unknown]  [libgomp.so.1.0.0]
+  1.78 %  cos@plt  [perf_e2e]
+  1.66 %  [unknown]  [[unknown]]
+  0.87 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.20 %  std::_Function_handler<double   [perf_e2e]
+  0.05 %  sgpp::combigrid::TensorGrid::getNeighborsForLinInterpolation  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  0.00 %  _int_malloc  [libc.so.6]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::tools::sparse_grid_generation::getNodesPerDimForTG  [libsgppcombigrid.so]
+  0.00 %  mmap  [libc.so.6]
+  0.00 %  _mid_memalign  [libc.so.6]
+  0.00 %  sgpp::combigrid::doublingLvl2GPCntFunction  [libsgppcombigrid.so]
+  0.00 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.00 %  _int_free_maybe_trim  [libc.so.6]
+  0.00 %  _int_free_merge_chunk  [libc.so.6]
+  0.00 %  __printf_buffer_write  [libc.so.6]
+  0.00 %  sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+
+## per symbol / innermost helper (combigrid + base only)
+  6.91 %  sgpp::combigrid::linear_interpolation::interpolate  <=  sgpp::combigrid::linear_interpolation::interpolate
+  0.65 %  sgpp::combigrid::linear_interpolation::interpolate  <=  sgpp::combigrid::SourceFunc::evaluate

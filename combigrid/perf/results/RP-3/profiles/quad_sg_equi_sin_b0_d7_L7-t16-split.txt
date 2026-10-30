@@ -1,0 +1,44 @@
+samples: 117791
+
+## per dso
+ 74.17 %  libm.so.6
+ 17.26 %  perf_e2e
+  6.32 %  libsgppcombigrid.so
+  0.90 %  libopenblasp-r0.3.32.so
+  0.77 %  [unknown]
+  0.57 %  libgomp.so.1.0.0
+  0.01 %  libc.so.6
+  0.00 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 74.17 %  __sin_fma  [libm.so.6]
+ 13.51 %  sgpp::combigrid::perf::sinProd  [perf_e2e]
+  6.31 %  sgpp::combigrid::quadrature_operator::processTensorGrid  [libsgppcombigrid.so]
+  3.25 %  sin@plt  [perf_e2e]
+  0.90 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.77 %  [unknown]  [[unknown]]
+  0.57 %  [unknown]  [libgomp.so.1.0.0]
+  0.50 %  std::_Function_handler<double   [perf_e2e]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  unlink_chunk.isra.0  [libc.so.6]
+  0.00 %  _int_malloc  [libc.so.6]
+  0.00 %  sgpp::combigrid::quadrature_operator::getWeights  [libsgppcombigrid.so]
+  0.00 %  check_match  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  _itoa_word  [libc.so.6]
+  0.00 %  _mid_memalign  [libc.so.6]
+  0.00 %  _int_free_chunk  [libc.so.6]
+  0.00 %  sgpp::combigrid::tools::complete_sg_gen::populateMIVecSerial  [libsgppcombigrid.so]
+  0.00 %  __GI___clone3  [libc.so.6]
+  0.00 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::NodeGenFunc::genNodesWithBoundary  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::getQuadRule  [libsgppcombigrid.so]
+  0.00 %  free@plt  [libsgppbase.so]
+  0.00 %  _int_memalign  [libc.so.6]
+  0.00 %  _int_free_merge_chunk  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  3.76 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sumOverRows
+  2.16 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.34 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  updateWeightProducts

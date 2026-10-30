@@ -1,0 +1,17 @@
+profile of `^mivec/sg/cc-exp/b1/d15/S10/n300$` (e2e, 16 threads, self time)
+    25.22%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+    16.46%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+    11.69%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     6.63%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     6.58%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     5.69%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+     5.28%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     4.30%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     2.97%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     1.92%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a82
+     1.86%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_operator::processTensorGrid
+     1.42%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c0
+     1.36%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c70
+     0.59%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a80
+     0.57%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::computeCTCoeffs
+

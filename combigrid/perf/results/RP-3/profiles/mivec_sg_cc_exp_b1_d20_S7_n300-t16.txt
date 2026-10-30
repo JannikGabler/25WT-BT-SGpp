@@ -1,0 +1,17 @@
+profile of `^mivec/sg/cc-exp/b1/d20/S7/n300$` (e2e, 16 threads, self time)
+    35.76%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+    16.30%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+    11.94%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     8.68%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     5.34%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     4.60%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     3.23%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a82
+     1.77%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c70
+     1.22%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+     1.15%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c0
+     0.91%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a80
+     0.83%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4be
+     0.70%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     0.58%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4cb
+     0.55%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4b3
+

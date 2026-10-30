@@ -1,0 +1,41 @@
+samples: 46309
+
+## per dso
+ 38.44 %  libm.so.6
+ 31.81 %  perf_e2e
+ 25.16 %  libsgppcombigrid.so
+  2.20 %  libopenblasp-r0.3.32.so
+  1.26 %  libgomp.so.1.0.0
+  1.10 %  [unknown]
+  0.01 %  ld-linux-x86-64.so.2
+  0.01 %  libc.so.6
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 27.51 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 25.16 %  sgpp::combigrid::quadrature_operator::processTensorGrid  [libsgppcombigrid.so]
+ 21.10 %  __ieee754_exp_fma  [libm.so.6]
+ 15.90 %  exp@@GLIBC_2.29  [libm.so.6]
+  2.40 %  exp@plt  [perf_e2e]
+  2.20 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.90 %  std::_Function_handler<double   [perf_e2e]
+  1.44 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  1.26 %  [unknown]  [libgomp.so.1.0.0]
+  1.10 %  [unknown]  [[unknown]]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _int_free_maybe_trim  [libc.so.6]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  _itoa_word  [libc.so.6]
+  0.00 %  operator new  [libsgppbase.so]
+  0.00 %  _int_memalign  [libc.so.6]
+  0.00 %  __getpagesize  [libc.so.6]
+  0.00 %  sgpp::combigrid::SparseGridBase::setTensorGrids  [libsgppcombigrid.so]
+  0.00 %  memset  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::getQuadRule  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+ 16.13 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sumOverRows
+  7.10 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.73 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  updateWeightProducts
+  0.20 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sgpp::combigrid::quadrature_operator::processTensorGrid

@@ -1,0 +1,45 @@
+samples: 63865
+
+## per dso
+ 54.59 %  perf_e2e
+ 23.14 %  libm.so.6
+ 18.65 %  libsgppcombigrid.so
+  1.61 %  libopenblasp-r0.3.32.so
+  1.04 %  [unknown]
+  0.93 %  libgomp.so.1.0.0
+  0.04 %  libc.so.6
+  0.00 %  ld-linux-x86-64.so.2
+  0.00 %  libstdc++.so.6.0.35
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 51.86 %  sgpp::combigrid::perf::uqIntegrand  [perf_e2e]
+ 18.62 %  sgpp::combigrid::quadrature_operator::processTensorGrid  [libsgppcombigrid.so]
+ 12.82 %  __ieee754_exp_fma  [libm.so.6]
+  9.29 %  exp@@GLIBC_2.29  [libm.so.6]
+  1.61 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.38 %  exp@plt  [perf_e2e]
+  1.35 %  std::_Function_handler<double   [perf_e2e]
+  1.04 %  [unknown]  [[unknown]]
+  1.02 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.93 %  [unknown]  [libgomp.so.1.0.0]
+  0.01 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  [libsgppcombigrid.so]
+  0.01 %  _mid_memalign  [libc.so.6]
+  0.01 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.01 %  __posix_memalign  [libc.so.6]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace  [libsgppcombigrid.so]
+  0.00 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.00 %  Eigen::internal::kissfft_impl<double>::get_plan  [libsgppcombigrid.so]
+  0.00 %  __cexp  [libm.so.6]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  raits<char>, std::allocator<char> > > > >, std::__cxx11::regex_traits<char>, true>::_M_dfs  [perf_e2e]
+  0.00 %  operator new  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.00 %  ::complex<double>, std::allocator<std::complex<double> > > > > >::_M_get_insert_unique_pos  [libsgppcombigrid.so]
+  0.00 %  sgpp::base::DataVector::DataVector  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+ 11.81 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sumOverRows
+  5.33 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.30 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  updateWeightProducts

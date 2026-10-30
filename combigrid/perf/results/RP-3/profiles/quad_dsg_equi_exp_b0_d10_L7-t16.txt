@@ -1,0 +1,11 @@
+profile of `^quad/dsg/equi-exp/b0/d10/L7$` (e2e, 16 threads, self time)
+    43.18%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::delta_quadrature_operator::forEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid
+    20.50%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+    16.41%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+    11.21%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     2.09%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     1.83%  perf_e2e  perf_e2e                 [.] exp@plt
+     1.42%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     1.06%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     0.51%  perf_e2e  libsgppcombigrid.so      [.] memset@plt
+

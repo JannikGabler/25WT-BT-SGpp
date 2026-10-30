@@ -1,0 +1,16 @@
+profile of `^quad/dsg/equi-exp/b1/d20/L6$` (e2e, 16 threads, self time)
+    26.87%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+    21.19%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::delta_quadrature_operator::forEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid
+    15.34%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+    11.85%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren
+     7.14%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     2.30%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     1.25%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     1.15%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::ProjectedSubTrieBuilder::build
+     1.00%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     1.00%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     0.98%  perf_e2e  perf_e2e                 [.] exp@plt
+     0.83%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.72%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     0.59%  perf_e2e  [unknown]                [k] 0xffffffff85b020fb
+

@@ -1,0 +1,45 @@
+samples: 12451
+
+## per dso
+ 34.11 %  perf_e2e
+ 32.67 %  libm.so.6
+ 13.98 %  libsgppcombigrid.so
+  7.49 %  libopenblasp-r0.3.32.so
+  6.63 %  libgomp.so.1.0.0
+  4.14 %  [unknown]
+  0.89 %  libc.so.6
+  0.06 %  libsgppbase.so
+  0.02 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 31.73 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 22.96 %  __ieee754_exp_fma  [libm.so.6]
+ 12.73 %  sgpp::combigrid::quadrature_operator::processTensorGrid  [libsgppcombigrid.so]
+  8.72 %  exp@@GLIBC_2.29  [libm.so.6]
+  7.49 %  [unknown]  [libopenblasp-r0.3.32.so]
+  6.63 %  [unknown]  [libgomp.so.1.0.0]
+  4.14 %  [unknown]  [[unknown]]
+  1.20 %  exp@plt  [perf_e2e]
+  1.16 %  std::_Function_handler<double   [perf_e2e]
+  0.99 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.34 %  _int_malloc  [libc.so.6]
+  0.31 %  sgpp::combigrid::quadrature_operator::getWeights  [libsgppcombigrid.so]
+  0.22 %  sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+  0.18 %  sgpp::combigrid::tools::sparse_grid_generation::getNodesPerDimForTG  [libsgppcombigrid.so]
+  0.15 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.13 %  unlink_chunk.isra.0  [libc.so.6]
+  0.11 %  _int_free_merge_chunk  [libc.so.6]
+  0.10 %  sgpp::combigrid::doublingLvl2GPCntFunction  [libsgppcombigrid.so]
+  0.07 %  sgpp::combigrid::tools::sparse_grid_generation::genTGData  [libsgppcombigrid.so]
+  0.06 %  sgpp::combigrid::tools::complete_sg_gen::addBarPosAsMI  [libsgppcombigrid.so]
+  0.06 %  _int_free_maybe_trim  [libc.so.6]
+  0.06 %  _int_memalign  [libc.so.6]
+  0.06 %  _int_free_chunk  [libc.so.6]
+  0.05 %  sgpp::combigrid::quadrature_rules::SimpsonQuadRule::genWeightsInplace  [libsgppcombigrid.so]
+  0.05 %  cfree@GLIBC_2.2.5  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  7.94 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sumOverRows
+  3.90 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.55 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  updateWeightProducts
+  0.30 %  sgpp::combigrid::quadrature_operator::getWeights  <=  sgpp::combigrid::quadrature_operator::getWeights

@@ -16,6 +16,7 @@ AC, idle; e2e at 16 threads, micro at 1 thread. Raw data: `baseline/` (protected
 8. [From findings to work packages](#from-findings-to-work-packages)
 9. [Re-profiling RP-1](#re-profiling-rp-1) (after WP-01, WP-13, WP-14; incl. peak memory)
 10. [Re-profiling RP-2](#re-profiling-rp-2) (after WP-20, WP-02; WP-21/WP-22 sizing, code placement, peak memory)
+11. [Re-profiling RP-3](#re-profiling-rp-3) (after WP-03; mivec split, WP-29 kernel shares, OpenBLAS cold first call, peak memory)
 
 ## Measurement noise
 
@@ -737,3 +738,152 @@ follow-ups"). In short:
 - WP-22 is minimal in runtime and material in memory; it should be merged with WP-18.
 - No new hot spots. New small findings: the slack break in the sub-trie DFS, trie node
   reservation, generation page faults, and the fragile closure code generation.
+
+## Re-profiling RP-3
+
+Work session RP-3, 2026-10-30. Code: 0c6ecfc4b (= `rp-3` snapshot; since RP-2 the accepted WP-03,
+the `SourceFunc` cleanup 0273aa1d7 (unused cache member removed) and the WP-24/WP-25 benchmarks;
+no other production code). Judged configuration, boost off, `calibrate` OK (e2e 1.002 burst /
+1.001 sustained, micro 1.032 / 1.034). Reports in `results/RP-3/`:
+- A/Bs: `e2e.md/.json` (full suite baseline → rp-3), `e2e-rp-2-vs-rp-3-interp.md/.json` (direct
+  check of interp/interplin); `micro-run.json`;
+- derived data: `groups.md`, `profile-splits.md`, `mivec-generation-split.md`,
+  `openblas-cold-start.md` (+ `openblas-diag-raw.json`);
+- top lists and inline-chain splits: `profiles/` (21 cases);
+- scripts: `profile_split.py` (RP-2 method), `groups.py`, `openblas_diag.py`,
+  `mivec_gen_split.cpp` (scratch diagnostic, not built by SCons).
+
+### Cumulative progress baseline → rp-3
+
+Full e2e A/B (`ab e2e baseline rp-3`, 38 cases, 5 rounds, foreign load ≤ 0.3 %). rp-2 = the RP-2
+report (other session):
+
+| group | baseline | rp-2 | rp-3 | baseline → rp-3 | rp-2 → rp-3 | d ≥ 7: baseline → rp-3 | peak RSS geomean | verdicts (total) |
+|---|---|---|---|---|---|---|---|---|
+| quad/sg | 22.28 s | 9.18 s | 9.20 s | 2.42x | 0.997x | 18.50 → 6.93 s (2.67x) | 1.064 (2 MEM+) | 13 faster |
+| quad/dsg | 26.70 s | 17.74 s | 17.75 s | 1.50x | 1.000x | 26.10 → 17.20 s (1.52x) | 0.973 (6 MEM+, 2 MEM−) | 9 faster |
+| interp | 6.60 s | 5.73 s | 5.70 s | 1.16x | 1.006x | 3.70 → 3.25 s (1.14x) | 1.003 | 7 faster, 1 ~ |
+| interplin | 5.02 s | 4.65 s | 4.55 s | 1.10x | 1.023x (drift; direct A/B: noise) | 4.40 → 4.00 s (1.10x) | 0.995 | 4 faster |
+| mivec | 9.32 s | 6.35 s | **1.26 s** | **7.42x** | **5.05x** | 7.05 → 0.51 s (13.7x) | 0.995 (1 MEM−) | 4 faster |
+| **all** | **69.92 s** | **43.65 s** | **38.45 s** | **1.818x** | **1.135x** | 59.76 → 31.90 s (1.87x) | **1.014** | 37 faster, 1 ~, 0 SLOWER |
+
+- mivec: generation 13.8 ms (rp-2 5.10 s), operator 1.241 s; d10 / d15 / d20 3.92 / 68.5 / 593x
+  since rp-2, d5 unchanged.
+- quad/dsg b0 15.30 s, b1 2.45 s (rp-2 15.30 / 2.44 s).
+- Direct rp-2 → rp-3 A/B of interp + interplin (12 cases): all noise except
+  `interp/sg/cheb1/b0/d5/L4/p64` 0.980 [0.962, 0.998] (337 → 342 ms, unchanged source:
+  placement / LTO); RP-2's interplin numbers were session drift.
+- Peak memory: 8 `MEM+` (as RP-2: sg d2 WP-01 scratch 364 → 620 / 805 → 1064 MiB; 6 dsg b0 WP-02
+  slot arrays +1.1…+5.1 MiB), 3 `MEM−` (dsg b1 d20 331 → 218 MiB, d15 234 → 150 MiB, mivec d10
+  17.7 → 17.1 MiB). rp-2 → rp-3 per case geomean 0.995 (cross-session). Floors 10.3 / 10.3 MiB.
+
+### Where the time goes (rp-3)
+
+| group | share of the suite | of which |
+|---|---|---|
+| quad/dsg | **46.2 %** | b0 39.8 % · b1 6.4 % |
+| quad/sg | 23.9 % | |
+| interp | 14.8 % | |
+| interplin | 11.8 % | |
+| mivec | 3.3 % | operator 3.2 % · generation 0.04 % |
+
+Longest cases: `quad/dsg/cc-uq/b0/d10/L7` 6.79 s, `quad/dsg/equi-exp/b0/d10/L7` 5.40 s (together
+31.7 % of the suite), `interplin/.../d10/L5/p32` 2.47 s, `quad/sg/equi-sin/b0/d7/L7` 2.42 s,
+`interp/sg/cc/b0/d10/L2/p8` 1.99 s, `interplin/.../d8/L5/p256` 1.53 s, `interp/sg/cc/b0/d5/L6/p64`
+1.45 s, `quad/dsg/cc-uq/b0/d7/L10` 1.44 s, `quad/sg/cc-uq/b0/d10/L4` 1.31 s, `interp/sg/cc/b0/d7/L4/p16`
+1.26 s, dsg b1 d20 / d15 1.23 / 1.22 s, sg cc d2 L20 1.20 s. mivec: d5 0.74 s, d10 0.48 s.
+
+### Hot spots per operator (profiles, 16 threads; RP-2 values in brackets)
+
+Details and the inline-chain method: `results/RP-3/profile-splits.md`.
+
+| case (rp-3 total) | top shares |
+|---|---|
+| `quad/dsg/equi-exp/b0/d10/L7` (5.40 s) | row loop **43.2 %** [43.1] = `updateCoeffSums` 14.5 · `compRowWeights` 11.6 · row + advance + lambda 11.6 · call 5.4 + `_M_invoke` 1.4 · integrand 52.4 % [52.5] · memset 2.6 % |
+| `quad/dsg/cc-uq/b0/d10/L7` (6.79 s) | row loop 33.1 % [32.8] = 10.8 / 8.5 / 9.4 / 4.4 + 1.2 · integrand 63.3 % [63.6] |
+| dsg b0 d7 equi / cc (1.14 / 1.44 s) | row loop 43.3 / 33.8 % [42.9 / 33.9] · integrand 48.2 / 58.7 % |
+| `quad/dsg/equi-exp/b1/d20/L6` (1.23 s) | integrand 51.9 % [52.8] · row loop 21.1 % [21.3] · projection builder 13.1 % [13.6] · libgomp 2.8, OpenBLAS 2.7 |
+| `quad/dsg/equi-exp/b1/d15/L7` (1.22 s) | integrand 55.2 % [55.6] · row loop 24.9 % [24.8] · builder 9.0 % [9.6] |
+| `quad/sg/*` | equi-exp/b0/d10/L4 `processTensorGrid` 25.2 % [24.9] (rows 16.1, call 7.1, weight products 1.7); equi-sin/b0/d7/L7 integrand 91.4 / kernel 6.3 %; cc-uq/b0/d10/L4 77.7 / 18.6 %; b1/d20/L5 66.8 / 12.7 % + OpenBLAS 7.5 + libgomp 6.6 %; cc-uq/b0/d2/L20 CC weights ≈ 24.8 % [≈ 24] + kernel 23.1 % [21.9] |
+| `interp/*` | cc d10 / d7 / d5: `interpolateFirstDim` 19.1 / 17.8 / 20.0 % [18.9 / – / 19.9] (incl. `getGridPoint` 5.6 / 7.4 / 8.5) + barycentric 3.5 / 4.8 / 6.0 %; cheb1 d5: generic weights + `log`/`exp` 24.8 % [24.0], allocations 7.2 %, libgomp 21.3 % [18.9] |
+| `interplin/*` | `computeNeighborGPWithWeight` 20.5 / 17.6 % [19.9 / 16.5], `interpolate` 7.6 / 8.2 % (d10 / d8); integrand 66.7 / 66.6 % |
+| `mivec/...` d5 / d10 | integrand 76.9 / 70.2 % · `processTensorGrid` 15.2 / 11.8 % · libgomp 3.6 / 8.9 · OpenBLAS 3.0 / 6.4 % · generation symbols ≤ 0.2 % [closure 77.5 % at d10] |
+| `mivec/...` d15 / d20 | spinning threads: libgomp 47.0 / 50.6 %, OpenBLAS 29.0 / 39.7 % (cold first call, below) [closure 96.1 / 97.2 %] |
+
+Observations:
+- **Unchanged code, unchanged shares**: quad/dsg, quad/sg, interp and interplin are within ≈ 1
+  point of RP-2 (no LTO shift of unchanged code this time, unlike the closure in RP-2).
+- Absolute (shares × rp-3 medians): DSG b0 d7/d10 row loop **5.55 s** [5.53], per-row trie work
+  **3.30 s** [3.3], dispatch 0.92 s [0.9]; b1 row loop 0.56 s, builder 0.27 s [≈ 0.31], dispatch
+  0.13 s; quad/sg dispatch ≈ 0.45–0.55 s (0.29 s in the profiled cases) + mivec 0.11 s;
+  `interpolateFirstDim` + barycentric 0.73 s at d ≥ 7; corner loop 1.09 s (d8 + d10).
+- `libsgppbase.so` ≤ 0.06 % at d ≥ 7 (WP-23: ≤ 0.09 %).
+
+### WP-29 kernels: the "before" picture
+
+| kernel (WP-29 step) | case | kernel share | dispatch inside | integrand |
+|---|---|---|---|---|
+| SG row loop `processTensorGrid` / `sumOverRows` (a) | quad/sg equi-exp b0 d10 / cc-uq b0 d10 / equi-sin b0 d7 / equi-exp b1 d20 | 25.2 / 18.6 / 6.3 / 12.7 % | 9.0 / 6.7 / 2.7 / 5.1 % | 70.3 / 77.7 / 91.4 / 66.8 % |
+| SG row loop in mivec (a) | mivec d5 / d10 | 15.2 / 11.8 % | 10.2 / 6.9 % | 76.9 / 70.2 % |
+| DSG row loop `forEachGPWithGlobalWeight` (b) | dsg equi / cc b0 d10, equi / cc b0 d7 | 43.2 / 33.1 / 43.3 / 33.8 % | 6.8 / 5.6 / 7.3 / 6.0 % | 52.4 / 63.3 / 48.2 / 58.7 % |
+| DSG row loop (b) | dsg b1 d20 / d15 | 21.1 / 24.9 % (+ builder 13.1 / 9.0 %) | 4.6 / 5.7 % | 51.9 / 55.2 % |
+| `interpolateFirstDim` + barycentric (c) | interp cc d10 / d7 / d5 | 22.6 / 22.6 / 26.0 % | 2.5 / 1.1 / 1.8 % | 70.7 / 70.7 / 67.2 % |
+| generic barycentric formula (c) | interp cheb1 d5 | weights 24.8 + allocations 7.2 + `interpolateFirstDim` 7.3 % | 0.6 % | ≈ 24 % |
+| corner loop `computeNeighborGPWithWeight` + `interpolate` (c) | interplin d10 / d8 | 28.1 / 25.8 % | 0.7 / 0.8 % | 66.7 / 66.6 % |
+
+A vector run with m outputs multiplies the integrand part by m and keeps the per-point framework
+work (trie weights, row odometer, `getGridPoint`, corner weights) once per point; the larger the
+kernel share, the larger the vector gain (WP-24: DSG 1.89–2.77x, SG 1.33–2.56x at m = 32).
+
+### mivec after WP-03 (`results/RP-3/mivec-generation-split.md`)
+
+- The group is **operator-bound**: operator 1.241 s, generation 13.8 ms (1.1 %).
+- Generation split (scratch program, same MI sets, 16 threads, warm), d10: closure 0.74 ms (10 %),
+  **CT coefficients 4.82 ms (64 %)**, filter + partition 1.38 ms (18 %), tensor-grid
+  materialization 0.61 ms (8 %); d15 / d20: CT coefficients 70 / 71 %. The CT coefficients scale
+  only 1.7–3.8x from 1 to 16 threads (d10 14.8 → 4.8 ms).
+- 13.8 ms = 0.036 % of the suite: no WP. For dimension-adaptive refinement the incremental update
+  of the CT coefficients would be the relevant part.
+
+### OpenBLAS pool: cold first call (`results/RP-3/openblas-cold-start.md`)
+
+Diagnostic with `OPENBLAS_NUM_THREADS=1` (no code change), 16 threads:
+- The judged `total` (after a warm-up) is unchanged (0.97–1.02).
+- The **first operator call of a process** is **+63…+130 ms** slower with the pool:
+  - mivec d20 135.7 vs. 6.2 ms (22x);
+  - interp equi d3 169 vs. 54 ms;
+  - dsg b0 d10 5476 vs. 5408 ms.
+- Process wall time +56…+135 ms; `--list` (libraries only) only +2–3 ms.
+- Mechanism (`strace`): the 15 OpenBLAS threads busy-wait after their start; OpenMP barrier
+  wake-ups then complete only every scheduler tick (4 ms) until the pool sleeps.
+- The "OpenBLAS x %" samples in short-case profiles are this warm-up spinning.
+- Relevant for every one-shot process: C++ programs, Boost tests, presumably Python scripts.
+
+### Micro-benchmarks (rp-3, `run micro` filtered, 1 thread; RP-2 in brackets)
+
+Calibration micro 1.032 (RP-2 0.994), so +1–3 % across the board is machine state.
+
+| case | rp-3 [rp-2] |
+|---|---|
+| micro/quad/process_tg/equi/b0/d10/L4 vs. micro/sol/quad_tg/equi/b0/d10/L4 | 21.98 vs. 24.82 ns/point [21.84 vs. 24.10] |
+| micro/dsg/process_delta_tg/equi/b0/d10/L7 | 26.50 ns/point [26.12] = 1.21x the SG kernel [1.20] |
+| micro/dsg/process_delta_tgs/equi/b0/d10/L6/s64 · b1/d20/L6/s256 · b1/d15/L7/s128 | 28.62 · 48.77 · 33.40 ns/point [28.3 · 48.5 · 33.3] |
+| micro/dsg/sub_tries/equi/b1/d20/L6/s256 · prepare/equi/b1/d20/L6 | 20.03 ms [19.65] · 63.9 ms [65.7] |
+| micro/quad/process_tg/cc/b0/d2/L16 vs. equi/b0/d2/L16 | 64.3 vs. 15.6 ns/point (CC weights per grid → WP-05) |
+| micro/interp/global_tg/cc/b0/d5/L6 · cheb1/b0/d5/L4 | 108.7 · 194.4 ns/point [107.7 · 192.1] |
+| micro/interp/barycentric_1d/generic/n65 vs. opt_cc/n65 | 580 vs. 3.1 ns/node [577 vs. 3.0] |
+| micro/interplin/tg/equi/b1/d8/L5 | 167.8 ns/corner [169.3] |
+| micro/mivec/downwards_closure/d10/S12/n1000 · d15/S10/n300 · d20/S7/n300 | 573 · 92 · 41 µs (WP-03-before: 12.7 · 15.0 · 15.8 s, `ab micro`) |
+| micro/mivec/ct_coeffs/d10/S12/n1000 | 15.8 ms [15.6] |
+| micro/gen/sparse_grid/cc/b1/d20/L5 · complete_mis_with_coeffs/d20/L6 | 69.7 · 10.1 ms [68.4 · 9.4] |
+
+### Findings → work packages (RP-3)
+
+Re-ranking with expected savings: summary `summaries/RP-3-reprofiling.md` ("Profile shift /
+follow-ups"). In short:
+- The estimates of WP-04 (1.5–2.5 s), WP-17 (≈ 1–1.5 s), WP-06 (0.6–0.7 s), WP-08 (≈ 0.5 s),
+  WP-21 (0.1–0.2 s) and WP-05 (0.5–0.8 s) stand.
+- MI-set generation is finished as a runtime topic (0.04 % of the suite).
+- WP-10 gets new decision data: the cold first call (+63…+130 ms per process).
+- WP-32 / WP-33 keep their ranks.
+- No new runtime hot spot.

@@ -1,0 +1,43 @@
+samples: 34261
+
+## per dso
+ 46.30 %  libm.so.6
+ 30.72 %  perf_e2e
+ 15.26 %  libsgppcombigrid.so
+  3.63 %  libgomp.so.1.0.0
+  2.99 %  libopenblasp-r0.3.32.so
+  1.04 %  [unknown]
+  0.05 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 23.54 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 22.62 %  __ieee754_exp_fma  [libm.so.6]
+ 21.07 %  exp@@GLIBC_2.29  [libm.so.6]
+ 15.16 %  sgpp::combigrid::quadrature_operator::processTensorGrid  [libsgppcombigrid.so]
+  4.68 %  exp@plt  [perf_e2e]
+  3.63 %  [unknown]  [libgomp.so.1.0.0]
+  2.99 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.52 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  2.50 %  std::_Function_handler<double   [perf_e2e]
+  1.04 %  [unknown]  [[unknown]]
+  0.04 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  [libsgppcombigrid.so]
+  0.04 %  __cos_fma  [libm.so.6]
+  0.04 %  __sincos_fma  [libm.so.6]
+  0.02 %  Eigen::internal::kiss_cpx_fft<double>::bfly4  [libsgppcombigrid.so]
+  0.02 %  _mid_memalign  [libc.so.6]
+  0.01 %  __cexp  [libm.so.6]
+  0.01 %  _int_malloc  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::computeCTCoeffs  [libsgppcombigrid.so]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  _int_free_merge_chunk  [libc.so.6]
+  0.01 %  Eigen::internal::kissfft_impl<double>::get_plan  [libsgppcombigrid.so]
+  0.01 %   std::allocator<std::pair<int const, Eigen::internal::kiss_cpx_fft<double> > > >::_M_erase  [libsgppcombigrid.so]
+  0.01 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.01 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::tools::sparse_grid_generation::getNodesPerDimForTG  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  7.65 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate
+  7.39 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sumOverRows

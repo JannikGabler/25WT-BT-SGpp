@@ -1,0 +1,11 @@
+profile of `^interplin/sg/equi/b1/d8/L5/p256$` (e2e, 16 threads, self time)
+    54.90%  perf_e2e  libm.so.6                [.] __cos_fma
+    17.67%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::linear_interpolation::computeNeighborGPWithWeight
+    10.15%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     8.20%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::linear_interpolation::interpolate
+     1.99%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     1.76%  perf_e2e  perf_e2e                 [.] cos@plt
+     1.38%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     1.17%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     0.67%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+

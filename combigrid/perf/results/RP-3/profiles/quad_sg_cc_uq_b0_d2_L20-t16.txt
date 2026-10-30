@@ -1,0 +1,27 @@
+profile of `^quad/sg/cc-uq/b0/d2/L20$` (e2e, 16 threads, self time)
+    13.21%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::uqIntegrand
+    10.51%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     8.04%  perf_e2e  libsgppcombigrid.so      [.] Eigen::internal::kiss_cpx_fft<double>::bfly4
+     6.69%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     6.51%  perf_e2e  libsgppcombigrid.so      [.] void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >
+     5.33%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_operator::processTensorGrid
+     4.42%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     3.92%  perf_e2e  [unknown]                [k] 0xffffffff85e2e90a
+     3.80%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT
+     2.89%  perf_e2e  libm.so.6                [.] __sincos_fma
+     2.33%  perf_e2e  libsgppbase.so           [.] sgpp::base::DataVector::DataVector
+     2.15%  perf_e2e  libm.so.6                [.] __cos_fma
+     1.80%  perf_e2e  [unknown]                [k] 0xffffffff856011b2
+     1.49%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     1.08%  perf_e2e  libm.so.6                [.] __cexp
+     0.93%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     0.93%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     0.87%  perf_e2e  perf_e2e                 [.] exp@plt
+     0.82%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     0.81%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     0.64%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     0.58%  perf_e2e  libc.so.6                [.] __memmove_avx_unaligned_erms
+     0.54%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.53%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     0.50%  perf_e2e  [unknown]                [k] 0xffffffff8570410b
+

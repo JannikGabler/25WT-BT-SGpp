@@ -1,0 +1,45 @@
+samples: 17900
+
+## per dso
+ 41.12 %  libm.so.6
+ 29.12 %  perf_e2e
+ 12.22 %  libsgppcombigrid.so
+  8.88 %  libgomp.so.1.0.0
+  6.40 %  libopenblasp-r0.3.32.so
+  2.00 %  [unknown]
+  0.19 %  libc.so.6
+  0.03 %  libsgppbase.so
+  0.02 %  ld-linux-x86-64.so.2
+  0.01 %  libstdc++.so.6.0.35
+
+## per symbol
+ 25.32 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 19.83 %  __ieee754_exp_fma  [libm.so.6]
+ 19.77 %  exp@@GLIBC_2.29  [libm.so.6]
+ 11.79 %  sgpp::combigrid::quadrature_operator::processTensorGrid  [libsgppcombigrid.so]
+  8.88 %  [unknown]  [libgomp.so.1.0.0]
+  6.40 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.07 %  exp@plt  [perf_e2e]
+  2.00 %  [unknown]  [[unknown]]
+  1.73 %  std::_Function_handler<double   [perf_e2e]
+  1.45 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.21 %  sgpp::combigrid::tools::computeCTCoeffs  [libsgppcombigrid.so]
+  0.09 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  [libsgppcombigrid.so]
+  0.04 %  __cos_fma  [libm.so.6]
+  0.04 %  _mid_memalign  [libc.so.6]
+  0.03 %  Eigen::internal::kissfft_impl<double>::get_plan  [libsgppcombigrid.so]
+  0.03 %  unlink_chunk.isra.0  [libc.so.6]
+  0.03 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.03 %  __sincos_fma  [libm.so.6]
+  0.03 %  _int_malloc  [libc.so.6]
+  0.02 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.02 %  sgpp::combigrid::MIVec<unsigned int>::lookup  [libsgppcombigrid.so]
+  0.02 %  _int_memalign  [libc.so.6]
+  0.02 %  __posix_memalign  [libc.so.6]
+  0.02 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+
+## per symbol / innermost helper (combigrid + base only)
+  6.36 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sumOverRows
+  5.15 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.22 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  updateWeightProducts

@@ -1,0 +1,35 @@
+samples: 2509
+
+## per dso
+ 50.58 %  libgomp.so.1.0.0
+ 39.66 %  libopenblasp-r0.3.32.so
+  6.90 %  [unknown]
+  1.32 %  perf_e2e
+  0.88 %  libm.so.6
+  0.36 %  libsgppcombigrid.so
+  0.16 %  ld-linux-x86-64.so.2
+  0.12 %  libc.so.6
+  0.04 %  libsgppbase.so
+
+## per symbol
+ 50.58 %  [unknown]  [libgomp.so.1.0.0]
+ 39.66 %  [unknown]  [libopenblasp-r0.3.32.so]
+  6.90 %  [unknown]  [[unknown]]
+  1.20 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+  0.68 %  __ieee754_exp_fma  [libm.so.6]
+  0.16 %  sgpp::combigrid::quadrature_operator::processTensorGrid  [libsgppcombigrid.so]
+  0.12 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.12 %  sgpp::combigrid::tools::computeCTCoeffs  [libsgppcombigrid.so]
+  0.12 %  exp@@GLIBC_2.29  [libm.so.6]
+  0.08 %  std::_Function_handler<double   [perf_e2e]
+  0.08 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  [libsgppcombigrid.so]
+  0.04 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.04 %  _int_malloc  [libc.so.6]
+  0.04 %  __cos_fma  [libm.so.6]
+  0.04 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.04 %  exp@plt  [perf_e2e]
+  0.04 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.04 %  operator new  [libsgppbase.so]
+  0.04 %  _mid_memalign  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)

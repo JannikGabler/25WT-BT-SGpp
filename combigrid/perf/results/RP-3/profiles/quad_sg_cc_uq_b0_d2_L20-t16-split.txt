@@ -1,0 +1,55 @@
+samples: 29571
+
+## per dso
+ 24.42 %  libsgppcombigrid.so
+ 24.01 %  libm.so.6
+ 23.13 %  [unknown]
+ 14.91 %  perf_e2e
+  5.16 %  libopenblasp-r0.3.32.so
+  4.58 %  libgomp.so.1.0.0
+  2.36 %  libsgppbase.so
+  1.42 %  libc.so.6
+  0.02 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 23.13 %  [unknown]  [[unknown]]
+ 13.12 %  sgpp::combigrid::perf::uqIntegrand  [perf_e2e]
+ 10.45 %  __ieee754_exp_fma  [libm.so.6]
+  8.00 %  Eigen::internal::kiss_cpx_fft<double>::bfly4  [libsgppcombigrid.so]
+  6.65 %  exp@@GLIBC_2.29  [libm.so.6]
+  6.49 %  void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >  [libsgppcombigrid.so]
+  5.30 %  sgpp::combigrid::quadrature_operator::processTensorGrid  [libsgppcombigrid.so]
+  5.16 %  [unknown]  [libopenblasp-r0.3.32.so]
+  4.58 %  [unknown]  [libgomp.so.1.0.0]
+  3.79 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  [libsgppcombigrid.so]
+  2.87 %  __sincos_fma  [libm.so.6]
+  2.36 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  2.13 %  __cos_fma  [libm.so.6]
+  1.07 %  __cexp  [libm.so.6]
+  0.92 %  std::_Function_handler<double   [perf_e2e]
+  0.87 %  exp@plt  [perf_e2e]
+  0.82 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.80 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.58 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.41 %  Eigen::internal::kissfft_impl<double>::get_plan  [libsgppcombigrid.so]
+  0.30 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.06 %  cos@plt  [libsgppcombigrid.so]
+  0.03 %  __sincos_ifunc@plt  [libm.so.6]
+  0.03 %  sincos@plt  [libsgppcombigrid.so]
+  0.02 %  cexp@plt  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  8.00 %  Eigen::internal::kiss_cpx_fft<double>::bfly4  <=  Eigen::internal::kiss_cpx_fft<double>::bfly4
+  5.63 %  void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >  <=  void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >
+  2.47 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sumOverRows
+  2.46 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate
+  2.36 %  sgpp::base::DataVector::DataVector  <=  double* std::uninitialized_fill_n<double*, unsigned long, double>
+  1.78 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  <=  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT
+  0.86 %  void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >  <=  Eigen::internal::kiss_cpx_fft<double>::bfly2
+  0.66 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  <=  Eigen::internal::kiss_cpx_fft<double>::bfly4
+  0.58 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  <=  Eigen::FFT<double, Eigen::default_fft_impl<double> >::ReflectSpectrum
+  0.51 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  <=  Eigen::internal::kissfft_impl<double>::fwd
+  0.41 %  Eigen::internal::kissfft_impl<double>::get_plan  <=  Eigen::internal::kiss_cpx_fft<double>::make_twiddles
+  0.30 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  <=  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary
+  0.25 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  <=  Eigen::internal::kissfft_impl<double>::real_twiddles
+  0.23 %  sgpp::combigrid::quadrature_operator::processTensorGrid  <=  mapNodesOntoDomain

@@ -1,0 +1,12 @@
+profile of `^interp/sg/cc/b0/d5/L6/p64$` (e2e, 16 threads, self time)
+    52.91%  perf_e2e  libm.so.6                [.] __cos_fma
+    20.01%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::interpolateFirstDim
+    12.34%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     4.25%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate
+     1.81%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     1.79%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::barycentricFormula
+     1.63%  perf_e2e  perf_e2e                 [.] cos@plt
+     1.26%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     1.18%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     0.61%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+

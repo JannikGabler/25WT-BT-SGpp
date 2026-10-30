@@ -1,0 +1,46 @@
+samples: 92551
+
+## per dso
+ 58.42 %  libm.so.6
+ 22.78 %  libsgppcombigrid.so
+ 12.23 %  perf_e2e
+  3.86 %  libgomp.so.1.0.0
+  1.51 %  [unknown]
+  1.06 %  libopenblasp-r0.3.32.so
+  0.14 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libstdc++.so.6.0.35
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 58.42 %  __cos_fma  [libm.so.6]
+ 19.05 %  sgpp::combigrid::global_interpolation::interpolateFirstDim  [libsgppcombigrid.so]
+  9.47 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  3.86 %  [unknown]  [libgomp.so.1.0.0]
+  2.52 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate  [libsgppcombigrid.so]
+  1.85 %  cos@plt  [perf_e2e]
+  1.51 %  [unknown]  [[unknown]]
+  1.06 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.99 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::barycentricFormula  [libsgppcombigrid.so]
+  0.91 %  std::_Function_handler<double   [perf_e2e]
+  0.18 %  sgpp::combigrid::global_interpolation::interpolateLaterDim  [libsgppcombigrid.so]
+  0.09 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.03 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.03 %  memmove@plt  [libsgppcombigrid.so]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _mid_memalign  [libc.so.6]
+  0.00 %  start_thread  [libc.so.6]
+  0.00 %  std::ctype<wchar_t>::_M_initialize_ctype  [libstdc++.so.6.0.35]
+  0.00 %  alloc_new_heap  [libc.so.6]
+  0.00 %  operator new  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::global_interpolation::interpolate  [libsgppcombigrid.so]
+  0.00 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.00 %  _int_free_maybe_trim  [libc.so.6]
+  0.00 %  _int_malloc  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+ 11.75 %  sgpp::combigrid::global_interpolation::interpolateFirstDim  <=  sgpp::combigrid::global_interpolation::interpolateFirstDim
+  5.57 %  sgpp::combigrid::global_interpolation::interpolateFirstDim  <=  sgpp::combigrid::TensorGrid::getGridPoint
+  1.61 %  sgpp::combigrid::global_interpolation::interpolateFirstDim  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.55 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate  <=  sgpp::combigrid::tools::nearlyEqual

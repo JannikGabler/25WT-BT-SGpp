@@ -1,0 +1,45 @@
+samples: 326311
+
+## per dso
+ 44.35 %  perf_e2e
+ 33.68 %  libsgppcombigrid.so
+ 18.95 %  libm.so.6
+  1.67 %  libc.so.6
+  0.66 %  [unknown]
+  0.37 %  libgomp.so.1.0.0
+  0.32 %  libopenblasp-r0.3.32.so
+  0.00 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 42.07 %  sgpp::combigrid::perf::uqIntegrand  [perf_e2e]
+ 33.09 %  rEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid  [libsgppcombigrid.so]
+ 10.46 %  __ieee754_exp_fma  [libm.so.6]
+  7.63 %  exp@@GLIBC_2.29  [libm.so.6]
+  1.66 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  1.16 %  std::_Function_handler<double   [perf_e2e]
+  1.12 %  exp@plt  [perf_e2e]
+  0.84 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.66 %  [unknown]  [[unknown]]
+  0.37 %  [unknown]  [libgomp.so.1.0.0]
+  0.37 %  memset@plt  [libsgppcombigrid.so]
+  0.32 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.08 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  [libsgppcombigrid.so]
+  0.06 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren  [libsgppcombigrid.so]
+  0.03 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::childBlock  [libsgppcombigrid.so]
+  0.01 %  __cos_fma  [libm.so.6]
+  0.00 %  sgpp::combigrid::delta_quadrature_operator::prepareDeltaTensorGrid  [libsgppcombigrid.so]
+  0.00 %  _int_malloc  [libc.so.6]
+  0.00 %  p::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genDeltaNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.00 %  _int_memalign  [libc.so.6]
+  0.00 %  _int_free_maybe_trim  [libc.so.6]
+  0.00 %  sgpp::combigrid::tools::deltas_sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+  0.00 %  _int_free_chunk  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+ 10.80 %  rEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid  <=  sgpp::combigrid::delta_quadrature_operator::updateCoeffSums
+  9.37 %  rEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid  <=  rEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid
+  8.50 %  rEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid  <=  sgpp::combigrid::delta_quadrature_operator::compRowWeights
+  4.42 %  rEachGPWithGlobalWeight<sgpp::combigrid::delta_quadrature_operator::processDeltaTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate
