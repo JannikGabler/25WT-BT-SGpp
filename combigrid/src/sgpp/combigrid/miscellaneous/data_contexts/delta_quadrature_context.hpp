@@ -8,7 +8,6 @@
  */
 #pragma once
 
-#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
@@ -22,11 +21,13 @@ namespace misc {
 
 /**
  * @brief Read-only data of one delta-quadrature call, shared by all functions and threads.
+ *
+ * The source function (@c SourceFunc or @c VectorSourceFunc) is passed separately, so that the
+ * same context serves both value types of the kernel.
  */
 struct DeltaQuadratureContext {
   // Top-level arguments
   const DeltasSparseGrid& deltasSparseGrid;
-  const SourceFunc& sourceFunc;
   const HyperCubeArea& domain;
 
   // Precomputed values

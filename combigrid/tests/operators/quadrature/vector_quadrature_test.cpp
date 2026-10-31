@@ -5,13 +5,16 @@
 
 /**
  * @file vector_quadrature_test.cpp
- * @brief Boost.Test cases for the sparse-grid quadrature of vector-valued source functions
- * (@c VectorSourceFunc): output k equals the scalar quadrature of output k up to round-off.
+ * @brief Boost.Test cases for the sparse-grid and deltas-sparse-grid quadrature of vector-valued
+ * source functions (@c VectorSourceFunc): output k equals the scalar quadrature of output k up to
+ * round-off.
  *
  * The vector and the scalar kernels perform the same operations per output, but the compiler may
  * contract them differently to FMAs (memory vs. register accumulators), and the thread results
  * are combined in a different order. The test integrands are positive and all quadrature weights
- * are positive, so the sums of a tensor grid do not cancel and round-off is relative to them.
+ * of a tensor grid are positive, so the sums of a tensor grid do not cancel and round-off is
+ * relative to them. The global weights of the deltas sparse grid have both signs (they contain
+ * the combination coefficients): there, round-off is relative to the sum of the absolute terms.
  */
 
 #define BOOST_TEST_DYN_LINK
@@ -20,6 +23,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/unit_test_suite.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <sgpp/base/datatypes/DataVector.hpp>
@@ -28,16 +32,23 @@
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -256,6 +267,242 @@ BOOST_AUTO_TEST_CASE(Wrong_Result_Size_Is_Rejected) {
   for (const size_t size : {0u, 2u, 4u}) {
     std::vector<double> result(size);
     BOOST_CHECK_THROW(quadrature(sourceFunc, sg, result), std::invalid_argument);
+  }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+namespace {
+
+/// Relative tolerance of the comparison of the deltas sparse grid quadrature with the sparse grid
+/// quadrature (different algorithms: round-off of the combination), as in delta_quadrature_test.
+constexpr double DSG_VS_SG_TOL = 1e-11;
+
+/// Anisotropic MIs for high dimensions (closure computed by MIVecSGGenInstr; unlike
+/// anisotropicMIs without (1, ..., 1), whose full grid has 3^d to 5^d points): 4 e_0,
+/// e_0 + e_1 + e_2, e_{d-2} + 2 e_{d-1}.
+LvlMIVec sparseAnisotropicMIs(const size_t nDim) {
+  LvlMI first(nDim, 0), mixed(nDim, 0), last(nDim, 0);
+  first[0] = 4;
+  mixed[0] = mixed[1] = mixed[2] = 1;
+  last[nDim - 2] = 1;
+  last[nDim - 1] = 2;
+  return LvlMIVec(std::vector<LvlMI>{first, mixed, last});
+}
+
+/// Data that the deltas sparse grid quadrature precomputes, assembled with the internal helpers.
+struct DeltaQuadratureData {
+  explicit DeltaQuadratureData(const DeltasSparseGrid& dsg)
+      : weights1D(tools::dsg_quadrature::comp1DWeights(dsg)),
+        coeffTrie(dsg.getTensorGrids(), dsg.nDim()),
+        context{.deltasSparseGrid = dsg,
+                .domain = dsg.getGenInstr().getDomain(),
+                .weights1D = weights1D,
+                .coeffTrie = coeffTrie} {}
+
+  const misc::FlatNestedVec<double, 3> weights1D;
+  const misc::CTCoeffTrie coeffTrie;
+  const misc::DeltaQuadratureContext context;
+};
+
+/**
+ * Compares the vector processDeltaTensorGrid with the scalar one of every output, delta tensor
+ * grid by delta tensor grid (same points in the same order, results within round-off of the sum
+ * of |global weight * value|), and returns the scale of the combined results: per output, volume
+ * * sum of |global weight * value| over all grid points.
+ */
+std::vector<double> checkDeltaTensorGrids(const DeltasSparseGrid& dsg, const size_t nOutputs) {
+  const DeltaQuadratureData data(dsg);
+  const size_t maxSum = dsg.getMaxTGSumOverGPCntsPerDim();
+  misc::DeltaQuadratureScratch scalarScratch(dsg.nDim(), maxSum);
+  misc::DeltaQuadratureScratch vectorScratch(dsg.nDim(), maxSum, nOutputs);
+
+  std::vector<DataVector> vectorPoints, scalarPoints;
+  const VectorSourceFunc vectorFunc(
+      [&vectorPoints, nOutputs](const DataVector& x, std::span<double> out) {
+        BOOST_REQUIRE_EQUAL(out.size(), nOutputs);
+        vectorPoints.push_back(x);
+        components(x, out);
+      },
+      nOutputs);
+
+  std::vector<double> scales(nOutputs, 0.0);
+
+  for (const TensorGridCTData& tgData : dsg) {
+    std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
+    vectorPoints.clear();
+    tools::dsg_quadrature::processDeltaTensorGrid(data.context, vectorFunc, tgData, vectorScratch,
+                                                  out);
+    BOOST_CHECK_EQUAL(vectorPoints.size(), tgData.tensorGrid.nGP());
+
+    for (size_t k = 0; k < nOutputs; k++) {
+      const SourceFunc scalarFunc([&scalarPoints, k](const DataVector& x) {
+        scalarPoints.push_back(x);
+        return component(x, k);
+      });
+      scalarPoints.clear();
+      const double scalar = tools::dsg_quadrature::processDeltaTensorGrid(data.context, scalarFunc,
+                                                                          tgData, scalarScratch);
+      BOOST_CHECK(scalarPoints == vectorPoints);
+
+      double scale = 0.0;
+      tools::dsg_quadrature::forEachGPWithGlobalWeight(
+          data.context, tgData, scalarScratch,
+          [&scale, k](const DataVector& x, const double globalWeight) {
+            scale += std::abs(globalWeight * component(x, k));
+          });
+
+      BOOST_CHECK_MESSAGE(std::abs(out[k] - scalar) <= ULP_TOL * EPS * scale,
+                          "delta tensor grid, output " << k << ": vector " << out[k] << ", scalar "
+                                                       << scalar << ", scale " << scale);
+      scales[k] += scale;
+    }
+  }
+
+  for (double& scale : scales) scale *= dsg.getGenInstr().getVolumeOfDomain();
+  return scales;
+}
+
+/**
+ * Compares both vector deltas sparse grid quadrature overloads with the scalar deltas sparse grid
+ * quadrature of every output (and the kernels delta tensor grid by delta tensor grid,
+ * checkDeltaTensorGrids), and with the vector sparse grid quadrature.
+ */
+void checkVectorDeltaQuadrature(const SGGenInstr& genInstr, const size_t nOutputs) {
+  const DeltasSparseGrid dsg(genInstr);
+  const SparseGrid sg(genInstr);
+  const std::vector<double> scales = checkDeltaTensorGrids(dsg, nOutputs);
+  const VectorSourceFunc vectorFunc(components, nOutputs);
+
+  std::vector<double> viaSpan(nOutputs, std::numeric_limits<double>::quiet_NaN());
+  quadrature(vectorFunc, dsg, viaSpan);
+  const DataVector viaDataVector = quadrature(vectorFunc, dsg);
+  BOOST_REQUIRE_EQUAL(viaDataVector.size(), nOutputs);
+  const DataVector viaSG = quadrature(vectorFunc, sg);
+
+  // Round-off of the combination grows with the sum of the absolute coefficients
+  double sumOfAbsCoeffs = 0.0;
+  for (const TensorGridCTData& tgData : sg) {
+    sumOfAbsCoeffs += std::abs(static_cast<double>(tgData.coefficient));
+  }
+  const double sgTol = std::max(DSG_VS_SG_TOL, 64.0 * EPS * sumOfAbsCoeffs);
+
+  for (size_t k = 0; k < nOutputs; k++) {
+    const double scalar =
+        quadrature(SourceFunc([k](const DataVector& x) { return component(x, k); }), dsg);
+    const double tol = ULP_TOL * EPS * scales[k];
+
+    BOOST_CHECK_MESSAGE(std::abs(viaSpan[k] - scalar) <= tol,
+                        "output " << k << ": vector (span) " << viaSpan[k] << ", scalar " << scalar
+                                  << ", difference " << viaSpan[k] - scalar);
+    BOOST_CHECK_MESSAGE(
+        std::abs(viaDataVector[k] - scalar) <= tol,
+        "output " << k << ": vector (DataVector) " << viaDataVector[k] << ", scalar " << scalar);
+    BOOST_CHECK_MESSAGE(
+        std::abs(viaSpan[k] - viaSG[k]) <= sgTol * std::max(1.0, std::abs(viaSG[k])),
+        "output " << k << ": vector DSG " << viaSpan[k] << ", vector SG " << viaSG[k]);
+  }
+}
+
+}  // namespace
+
+BOOST_AUTO_TEST_SUITE(vector_delta_quadrature)
+
+BOOST_AUTO_TEST_CASE(Outputs_Equal_Scalar_Quadrature) {
+  // Nested node families (equidistant / Clenshaw-Curtis / mixed with doubling growth; linear
+  // growth is not nested, DeltasSparseGrid rejects it), boundary level offsets 0 / 1 / 2 (>= 1:
+  // projected sub-tries), d = 1, ..., 4, unit and shifted domains, complete (levels 0 and 3) and
+  // MI-vector grids, m = 1 / 3
+  for (const std::string nodes : {"equidistant", "Clenshaw-Curtis", "mixed"}) {
+    for (const LvlType boundary : {0u, 1u, 2u}) {
+      for (size_t nDim = 1; nDim <= 4; nDim++) {
+        for (const bool unitDomain : {true, false}) {
+          for (const size_t nOutputs : {1u, 3u}) {
+            const LvlMIVec mis = anisotropicMIs(nDim);
+            CompleteSGGenInstr level0(0, nDim);
+            CompleteSGGenInstr level3(3, nDim);
+            MIVecSGGenInstr miVec(mis);
+
+            for (SGGenInstr* const genInstr :
+                 {static_cast<SGGenInstr*>(&level0), static_cast<SGGenInstr*>(&level3),
+                  static_cast<SGGenInstr*>(&miVec)}) {
+              configure(*genInstr, nodes, &doublingLvl2GPCntFunction, boundary, unitDomain);
+              BOOST_TEST_CONTEXT(nodes << " nodes, boundary level offset " << boundary << ", nDim "
+                                       << nDim << (unitDomain ? ", unit" : ", shifted")
+                                       << " domain, "
+                                       << (genInstr == &miVec    ? "MIVec"
+                                           : genInstr == &level0 ? "complete, level 0"
+                                                                 : "complete, level 3")
+                                       << ", m = " << nOutputs) {
+                checkVectorDeltaQuadrature(*genInstr, nOutputs);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(Outputs_Equal_Scalar_Quadrature_High_Dimensions) {
+  // Deep projected sub-tries (most dimensions of most delta tensor grids have a single node) with
+  // projected coefficients in double-double arithmetic
+  for (const std::string nodes : {"equidistant", "Clenshaw-Curtis"}) {
+    for (const LvlType boundary : {1u, 2u}) {
+      for (const size_t nDim : {8u, 10u}) {
+        BOOST_TEST_CONTEXT(nodes << " nodes, boundary level offset " << boundary << ", nDim "
+                                 << nDim) {
+          const LvlMIVec mis = sparseAnisotropicMIs(nDim);
+          CompleteSGGenInstr complete(3, nDim);
+          MIVecSGGenInstr miVec(mis);
+
+          for (SGGenInstr* const genInstr :
+               {static_cast<SGGenInstr*>(&complete), static_cast<SGGenInstr*>(&miVec)}) {
+            configure(*genInstr, nodes, &doublingLvl2GPCntFunction, boundary, false);
+            checkVectorDeltaQuadrature(*genInstr, 3);
+          }
+        }
+      }
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
+  // A delta tensor grid without grid points contributes 0 to every output and does not evaluate
+  // the source function
+  CompleteSGGenInstr genInstr(2, 3);
+  const DeltasSparseGrid dsg(genInstr);
+  const DeltaQuadratureData data(dsg);
+
+  size_t nEvaluations = 0;
+  const VectorSourceFunc sourceFunc(
+      [&nEvaluations](const DataVector&, std::span<double> out) {
+        nEvaluations++;
+        for (double& value : out) value = 1.0;
+      },
+      3);
+  misc::DeltaQuadratureScratch scratch(3, dsg.getMaxTGSumOverGPCntsPerDim(), 3);
+
+  for (const GPMI& nGPPerDim : {GPMI{3, 0, 5}, GPMI{0, 3, 5}, GPMI{3, 5, 0}}) {
+    const TensorGridCTData tgData{
+        .mi = LvlMI(3, 0), .coefficient = 1, .tensorGrid = TensorGrid(nGPPerDim)};
+    BOOST_REQUIRE_EQUAL(tgData.tensorGrid.nGP(), 0u);
+    std::vector<double> out(3, std::numeric_limits<double>::quiet_NaN());
+    tools::dsg_quadrature::processDeltaTensorGrid(data.context, sourceFunc, tgData, scratch, out);
+    for (const double value : out) BOOST_CHECK_EQUAL(value, 0.0);
+  }
+
+  BOOST_CHECK_EQUAL(nEvaluations, 0u);
+}
+
+BOOST_AUTO_TEST_CASE(Wrong_Result_Size_Is_Rejected) {
+  CompleteSGGenInstr genInstr(2, 2);
+  const DeltasSparseGrid dsg(genInstr);
+  const VectorSourceFunc sourceFunc(components, 3);
+
+  for (const size_t size : {0u, 2u, 4u}) {
+    std::vector<double> result(size);
+    BOOST_CHECK_THROW(quadrature(sourceFunc, dsg, result), std::invalid_argument);
   }
 }
 

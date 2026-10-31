@@ -305,18 +305,19 @@ std::vector<LvlMI> completeSGLevels(const size_t nDim, const LvlType maxLvl) {
 }
 
 /// Data that quadratureDelta precomputes for @p deltasSG, assembled with the internal helpers,
-/// plus the scratch of one thread.
+/// plus the scratch of one thread and the source function (passed to the kernel separately).
 struct DeltaQuadratureData {
   DeltaQuadratureData(const DeltasSparseGrid& deltasSG, const SourceFunc& sourceFunc)
-      : weights1D(tools::dsg_quadrature::comp1DWeights(deltasSG)),
+      : sourceFunc(sourceFunc),
+        weights1D(tools::dsg_quadrature::comp1DWeights(deltasSG)),
         coeffTrie(deltasSG.getTensorGrids(), deltasSG.nDim()),
         context{.deltasSparseGrid = deltasSG,
-                .sourceFunc = sourceFunc,
                 .domain = deltasSG.getGenInstr().getDomain(),
                 .weights1D = weights1D,
                 .coeffTrie = coeffTrie},
         scratch(deltasSG.nDim(), deltasSG.getMaxTGSumOverGPCntsPerDim()) {}
 
+  const SourceFunc& sourceFunc;
   const misc::FlatNestedVec<double, 3> weights1D;
   const misc::CTCoeffTrie coeffTrie;
   const misc::DeltaQuadratureContext context;
@@ -1478,10 +1479,10 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Independent_Of_Visit_Order) {
 
             BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaTG.mi)) {
               BOOST_CHECK(visit(deltaTG, shared.scratch) == visit(deltaTG, fresh));
-              BOOST_CHECK_EQUAL(
-                  tools::dsg_quadrature::processDeltaTensorGrid(shared.context, deltaTG,
-                                                                shared.scratch),
-                  tools::dsg_quadrature::processDeltaTensorGrid(shared.context, deltaTG, fresh));
+              BOOST_CHECK_EQUAL(tools::dsg_quadrature::processDeltaTensorGrid(
+                                    shared.context, sourceFunc, deltaTG, shared.scratch),
+                                tools::dsg_quadrature::processDeltaTensorGrid(
+                                    shared.context, sourceFunc, deltaTG, fresh));
             }
           }
         }
@@ -1515,7 +1516,7 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Reproduce_Quadrature) {
               double result = 0.0;
               for (const LvlMI& deltaMI : completeSGLevels(nDim, maxLvl)) {
                 result += tools::dsg_quadrature::processDeltaTensorGrid(
-                    data.context, expectedDeltaTGData(deltaMI, genInstr), data.scratch);
+                    data.context, sourceFunc, expectedDeltaTGData(deltaMI, genInstr), data.scratch);
               }
 
               checkQuadResult(result * genInstr.getVolumeOfDomain(), quadrature(sourceFunc, sg));

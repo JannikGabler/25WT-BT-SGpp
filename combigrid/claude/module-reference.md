@@ -17,7 +17,7 @@ functions/
   level_to_grid_point_count_functions/  linear / doubling growth (level → #inner nodes)
   node_generation_functions/            1D node families; default_functions/ (concrete),
                                         getter/ (static singletons)
-  source_functions/                     SourceFunc
+  source_functions/                     SourceFunc, VectorSourceFunc (m outputs)
 grids/
   tensor_grid            anisotropic tensor grid (per-dim node lists)
   sparse_grid_base       common base: nDim, vector<TensorGridCTData> (not SWIG-wrapped)
@@ -30,6 +30,8 @@ miscellaneous/         (namespace misc)
   ct_coefficient_trie/   CTCoeffTrie: prefix tree over the tensor grids' level MIs (DSG quadrature)
   data_contexts/         read-only data of one operator call (QuadratureContext, DeltaQuadratureContext)
   data_scratches/        per-thread scratch (quadrature, delta quadrature, linear interpolation)
+  operators/value_types/ ScalarValues / VectorValues: value types the operator kernels are
+                         templates over (scalar vs. m outputs)
   flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
   iterators/             TensorGridIterator (grid points + MIs without materializing the grid)
   bounding_boxes/        discrete rectangular / unit boxes over MI grids + iterators
@@ -51,7 +53,8 @@ tools/                 (namespace tools)
   combitech_coefficients/               computeCTCoeffs, computeCTCoeffSingle
   sparse_grid_generation/               SparseGrid / DeltasSparseGrid generation, node lookup
   sparse_grid_generation_instructions/  MI generation of the complete sparse grid
-  operators/             quadrature utilities, ProjectedSubTrieBuilder (DSG), generic barycentric formula
+  operators/             quadrature_tools (SG), deltas_sparse_grid_quadrature_tools (DSG internals),
+                         ProjectedSubTrieBuilder (DSG), generic barycentric formula
   downwards_closedness, paretoMaxima, multiindex_bounding_box_generation, multiindex_domination
   multiindex/, multiindex_view/, multiindex_vector/ (component-wise max)   MI helpers
   math/ (binomial, pow, ceil), comparison/ (nearly_equal), data_vector/ (normalization
@@ -89,6 +92,14 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 - `SourceFunc` ([functions/source_functions/source_function.hpp](../src/sgpp/combigrid/functions/source_functions/source_function.hpp)):
   wraps `std::function<double(const base::DataVector&)>`; maps `[0,1]^d → domain` before calling it.
   No caching.
+- `VectorSourceFunc` ([functions/source_functions/vector_source_function.hpp](../src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp)):
+  f: Ω → ℝ^m; wraps `std::function<void(const base::DataVector&, std::span<double>)>` + `nOutputs`
+  (m ≥ 1; 0 throws `base::data_exception`); `nOutputs()`, `evaluate(point, out)`,
+  `evaluateNormalizedInPlace(point, area, out)`. `out.size()` is only asserted (no per-evaluation
+  check). Operators (so far both quadratures) take it through separate overloads; their kernels are
+  templates over `ScalarValues` / `VectorValues` (no runtime dispatch, scalar path unchanged).
+  Output k equals the scalar run of component k within round-off (not bitwise). For m = 1 use
+  `SourceFunc` (the vector path is slower there).
 - `NodeGenFunc`
   ([functions/node_generation_functions/node_generation_function.hpp](../src/sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp)):
   abstract 1D node family; also returns the matching 1D `QuadRule*` and `InterpolationMethod*`.
@@ -101,10 +112,12 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `doublingLvl2GPCntFunction` (2^{ℓ+1}−1 inner nodes, CC-compatible; the Doxygen comment has a typo,
   the code is `tools::pow(2, lvl+1) - 1`).
 - Operators: `interpolate(sourceFunc, point, sg)`, `interpolateLinear(sourceFunc, point, sg)`,
-  `quadrature(sourceFunc, sg)` (SparseGrid or DeltasSparseGrid). OpenMP over tensor grids in the
-  drivers (`quadrature.cpp`, `deltas_sparse_grid_quadrature.cpp`, `global_interpolation.cpp`,
-  `linear_interpolation.cpp`); generation and CT coefficients are parallel above the thresholds in
-  `constants.hpp`.
+  `quadrature(sourceFunc, sg)` (SparseGrid or DeltasSparseGrid); vector-valued (quadrature only so
+  far, both grid types): `quadrature(vectorSourceFunc, sg, out)` (`std::span<double>` of size m,
+  wrong size throws `std::invalid_argument`) and `base::DataVector quadrature(vectorSourceFunc,
+  sg)`. OpenMP over tensor grids in the drivers (`quadrature.cpp`,
+  `deltas_sparse_grid_quadrature.cpp`, `global_interpolation.cpp`, `linear_interpolation.cpp`);
+  generation and CT coefficients are parallel above the thresholds in `constants.hpp`.
 - `tools::computeCTCoeffs(miVec)`: CT coefficients of a downwards-closed MI set.
 
 ## Design rationale (thesis §5)
@@ -151,8 +164,10 @@ operation machinery.
 
 - **Dimension-adaptive refinement** is not implemented; the caller builds the loop on
   `MIVecSGGenInstr` (highest-priority future work; planned by the owner).
-- **No vector-valued source functions** (planned: perf phase WP-29, separate `VectorSourceFunc`).
-  Today: one `SourceFunc` / operator call per output.
+- **Vector-valued source functions only partly implemented**: `VectorSourceFunc` works with the
+  `SparseGrid` and `DeltasSparseGrid` quadrature (C++ only; perf phase WP-29a/b). Interpolation,
+  linear interpolation and the Python bindings follow (WP-29c–d); until then one `SourceFunc` /
+  operator call per output there.
 - **No source-function caching**: shared points are re-evaluated across tensor grids and operator
   calls. Opt-in design chosen (cache in the callable stored in a plain `SourceFunc`), not
   implemented ([PLAN.md](../perf/PLAN.md) WP-26–WP-28).

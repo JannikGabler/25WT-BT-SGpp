@@ -388,6 +388,16 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   cycles). Memory: per-thread builder arrays 13.5 MB of the 24 MB heap at b0 d10 → `TrieNode`
   24 → 16 B ≈ −3 MB per b0 case (vs. baseline 6 b0 `MEM+`, +1.2…+5.8 MiB).
 - **From WP-23**: no cross-library (`libsgppbase`) cost on the DSG row path; estimate unchanged.
+- **From WP-29b**: the row loop is now `forEachGPWithGlobalWeight` inside the template
+  `sumWithGlobalWeights<ValueType>` (`tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.cpp`);
+  changes must keep both instantiations (scalar / vector) correct and 64-byte aligned. Candidates:
+  the loop takes its functor by reference, so after every opaque `evaluate` it reloads the closure
+  fields and the scalar accumulator lives in the caller's frame → pass the functor by value / keep
+  the accumulator in a register. `updateCoeffSums` must stay LTO-inlinable into the scalar
+  instantiation (header-inline; V1 in the .cpp: e2e 0.992x). Placement: LTO inlining in the DSG
+  unit shifts with unrelated code size; if b0 shifts, check op-cache misses and whether
+  `ProjectedSubTrieBuilder::childBlock` is still inlined into `addChildren` (`[[gnu::always_inline]]`
+  candidate).
 
 ## WP-05 — SG quadrature at low d: CC 1D weights and per-thread scratch (incl. RP-1 NEW-A)
 - **Scope after RP-1** (owner 2026-10-28: NEW-A merged into WP-05, runtime rank kept): (a) CC 1D
@@ -1408,8 +1418,10 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   A/B `^interp/|^interplin/`; **(d)** Python bindings (`pysgpp.VectorSourceFunc(callable, nOutputs)`,
   callable(tuple) → sequence of m floats, length checked; exception registry +
   `COMBIGRID_SOURCE_FUNC_EXCEPTION` for the new overloads; overloads return a `DataVector`), Python
-  example, `python-bindings.md`, `SG_PYTHON=1` build (CLAUDE.md §6 "Not implemented" and combigrid/claude/module-reference.md "No vector-valued source
-  functions" are the owner's files → note in the summary).
+  example, `python-bindings.md`, `SG_PYTHON=1` build. **Docs** (owner 2026-10-30): each of WP-29b–d
+  updates the vector-valued lines of CLAUDE.md §2/§6, `combigrid/claude/module-reference.md` (key
+  classes, operators, "Known limitations") and `python-bindings.md` itself (state after WP-29a set
+  by the master); other owner's files → list in the summary.
 - **Measurement**: standard A/B per step on its filter (scalar path: no regression; WP-24's
   prototype: 1.009x, 0 SLOWER); vector gain in the kept comparison benchmark
   (`combigrid/benchmarks/perf/perf_vector_proto.hpp`, `micro/vec/...`) or new production-kernel
@@ -1441,7 +1453,8 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   `sumOverRows` one template; `processTensorGrid(context, SourceFunc|VectorSourceFunc, tg, scratch[,
   out])`; `misc::QuadratureContext` without the function; `QuadratureScratch(nDim, maxSum, nOutputs
   = 0)` holds `valueBuffer` + slot constants; overloads `quadrature(const VectorSourceFunc&, const
-  SparseGrid&, std::span<double>)` (wrong size → `base::data_exception`) + `DataVector` variant;
+  SparseGrid&, std::span<double>)` (wrong size → `std::invalid_argument` since the owner's accept
+  commit, not `base::data_exception` as the summary says) + `DataVector` variant;
   per-thread m-vectors combined in a critical section; both overloads `%ignore`d in `combigrid.i`.
   Tests `vector_source_function_test.cpp`, `vector_quadrature_test.cpp` (per TG same points in the
   same order as scalar, |Δ| ≤ 16 eps·|TG sum|). Measured: scalar 1.002x; vector (1 t, m =
@@ -1452,8 +1465,28 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   `evaluateNormalizedInPlace` / interpolation operations. **(d)**: remove the two `%ignore`s,
   `%ignore` the `std::function` ctors, add the `PyObject*` ctor, exception registry keyed by
   `VectorSourceFunc*`; Python gets the `DataVector` overload.
-- **Status**: WP-29a accepted (2026-10-30); WP-29b in progress (prompt issued 2026-10-30); WP-29c–d
-  ready, one session each after it.
+- **From WP-29b** (accepted 2026-10-31, [summary](summaries/WP-29b-vector-dsg-quadrature.md)):
+  `tools::dsg_quadrature::processDeltaTensorGrid(context, SourceFunc | VectorSourceFunc, deltaTG,
+  scratch[, out])` = TU-local template `sumWithGlobalWeights<ValueType>` around the unchanged row
+  loop (`noinline`, `aligned(64)`; both instantiations 64-byte aligned); trie partial sums / global
+  weights once per point for all m; `misc::DeltaQuadratureContext` without the function;
+  `DeltaQuadratureScratch(nDim, maxSum, nOutputs = 0)`; `combineDeltaTensorGrids`; overloads
+  `quadrature(const VectorSourceFunc&, const DeltasSparseGrid&, std::span<double>)` + `DataVector`
+  variant (wrong size → `std::invalid_argument`). `updateCoeffSums` must stay header-inline (in the
+  .cpp LTO stops inlining it into the scalar instantiation: e2e 0.992x). Measured: scalar 1.001x,
+  memory 0.999; vector (1 t, m = 1/2/4/8/32) b0 d10 L7 0.95/1.62/1.87/2.41/2.96, b1 d20 L6
+  0.93/1.41/1.49/1.79/1.96, incl. sub-tries 0.96/1.71/2.00/2.64/3.18; bitwise equal to scalar
+  runs. DSG is not bound (SWIG never sees the header). For **(c)**: fix the stale comments
+  `tools::{Scalar,Vector}Values` (`quadrature_scratch.hpp:29/38/42/105`, `scalar_values.hpp:11/13`,
+  `quadrature_tools.cpp:220`) and `delta_quadrature_operator::` (`delta_quadrature_context.hpp:35`,
+  `delta_quadrature_scratch.hpp:26/31/57/67`, `projected_sub_trie_builder.hpp:9/25/51`; comments
+  only). For **(d)**: `combigrid.i:245–246` `%ignore quadrature_operator::processTensorGrid /
+  getWeights` names a namespace that no longer exists. Dimension-adaptive: DSG contributions are
+  per delta TG with global weights (not per-ℓ increments; error indicators from the SG kernel);
+  weights and trie rebuilt per call (`prepare` b1 d20 114 ms at 1 t; incremental loop needs trie
+  insertion).
+- **Status**: WP-29a accepted (2026-10-30); WP-29b accepted (2026-10-31); WP-29c in progress
+  (prompt issued 2026-10-31); WP-29d ready, one session after it.
 
 ## WP-30 — Vector-valued source functions: specific optimizations (later)
 - **Source**: owner, 2026-10-29 (low relevance, for later).
@@ -1467,6 +1500,7 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   0.78x (memory accumulators + m-loop per point); WP-24's rowbuf was ≤ 5 % better at m = 2–8. A
   single output belongs in `SourceFunc` (document); candidates: register accumulators for small m,
   rowbuf.
+- **From WP-29b**: DSG vector path at m = 1 0.93–0.96x of `SourceFunc` (4–7 % slower).
 
 ## RP-3 — Re-profiling after WP-03
 - **Source**: rule 7: WP-03 changed the mivec group by 5.08x (6.32 → 1.24 s) and its hot-spot
@@ -1518,6 +1552,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **Functional change**: none (same results). If a removed header is part of the umbrella header
   or the SWIG interface → BLOCKED with options.
 - **Dependencies**: WP-03 (accepted). Low priority (rank after WP-10).
+- **From WP-29b** (small cleanups, add here): `operators/quadrature/quadrature.cpp` (SG) has a
+  `using namespace` (cpplint `build/namespaces` once touched); `tensor_grid.cpp:34` unused variable
+  `sum` (warning in normal builds).
 
 ## WP-32 — Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23)
 - **Source**: WP-23 summary (follow-up); owner 2026-10-29: plan it, then decide on base's

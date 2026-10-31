@@ -8,11 +8,14 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
+#include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
+#include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
@@ -127,18 +130,84 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
   return weights;
 }
 
-double processDeltaTensorGrid(const DeltaQuadratureContext& context,
-                              const TensorGridCTData& deltaTGData,
-                              DeltaQuadratureScratch& scratch) {
-  const SourceFunc& sourceFunc = context.sourceFunc;
-  double result = 0.0;
+namespace {
 
-  forEachGPWithGlobalWeight(context, deltaTGData, scratch,
-                            [&](const base::DataVector& gp, const double globalWeight) {
-                              result += globalWeight * sourceFunc.evaluate(gp);
-                            });
+/**
+ * Sums the global weight times the source function over the grid points of @p deltaTGData and
+ * returns the accumulator of the sums. Written once for both value types (misc::ScalarValues,
+ * misc::VectorValues), which perform the same operations per output; the global weight of a grid
+ * point is computed once for all outputs. @p values (a small view) is captured by value, so that
+ * the row loop reaches the source function through the closure directly (as the scalar kernel
+ * did before the value types).
+ */
+template <typename ValueType>
+typename ValueType::Acc sumWithGlobalWeights(const DeltaQuadratureContext& context,
+                                             const ValueType values,
+                                             const TensorGridCTData& deltaTGData,
+                                             DeltaQuadratureScratch& scratch) {
+  typename ValueType::Acc result = values.zeroAcc(DeltaQuadratureScratch::TG_SUM_ACC);
+
+  forEachGPWithGlobalWeight(
+      context, deltaTGData, scratch,
+      [&result, values](const base::DataVector& gp, const double globalWeight) {
+        values.addScaled(result, globalWeight, values.evaluate(gp));
+      });
 
   return result;
+}
+
+}  // namespace
+
+double processDeltaTensorGrid(const DeltaQuadratureContext& context, const SourceFunc& sourceFunc,
+                              const TensorGridCTData& deltaTGData,
+                              DeltaQuadratureScratch& scratch) {
+  return sumWithGlobalWeights(context, misc::ScalarValues(sourceFunc), deltaTGData, scratch);
+}
+
+void processDeltaTensorGrid(const DeltaQuadratureContext& context,
+                            const VectorSourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
+                            DeltaQuadratureScratch& scratch, const std::span<double> out) {
+  assert(out.size() == sourceFunc.nOutputs());
+  assert(scratch.valueBuffer.size() ==
+         misc::VectorValues::bufferSize(sourceFunc.nOutputs(), DeltaQuadratureScratch::N_ACCS));
+
+  const misc::VectorValues values(sourceFunc, scratch.valueBuffer);
+  values.store(sumWithGlobalWeights(context, values, deltaTGData, scratch), out.data());
+}
+
+/**
+ * Per thread first, then added to @p result, as the reduction of the scalar operator does output
+ * by output.
+ */
+void combineDeltaTensorGrids(const DeltaQuadratureContext& context,
+                             const VectorSourceFunc& sourceFunc, const std::span<double> result) {
+  const DeltasSparseGrid& deltasSparseGrid = context.deltasSparseGrid;
+  const size_t nOutputs = result.size();
+
+  std::ranges::fill(result, 0.0);
+
+#pragma omp parallel
+  {
+    DeltaQuadratureScratch scratch(deltasSparseGrid.nDim(),
+                                   deltasSparseGrid.getMaxTGSumOverGPCntsPerDim(), nOutputs);
+    std::vector<double> tgResult(nOutputs);
+    std::vector<double> threadResult(nOutputs, 0.0);
+
+    // Dynamic scheduling as in the scalar operator (delta tensor grids differ in size by orders
+    // of magnitude)
+#pragma omp for schedule(dynamic) nowait
+    for (const TensorGridCTData& tgData : deltasSparseGrid) {
+      processDeltaTensorGrid(context, sourceFunc, tgData, scratch, tgResult);
+      for (size_t k = 0; k < nOutputs; k++) {
+        threadResult[k] += tgResult[k];
+      }
+    }
+
+#pragma omp critical
+    for (size_t k = 0; k < nOutputs; k++) {
+      result[k] += threadResult[k];
+    }
+  }
 }
 
 void compSubTrie(const DeltaQuadratureContext& context, const LvlMI& deltaTGMI,
@@ -182,24 +251,6 @@ void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
       scratch.gpCntOfProjDepth[projDepth] = nGPPerDim[dim];
       scratch.gpMI[projDepth] = 0;
       projDepth++;
-    }
-  }
-}
-
-void updateCoeffSums(misc::DeltaQuadratureScratch& scratch, const size_t maxDepth) {
-  for (size_t depth = maxDepth; depth >= 1; depth--) {
-    const GPCntType nodeIdx = scratch.gpMI[depth];
-    const misc::DeltaQuadratureScratch::TrieNode* const children = scratch.trieNodes[depth].data();
-    size_t childIdx = 0;
-
-    for (misc::DeltaQuadratureScratch::TrieNode& parent : scratch.trieNodes[depth - 1]) {
-      double sum = 0.0;
-
-      for (; childIdx < parent.childEnd; childIdx++) {
-        sum += children[childIdx].weights[nodeIdx] * children[childIdx].coeffSum;
-      }
-
-      parent.coeffSum = sum;
     }
   }
 }

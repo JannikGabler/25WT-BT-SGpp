@@ -1245,7 +1245,6 @@ inline void addDeltaCases(Suite& suite, const std::string& nodes, const LvlType 
       coeffTrie.emplace(dsg->getTensorGrids(), nDim);
       tgData = selectTGs(*dsg, false)[0];
       context.emplace(misc::DeltaQuadratureContext{.deltasSparseGrid = *dsg,
-                                                   .sourceFunc = sourceFunc,
                                                    .domain = dsg->getGenInstr().getDomain(),
                                                    .weights1D = *weights1D,
                                                    .coeffTrie = *coeffTrie});
@@ -1264,8 +1263,8 @@ inline void addDeltaCases(Suite& suite, const std::string& nodes, const LvlType 
   suite.addMicro("micro/vec/dsg/scalar/" + cfg + "/m1", [=](MicroRun& run) {
     Setup s(nodes, boundary, nDim, maxLvl);
     const ScalarFunc f(perf::expSum);
-    const double production =
-        tools::dsg_quadrature::processDeltaTensorGrid(*s.context, *s.tgData, *s.scratch);
+    const double production = tools::dsg_quadrature::processDeltaTensorGrid(
+        *s.context, s.sourceFunc, *s.tgData, *s.scratch);
     compareResults(run, "dsg/scalar/" + cfg,
                    {processDeltaTGScalar(*s.context, *s.tgData, *s.scratch, f)}, {production});
     run.setItems(static_cast<double>(s.tgData->tensorGrid.nGP()));

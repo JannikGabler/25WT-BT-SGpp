@@ -96,6 +96,7 @@ C++ → Python translation:
 |---|---|
 | `SparseGridBase` (abstract base of `SparseGrid` and `DeltasSparseGrid`) | irrelevant for Python users; its public methods are declared again on `SparseGrid` (see decision 7). Its protected manual-assembly methods (`addTensorGrid`, `setTensorGrid`, …) stay hidden: a grid without instruction or with unset size caches crashes the operators |
 | `DeltasSparseGrid` and its quadrature | not in the umbrella header |
+| `VectorSourceFunc` and the vector-valued `quadrature` overloads | not bound yet (planned: perf phase WP-29d). `VectorSourceFunc` has no proxy and `std::span` no typemap, so `combigrid.i` `%ignore`s both overloads |
 | `QuadRule`, `InterpolationMethod` and their implementations/getters, `NodeGenFunc::getQuadRule` / `getInterpolationMethod`, concrete `node_gen_funcs::*` classes | extension machinery; node types are chosen via the getters, quadrature/interpolation rules are selected automatically |
 | `global_interpolation::*`, `linear_interpolation::*`, `quadrature_operator::*` | internal; because SWIG flattens namespaces they would otherwise become public functions (`*_interpolation::interpolate` would even be merged into the public `interpolate` / `interpolateLinear` as extra overloads) |
 | `tools::computeCTCoeffsNaive` | reference implementation for tests |

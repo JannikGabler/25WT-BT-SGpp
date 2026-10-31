@@ -39,6 +39,7 @@
 
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
@@ -46,6 +47,7 @@
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <span>
 #include <vector>
 
 namespace sgpp {
@@ -93,10 +95,41 @@ misc::FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSpars
 /**
  * @brief Computes the quadrature (on the unit domain) of the grid points of one delta tensor
  * grid, each weighted with its global weight.
+ *
+ * @param context     Read-only data of the delta quadrature call.
+ * @param sourceFunc  Source function.
+ * @param deltaTGData Delta tensor grid.
+ * @param scratch     Per-thread scratch space; reused across calls.
+ * @return Sum of the global weight times the function value over the grid points.
  */
 double processDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
-                              const TensorGridCTData& deltaTGData,
+                              const SourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
                               misc::DeltaQuadratureScratch& scratch);
+
+/**
+ * @brief @ref processDeltaTensorGrid for a vector-valued source function: the same iteration with
+ * m values per grid point (the global weight of a grid point is computed once for all outputs).
+ *
+ * @param context     Read-only data of the delta quadrature call.
+ * @param sourceFunc  Vector-valued source function (m outputs).
+ * @param deltaTGData Delta tensor grid.
+ * @param scratch     Per-thread scratch space, constructed with m outputs; reused across calls.
+ * @param out         Output: the m sums of the delta tensor grid (size m).
+ */
+void processDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
+                            const VectorSourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
+                            misc::DeltaQuadratureScratch& scratch, std::span<double> out);
+
+/**
+ * @brief Sets @p result to the sum of @ref processDeltaTensorGrid (vector-valued) over the delta
+ * tensor grids of @c context.deltasSparseGrid (on the unit domain), in parallel.
+ *
+ * @param context    Read-only data of the delta quadrature call.
+ * @param sourceFunc Vector-valued source function (m outputs).
+ * @param result     Output: the m sums (size m).
+ */
+void combineDeltaTensorGrids(const misc::DeltaQuadratureContext& context,
+                             const VectorSourceFunc& sourceFunc, std::span<double> result);
 
 /**
  * @brief Fills @c scratch.trieNodes with the projected sub-trie of the tensor grids
@@ -127,8 +160,30 @@ void prepareDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
  * @brief Recomputes the partial sums @c coeffSum of the sub-trie nodes of the (projected) depths
  * @c 0, ..., maxDepth-1, i.e. the ones that depend on the node indices of the projected depths
  * @c 1, ..., maxDepth.
+ *
+ * @note Defined in the header, so that both calls in @ref forEachGPWithGlobalWeight are inlined.
+ * Defined in the .cpp, LTO stopped inlining the call before the row loop once there were two
+ * instantiations (scalar and vector-valued); the shorter code moved the row loop within its
+ * op-cache windows (+9 % op-cache misses, deltas sparse grid quadrature at boundary level offset
+ * 0 about 1 % slower at identical instructions).
  */
-void updateCoeffSums(misc::DeltaQuadratureScratch& scratch, size_t maxDepth);
+inline void updateCoeffSums(misc::DeltaQuadratureScratch& scratch, const size_t maxDepth) {
+  for (size_t depth = maxDepth; depth >= 1; depth--) {
+    const GPCntType nodeIdx = scratch.gpMI[depth];
+    const misc::DeltaQuadratureScratch::TrieNode* const children = scratch.trieNodes[depth].data();
+    size_t childIdx = 0;
+
+    for (misc::DeltaQuadratureScratch::TrieNode& parent : scratch.trieNodes[depth - 1]) {
+      double sum = 0.0;
+
+      for (; childIdx < parent.childEnd; childIdx++) {
+        sum += children[childIdx].weights[nodeIdx] * children[childIdx].coeffSum;
+      }
+
+      parent.coeffSum = sum;
+    }
+  }
+}
 
 /**
  * @brief Computes the global weights of the current row of grid points (all @p nGP0 node indices

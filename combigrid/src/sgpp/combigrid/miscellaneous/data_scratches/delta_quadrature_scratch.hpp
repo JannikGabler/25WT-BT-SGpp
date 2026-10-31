@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <limits>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -30,8 +31,17 @@ namespace misc {
  * @c delta_quadrature_operator::compSubTrie), with the partial sums of the global weights, the
  * grid-point coordinates and the global weights of the current row of grid points. Its size does
  * not depend on the number of grid points of the sparse grid.
+ *
+ * For a vector-valued source function (m outputs), the scratch also holds the buffer of the
+ * @c misc::VectorValues of the kernel: the m values at the current grid point and the m sums of
+ * the delta tensor grid.
  */
 struct DeltaQuadratureScratch {
+  /// @brief Accumulator slot of the sums of the delta tensor grid (@c misc::VectorValues::zeroAcc).
+  static constexpr std::size_t TG_SUM_ACC = 0;
+  /// @brief Number of accumulator slots of the kernel.
+  static constexpr std::size_t N_ACCS = 1;
+
   /**
    * @brief Node of the projected sub-trie.
    *
@@ -69,8 +79,11 @@ struct DeltaQuadratureScratch {
    * @param nDim                     Spatial dimension.
    * @param maxTGSumOverGPCntsPerDim Upper bound on @f$\sum_k n_k@f$ across the delta tensor
    *                                 grids that will be processed.
+   * @param nOutputs                 Number of outputs m of a vector-valued source function, 0 for
+   *                                 a scalar source function (no @ref valueBuffer).
    */
-  DeltaQuadratureScratch(const size_t nDim, const size_t maxTGSumOverGPCntsPerDim)
+  DeltaQuadratureScratch(const size_t nDim, const size_t maxTGSumOverGPCntsPerDim,
+                         const size_t nOutputs = 0)
       : trieNodes(nDim),
         projChildBlocks(nDim),
         nodesPerDim(maxTGSumOverGPCntsPerDim),
@@ -78,7 +91,8 @@ struct DeltaQuadratureScratch {
         gpCntOfProjDepth(nDim),
         gp(nDim),
         gpMI(nDim),
-        rowWeights(maxTGSumOverGPCntsPerDim) {
+        rowWeights(maxTGSumOverGPCntsPerDim),
+        valueBuffer(misc::VectorValues::bufferSize(nOutputs, N_ACCS)) {
     projDims.reserve(nDim);
   }
 
@@ -113,6 +127,9 @@ struct DeltaQuadratureScratch {
   /// @brief Global weights of the grid points of the current row (all node indices of
   /// dimension @c projDims[0], the other ones fixed by @ref gpMI).
   base::DataVector rowWeights;
+  /// @brief Buffer of the @c misc::VectorValues of a vector-valued source function (empty for a
+  /// scalar one; accumulator slot @ref TG_SUM_ACC).
+  std::vector<double> valueBuffer;
 };
 
 }  // namespace misc
