@@ -10,6 +10,7 @@
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -119,9 +120,9 @@ void getWeights(const QuadratureContext& context, const TensorGrid& tg,
 }
 
 /**
- * Maps the nodes of @p tg onto the domain (once, instead of for every grid point; same
- * arithmetic as tools::denormalizeDataVector) and moves to the first grid point (all node
- * indices 0).
+ * Maps the nodes of @p tg onto the domain (once, instead of for every grid point; with
+ * tools::mapToDomain, as interpolation, so that both evaluate bitwise identical points) and moves
+ * to the first grid point (all node indices 0).
  */
 void mapNodesOntoDomain(const QuadratureContext& context, const TensorGrid& tg,
                         QuadratureScratch& scratch) {
@@ -139,7 +140,7 @@ void mapNodesOntoDomain(const QuadratureContext& context, const TensorGrid& tg,
     double* const nodes = scratch.nodesPerDim.data() + offset;
 
     for (GPCntType nodeIdx = 0; nodeIdx < nGPPerDim[dim]; nodeIdx++) {
-      nodes[nodeIdx] = nodesPerDim[offset + nodeIdx] * width + lower;
+      nodes[nodeIdx] = tools::mapToDomain(nodesPerDim[offset + nodeIdx], lower, width);
     }
 
     scratch.gp[dim] = nodes[0];

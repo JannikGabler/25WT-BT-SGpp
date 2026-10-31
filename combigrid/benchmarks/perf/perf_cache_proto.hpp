@@ -10,7 +10,8 @@
  * Everything lives in this header so that all designs are compiled alike (judged flags, LTO):
  * - keys: the bit patterns of the user-domain point (the @c base::DataVector the operators pass to
  *   the user function), hashed with @ref hashPoint (wyhash-style products of independent word
- *   pairs) or with the removed prototype's @c misc::DataVectorHash;
+ *   pairs) or with the removed prototype's @c misc::DataVectorHash (copied here as
+ *   @ref OldProtoHash; the header was deleted in WP-26);
  * - records: fixed size, @c [hash | d key doubles | m value doubles] (m = 1 for @c SourceFunc,
  *   m outputs for a @c VectorSourceFunc, WP-24), stored in chunked arenas; the hash tables only
  *   hold 4-byte record indices (heterogeneous lookup with a @ref Probe), so the bytes per entry
@@ -64,7 +65,6 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/hashing/data_vector_hash.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
@@ -129,8 +129,23 @@ inline uint64_t hashPoint(const double* x, const size_t d) {
   return mum(acc ^ SECRET3, last ^ SECRET2);
 }
 
-/// @brief The removed prototype's hash (@c misc::DataVectorHash, FNV-style combine).
-inline uint64_t hashPointFnv(const base::DataVector& x) { return misc::DataVectorHash()(x); }
+/**
+ * @brief The removed prototype's hash @c misc::DataVectorHash (FNV-style combine; header deleted
+ * in WP-26): its low byte is independent of the key for dyadic coordinates (all keys in one of
+ * 256 shards).
+ */
+struct OldProtoHash {
+  size_t operator()(const base::DataVector& v) const noexcept {
+    size_t h = 1469598103934665603ULL;
+    for (const double d : v) {
+      h ^= static_cast<size_t>(bitsOf(d)) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+    }
+    return h;
+  }
+};
+
+/// @brief The removed prototype's hash (@ref OldProtoHash).
+inline uint64_t hashPointFnv(const base::DataVector& x) { return OldProtoHash()(x); }
 
 #ifdef PERF_CACHE_HAVE_XXH3
 inline uint64_t hashPointXxh3(const double* x, const size_t d) {
@@ -307,7 +322,7 @@ class OldProtoTable {
       : layout_(layout), shards_(256), memLimit_(memLimit) {}
 
   bool find(const base::DataVector& x, uint64_t /*hash*/, double* out) {
-    Shard& s = shards_[misc::DataVectorHash()(x) % shards_.size()];
+    Shard& s = shards_[OldProtoHash()(x) % shards_.size()];
     std::lock_guard<std::mutex> guard(s.mutex);
     const auto it = s.map.find(x);
     if (it == s.map.end()) return false;
@@ -316,7 +331,7 @@ class OldProtoTable {
   }
 
   bool insert(const base::DataVector& x, uint64_t /*hash*/, const double* value) {
-    Shard& s = shards_[misc::DataVectorHash()(x) % shards_.size()];
+    Shard& s = shards_[OldProtoHash()(x) % shards_.size()];
     std::lock_guard<std::mutex> guard(s.mutex);
     // ~ node (64-byte aligned by base's operator new) + key heap block + bucket pointer
     const size_t entryBytes = 128 + 8 * layout_.d + 8;
@@ -342,7 +357,7 @@ class OldProtoTable {
  private:
   struct Shard {
     std::mutex mutex;
-    std::unordered_map<base::DataVector, double, misc::DataVectorHash> map;
+    std::unordered_map<base::DataVector, double, OldProtoHash> map;
     size_t bytes = 0;
   };
   RecordLayout layout_;
@@ -413,6 +428,121 @@ class ShardedTable {
     alignas(64) Lock lock;
     ChunkedArena arena;
     boost::unordered_flat_set<uint32_t, IdxHash<ChunkedArena>, IdxEq<ChunkedArena>> set;
+  };
+
+  Shard& shard(const uint64_t hash) { return *shards_[(hash >> 24) & (nShards_ - 1)]; }
+
+  RecordLayout layout_;
+  size_t nShards_;
+  size_t shardMemLimit_;
+  std::unique_ptr<std::optional<Shard>[]> shards_;
+};
+
+/**
+ * @brief WP-26 decision 5: as @ref ShardedTable, but the index of a shard is an own open-addressing
+ * table (linear probing, 8-byte slots = 32-bit hash fingerprint | record index + 1, grown at load
+ * 3/4 under the shard lock) instead of @c boost::unordered_flat_set. A probe touches a record only
+ * on a fingerprint match.
+ */
+template <typename Lock>
+class ShardedOATable {
+ public:
+  ShardedOATable(const RecordLayout layout, const size_t capacityHint, const size_t memLimit,
+                 const size_t nShards = 64)
+      : layout_(layout), nShards_(nShards), shardMemLimit_(memLimit / nShards) {
+    shards_ = std::make_unique<std::optional<Shard>[]>(nShards);
+    for (size_t s = 0; s < nShards; s++) {
+      shards_[s].emplace(layout);
+      shards_[s]->reserve(capacityHint / nShards + 1);
+    }
+  }
+
+  bool find(const base::DataVector& x, const uint64_t hash, double* out) {
+    Shard& s = shard(hash);
+    std::lock_guard<Lock> guard(s.lock);
+    const uint64_t* record = s.find(Probe{x.data(), hash}, layout_);
+    if (record == nullptr) return false;
+    std::memcpy(out, record + 1 + layout_.d, 8 * layout_.m);
+    return true;
+  }
+
+  bool insert(const base::DataVector& x, const uint64_t hash, const double* value) {
+    Shard& s = shard(hash);
+    std::lock_guard<Lock> guard(s.lock);
+    const Probe p{x.data(), hash};
+    if (s.find(p, layout_) != nullptr) return false;
+    if (s.bytes() + layout_.bytes() > shardMemLimit_) return false;
+    const uint32_t idx = s.arena.allocate();
+    writeRecord(s.arena.record(idx), layout_, x.data(), hash, value);
+    s.add(hash, idx);
+    return true;
+  }
+
+  size_t size() const {
+    size_t n = 0;
+    for (size_t s = 0; s < nShards_; s++) n += shards_[s]->arena.size();
+    return n;
+  }
+
+  size_t bytes() const {
+    size_t n = 0;
+    for (size_t s = 0; s < nShards_; s++) n += shards_[s]->bytes();
+    return n;
+  }
+
+ private:
+  struct Shard {
+    explicit Shard(const RecordLayout layout) : arena(layout) {}
+
+    static uint64_t slotOf(const uint64_t hash, const uint32_t idx) {
+      return (hash & 0xffffffff00000000ull) | (static_cast<uint64_t>(idx) + 1);
+    }
+
+    void reserve(const size_t n) {
+      size_t capacity = 16;
+      while (capacity * 3 < n * 4) capacity *= 2;
+      rehash(capacity);
+    }
+
+    const uint64_t* find(const Probe& p, const RecordLayout layout) const {
+      const uint64_t fp = p.hash & 0xffffffff00000000ull;
+      for (size_t i = p.hash & mask;; i = (i + 1) & mask) {
+        const uint64_t slot = slots[i];
+        if (slot == 0) return nullptr;
+        if ((slot & 0xffffffff00000000ull) == fp) {
+          const uint64_t* record = arena.record(static_cast<uint32_t>(slot) - 1);
+          if (recordMatches(record, layout, p)) return record;
+        }
+      }
+    }
+
+    void add(const uint64_t hash, const uint32_t idx) {
+      if ((arena.size()) * 4 > (mask + 1) * 3) rehash(2 * (mask + 1));
+      place(slotOf(hash, idx), hash);
+    }
+
+    void place(const uint64_t slot, const uint64_t hash) {
+      size_t i = hash & mask;
+      while (slots[i] != 0) i = (i + 1) & mask;
+      slots[i] = slot;
+    }
+
+    void rehash(const size_t capacity) {
+      std::unique_ptr<uint64_t[]> old = std::move(slots);
+      const size_t oldCapacity = old ? mask + 1 : 0;
+      slots.reset(new uint64_t[capacity]());
+      mask = capacity - 1;
+      for (size_t i = 0; i < oldCapacity; i++) {
+        if (old[i] != 0) place(old[i], arena.record(static_cast<uint32_t>(old[i]) - 1)[0]);
+      }
+    }
+
+    size_t bytes() const { return arena.allocatedBytes() + 8 * (mask + 1); }
+
+    alignas(64) Lock lock;
+    ChunkedArena arena;
+    std::unique_ptr<uint64_t[]> slots;
+    size_t mask = 0;
   };
 
   Shard& shard(const uint64_t hash) { return *shards_[(hash >> 24) & (nShards_ - 1)]; }
@@ -995,6 +1125,7 @@ inline void addTableCaseSet(Suite& suite, const size_t nDim, const size_t n) {
   addTableCases<OldProtoTable>(suite, "oldproto", nDim, n);
   addTableCases<ShardedTable<std::mutex>>(suite, "sharded_mutex", nDim, n);
   addTableCases<ShardedTable<SpinLock>>(suite, "sharded_spin", nDim, n);
+  addTableCases<ShardedOATable<SpinLock>>(suite, "sharded_oa_spin", nDim, n);
   addTableCases<BoostConcurrentTable>(suite, "boost_cfs", nDim, n);
 #ifdef PERF_CACHE_HAVE_PHMAP
   addTableCases<PhmapTable>(suite, "phmap", nDim, n);

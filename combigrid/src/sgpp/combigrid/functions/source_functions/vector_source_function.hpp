@@ -11,7 +11,9 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/source_functions/source_function_hook.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 
@@ -26,6 +28,8 @@ namespace combigrid {
  * The operators have overloads for @c VectorSourceFunc that evaluate the function once per grid
  * point for all @f$m@f$ outputs. Output @f$k@f$ of such an operator equals the scalar operator
  * applied to output @f$k@f$ (as a @c SourceFunc) up to round-off.
+ *
+ * Like @c SourceFunc, it may carry an end-of-operator hook (@c CachedVectorSourceFunc).
  */
 class VectorSourceFunc {
  public:
@@ -80,10 +84,35 @@ class VectorSourceFunc {
   void evaluateNormalizedInPlace(base::DataVector& point, const HyperCubeArea& area,
                                  std::span<double> out) const;
 
+  /**
+   * @brief Notifies the hook of the source function, if any, that an operator call has
+   * finished. Every operator calls it once at its end.
+   */
+  void finishOperatorCall() const;
+
+ protected:
+  /**
+   * @brief Wraps the provided callable and attaches @p hook (e.g. @c CachedVectorSourceFunc).
+   * @param func     Callable writing the @p nOutputs values at a point in problem coordinates to
+   *                 its second argument (of size @p nOutputs).
+   * @param nOutputs Number of outputs @f$m@f$.
+   * @param hook     Hook notified at the end of every operator call.
+   * @throws base::data_exception if @p nOutputs is 0.
+   */
+  VectorSourceFunc(std::function<void(const base::DataVector&, std::span<double>)> func,
+                   size_t nOutputs, std::shared_ptr<SourceFuncHook> hook);
+
+  /**
+   * @brief Returns the hook (nullptr for a plain source function).
+   * @return Hook.
+   */
+  const std::shared_ptr<SourceFuncHook>& hook() const;
+
  private:
   /// Wrapped user callable.
   std::function<void(const base::DataVector&, std::span<double>)> func;
-  size_t nOutputs_;  ///< Number of outputs.
+  size_t nOutputs_;                       ///< Number of outputs.
+  std::shared_ptr<SourceFuncHook> hook_;  ///< End-of-operator hook (or nullptr).
 };
 
 }  // namespace combigrid

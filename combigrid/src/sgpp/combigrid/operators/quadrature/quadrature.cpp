@@ -39,6 +39,8 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
     }
   }
 
+  sourceFunc.finishOperatorCall();
+
   return genInstr.getVolumeOfDomain() * result;
 }
 
@@ -59,6 +61,8 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
   for (double& value : result) {
     value *= volume;
   }
+
+  sourceFunc.finishOperatorCall();
 }
 
 base::DataVector quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid) {

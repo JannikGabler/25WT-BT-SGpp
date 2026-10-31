@@ -1,0 +1,3 @@
+limit 1073741824: lookups 640000 hits 618311 entries 20000 rejected 0 wrong 0
+limit 1048576: lookups 640000 hits 506757 entries 16384 rejected 115712 wrong 0
+OK

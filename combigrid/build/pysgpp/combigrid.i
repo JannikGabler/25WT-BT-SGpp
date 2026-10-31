@@ -24,6 +24,9 @@
 %shared_ptr(sgpp::combigrid::SGGenInstr)
 %shared_ptr(sgpp::combigrid::CompleteSGGenInstr)
 %shared_ptr(sgpp::combigrid::MIVecSGGenInstr)
+// The source-function cache (CachedSourceFunc.i) is shared between Python and the cached
+// functions through std::shared_ptr.
+%shared_ptr(sgpp::combigrid::SourceFuncCache)
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,6 +52,9 @@ namespace std {
 %include "Functions.i"
 %include "SourceFunc.i"
 %include "VectorSourceFunc.i"
+// Always wrapped; without Boost >= 1.81 and xxHash >= 0.8 the constructors raise RuntimeError
+// (SourceFuncCache.isAvailable()).
+%include "CachedSourceFunc.i"
 
 // ---------------------------------------------------------------------------
 // Sparse grid generation instructions

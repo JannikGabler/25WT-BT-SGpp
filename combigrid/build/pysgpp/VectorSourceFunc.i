@@ -31,6 +31,9 @@
 // evaluateNormalizedInPlace (an internal step of the operators) is not exposed.
 %ignore sgpp::combigrid::VectorSourceFunc::evaluate(const base::DataVector&, std::span<double>) const;
 %ignore sgpp::combigrid::VectorSourceFunc::evaluateNormalizedInPlace;
+// The end-of-operator hook (e.g. of a CachedVectorSourceFunc) is an internal step of the
+// operators.
+%ignore sgpp::combigrid::VectorSourceFunc::finishOperatorCall;
 
 // Before the %extend block: the handler must precede the declaration of the extended evaluate.
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::VectorSourceFunc::evaluate)

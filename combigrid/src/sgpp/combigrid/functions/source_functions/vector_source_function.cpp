@@ -33,6 +33,11 @@ VectorSourceFunc::VectorSourceFunc(
     std::function<void(const base::DataVector&, std::span<double>)>&& func, const size_t nOutputs)
     : func(std::move(func)), nOutputs_(checkedNOutputs(nOutputs)) {}
 
+VectorSourceFunc::VectorSourceFunc(
+    std::function<void(const base::DataVector&, std::span<double>)> func, const size_t nOutputs,
+    std::shared_ptr<SourceFuncHook> hook)
+    : func(std::move(func)), nOutputs_(checkedNOutputs(nOutputs)), hook_(std::move(hook)) {}
+
 size_t VectorSourceFunc::nOutputs() const { return nOutputs_; }
 
 void VectorSourceFunc::evaluate(const base::DataVector& point, std::span<double> out) const {
@@ -49,6 +54,14 @@ void VectorSourceFunc::evaluateNormalizedInPlace(base::DataVector& point, const 
 
   evaluate(point, out);
 }
+
+void VectorSourceFunc::finishOperatorCall() const {
+  if (hook_ != nullptr) {
+    hook_->finishOperatorCall();
+  }
+}
+
+const std::shared_ptr<SourceFuncHook>& VectorSourceFunc::hook() const { return hook_; }
 
 }  // namespace combigrid
 }  // namespace sgpp

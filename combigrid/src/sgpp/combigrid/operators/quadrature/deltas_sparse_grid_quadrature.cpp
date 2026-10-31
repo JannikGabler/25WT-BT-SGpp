@@ -63,6 +63,8 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
     }
   }
 
+  sourceFunc.finishOperatorCall();
+
   return genInstr.getVolumeOfDomain() * result;
 }
 
@@ -88,6 +90,8 @@ void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& delt
   for (double& value : result) {
     value *= volume;
   }
+
+  sourceFunc.finishOperatorCall();
 }
 
 base::DataVector quadrature(const VectorSourceFunc& sourceFunc,

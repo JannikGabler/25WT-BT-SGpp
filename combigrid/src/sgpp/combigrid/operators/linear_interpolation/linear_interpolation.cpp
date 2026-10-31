@@ -54,6 +54,8 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
     }
   }
 
+  sourceFunc.finishOperatorCall();
+
   return result;
 }
 
@@ -92,6 +94,8 @@ void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVecto
       result[k] += threadResult[k];
     }
   }
+
+  sourceFunc.finishOperatorCall();
 }
 
 base::DataVector interpolateLinear(const VectorSourceFunc& sourceFunc,

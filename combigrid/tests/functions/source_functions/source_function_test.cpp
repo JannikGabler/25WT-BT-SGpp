@@ -8,9 +8,11 @@
  * @brief Boost.Test cases for @c SourceFunc and for the points the operators pass to it.
  *
  * The second suite pins which bit patterns the operators pass to the source function for the
- * same grid point (the property a cache keyed by the user-domain point relies on, WP-25): SG and
- * DSG quadrature use identical patterns, global and multilinear interpolation too; between the
- * two families they are identical on the unit domain only.
+ * same grid point (the property the source-function cache, keyed by the point in problem
+ * coordinates, relies on): all operators map the grid points with tools::mapToDomain
+ * (std::fma), so SG and DSG quadrature and global and multilinear interpolation pass identical
+ * patterns on every domain (WP-26; before, quadrature and interpolation differed by up to one
+ * ulp on non-unit domains).
  */
 
 #define BOOST_TEST_DYN_LINK
@@ -20,6 +22,7 @@
 #include <boost/test/unit_test_suite.hpp>
 
 #include <bit>
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <mutex>
@@ -93,7 +96,7 @@ bool onDomainBoundary(const std::vector<uint64_t>& bits, const HyperCubeArea& do
   for (size_t k = 0; k < bits.size(); k++) {
     const double x = std::bit_cast<double>(bits[k]);
     const double width = domain[k].second - domain[k].first;
-    if (x == domain[k].first || x == width + domain[k].first) return true;
+    if (x == domain[k].first || x == std::fma(1.0, width, domain[k].first)) return true;
   }
   return false;
 }
@@ -108,8 +111,6 @@ void checkOperatorsEvaluateIdenticalPoints(NodeGenFunc* nodes, const LvlType bou
   genInstr.setDomain(domain);
   const SparseGrid sg(genInstr);
   const DeltasSparseGrid dsg(genInstr);
-  bool unitDomain = true;
-  for (const auto& [lower, upper] : domain) unitDomain = unitDomain && lower == 0.0 && upper == 1.0;
 
   PointRecorder quad, deltaQuad, interp, interpLin;
   sgpp::combigrid::quadrature(quad.func(), sg);
@@ -128,17 +129,15 @@ void checkOperatorsEvaluateIdenticalPoints(NodeGenFunc* nodes, const LvlType bou
   }
 
   // The DSG evaluates every distinct point exactly once, SG quadrature the same points (with
-  // repetitions; both map the nodes of a tensor grid onto the domain with u * width + lower).
+  // repetitions; both map the nodes of a tensor grid onto the domain with tools::mapToDomain).
   BOOST_CHECK_EQUAL(deltaQuad.evaluations(), deltaQuad.points().size());
   BOOST_CHECK(quad.points() == deltaQuad.points());
 
   // Global interpolation evaluates every grid point with one bit pattern (shared points of
-  // different tensor grids are identical). It maps with tools::denormalizeDataVector, which is
-  // not contracted to an FMA (the store to the point may alias the domain), while the quadrature
-  // mappings are where the target has FMA: on non-unit domains the patterns differ by up to one
-  // ulp between the two families (judged build); on the unit domain both are exact.
+  // different tensor grids are identical), mapped with tools::denormalizeDataVector, i.e. also
+  // with tools::mapToDomain: the same patterns as quadrature, also on non-unit domains.
   BOOST_CHECK_EQUAL(interp.points().size(), quad.points().size());
-  if (unitDomain) BOOST_CHECK(interp.points() == quad.points());
+  BOOST_CHECK(interp.points() == quad.points());
 
   // Multilinear interpolation maps like global interpolation and evaluates grid points and, in
   // tensor grids without boundary nodes in a dimension, points on the domain boundary there (it
@@ -183,7 +182,7 @@ BOOST_AUTO_TEST_CASE(evaluate_normalized_maps_onto_the_domain) {
     DataVector mapped(nDim);
     for (size_t k = 0; k < nDim; k++) {
       unit[k] = 0.125 + 0.25 * static_cast<double>(k);
-      mapped[k] = unit[k] * (domain[k].second - domain[k].first) + domain[k].first;
+      mapped[k] = std::fma(unit[k], domain[k].second - domain[k].first, domain[k].first);
     }
 
     const DataVector unitBefore(unit);
@@ -192,10 +191,11 @@ BOOST_AUTO_TEST_CASE(evaluate_normalized_maps_onto_the_domain) {
 
     const double inPlace = f.evaluateNormalizedInPlace(unit, domain);
     BOOST_CHECK_EQUAL(inPlace, outOfPlace);
+    // Overwritten with the mapped point, bitwise as tools::mapToDomain (std::fma)
     for (size_t k = 0; k < nDim; k++) {
-      BOOST_CHECK_CLOSE(unit[k], mapped[k], 1e-13);  // overwritten with the mapped point
+      BOOST_CHECK_EQUAL(std::bit_cast<uint64_t>(unit[k]), std::bit_cast<uint64_t>(mapped[k]));
     }
-    BOOST_CHECK_CLOSE(inPlace, weightedSum(mapped), 1e-12);
+    BOOST_CHECK_EQUAL(inPlace, weightedSum(mapped));
   }
 }
 

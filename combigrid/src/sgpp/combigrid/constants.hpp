@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file constants.hpp
  * @brief Compile-time tuning constants for the @c combigrid module.
@@ -47,9 +52,24 @@ constexpr size_t DWC_MIN_MI_FOR_CONCURRENCY = 10000;
 }  // namespace mi_vec
 
 /**
- * @brief Constants controlling source-function evaluation behavior.
+ * @brief Constants of the source-function cache (@c SourceFuncCache).
  */
-namespace source_func {}  // namespace source_func
+namespace source_func_cache {
+
+/// Number of shards of the table of a cache (each with a lock, a record arena and an index;
+/// selected by bits 24..29 of the hash, so at most 64). WP-25: one shared table at 16 threads
+/// keeps the hits that per-thread tables lose (0.82 vs. 0.47).
+constexpr size_t N_SHARDS = 64;
+
+/// Records per chunk of the record arena of a shard, as a power of two (2^7 = 128: every shard
+/// allocates whole chunks, so small caches must not pay a large chunk per shard; WP-25: 4096
+/// records cost 2.5 KB per entry at 1e4 entries).
+constexpr size_t RECORDS_PER_CHUNK_LOG2 = 7;
+
+/// Default soft memory limit of a cache in bytes (1 GiB).
+constexpr size_t DEFAULT_MEMORY_LIMIT = size_t{1} << 30;
+
+}  // namespace source_func_cache
 
 /**
  * @brief Constants controlling sparse-grid generation instructions.

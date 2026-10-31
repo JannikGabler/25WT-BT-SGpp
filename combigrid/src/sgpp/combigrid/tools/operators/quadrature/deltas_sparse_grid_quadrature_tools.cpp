@@ -19,6 +19,7 @@
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/projected_sub_trie_builder.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
@@ -229,8 +230,8 @@ void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
 
   compSubTrie(context, deltaTGData.mi, scratch);
 
-  // Maps the nodes onto the domain once, instead of every grid point (same arithmetic as
-  // tools::denormalizeDataVector)
+  // Maps the nodes onto the domain once, instead of every grid point (with tools::mapToDomain,
+  // as the other operators)
   size_t offset = 0;
   size_t projDepth = 0;
 
@@ -240,7 +241,7 @@ void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
     double* const nodes = scratch.nodesPerDim.data() + offset;
 
     for (GPCntType nodeIdx = 0; nodeIdx < nGPPerDim[dim]; nodeIdx++) {
-      nodes[nodeIdx] = nodesPerDim[offset + nodeIdx] * width + lower;
+      nodes[nodeIdx] = tools::mapToDomain(nodesPerDim[offset + nodeIdx], lower, width);
     }
 
     scratch.gp[dim] = nodes[0];

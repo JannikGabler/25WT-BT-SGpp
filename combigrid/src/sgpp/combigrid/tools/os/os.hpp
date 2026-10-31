@@ -11,9 +11,8 @@ namespace tools {
 /**
  * @brief Returns @c true iff this translation unit was compiled on Linux.
  *
- * Used by features (e.g. the persistent cache, mmap) that are documented
- * to work only on Linux to query their availability at runtime without
- * preprocessor noise at the call site.
+ * For features that are documented to work only on Linux, to query their
+ * availability at runtime without preprocessor noise at the call site.
  */
 inline bool isLinux() {
 #ifdef __linux__

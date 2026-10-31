@@ -33,7 +33,8 @@
 //    again after an operator call; entries are removed in the (extended) destructor.
 //
 // The vector-valued VectorSourceFunc (VectorSourceFunc.i) uses the same holder (callVector), its
-// own registry VectorSourceFunc* -> holder and the same exception handler.
+// own registry VectorSourceFunc* -> holder and the same exception handler. The cached variants
+// (CachedSourceFunc.i) are registered under their base class pointer.
 
 %{
 #include <algorithm>
@@ -294,6 +295,9 @@ bool raisePendingSourceFuncError(const Func* sourceFunc) {
     delete $self;
   }
 }
+
+// The end-of-operator hook (e.g. of a CachedSourceFunc) is an internal step of the operators.
+%ignore sgpp::combigrid::SourceFunc::finishOperatorCall;
 
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::SourceFunc::evaluate)
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::SourceFunc::evaluateNormalizedInPlace)

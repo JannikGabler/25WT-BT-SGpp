@@ -42,6 +42,8 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
     result += tgData.coefficient * v;
   }
 
+  sourceFunc.finishOperatorCall();
+
   return result;
 }
 
@@ -78,6 +80,8 @@ void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& poi
       result[k] += threadResult[k];
     }
   }
+
+  sourceFunc.finishOperatorCall();
 }
 
 base::DataVector interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,

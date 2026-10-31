@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file source_function.hpp
  * @brief Wrapper for user-supplied black-box functions
@@ -6,7 +11,9 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/source_functions/source_function_hook.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -18,6 +25,10 @@ namespace combigrid {
  *
  * Beyond plain forwarding, the wrapper can transform a normalized
  * @f$[0,1]^d@f$ point into the actual problem domain before evaluating.
+ *
+ * A source function may carry a hook (@c SourceFuncHook) that every operator notifies once at
+ * the end of a call; a @c CachedSourceFunc attaches its cache this way. A plain source function
+ * has none and evaluates the wrapped callable directly.
  */
 class SourceFunc {
  public:
@@ -66,8 +77,30 @@ class SourceFunc {
   double evaluateNormalizedOutOfPlace(const base::DataVector& point,
                                       const HyperCubeArea& area) const;
 
+  /**
+   * @brief Notifies the hook of the source function, if any, that an operator call has
+   * finished. Every operator calls it once at its end.
+   */
+  void finishOperatorCall() const;
+
+ protected:
+  /**
+   * @brief Wraps the provided callable and attaches @p hook (e.g. @c CachedSourceFunc).
+   * @param func Callable mapping a point in problem coordinates to a scalar.
+   * @param hook Hook notified at the end of every operator call.
+   */
+  SourceFunc(std::function<double(const base::DataVector&)> func,
+             std::shared_ptr<SourceFuncHook> hook);
+
+  /**
+   * @brief Returns the hook (nullptr for a plain source function).
+   * @return Hook.
+   */
+  const std::shared_ptr<SourceFuncHook>& hook() const;
+
  private:
   std::function<double(const base::DataVector&)> func;  ///< Wrapped user callable.
+  std::shared_ptr<SourceFuncHook> hook_;                ///< End-of-operator hook (or nullptr).
 };
 
 }  // namespace combigrid

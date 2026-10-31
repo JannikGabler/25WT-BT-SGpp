@@ -55,6 +55,7 @@
 #include <string>
 #include <vector>
 
+#include "perf_cache.hpp"
 #include "perf_cache_proto.hpp"
 #include "perf_harness.hpp"
 #include "perf_problems.hpp"
@@ -957,6 +958,11 @@ int main(int argc, char** argv) {
 
   // WP-25: source-function cache (prototypes, micro/cache/...)
   perf::cache_proto::addCacheProtoCases(suite);
+
+#ifdef SGPP_COMBIGRID_HAS_CACHE_LIBRARIES
+  // WP-26: the production source-function cache (micro/cache/.../production...)
+  perf::cache_production::addCacheProductionCases(suite);
+#endif
 
   return suite.main(argc, argv);
 }

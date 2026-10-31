@@ -40,7 +40,12 @@ tensorGrid}`) → operators `interpolate`, `interpolateLinear`, `quadrature`. A 
 its `quadrature` overload (C++ only) evaluates every grid point once. User functions are wrapped in
 `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators (`interpolate`, `interpolateLinear`,
 both quadratures; Python: all but the C++-only DSG quadrature)); nodes / weights live on [0,1]^d,
-the user domain enters only via `setDomain()`.
+the user domain enters only via `setDomain()` (all operators map with `tools::mapToDomain` =
+`std::fma`, so they evaluate bitwise identical points). Optional caching (WP-26): `CachedSourceFunc`
+/ `CachedVectorSourceFunc` (a `SourceFunc` / `VectorSourceFunc` whose callable looks every point up
+in a shared in-memory `SourceFuncCache`; `CacheConfig{.memoryLimit}`, `statistics()`; Python too);
+always compiled, but works only if Boost ≥ 1.81 and xxHash ≥ 0.8 are found at build time, else
+its constructors throw (`SourceFuncCache::isAvailable()`).
 
 ```cpp
 CompleteSGGenInstr genInstr(/*maxLvl=*/10, /*nDim=*/3);
@@ -128,8 +133,7 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   measurably faster even with LTO.
 - **One type per file** (exceptions: small helpers, optimization). **Methods > 30 lines** get
   decomposed (rare exceptions for optimization).
-- **Errors**: `assert` for internal invariants; otherwise throw a `sgpp::base::*_exception` subclass
-  if viable, else a std exception.
+- **Errors**: `assert` for internal invariants; otherwise throw an exception
 - **Parallelism**: OpenMP in the operator drivers and internally (gated by `constants.hpp`).
 
 ## 6. Gotchas
@@ -146,9 +150,19 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   sources from them.
 - Combigrid is only built in CI's **linux-full** job.
 - The thesis predates refactors: never copy its code without checking the API (code wins).
+- Source-function cache: one `SourceFuncCache` per function (m fixed by the first cached function,
+  another m throws; points of another d bypass it); NaN values are not stored; it only pays for
+  functions ≳ 0.3 µs (the judged suite uses plain `SourceFunc`). Its keys are the user-domain bit
+  patterns: any new unit → domain mapping must use `tools::mapToDomain`.
+- Optional libraries are detected only in
+  [optional_libraries.hpp](combigrid/src/sgpp/combigrid/optional_libraries.hpp) (`__has_include` +
+  version macros; no SCons code): code that needs them tests its macro
+  (`SGPP_COMBIGRID_HAS_CACHE_LIBRARIES`, only in `.cpp` / internal files: it includes `xxhash.h`).
+  Public classes stay unconditional and throw without the library. Force the fallback with
+  `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_CACHE`.
 - Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
-  on `MIVecSGGenInstr`), source-function caching (shared points are re-evaluated), dimension-wise
-  boundary offsets, Leja nodes.
+  on `MIVecSGGenInstr`), disk tier and adaptive policy of the cache (WP-28 / WP-27),
+  dimension-wise boundary offsets, Leja nodes.
 
 ## 7. Python bindings (pysgpp)
 

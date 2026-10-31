@@ -10,14 +10,20 @@ Under [combigrid/src/sgpp/combigrid/](../src/sgpp/combigrid/) (`.lint`/`.os`/`.g
 a matching source are stale build artifacts):
 
 ```
+optional_libraries.hpp the one place that detects optional libraries (__has_include + versions):
+                       SGPP_COMBIGRID_HAS_CACHE_LIBRARIES / HAS_CACHE_LIBRARIES (Boost.Unordered,
+                       xxHash); SGPP_COMBIGRID_DISABLE_CACHE forces "not available"
 constants.hpp          parallelism thresholds per subsystem (mi_vec, sg_gen_instr, ct_coefficients,
-                       sg_gen_node_lookup)
+                       sg_gen_node_lookup); source_func_cache (shards, arena chunk, default limit)
 type_defs.hpp          LvlType, GPCntType, CTCoeffType, MI/MIVec aliases, HyperCubeArea
 functions/
   level_to_grid_point_count_functions/  linear / doubling growth (level → #inner nodes)
   node_generation_functions/            1D node families; default_functions/ (concrete),
                                         getter/ (static singletons)
-  source_functions/                     SourceFunc, VectorSourceFunc (m outputs)
+  source_functions/                     SourceFunc, VectorSourceFunc (m outputs), SourceFuncHook
+                                        (end-of-operator hook); caching/ (always compiled):
+                                        SourceFuncCache, CacheConfig, CacheStatistics,
+                                        CachedSourceFunc, CachedVectorSourceFunc
 grids/
   tensor_grid            anisotropic tensor grid (per-dim node lists)
   sparse_grid_base       common base: nDim, vector<TensorGridCTData> (not SWIG-wrapped)
@@ -35,8 +41,10 @@ miscellaneous/         (namespace misc)
   flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
   iterators/             TensorGridIterator (grid points + MIs without materializing the grid)
   bounding_boxes/        discrete rectangular / unit boxes over MI grids + iterators
-  concurrency/           ConcurrentTaskQueue (node-lookup pipeline)
-  hashing/               std::pair, DataVector hashers
+  caching/               PointValueTable (sharded table of the source-function cache: per shard a
+                         spin lock, RecordArena and boost::unordered_flat_set of record ids; XXH3)
+  concurrency/           ConcurrentTaskQueue (node-lookup pipeline, commented out), SpinLock
+  hashing/               std::pair hasher
   vector_map/            VectorMap (tiny linear-search map)
   multiindex_vector_lookup*, multiindex_lookup_equal   MI → index hash map
 multiindices/          MI<T>, MIVec<T> (flat array ~ matrix), views, references, iterators, hashes,
@@ -63,7 +71,8 @@ tools/                 (namespace tools)
   downwards_closedness, paretoMaxima, multiindex_bounding_box_generation, multiindex_domination
   multiindex/, multiindex_view/, multiindex_vector/ (component-wise max)   MI helpers
   math/ (binomial, pow, ceil), comparison/ (nearly_equal), data_vector/ (normalization
-  [0,1]^d ↔ domain), hashing/ (FNV-1a), collections/ (k-way unique merge), functions/ (equidistant
+  [0,1]^d ↔ domain; mapToDomain = std::fma, the one unit → domain mapping of all operators),
+  hashing/ (FNV-1a), collections/ (k-way unique merge), functions/ (equidistant
   node utilities), os/, concurrency.hpp (range partitioning), iterators.hpp, benchmarking/
 ```
 
@@ -95,8 +104,24 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
     recursive enumeration over the dimensions (colexicographic order; since WP-03), (2)
     `tools::computeCTCoeffs()` (dimension-separated O(|I|·d)), (3) drops zero-coefficient MIs.
 - `SourceFunc` ([functions/source_functions/source_function.hpp](../src/sgpp/combigrid/functions/source_functions/source_function.hpp)):
-  wraps `std::function<double(const base::DataVector&)>`; maps `[0,1]^d → domain` before calling it.
-  No caching.
+  wraps `std::function<double(const base::DataVector&)>`; maps `[0,1]^d → domain` before calling it
+  (`tools::mapToDomain`). Optional end-of-operator hook (`SourceFuncHook`, `std::shared_ptr`,
+  null for plain functions): every operator calls `finishOperatorCall()` once at its end (read once
+  per call, no per-evaluation check). Same for `VectorSourceFunc`.
+- Caching ([functions/source_functions/caching/](../src/sgpp/combigrid/functions/source_functions/caching/),
+  WP-26; works if Boost ≥ 1.81 + xxHash ≥ 0.8 were found when building, see `optional_libraries.hpp`;
+  otherwise every constructor throws `base::not_implemented_exception`, `SourceFuncCache::isAvailable()`):
+  `CachedSourceFunc(func, cache | CacheConfig{})` / `CachedVectorSourceFunc(func, m, …)` are final
+  subclasses without data or virtuals: the stored callable looks the point up in a
+  `SourceFuncCache` (held by `shared_ptr`, attached as hook) and calls `func` on misses only, so
+  operators and plain functions are unchanged (design W) and slicing to `SourceFunc` keeps the
+  caching. Keys = bit patterns of the user-domain point (identical across operators, grids,
+  refinement steps and calls); one cache per function (m fixed by the first cached function,
+  another m throws; d by the first lookup, other d bypass); NaN values are not stored;
+  `CacheConfig::memoryLimit` (default 1 GiB) is a soft limit split over 64 shards (at the limit:
+  stop inserting); `statistics()` (lookups, hits, inserts, rejectedInserts, entries, bytes,
+  operatorCalls); `clear()`. Table: `misc::PointValueTable` (8 (d + m + 1) bytes per record + index).
+  Pays for functions ≳ 0.3 µs (WP-25 break-even) and Python callables (hits skip the GIL).
 - `VectorSourceFunc` ([functions/source_functions/vector_source_function.hpp](../src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp)):
   f: Ω → ℝ^m; wraps `std::function<void(const base::DataVector&, std::span<double>)>` + `nOutputs`
   (m ≥ 1; 0 throws `base::data_exception`); `nOutputs()`, `evaluate(point, out)`,
@@ -137,8 +162,9 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 ## Design rationale (thesis §5)
 
 - **Two domains**: nodes, weights and interpolation live on [0,1]^d. The user domain Ω = ∏[a_k, b_k]
-  enters only (1) in function evaluations (affine map `(b_k−a_k)·u_k + a_k`) and (2) as the factor
-  |Ω| of quadrature results. `SourceFunc` + `SGGenInstr::setDomain()` handle it.
+  enters only (1) in function evaluations (affine map `std::fma(u_k, b_k−a_k, a_k)`,
+  `tools::mapToDomain`, used by all operators so they pass bitwise identical points; WP-26) and (2)
+  as the factor |Ω| of quadrature results. `SourceFunc` + `SGGenInstr::setDomain()` handle it.
 - **Node generation**: `NodeGenFunc` receives the number of *inner* nodes; `SGGenInstr` appends
   boundary nodes per `boundaryLevelOffset`. Level → count (`Lvl2GPCntFunc`) and node positions are
   independent abstractions.
@@ -182,9 +208,11 @@ operation machinery.
   `DataVector`-returning overloads of all three operators are bound; the DSG quadrature (also the
   scalar one) and the `std::span` overloads are C++ only. Python callables run serially under the
   GIL; a vector callable needs one call per grid point for all m outputs.
-- **No source-function caching**: shared points are re-evaluated across tensor grids and operator
-  calls. Opt-in design chosen (cache in the callable stored in a plain `SourceFunc`), not
-  implemented ([PLAN.md](../perf/PLAN.md) WP-26–WP-28).
+- **Source-function caching** (WP-26): in memory only, policy "always" (`CachedSourceFunc`; "none"
+  = plain `SourceFunc`); disk tier (WP-28) and adaptive policy (WP-27) are planned
+  ([PLAN.md](../perf/PLAN.md)). Unavailable (constructors throw) without Boost ≥ 1.81 + xxHash ≥ 0.8. Without a cache,
+  shared points are re-evaluated across tensor grids and operator calls. Python misses still run
+  serially under the GIL.
 - **Reduced representation**: `SparseGrid` operators process full tensor grids, so shared points are
   evaluated repeatedly (Tasmanian / SGMK win at d ≳ 7 for this reason); only the DSG quadrature
   evaluates every point once.
