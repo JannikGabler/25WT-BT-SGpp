@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-29b (2026-10-31) · Next free WP number: 36 · Re-profilings done: 3 (RP-1 10-28, RP-2 10-29, RP-3 10-30; RP-0 = setup)
+Last processed: WP-29c (2026-10-31) · Next free WP number: 36 · Re-profilings done: 3 (RP-1 10-28, RP-2 10-29, RP-3 10-30; RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC
   15.2, 16 threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (2.0 GHz),
@@ -60,7 +60,8 @@ Last processed: WP-29b (2026-10-31) · Next free WP number: 36 · Re-profilings 
 | – | WP-24, WP-25 | Explorations: vector-valued (design T); caching (design W) | accepted | T scalar ≈ 0, vector m = 32 1.3–2.8x; W costs 0, Python warm ~2000x at 16 t; benchmarks `perf_vector_proto.hpp`, `perf_cache_proto.hpp`, `perf_cache_counts.cpp` kept | [WP-24](summaries/WP-24-vector-valued-exploration.md), [WP-25](summaries/WP-25-caching-exploration.md) |
 | – | WP-29a | Vector-valued (a): `VectorSourceFunc`, value types, SG quadrature (+ owner's restructuring) | accepted | scalar 1.002x, memory 1.002, refcheck OK; vector vs. m scalar runs at m = 32: d10 2.68, b1 d20 2.48, d2 L16 1.29; m = 1 0.66–0.93 | [WP-29a](summaries/WP-29a-vector-sg-quadrature.md) |
 | – | WP-29b | Vector-valued (b): DSG quadrature | accepted (10-31) | scalar 1.001x (17.748 → 17.738 s), memory 0.999, refcheck OK; vector at m = 32: b0 d10 2.96, b1 d20 1.96 (incl. sub-tries 3.18), bitwise; m = 1 0.93–0.96 | [WP-29b](summaries/WP-29b-vector-dsg-quadrature.md) |
-| 1 | WP-29c–d | Vector-valued: (c) interp + interplin, (d) bindings | **WP-29c in progress** (10-31); d ready | | |
+| – | WP-29c | Vector-valued (c): global + linear interpolation (+ owner's refactor into `tools::`) | accepted (10-31) | scalar 0.999x (10.258 → 10.263 s), memory 1.004, refcheck OK; vector at m = 32: interp 1.25–2.12, interplin 1.21–1.59; m = 1 0.82–1.01 | [WP-29c](summaries/WP-29c-vector-interpolation.md) |
+| 1 | WP-29d | Vector-valued (d): Python bindings (+ WP-29c refactor leftovers) | **in progress** (10-31) | | |
 | 2 | WP-26 | Caching: wrapper W, in-memory table, policies, `pysgpp.CachedSourceFunc` | needs decision (API details 1–6; after WP-29d) | | |
 | 3 | WP-28 | Caching: disk tier | needs decision (after WP-26) | | |
 | 4 | WP-27 | Caching: adaptive policy | needs decision (after WP-28) | | |
@@ -83,11 +84,11 @@ Last processed: WP-29b (2026-10-31) · Next free WP number: 36 · Re-profilings 
 
 ## Next action
 
-WP-29c (global + linear interpolation) is running (prompt issued 2026-10-31). Owner: commit
-"Accept WP-29b: …" first (tree clean): WP-29b code, tests, benchmarks, summary, `results/WP-29b/`,
-STATUS/PLAN and the last master session's doc updates (CLAUDE.md, module-reference.md,
-python-bindings.md); `compile{ASan,Debug,Normal}.sh` are untracked (snapshots "dirty": commit or
-ignore). WP-26 doc lines: decide then. Next master start: process WP-29c, then issue WP-29d.
+WP-29d (Python bindings + WP-29c refactor leftovers, ASan / `SG_PYTHON=1` re-runs) is running
+(prompt issued 2026-10-31). Owner: commit "Accept WP-29c: …" first (tree clean): code, tests,
+benchmarks, docs, summary, `results/WP-29c/`, STATUS/PLAN; `compile{ASan,Debug,Normal}.sh` are
+still untracked (snapshots "dirty": commit or ignore). Next master start: process WP-29d, then
+present the WP-26 API decisions (1–6) and its doc lines.
 
 ## Open decisions for the owner
 
@@ -144,22 +145,27 @@ ignore). WP-26 doc lines: decide then. Next master start: process WP-29c, then i
 - WP-29b `updateCoeffSums` out-of-line with two kernel instantiations: LTO stops inlining it into
   the scalar row loop (op-cache misses +9 %) and `childBlock` into `addChildren` → e2e 0.992x,
   5 SLOWER → header-inline.
+- WP-29c per-call `std::vector` for the innerk factors in `OptBarycentricFormula`: 10 % of vector
+  time in malloc/free (cc d2 m1 0.74x) → 64-node stack blocks; zero-filling `out` (memset per 1D
+  call). V1 (templates not inlined into exported wrappers, pointer-based ops): interplin d2 micro
+  0.972 SLOWER; V2 (+ `always_inline`) 0.992x → slot-based ops. `aligned(64)` on both collapse
+  templates: op-cache misses 2.6–3.0 M → 17–18 M, cycles +1.6–4 %.
 
 ## Re-profiling
 
 Last: RP-3 (2026-10-30; rp-3 = 0c6ecfc4b). Accepted optimizations since: 0. Features (WP-29a–d,
 WP-26–28; scalar ≈ 0) count only if a group changes ≥ 1.3x or a hot-spot ranking shifts (WP-29a
-1.002x, WP-29b 1.001x: no). RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another
+1.002x, WP-29b 1.001x, WP-29c 0.999x: no). RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another
 rule-7 trigger.
 
 ## Log
 
-- 2026-10-31 WP-29b accepted (owner; commit pending): vector DSG quadrature (2 overloads, wrong size
-  → `std::invalid_argument` like SG), context without the function; scalar 1.001x, memory 0.999,
-  refcheck OK; vector at m = 32 1.96–3.18x. Follow-ups → PLAN.md: WP-04 (functor by value /
-  register accumulator; `childBlock` `always_inline`), WP-30 (DSG m = 1), WP-29c (stale comments),
-  WP-29d (stale `%ignore`), WP-31 (`using namespace`, unused variable). No RP-4. WP-29c issued.
-  STATUS.md compacted (owner's request).
+- 2026-10-31 WP-29c accepted (owner): vector global + linear interpolation, owner's refactor into
+  `tools::{global,lin}_interpolation`; scalar 0.999x, memory 1.004, refcheck OK; vector at m = 32
+  1.21–2.12x; ~1 ulp per 1D step vs. scalar. Follow-ups → PLAN.md: WP-29d (refactor leftovers,
+  ASan + `SG_PYTHON=1` re-run, stale `%ignore`s, module-reference tools files), WP-30 (m = 1
+  0.82–1.01), WP-06/07/08 (new locations, placement). No RP-4 (feature). WP-29d issued.
+  Tests: 20+ full-suite runs, `sin_func_random_cube_3D` did not fail.
 - Test failures: once-seen (WP-02; 0/150 reruns); WP-29a: 2 of 16 normal runs failed a
   time-seeded test (one `equidistant_nodes/sin_func_random_cube_3D` seed 1793379453) → WP-35;
   WP-29b: 0 of 31. Report recurrences.
@@ -172,4 +178,4 @@ rule-7 trigger.
   10-29 WP-02 (5215417ea), RP-2 (50a8737e0: 1.604x), WP-03 (8adcb9536; WP-12 dropped), caching
   prototype removed (6dfcf971a), WP-23 rejected (2221501b2; 0273aa1d7). 10-30 WP-24 (8118ea9a2),
   WP-25 (5ced35885; order RP-3 → WP-29a–d → WP-26 → WP-28 → WP-27 → WP-04 → WP-17), CLAUDE.md
-  compacted (0c6ecfc4b), RP-3 (e1257538d: 1.818x; WP-10 dropped), WP-29a (6dad1b375 + 984c646b5).
+  compacted (0c6ecfc4b), RP-3 (e1257538d: 1.818x; WP-10 dropped), WP-29a (6dad1b375 + 984c646b5). 10-31 WP-29b (a14f723a0; STATUS.md compacted).

@@ -15,7 +15,10 @@
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <span>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -79,6 +82,26 @@ class VectorValues {
     return buffer;
   }
 
+  /**
+   * @brief Evaluates the source function at a normalized point.
+   * @param point Point in @f$[0,1]^d@f$, overwritten with its image in @p area.
+   * @param area  Domain.
+   * @return The m function values (valid until the next evaluation).
+   */
+  const double* evaluateNormalizedInPlace(base::DataVector& point,
+                                          const HyperCubeArea& area) const {
+    sourceFunc->evaluateNormalizedInPlace(point, area, std::span<double>(buffer, nOutputs_));
+    return buffer;
+  }
+
+  /// @brief As @ref evaluateNormalizedInPlace(base::DataVector&, const HyperCubeArea&) const,
+  /// writing the m values to slot @p idx of @p dst (@c dst[idx * m + k]) instead of the buffer.
+  void evaluateNormalizedInPlace(base::DataVector& point, const HyperCubeArea& area,
+                                 std::vector<double>& dst, const size_t idx) const {
+    sourceFunc->evaluateNormalizedInPlace(
+        point, area, std::span<double>(dst.data() + idx * nOutputs_, nOutputs_));
+  }
+
   /// @brief @p acc += @p weight * @p values (m values, output by output).
   void addScaled(const Acc acc, const double weight, const double* const values) const {
     for (size_t k = 0; k < nOutputs_; k++) {
@@ -88,6 +111,14 @@ class VectorValues {
 
   /// @brief Writes the m accumulated values to @p out.
   void store(const Acc acc, double* const out) const { std::copy_n(acc, nOutputs_, out); }
+
+  /// @brief Writes the 1D interpolants of the m outputs of @p values (m per node, node-major) at
+  /// @p pos to slot @p idx of @p dst (@p method's multi-output overload).
+  void interpolate(const InterpolationMethod& method, const double pos,
+                   const std::vector<double>& nodes, const std::vector<double>& values,
+                   std::vector<double>& dst, const size_t idx) const {
+    method.interpolate(pos, nodes, values, nOutputs_, dst.data() + idx * nOutputs_);
+  }
 
  private:
   const VectorSourceFunc* sourceFunc;  ///< Viewed source function.

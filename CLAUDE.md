@@ -38,8 +38,8 @@ Pipeline: a generation instruction (`CompleteSGGenInstr(maxLvl, nDim)` or `MIVec
 for custom / adaptive MI sets) → `SparseGrid` (list of `TensorGridCTData {mi, coefficient,
 tensorGrid}`) → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid` +
 its `quadrature` overload (C++ only) evaluates every grid point once. User functions are wrapped in
-`SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, so far quadrature only (`SparseGrid` and
-`DeltasSparseGrid`), C++ only); nodes / weights live on [0,1]^d, the user domain enters only via
+`SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators (`interpolate`, `interpolateLinear`,
+both quadratures), C++ only); nodes / weights live on [0,1]^d, the user domain enters only via
 `setDomain()`.
 
 ```cpp
@@ -101,6 +101,10 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - **New files**: under the matching subdirectory of
   [combigrid/src/sgpp/combigrid/](combigrid/src/sgpp/combigrid/) (picked up automatically). Public
   API headers go into the umbrella header (required for Python exposure).
+- **Operator internals**: internal methods used by end-user operations go into their own files
+  under [combigrid/src/sgpp/combigrid/tools/](combigrid/src/sgpp/combigrid/tools/) (e.g.
+  [tools/operators/quadrature/](combigrid/src/sgpp/combigrid/tools/operators/quadrature/) for
+  `quadrature`), not into the operator's own file.
 - **C++23** (combigrid need not compile with older standards). `#pragma once`.
 - **Namespaces**: `sgpp::combigrid` (public), `::tools` (under `tools/`), `::misc` (under
   `miscellaneous/`), `::constants`, per-operator namespaces for internals, anonymous namespaces for
@@ -143,9 +147,8 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - Combigrid is only built in CI's **linux-full** job.
 - The thesis predates refactors: never copy its code without checking the API (code wins).
 - Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
-  on `MIVecSGGenInstr`), vector-valued source functions beyond the quadrature (`SparseGrid` and
-  `DeltasSparseGrid`), source-function caching (shared points are re-evaluated), dimension-wise
-  boundary offsets, Leja nodes.
+  on `MIVecSGGenInstr`), Python bindings of vector-valued source functions, source-function
+  caching (shared points are re-evaluated), dimension-wise boundary offsets, Leja nodes.
 
 ## 7. Python bindings (pysgpp)
 

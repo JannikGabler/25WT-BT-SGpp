@@ -23,12 +23,12 @@ namespace misc {
 
 /**
  * @brief Pre-allocated workspace of the delta quadrature for the delta tensor grid currently
- * processed by a thread (see @c delta_quadrature_operator::forEachGPWithGlobalWeight).
+ * processed by a thread (see @c tools::dsg_quadrature::forEachGPWithGlobalWeight).
  *
  * Holds the sub-trie of the @c CTCoeffTrie that contains the tensor grids
  * @f$\vec{\ell} \geq \vec{m}@f$ (where @f$\vec{m}@f$ is the level of the delta tensor grid),
  * projected onto the dimensions in which the delta tensor grid has more than one node (see
- * @c delta_quadrature_operator::compSubTrie), with the partial sums of the global weights, the
+ * @c tools::dsg_quadrature::compSubTrie), with the partial sums of the global weights, the
  * grid-point coordinates and the global weights of the current row of grid points. Its size does
  * not depend on the number of grid points of the sparse grid.
  *
@@ -54,7 +54,7 @@ struct DeltaQuadratureScratch {
     const double* weights;  ///< 1D weights of the delta nodes of the node's dimension.
     std::size_t childEnd;   ///< End of the children in the next projected depth (@c 0 for leaves).
     /**
-     * @brief Leaves: the projected coefficient (see @c delta_quadrature_operator::compSubTrie).
+     * @brief Leaves: the projected coefficient (see @c tools::dsg_quadrature::compSubTrie).
      * Inner nodes of projected depth @c t: the sum of @c weights[gpMI[t+1]] * @c coeffSum over the
      * children, i.e. the global weight with the projected depths @c 0, ..., t factored out.
      */
@@ -64,7 +64,7 @@ struct DeltaQuadratureScratch {
   /**
    * @brief Slot of the last projected depth while the projected sub-trie is built (see
    * @ref projChildBlocks): the projected coefficient accumulated so far, as the unevaluated sum
-   * @c hi + @c lo (double-double, see @c delta_quadrature_operator::compSubTrie).
+   * @c hi + @c lo (double-double, see @c tools::dsg_quadrature::compSubTrie).
    */
   struct ProjLeafSlot {
     double hi;

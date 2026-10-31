@@ -26,7 +26,7 @@ namespace misc {
  * Holds the buffers needed to integrate one tensor grid: the concatenated 1D weight vector for
  * every dimension, the per-dimension quadrature-rule pointers, the nodes mapped onto the domain,
  * and the state of the row-wise iteration over the grid points (see
- * @c quadrature_operator::processTensorGrid). Its size does not depend on the number of grid
+ * @c tools::quadrature::processTensorGrid). Its size does not depend on the number of grid
  * points.
  *
  * The iteration runs over the "iterated dimensions": the row dimension (the first dimension with
@@ -35,11 +35,11 @@ namespace misc {
  * and contribute a constant factor to the weights.
  *
  * For a vector-valued source function (m outputs), the scratch also holds the buffer of the
- * @c tools::VectorValues of the row loop: the m values at the current grid point, the m sums of
+ * @c misc::VectorValues of the row loop: the m values at the current grid point, the m sums of
  * the tensor grid and the m sums of the current row.
  */
 struct QuadratureScratch {
-  /// @brief Accumulator slot of the sums of the tensor grid (@c tools::VectorValues::zeroAcc).
+  /// @brief Accumulator slot of the sums of the tensor grid (@c misc::VectorValues::zeroAcc).
   static constexpr size_t TG_SUM_ACC = 0;
   /// @brief Accumulator slot of the sums of the current row.
   static constexpr size_t ROW_SUM_ACC = 1;
@@ -102,7 +102,7 @@ struct QuadratureScratch {
   /// dimensions with one node (entry 0 is unused).
   std::vector<double> weightProducts;
 
-  /// @brief Buffer of the @c tools::VectorValues of a vector-valued source function (empty for a
+  /// @brief Buffer of the @c misc::VectorValues of a vector-valued source function (empty for a
   /// scalar one; accumulator slots @ref TG_SUM_ACC and @ref ROW_SUM_ACC).
   std::vector<double> valueBuffer;
 };

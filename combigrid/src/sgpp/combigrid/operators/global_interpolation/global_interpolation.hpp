@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file global_interpolation.hpp
  * @brief Global tensor-product interpolation operator on a
@@ -12,7 +17,10 @@
 
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <span>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -36,88 +44,34 @@ namespace combigrid {
 double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
                    const SparseGrid& sparseGrid);
 
-/******************
-Internal operations
-******************/
+/**
+ * @brief Vector-valued counterpart of
+ * @ref interpolate(const SourceFunc&, const base::DataVector&, const SparseGrid&): evaluates the
+ * global interpolants of the m outputs of @p sourceFunc at @p point, evaluating it once per grid
+ * point.
+ *
+ * Output k equals the scalar interpolation of output k (as a @c SourceFunc) up to round-off.
+ *
+ * @param sourceFunc Vector-valued source function (m = @c sourceFunc.nOutputs()).
+ * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().
+ * @param sparseGrid Sparse grid with attached generation instruction.
+ * @param result     Output: the m interpolated values.
+ * @throws std::invalid_argument if the size of @p result is not m.
+ */
+void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
+                 const SparseGrid& sparseGrid, std::span<double> result);
 
 /**
- * @brief Implementation details of the global interpolation operator.
+ * @brief Variant of the @c std::span overload for a @c VectorSourceFunc that returns the m
+ * interpolated values.
  *
- * The tensor-product evaluation proceeds dimension by dimension: the
- * first dimension is collapsed by interpolating across slices of the
- * tensor grid (consuming function values produced by @p sourceFunc); each
- * subsequent dimension is collapsed by interpolating the intermediate
- * results.
+ * @param sourceFunc Vector-valued source function.
+ * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().
+ * @param sparseGrid Sparse grid with attached generation instruction.
+ * @return The m interpolated values.
  */
-namespace global_interpolation {
+base::DataVector interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
+                             const SparseGrid& sparseGrid);
 
-/**
- * @brief Tensor-product global interpolation on a single tensor grid.
- *
- * @param sourceFunc Source function to evaluate at grid points.
- * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tgData     Tensor grid + level multi-index + combination coefficient.
- * @param genInstr   Generation instruction (provides domain, node-generation
- *                   functions, and 1D interpolation methods).
- * @return Interpolated value on this single tensor grid.
- */
-double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
-                   const TensorGridCTData& tgData, const SGGenInstr& genInstr);
-
-/**
- * @brief Collapses dimension 0 of the tensor grid by 1D interpolation.
- *
- * Evaluates @p sourceFunc on the @f$n_0 \cdot \mathrm{nInterpolations}@f$
- * grid points contributing to the first-dimension collapse and produces
- * one interpolated value per slice along dimension 0.
- *
- * @param sourceFunc       Source function.
- * @param point            Query coordinate in dimension 0.
- * @param tgData           Tensor-grid combination data.
- * @param genInstr         Generation instruction (for node generator + domain).
- * @param nInterpolations  Number of slices to collapse
- *                         (@f$\prod_{k\ge 1} n_k@f$).
- * @return Vector of @p nInterpolations intermediate interpolation values.
- */
-std::vector<double> interpolateFirstDim(const SourceFunc& sourceFunc, double point,
-                                        const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                                        size_t nInterpolations);
-
-/**
- * @brief Collapses dimension @p dim (with @c dim @c >=1) in place.
- *
- * Consumes the intermediate values previously produced by
- * @ref interpolateFirstDim or by the previous call to this function and
- * shrinks @p interpolationResults by a factor of @c n_dim. After every
- * dimension has been collapsed, @p interpolationResults contains a single
- * scalar (the final interpolated value).
- *
- * @param dim                  Current dimension being collapsed.
- * @param point                Query coordinate in dimension @p dim.
- * @param tgData               Tensor-grid combination data.
- * @param genInstr             Generation instruction.
- * @param nInterpolations      Number of remaining 1D interpolations after
- *                             this collapse.
- * @param interpolationResults In/out: intermediate values; resized to
- *                             @p nInterpolations on return.
- */
-void interpolateLaterDim(size_t dim, double point, const TensorGridCTData& tgData,
-                         const SGGenInstr& genInstr, size_t nInterpolations,
-                         std::vector<double>& interpolationResults);
-
-/**
- * @brief Computes how many 1D interpolations remain after collapsing each
- * dimension.
- *
- * Entry @c k of the returned vector is @f$\prod_{j>k} n_j@f$, i.e. the
- * number of intermediate values that must be produced when the algorithm
- * is about to collapse dimension @c k.
- *
- * @param tensorGrid Tensor grid.
- * @return Per-dimension interpolation count.
- */
-std::vector<size_t> getInterpolationCntPerDim(const TensorGrid& tensorGrid);
-
-}  // namespace global_interpolation
 }  // namespace combigrid
 }  // namespace sgpp

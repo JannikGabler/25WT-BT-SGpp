@@ -57,7 +57,9 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
+#include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
+#include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -833,7 +835,7 @@ struct InterpTG {
 inline double interpTGScalar(const ScalarFunc& f, const DataVector& point, const InterpTG& ctx) {
   const TensorGrid& tg = ctx.tgData.tensorGrid;
   const size_t nDim = tg.nDim();
-  const std::vector<size_t> cnt = global_interpolation::getInterpolationCntPerDim(tg);
+  const std::vector<size_t> cnt = tools::global_interpolation::getInterpolationCntPerDim(tg);
   const HyperCubeArea& domain = ctx.genInstr.getDomain();
 
   // First dimension (evaluates the source function)
@@ -875,7 +877,7 @@ inline void interpTGVecInnerT(const VecFunc& f, const DataVector& point, const I
   const TensorGrid& tg = ctx.tgData.tensorGrid;
   const size_t nDim = tg.nDim();
   const size_t m = f.nOutputs();
-  const std::vector<size_t> cnt = global_interpolation::getInterpolationCntPerDim(tg);
+  const std::vector<size_t> cnt = tools::global_interpolation::getInterpolationCntPerDim(tg);
   const HyperCubeArea& domain = ctx.genInstr.getDomain();
 
   const GPCntType n0 = tg.getGPCntPerDim()[0];
@@ -935,7 +937,7 @@ inline void interpTGVecOuter(const VecFunc& f, const DataVector& point, const In
   const TensorGrid& tg = ctx.tgData.tensorGrid;
   const size_t nDim = tg.nDim();
   const size_t m = f.nOutputs();
-  const std::vector<size_t> cnt = global_interpolation::getInterpolationCntPerDim(tg);
+  const std::vector<size_t> cnt = tools::global_interpolation::getInterpolationCntPerDim(tg);
   const HyperCubeArea& domain = ctx.genInstr.getDomain();
 
   const GPCntType n0 = tg.getGPCntPerDim()[0];
@@ -1368,7 +1370,7 @@ inline void addInterpCases(Suite& suite, const std::string& nodes, const size_t 
   suite.addMicro("micro/vec/interp/scalar/" + cfg + "/m1", [=](MicroRun& run) {
     const Setup s(nodes, nDim, maxLvl);
     const ScalarFunc f(perf::cosProd);
-    const double production = global_interpolation::interpolate(
+    const double production = tools::global_interpolation::processTensorGrid(
         SourceFunc(perf::cosProd), s.normPoint, s.ctx->tgData, s.sg->getGenInstr());
     compareResults(run, "interp/scalar/" + cfg, {interpTGScalar(f, s.normPoint, *s.ctx)},
                    {production});

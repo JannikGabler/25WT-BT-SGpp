@@ -32,7 +32,7 @@ struct DeltaQuadratureContext {
 
   // Precomputed values
   /// @brief @c weights1D[dim][lvl]: 1D quadrature weights of level @c lvl in delta order (see
-  /// @c delta_quadrature_operator::comp1DWeights).
+  /// @c tools::dsg_quadrature::comp1DWeights).
   const FlatNestedVec<double, 3>& weights1D;
   /// @brief Trie over the levels of the tensor grids with a non-zero coefficient.
   const CTCoeffTrie& coeffTrie;

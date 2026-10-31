@@ -237,8 +237,6 @@ namespace std {
 // linear_interpolation::interpolate would even be merged into the public interpolate /
 // interpolateLinear functions as additional overloads).
 %ignore sgpp::combigrid::global_interpolation::interpolate;
-%ignore sgpp::combigrid::global_interpolation::interpolateFirstDim;
-%ignore sgpp::combigrid::global_interpolation::interpolateLaterDim;
 %ignore sgpp::combigrid::global_interpolation::getInterpolationCntPerDim;
 %ignore sgpp::combigrid::linear_interpolation::interpolate;
 %ignore sgpp::combigrid::linear_interpolation::computeNeighborGPWithWeight;
@@ -249,6 +247,14 @@ namespace std {
 // operator overloads that take one (VectorSourceFunc has no proxy, std::span no typemap).
 %ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&, std::span<double>);
 %ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&);
+%ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
+                                     const SparseGrid&, std::span<double>);
+%ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
+                                     const SparseGrid&);
+%ignore sgpp::combigrid::interpolateLinear(const VectorSourceFunc&, const base::DataVector&,
+                                           const SparseGrid&, std::span<double>);
+%ignore sgpp::combigrid::interpolateLinear(const VectorSourceFunc&, const base::DataVector&,
+                                           const SparseGrid&);
 
 // Re-raise exceptions of Python source functions after the operator returns (see SourceFunc.i).
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::interpolate)

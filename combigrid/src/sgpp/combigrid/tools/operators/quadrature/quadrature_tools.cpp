@@ -217,7 +217,7 @@ void updateWeightProducts(const double* const* const weightsOfIterDim, const GPC
 /**
  * Sums the weight times the source function over all grid points, row by row, starting at the
  * first grid point (set up by prepareTensorGrid), and returns the accumulator of the sums.
- * Written once for both value types (tools::ScalarValues, tools::VectorValues), which perform
+ * Written once for both value types (misc::ScalarValues, misc::VectorValues), which perform
  * the same operations per output.
  *
  * The data of the scratch is copied into locals first: the source function may write to any

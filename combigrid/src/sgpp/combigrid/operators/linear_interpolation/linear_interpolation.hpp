@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file linear_interpolation.hpp
  * @brief Multilinear (piecewise-linear in every dimension) interpolation
@@ -7,8 +12,10 @@
 
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
+#include <span>
 
 namespace sgpp {
 namespace combigrid {
@@ -33,59 +40,34 @@ namespace combigrid {
 double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& point,
                          const SparseGrid& sparseGrid);
 
-/******************
-Internal operations
-******************/
+/**
+ * @brief Vector-valued counterpart of
+ * @ref interpolateLinear(const SourceFunc&, const base::DataVector&, const SparseGrid&):
+ * evaluates the linear interpolants of the m outputs of @p sourceFunc at @p point, evaluating it
+ * once per corner (the corner weights serve all outputs).
+ *
+ * Output k equals the scalar interpolation of output k (as a @c SourceFunc) up to round-off.
+ *
+ * @param sourceFunc Vector-valued source function (m = @c sourceFunc.nOutputs()).
+ * @param point      Evaluation point; must have @c size() == sparseGrid.nDim().
+ * @param sparseGrid Sparse grid with attached generation instruction.
+ * @param result     Output: the m interpolated values.
+ * @throws std::invalid_argument if the size of @p result is not m.
+ */
+void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
+                       const SparseGrid& sparseGrid, std::span<double> result);
 
 /**
- * @brief Implementation details of the linear interpolation operator.
+ * @brief Variant of the @c std::span overload for a @c VectorSourceFunc that returns the m
+ * interpolated values.
  *
- * These helpers operate on a single tensor grid and are used by the
- * top-level driver @ref interpolateLinear. They are exposed primarily for
- * unit-testing.
+ * @param sourceFunc Vector-valued source function.
+ * @param point      Evaluation point; must have @c size() == sparseGrid.nDim().
+ * @param sparseGrid Sparse grid with attached generation instruction.
+ * @return The m interpolated values.
  */
-namespace linear_interpolation {
+base::DataVector interpolateLinear(const VectorSourceFunc& sourceFunc,
+                                   const base::DataVector& point, const SparseGrid& sparseGrid);
 
-/**
- * @brief Multilinear interpolation on a single tensor grid.
- *
- * Performs the @f$2^d@f$-corner multilinear interpolation: identifies the
- * grid cell containing @p point, evaluates @p sourceFunc at each of its
- * @f$2^d@f$ corners, and combines them with the standard tensor-product
- * hat-function weights.
- *
- * @param sourceFunc Source function to evaluate at the corner grid points.
- * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tgData     Tensor grid + level multi-index + combination coefficient.
- * @param genInstr   Generation instruction (used for the domain).
- * @param scratch    Per-thread scratch space; reused across calls.
- * @return Interpolated value on this single tensor grid.
- */
-double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
-                   const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                   misc::LinInterpScratch& scratch);
-
-/**
- * @brief Computes one corner of the surrounding cell and its associated
- * multilinear weight.
- *
- * The bits of @p idx select the lower (@c 0) or upper (@c 1) per-dimension
- * neighbor; iterating @p idx over @f$[0, 2^d)@f$ visits every corner. If
- * the cell has zero extent in some dimension (the query point coincides
- * with a node) the corresponding factor is replaced by @c 0.5 so that
- * both halves of @p idx contribute equally.
- *
- * @param idx              Corner index in @f$[0, 2^d)@f$.
- * @param point            Query point in normalized coordinates.
- * @param nDim             Spatial dimension.
- * @param neighborsPerDim  Per-dimension @c (lower, upper) neighbor pairs.
- * @param gpOut            Output: coordinates of the selected corner.
- * @return Multilinear weight for this corner.
- */
-double computeNeighborGPWithWeight(size_t idx, const base::DataVector& point, const size_t nDim,
-                                   const std::vector<std::pair<double, double>>& neighborsPerDim,
-                                   base::DataVector& gpOut);
-
-}  // namespace linear_interpolation
 }  // namespace combigrid
 }  // namespace sgpp

@@ -1,4 +1,10 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <cassert>
+#include <cstddef>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
@@ -27,6 +33,35 @@ double BarycentricFormula::interpolate(const double pos, const std::vector<doubl
   }
 
   return result;
+}
+
+void BarycentricFormula::interpolate(const double pos, const std::vector<double>& nodes,
+                                     const std::vector<double>& values, const size_t nOutputs,
+                                     double* const out) const {
+  assert(values.size() == nodes.size() * nOutputs);
+
+  if (hasTrivialResult(pos, nodes, values, nOutputs, out)) {
+    return;
+  }
+
+  // The factors of the nodes once for all outputs (in place of the weights), then output by
+  // output (the operations of evaluateFormula per output)
+  const size_t nNodes = nodes.size();
+  std::vector<double> factors = tools::barycentricFormulaWeights(nodes);
+  double denominator = 0.0;
+
+  for (size_t i = 0; i < nNodes; i++) {
+    factors[i] = factors[i] / (pos - nodes[i]);
+    denominator += factors[i];
+  }
+
+  for (size_t k = 0; k < nOutputs; k++) {
+    double numerator = 0.0;
+    for (size_t i = 0; i < nNodes; i++) {
+      numerator += factors[i] * values[i * nOutputs + k];
+    }
+    out[k] = numerator / denominator;
+  }
 }
 
 double BarycentricFormula::evaluateFormula(const double pos, const std::vector<double>& nodes,

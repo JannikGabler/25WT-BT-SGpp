@@ -46,6 +46,8 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
+#include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
+#include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -605,8 +607,8 @@ void addInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, cons
 
     run.setItems(static_cast<double>(tgData.tensorGrid.nGP()));
     run.measure([&]() {
-      doNotOptimize(
-          cg::global_interpolation::interpolate(sourceFunc, normPoint, tgData, sg.getGenInstr()));
+      doNotOptimize(cg::tools::global_interpolation::processTensorGrid(sourceFunc, normPoint,
+                                                                       tgData, sg.getGenInstr()));
     });
   });
 }
@@ -645,8 +647,142 @@ void addLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl) {
 
     run.setItems(std::pow(2.0, static_cast<double>(nDim)));
     run.measure([&]() {
-      doNotOptimize(cg::linear_interpolation::interpolate(sourceFunc, normPoint, tgData,
-                                                          sg.getGenInstr(), scratch));
+      doNotOptimize(cg::tools::lin_interpolation::processTensorGrid(sourceFunc, normPoint, tgData,
+                                                                    sg.getGenInstr(), scratch));
+    });
+  });
+}
+
+/// The m scalar functions vec_proto::cosProdK(., k) and the VectorSourceFunc of all of them.
+std::vector<SourceFunc> cosProdScalarFuncs(const size_t m) {
+  std::vector<SourceFunc> funcs;
+  for (size_t k = 0; k < m; k++) {
+    funcs.emplace_back([k](const DataVector& x) { return perf::vec_proto::cosProdK(x, k); });
+  }
+  return funcs;
+}
+
+cg::VectorSourceFunc cosProdVectorFunc(const size_t m) {
+  return cg::VectorSourceFunc(
+      [](const DataVector& x, std::span<double> out) {
+        for (size_t k = 0; k < out.size(); k++) out[k] = perf::vec_proto::cosProdK(x, k);
+      },
+      m);
+}
+
+/// Sparse grid, query point and largest tensor grid of the vector-valued interpolation cases.
+struct VectorInterpSetup {
+  VectorInterpSetup(const std::string& nodes, const LvlType boundary, const size_t nDim,
+                    const LvlType maxLvl, const unsigned seed)
+      : domain(perf::shiftedDomain(nDim)), genInstr(maxLvl, nDim) {
+    perf::configure(genInstr, nodes, boundary, domain);
+    sg.emplace(genInstr);
+    const DataVector point = perf::randomPoints(domain, 1, seed)[0];
+    normPoint = cg::tools::normalizeDataVector(point, domain);
+    tgData = &largestTensorGrid(*sg);
+  }
+
+  HyperCubeArea domain;
+  CompleteSGGenInstr genInstr;
+  std::optional<SparseGrid> sg;
+  DataVector normPoint;
+  const TensorGridCTData* tgData = nullptr;
+};
+
+/**
+ * WP-29c: global interpolation of a vector-valued source function with the production kernels
+ * on the largest tensor grid (the micro/interp/global_tg configurations), ns per grid point and
+ * output: micro/interp/global_tg_vec/<cfg>/m<m> (one VectorSourceFunc with the m outputs
+ * vec_proto::cosProdK) vs. micro/interp/global_tg_scalar_x_m/<cfg>/m<m> (m scalar runs). Counter
+ * max_ulp: vector vs. scalar results.
+ */
+void addVectorInterpTG(Suite& suite, const std::string& nodes, const size_t nDim,
+                       const LvlType maxLvl, const size_t m) {
+  const std::string name = cfg(nodes, 0, nDim, maxLvl) + "/m" + std::to_string(m);
+
+  suite.addMicro("micro/interp/global_tg_scalar_x_m/" + name, [=](MicroRun& run) {
+    const VectorInterpSetup s(nodes, 0, nDim, maxLvl, 99);
+    const std::vector<SourceFunc> funcs = cosProdScalarFuncs(m);
+    const cg::SGGenInstr& genInstr = s.sg->getGenInstr();
+
+    run.setItems(static_cast<double>(s.tgData->tensorGrid.nGP() * m));
+    run.measure([&]() {
+      for (const SourceFunc& f : funcs) {
+        doNotOptimize(cg::tools::global_interpolation::processTensorGrid(f, s.normPoint, *s.tgData,
+                                                                         genInstr));
+      }
+    });
+  });
+
+  suite.addMicro("micro/interp/global_tg_vec/" + name, [=](MicroRun& run) {
+    const VectorInterpSetup s(nodes, 0, nDim, maxLvl, 99);
+    const cg::VectorSourceFunc f = cosProdVectorFunc(m);
+    const cg::SGGenInstr& genInstr = s.sg->getGenInstr();
+    std::vector<double> result(m), scalars;
+
+    cg::tools::global_interpolation::processTensorGrid(f, s.normPoint, *s.tgData, genInstr, result);
+    for (const SourceFunc& fk : cosProdScalarFuncs(m)) {
+      scalars.push_back(
+          cg::tools::global_interpolation::processTensorGrid(fk, s.normPoint, *s.tgData, genInstr));
+    }
+    perf::vec_proto::compareResults(run, name, result, scalars);
+
+    run.setItems(static_cast<double>(s.tgData->tensorGrid.nGP() * m));
+    run.measure([&]() {
+      cg::tools::global_interpolation::processTensorGrid(f, s.normPoint, *s.tgData, genInstr,
+                                                         result);
+      doNotOptimize(result.data());
+      perf::clobberMemory();
+    });
+  });
+}
+
+/**
+ * WP-29c: linear interpolation of a vector-valued source function with the production kernels
+ * on the largest tensor grid (the micro/interplin/tg configurations), ns per corner and output:
+ * micro/interplin/tg_vec/<cfg>/m<m> vs. micro/interplin/tg_scalar_x_m/<cfg>/m<m> (as
+ * addVectorInterpTG).
+ */
+void addVectorLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl, const size_t m) {
+  const std::string name = cfg("equi", 1, nDim, maxLvl) + "/m" + std::to_string(m);
+  const double nCorners = std::pow(2.0, static_cast<double>(nDim));
+
+  suite.addMicro("micro/interplin/tg_scalar_x_m/" + name, [=](MicroRun& run) {
+    const VectorInterpSetup s("equi", 1, nDim, maxLvl, 98);
+    const std::vector<SourceFunc> funcs = cosProdScalarFuncs(m);
+    const cg::SGGenInstr& genInstr = s.sg->getGenInstr();
+    cg::misc::LinInterpScratch scratch(nDim);
+
+    run.setItems(nCorners * static_cast<double>(m));
+    run.measure([&]() {
+      for (const SourceFunc& f : funcs) {
+        doNotOptimize(cg::tools::lin_interpolation::processTensorGrid(f, s.normPoint, *s.tgData,
+                                                                      genInstr, scratch));
+      }
+    });
+  });
+
+  suite.addMicro("micro/interplin/tg_vec/" + name, [=](MicroRun& run) {
+    const VectorInterpSetup s("equi", 1, nDim, maxLvl, 98);
+    const cg::VectorSourceFunc f = cosProdVectorFunc(m);
+    const cg::SGGenInstr& genInstr = s.sg->getGenInstr();
+    cg::misc::LinInterpScratch scratch(nDim, m), scalarScratch(nDim);
+    std::vector<double> result(m), scalars;
+
+    cg::tools::lin_interpolation::processTensorGrid(f, s.normPoint, *s.tgData, genInstr, scratch,
+                                                    result);
+    for (const SourceFunc& fk : cosProdScalarFuncs(m)) {
+      scalars.push_back(cg::tools::lin_interpolation::processTensorGrid(fk, s.normPoint, *s.tgData,
+                                                                        genInstr, scalarScratch));
+    }
+    perf::vec_proto::compareResults(run, name, result, scalars);
+
+    run.setItems(nCorners * static_cast<double>(m));
+    run.measure([&]() {
+      cg::tools::lin_interpolation::processTensorGrid(f, s.normPoint, *s.tgData, genInstr, scratch,
+                                                      result);
+      doNotOptimize(result.data());
+      perf::clobberMemory();
     });
   });
 }
@@ -765,11 +901,16 @@ int main(int argc, char** argv) {
   // Interpolation
   addInterpTG(suite, "cc", 5, 6);
   addInterpTG(suite, "cheb1", 5, 4);
+  addInterpTG(suite, "cc", 10, 2);  // WP-29c: high / low d, equi (generic formula)
+  addInterpTG(suite, "cc", 2, 12);
+  addInterpTG(suite, "equi", 3, 5);
   addBarycentric1D(suite, false, 9);
   addBarycentric1D(suite, false, 65);
   addBarycentric1D(suite, true, 9);
   addBarycentric1D(suite, true, 65);
   addLinearTG(suite, 8, 5);
+  addLinearTG(suite, 10, 5);  // WP-29c: high / low d
+  addLinearTG(suite, 2, 16);
 
   // Generation
   addCompleteMIs(suite, 20, 6);
@@ -800,6 +941,18 @@ int main(int argc, char** argv) {
     addVectorDeltaQuad(suite, "equi", 0, 10, 7, 0, m);
     addVectorDeltaQuad(suite, "equi", 1, 20, 6, 0, m);
     addVectorDeltaQuad(suite, "equi", 1, 20, 6, 256, m);
+  }
+
+  // WP-29c: vector-valued global / linear interpolation, production kernels (the
+  // micro/interp/global_tg and micro/interplin/tg configurations)
+  for (const size_t m : {1, 2, 4, 8, 32}) {
+    addVectorInterpTG(suite, "cc", 2, 12, m);
+    addVectorInterpTG(suite, "cc", 5, 6, m);
+    addVectorInterpTG(suite, "cheb1", 5, 4, m);
+    addVectorInterpTG(suite, "cc", 10, 2, m);
+    addVectorLinearTG(suite, 2, 16, m);
+    addVectorLinearTG(suite, 8, 5, m);
+    addVectorLinearTG(suite, 10, 5, m);
   }
 
   // WP-25: source-function cache (prototypes, micro/cache/...)

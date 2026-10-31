@@ -96,8 +96,11 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   f: Ω → ℝ^m; wraps `std::function<void(const base::DataVector&, std::span<double>)>` + `nOutputs`
   (m ≥ 1; 0 throws `base::data_exception`); `nOutputs()`, `evaluate(point, out)`,
   `evaluateNormalizedInPlace(point, area, out)`. `out.size()` is only asserted (no per-evaluation
-  check). Operators (so far both quadratures) take it through separate overloads; their kernels are
-  templates over `ScalarValues` / `VectorValues` (no runtime dispatch, scalar path unchanged).
+  check). All operators take it through separate overloads; their kernels are templates over
+  `ScalarValues` / `VectorValues` (no runtime dispatch, scalar path unchanged). The global
+  interpolation interpolates all m outputs per 1D step through the multi-output overload
+  `InterpolationMethod::interpolate(pos, nodes, values /* n × m, node-major */, m, out)` (default:
+  the scalar formula per output; both barycentric formulas override it: factors once per node).
   Output k equals the scalar run of component k within round-off (not bitwise). For m = 1 use
   `SourceFunc` (the vector path is slower there).
 - `NodeGenFunc`
@@ -112,10 +115,10 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `doublingLvl2GPCntFunction` (2^{ℓ+1}−1 inner nodes, CC-compatible; the Doxygen comment has a typo,
   the code is `tools::pow(2, lvl+1) - 1`).
 - Operators: `interpolate(sourceFunc, point, sg)`, `interpolateLinear(sourceFunc, point, sg)`,
-  `quadrature(sourceFunc, sg)` (SparseGrid or DeltasSparseGrid); vector-valued (quadrature only so
-  far, both grid types): `quadrature(vectorSourceFunc, sg, out)` (`std::span<double>` of size m,
-  wrong size throws `std::invalid_argument`) and `base::DataVector quadrature(vectorSourceFunc,
-  sg)`. OpenMP over tensor grids in the drivers (`quadrature.cpp`,
+  `quadrature(sourceFunc, sg)` (SparseGrid or DeltasSparseGrid); vector-valued (all operators):
+  `interpolate(vectorSourceFunc, point, sg, out)`, `interpolateLinear(…, out)`,
+  `quadrature(vectorSourceFunc, sg, out)` (`std::span<double>` of size m, wrong size throws
+  `std::invalid_argument`), each also returning a `base::DataVector` (no `out`). OpenMP over tensor grids in the drivers (`quadrature.cpp`,
   `deltas_sparse_grid_quadrature.cpp`, `global_interpolation.cpp`, `linear_interpolation.cpp`);
   generation and CT coefficients are parallel above the thresholds in `constants.hpp`.
 - `tools::computeCTCoeffs(miVec)`: CT coefficients of a downwards-closed MI set.
@@ -164,10 +167,8 @@ operation machinery.
 
 - **Dimension-adaptive refinement** is not implemented; the caller builds the loop on
   `MIVecSGGenInstr` (highest-priority future work; planned by the owner).
-- **Vector-valued source functions only partly implemented**: `VectorSourceFunc` works with the
-  `SparseGrid` and `DeltasSparseGrid` quadrature (C++ only; perf phase WP-29a/b). Interpolation,
-  linear interpolation and the Python bindings follow (WP-29c–d); until then one `SourceFunc` /
-  operator call per output there.
+- **Vector-valued source functions are C++ only**: `VectorSourceFunc` works with all operators
+  (perf phase WP-29a–c); the Python bindings follow (WP-29d).
 - **No source-function caching**: shared points are re-evaluated across tensor grids and operator
   calls. Opt-in design chosen (cache in the callable stored in a plain `SourceFunc`), not
   implemented ([PLAN.md](../perf/PLAN.md) WP-26–WP-28).

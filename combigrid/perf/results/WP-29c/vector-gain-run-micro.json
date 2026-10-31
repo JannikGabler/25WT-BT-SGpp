@@ -1,0 +1,2170 @@
+{
+ "suite": "micro",
+ "snapshot": "WP-29c-after",
+ "threads": 1,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-38-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "5.32",
+   "10.39",
+   "9.01"
+  ]
+ },
+ "records": [
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d2/L12/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0015576928157894738,
+     0.001558222105263158
+    ]
+   },
+   "items": 24579,
+   "batch": 38,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d2/L12/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00182098353125,
+     0.00182609721875
+    ]
+   },
+   "items": 24579,
+   "batch": 32,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d2/L12/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.003114407789473684,
+     0.0031086330526315788
+    ]
+   },
+   "items": 49158,
+   "batch": 19,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d2/L12/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0027995956666666665,
+     0.0027961734761904763
+    ]
+   },
+   "items": 49158,
+   "batch": 21,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d2/L12/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0059687358000000005,
+     0.0059607041
+    ]
+   },
+   "items": 98316,
+   "batch": 10,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d2/L12/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0045548084615384616,
+     0.004559885384615384
+    ]
+   },
+   "items": 98316,
+   "batch": 13,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d2/L12/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.011367989,
+     0.0113720398
+    ]
+   },
+   "items": 196632,
+   "batch": 5,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d2/L12/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.008857071333333333,
+     0.008860004666666666
+    ]
+   },
+   "items": 196632,
+   "batch": 6,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d2/L12/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.046054729,
+     0.046071561
+    ]
+   },
+   "items": 786528,
+   "batch": 2,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d2/L12/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0336075445,
+     0.0337210015
+    ]
+   },
+   "items": 786528,
+   "batch": 2,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d5/L6/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0011463282115384615,
+     0.0011457761923076922
+    ]
+   },
+   "items": 10449,
+   "batch": 52,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d5/L6/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0012416533125,
+     0.0012416213125
+    ]
+   },
+   "items": 10449,
+   "batch": 48,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d5/L6/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0022915873076923077,
+     0.0022892771923076925
+    ]
+   },
+   "items": 20898,
+   "batch": 26,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d5/L6/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0021534173703703706,
+     0.002153963148148148
+    ]
+   },
+   "items": 20898,
+   "batch": 27,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d5/L6/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.004583454,
+     0.004579972692307693
+    ]
+   },
+   "items": 41796,
+   "batch": 13,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d5/L6/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.003982737733333333,
+     0.0039818484
+    ]
+   },
+   "items": 41796,
+   "batch": 15,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d5/L6/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0092288695,
+     0.009233024833333334
+    ]
+   },
+   "items": 83592,
+   "batch": 6,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d5/L6/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0077442081428571435,
+     0.007767824285714286
+    ]
+   },
+   "items": 83592,
+   "batch": 7,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d5/L6/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.037250725,
+     0.0371997765
+    ]
+   },
+   "items": 334368,
+   "batch": 2,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d5/L6/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.029934577,
+     0.029927768
+    ]
+   },
+   "items": 334368,
+   "batch": 2,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cheb1/b0/d5/L4/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0005064401000000001,
+     0.00050572772
+    ]
+   },
+   "items": 2673,
+   "batch": 100,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cheb1/b0/d5/L4/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0005275229699999999,
+     0.0005272952899999999
+    ]
+   },
+   "items": 2673,
+   "batch": 100,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cheb1/b0/d5/L4/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0010063576101694916,
+     0.0010088127118644068
+    ]
+   },
+   "items": 5346,
+   "batch": 59,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cheb1/b0/d5/L4/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0007692052692307692,
+     0.0007693028717948718
+    ]
+   },
+   "items": 5346,
+   "batch": 78,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cheb1/b0/d5/L4/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.002017178551724138,
+     0.0020294223793103448
+    ]
+   },
+   "items": 10692,
+   "batch": 29,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cheb1/b0/d5/L4/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0012405795,
+     0.001249689375
+    ]
+   },
+   "items": 10692,
+   "batch": 48,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cheb1/b0/d5/L4/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.004056284571428571,
+     0.004045189857142857
+    ]
+   },
+   "items": 21384,
+   "batch": 14,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cheb1/b0/d5/L4/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0022030457777777778,
+     0.002210705
+    ]
+   },
+   "items": 21384,
+   "batch": 27,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cheb1/b0/d5/L4/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.016303502,
+     0.0161882995
+    ]
+   },
+   "items": 85536,
+   "batch": 4,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cheb1/b0/d5/L4/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.007956893714285715,
+     0.007952473714285714
+    ]
+   },
+   "items": 85536,
+   "batch": 7,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d10/L2/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0493214675,
+     0.0493159855
+    ]
+   },
+   "items": 177147,
+   "batch": 2,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d10/L2/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0496507325,
+     0.0495628725
+    ]
+   },
+   "items": 177147,
+   "batch": 2,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d10/L2/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.096377087,
+     0.096100237
+    ]
+   },
+   "items": 354294,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d10/L2/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.087357904,
+     0.087247485
+    ]
+   },
+   "items": 354294,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d10/L2/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.192266335,
+     0.192535642
+    ]
+   },
+   "items": 708588,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d10/L2/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.151152116,
+     0.151160078
+    ]
+   },
+   "items": 708588,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d10/L2/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.396010743,
+     0.387281119
+    ]
+   },
+   "items": 1417176,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d10/L2/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.290208347,
+     0.290627252
+    ]
+   },
+   "items": 1417176,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/scalar_x_m/cc/b0/d10/L2/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     1.58653587,
+     1.585460949
+    ]
+   },
+   "items": 5668704,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/vec/interp/innerk/cc/b0/d10/L2/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     1.100589606,
+     1.098993742
+    ]
+   },
+   "items": 5668704,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d2/L12/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0013362550222222223,
+     0.0013353269333333333
+    ]
+   },
+   "items": 24579,
+   "batch": 45,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d2/L12/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0016245749444444445,
+     0.0016256070555555554
+    ]
+   },
+   "items": 24579,
+   "batch": 36,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d5/L6/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0011414742692307692,
+     0.0011419403269230769
+    ]
+   },
+   "items": 10449,
+   "batch": 52,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d5/L6/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0012769664347826088,
+     0.0012792514347826087
+    ]
+   },
+   "items": 10449,
+   "batch": 46,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cheb1/b0/d5/L4/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0005142259600000001,
+     0.00051260007
+    ]
+   },
+   "items": 2673,
+   "batch": 100,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cheb1/b0/d5/L4/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00052326128,
+     0.00052401207
+    ]
+   },
+   "items": 2673,
+   "batch": 100,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d10/L2/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0487433595,
+     0.0487068675
+    ]
+   },
+   "items": 177147,
+   "batch": 2,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d10/L2/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.05223282,
+     0.052097049
+    ]
+   },
+   "items": 177147,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 26
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d2/L16/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     2.1063002600976506e-07,
+     2.0981148009954614e-07
+    ]
+   },
+   "items": 4,
+   "batch": 284893,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d2/L16/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     2.348958768777937e-07,
+     2.3528733472675607e-07
+    ]
+   },
+   "items": 4,
+   "batch": 255486,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d8/L5/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     4.254858327376697e-05,
+     4.256860185847034e-05
+    ]
+   },
+   "items": 256,
+   "batch": 1399,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d8/L5/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     4.509207559880239e-05,
+     4.4941258982035926e-05
+    ]
+   },
+   "items": 256,
+   "batch": 1336,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d10/L5/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00026469139285714287,
+     0.00026464368749999997
+    ]
+   },
+   "items": 1024,
+   "batch": 224,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d10/L5/m1",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00026255249532710284,
+     0.00026146343925233646
+    ]
+   },
+   "items": 1024,
+   "batch": 214,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d2/L12/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0026704524545454545,
+     0.0026713190909090907
+    ]
+   },
+   "items": 49158,
+   "batch": 22,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d2/L12/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0024402467916666668,
+     0.002434275375
+    ]
+   },
+   "items": 49158,
+   "batch": 24,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d5/L6/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.002251189730769231,
+     0.002245564846153846
+    ]
+   },
+   "items": 20898,
+   "batch": 26,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d5/L6/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0021734487407407406,
+     0.0021681796296296294
+    ]
+   },
+   "items": 20898,
+   "batch": 27,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 1
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cheb1/b0/d5/L4/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.001013979051724138,
+     0.001011746551724138
+    ]
+   },
+   "items": 5346,
+   "batch": 58,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cheb1/b0/d5/L4/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0007434319125,
+     0.0007449343625
+    ]
+   },
+   "items": 5346,
+   "batch": 80,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d10/L2/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.096899217,
+     0.097206238
+    ]
+   },
+   "items": 354294,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d10/L2/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.090924119,
+     0.090900304
+    ]
+   },
+   "items": 354294,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 26
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d2/L16/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     4.206167642522663e-07,
+     4.2126500247744133e-07
+    ]
+   },
+   "items": 8,
+   "batch": 143293,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d2/L16/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     3.6714803599503265e-07,
+     3.6714889243700564e-07
+    ]
+   },
+   "items": 8,
+   "batch": 163467,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d8/L5/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     8.48891373937677e-05,
+     8.47998087818697e-05
+    ]
+   },
+   "items": 512,
+   "batch": 706,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d8/L5/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     8.035416285329744e-05,
+     8.027398115746972e-05
+    ]
+   },
+   "items": 512,
+   "batch": 743,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d10/L5/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00050606785,
+     0.00050815539
+    ]
+   },
+   "items": 2048,
+   "batch": 100,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d10/L5/m2",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0005053093699999999,
+     0.00050509426
+    ]
+   },
+   "items": 2048,
+   "batch": 100,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d2/L12/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.005357635,
+     0.0053585289
+    ]
+   },
+   "items": 98316,
+   "batch": 10,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d2/L12/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0040831134285714285,
+     0.004081142857142857
+    ]
+   },
+   "items": 98316,
+   "batch": 14,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d5/L6/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.004536698230769231,
+     0.004535801
+    ]
+   },
+   "items": 41796,
+   "batch": 13,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d5/L6/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.003954210066666667,
+     0.003954009866666667
+    ]
+   },
+   "items": 41796,
+   "batch": 15,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 3
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cheb1/b0/d5/L4/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.002032269,
+     0.0020318499310344827
+    ]
+   },
+   "items": 10692,
+   "batch": 29,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cheb1/b0/d5/L4/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0012191048958333334,
+     0.0012231643958333335
+    ]
+   },
+   "items": 10692,
+   "batch": 48,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d10/L2/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.194707414,
+     0.194719916
+    ]
+   },
+   "items": 708588,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d10/L2/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.155668866,
+     0.156569046
+    ]
+   },
+   "items": 708588,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 26
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d2/L16/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     8.637495124311987e-07,
+     8.644366160558211e-07
+    ]
+   },
+   "items": 16,
+   "batch": 69221,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d2/L16/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     6.507740233340181e-07,
+     6.507324805639956e-07
+    ]
+   },
+   "items": 16,
+   "batch": 92483,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d8/L5/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00017005504545454544,
+     0.00017114432670454544
+    ]
+   },
+   "items": 1024,
+   "batch": 352,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d8/L5/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00015324024358974358,
+     0.00015321553076923076
+    ]
+   },
+   "items": 1024,
+   "batch": 390,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d10/L5/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0010485575714285714,
+     0.0010491399821428572
+    ]
+   },
+   "items": 4096,
+   "batch": 56,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d10/L5/m4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.000875614104477612,
+     0.0008770838805970149
+    ]
+   },
+   "items": 4096,
+   "batch": 67,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d2/L12/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.010700268,
+     0.0108079768
+    ]
+   },
+   "items": 196632,
+   "batch": 5,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d2/L12/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.007490755571428572,
+     0.007489618285714286
+    ]
+   },
+   "items": 196632,
+   "batch": 7,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d5/L6/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.009107346166666667,
+     0.0091045525
+    ]
+   },
+   "items": 83592,
+   "batch": 6,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d5/L6/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0076129971428571435,
+     0.007629429714285714
+    ]
+   },
+   "items": 83592,
+   "batch": 7,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 3
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cheb1/b0/d5/L4/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.004090711071428571,
+     0.004085438071428572
+    ]
+   },
+   "items": 21384,
+   "batch": 14,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cheb1/b0/d5/L4/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.002161156740740741,
+     0.0021647548518518517
+    ]
+   },
+   "items": 21384,
+   "batch": 27,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d10/L2/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.407259317,
+     0.407140238
+    ]
+   },
+   "items": 1417176,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d10/L2/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.295032886,
+     0.29470638
+    ]
+   },
+   "items": 1417176,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 26
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d2/L16/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     1.7528025345352376e-06,
+     1.7517314446265511e-06
+    ]
+   },
+   "items": 32,
+   "batch": 34168,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d2/L16/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     1.19014478488649e-06,
+     1.1940781076361328e-06
+    ]
+   },
+   "items": 32,
+   "batch": 50392,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d8/L5/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00034281645402298855,
+     0.00034553663793103446
+    ]
+   },
+   "items": 2048,
+   "batch": 174,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d8/L5/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0002972240995024876,
+     0.00029701839800995027
+    ]
+   },
+   "items": 2048,
+   "batch": 201,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d10/L5/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0021621655555555557,
+     0.0021599487407407405
+    ]
+   },
+   "items": 8192,
+   "batch": 27,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d10/L5/m8",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0017429207058823528,
+     0.0017413061176470587
+    ]
+   },
+   "items": 8192,
+   "batch": 34,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d2/L12/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.043595841,
+     0.043581768
+    ]
+   },
+   "items": 786528,
+   "batch": 2,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d2/L12/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.028184783,
+     0.028169453
+    ]
+   },
+   "items": 786528,
+   "batch": 2,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d5/L6/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.036554691,
+     0.036678589
+    ]
+   },
+   "items": 334368,
+   "batch": 2,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d5/L6/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.029273149,
+     0.0293123645
+    ]
+   },
+   "items": 334368,
+   "batch": 2,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 6
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cheb1/b0/d5/L4/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.01628667025,
+     0.01627177675
+    ]
+   },
+   "items": 85536,
+   "batch": 4,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cheb1/b0/d5/L4/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.007696516857142857,
+     0.007692785428571429
+    ]
+   },
+   "items": 85536,
+   "batch": 7,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_scalar_x_m/cc/b0/d10/L2/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     1.641177013,
+     1.644614303
+    ]
+   },
+   "items": 5668704,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interp/global_tg_vec/cc/b0/d10/L2/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     1.056845599,
+     1.058092258
+    ]
+   },
+   "items": 5668704,
+   "batch": 1,
+   "counters": {
+    "bitwise_equal": 0,
+    "max_ulp": 23396
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d2/L16/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     7.202028537170264e-06,
+     7.172258153477218e-06
+    ]
+   },
+   "items": 128,
+   "batch": 8340,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d2/L16/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     4.52469175086714e-06,
+     4.521173880259388e-06
+    ]
+   },
+   "items": 128,
+   "batch": 13262,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d8/L5/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0013909380238095238,
+     0.0013941989285714284
+    ]
+   },
+   "items": 8192,
+   "batch": 42,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d8/L5/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.001155718960784314,
+     0.001155357431372549
+    ]
+   },
+   "items": 8192,
+   "batch": 51,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_scalar_x_m/equi/b1/d10/L5/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.008779454833333334,
+     0.008759131166666666
+    ]
+   },
+   "items": 32768,
+   "batch": 6,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/interplin/tg_vec/equi/b1/d10/L5/m32",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.006106903666666667,
+     0.006094914333333333
+    ]
+   },
+   "items": 32768,
+   "batch": 9,
+   "counters": {
+    "bitwise_equal": 1,
+    "max_ulp": 0
+   }
+  }
+ ],
+ "process_floor_kib": null
+}

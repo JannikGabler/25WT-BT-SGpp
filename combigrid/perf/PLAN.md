@@ -52,6 +52,12 @@ moved from `operators/quadrature/deltas_sparse_grid_quadrature.{hpp,cpp}` (−�
 `tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.{hpp,cpp}`;
 `tools/operators/quadrature/quadrature_utilities.{hpp,cpp}` → `quadrature_tools.{hpp,cpp}` (same
 directory); value types `tools/operators/value_types/` → `miscellaneous/operators/value_types/`.
+WP-29c (owner, 2026-10-31): per-TG interpolation kernels moved from `operators/{global,linear}_
+interpolation/*.cpp` to `tools/operators/global_interpolation/global_interpolation_tools.{hpp,cpp}`
+(`tools::global_interpolation::processTensorGrid` → template `processTensorGridInternal`, which
+LTO-inlines `interpolateFirstDim` / `interpolateLaterDim`; also `getInterpolationCntPerDim`) and
+`tools/operators/linear_interpolation/linear_interpolation_tools.{hpp,cpp}`
+(`tools::lin_interpolation::processTensorGrid`, `sumOverCorners`, `computeNeighborGPWithWeight`).
 Entries written before keep the old paths: functions are located by name.
 
 Baseline e2e time per operator group (sum of `total` medians, `baseline/e2e_t16.jsonl`;
@@ -480,6 +486,11 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   integrand 67–71 %. Expected 0.6–0.7 s (d ≥ 7 ≈ 0.4 s).
 - **From RP-2**: unchanged (`interpolateFirstDim` 18.9 / 19.9 %). Alignment candidate:
   `interpolateFirstDim` at d10 has 2.8 % front-end stall cycles (upper bound of an alignment gain).
+- **From WP-29c**: per-TG allocations in the global kernel (nodes, results, inputValues,
+  `getInterpolationCntPerDim`) remain; kernel now `tools::global_interpolation::processTensorGridInternal`
+  (LTO-inlined collapse steps; `interpolateFirstDim` no longer a profile symbol). interp cc d10 is
+  op-cache-placement sensitive (±1–4 %; `aligned(64)` on the collapse templates made it worse:
+  op-cache misses 2.6–3.0 M → 17–18 M). Scalar formulas unchanged; vector path shares the kernel.
 
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
@@ -506,6 +517,8 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   `exp` 2.9 % + their allocations 5.5 %; libgomp 21.3 %; 1 thread: weights 34.3 % + allocations
   8.2 %. Expected ≈ 0.2 s (d < 7).
 - **From RP-2**: unchanged (cheb1 weights 24.0 % [RP-1 25.8 %]).
+- **From WP-29c**: the generic formula still computes its weights per 1D call; in the vector
+  override (innerk) `BarycentricFormula` reuses the weights vector for the factors.
 
 ## WP-08 — Linear interpolation: corner loop
 - **Location**: `operators/linear_interpolation/linear_interpolation.cpp`, `TensorGrid::getNeighborsForLinInterpolation`.
@@ -527,6 +540,8 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **From RP-2**: unchanged (`computeNeighborGPWithWeight` d10 19.9 %, d8 16.5 %). Alignment
   candidate: front-end stall cycles 2.9 / 5.7 % of the interplin cases (4.6–6.3 % of the
   function's own cycles) → try `[[gnu::aligned(64)]]` on the corner loop (as WP-02's row loop).
+- **From WP-29c**: corner loop is now the template `tools::lin_interpolation::sumOverCorners<ValueType>`
+  (corner weight once for all m); `computeNeighborGPWithWeight` moved to the same tools file.
 
 ## WP-09 — Multi-point interpolation API (from D-1; proposal, owner decides after the results)
 - **Source**: D-1. Owner, 2026-10-24: "Approve it as a work package. A new API can be considered
@@ -1485,8 +1500,28 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   per delta TG with global weights (not per-ℓ increments; error indicators from the SG kernel);
   weights and trie rebuilt per call (`prepare` b1 d20 114 ms at 1 t; incremental loop needs trie
   insertion).
-- **Status**: WP-29a accepted (2026-10-30); WP-29b accepted (2026-10-31); WP-29c in progress
-  (prompt issued 2026-10-31); WP-29d ready, one session after it.
+- **From WP-29c** (accepted 2026-10-31, [summary](summaries/WP-29c-vector-interpolation.md)):
+  `InterpolationMethod::interpolate(pos, nodes, values /* n × m */, m, out)` (default: scalar
+  formula per output; both built-ins override with innerk; `OptBarycentricFormula` factors in
+  64-node stack blocks, no allocation) + protected multi-output `hasTrivialResult`; per-TG kernels
+  in `tools::global_interpolation` / `tools::lin_interpolation` (owner's refactor, see header
+  "File layout"); `LinInterpScratch(nDim, nOutputs = 0)`; public `interpolate(VectorSourceFunc,
+  point, sg, span)` / `interpolateLinear(...)` + `DataVector` variants (wrong size →
+  `std::invalid_argument`). Measured (refactor vs. before): scalar e2e 0.999x, memory 1.004,
+  refcheck OK (no WARN); vector (1 t, m = 1/2/4/8/32) interp cheb1 d5 0.98/1.36/1.66/1.89/2.12,
+  cc d10 0.93/1.07/1.25/1.38/1.55, cc d2 0.82…1.55; interplin d10 1.01/1.00/1.20/1.24/1.44, d2
+  0.89…1.59. Vector ≠ scalar by ~1 ulp per 1D step (GCC contracts the multi-output numerator
+  loop's remainder; ≤ 11 eps · max |value|). Tests `interpolation_pinning_test.cpp` (384 golden
+  values), `vector_interpolation_test.cpp`. **For (d)** (owner's accept 10-31: refactor leftovers
+  go to WP-29d): ASan and the `SG_PYTHON=1` build were not re-run on the refactor; commented-out
+  declarations/definitions and `TODO: Document` blocks in the two tools files; stale `noinline`
+  comment `global_interpolation_tools.cpp:66` (attributes are commented out; LTO now inlines both
+  collapse steps, measured ≈ 0); file-scope `using namespace` in both operator `.cpp` (cpplint
+  `build/namespaces`); cpplint TODO warning `global_interpolation.cpp:40`; stale `%ignore
+  global_interpolation::*` / `linear_interpolation::*` (`combigrid.i:239–242`);
+  `module-reference.md` layout / key-classes lines lack the new tools files.
+- **Status**: WP-29a accepted (2026-10-30); WP-29b accepted (2026-10-31); WP-29c accepted
+  (2026-10-31); WP-29d in progress (prompt issued 2026-10-31).
 
 ## WP-30 — Vector-valued source functions: specific optimizations (later)
 - **Source**: owner, 2026-10-29 (low relevance, for later).
@@ -1501,6 +1536,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   single output belongs in `SourceFunc` (document); candidates: register accumulators for small m,
   rowbuf.
 - **From WP-29b**: DSG vector path at m = 1 0.93–0.96x of `SourceFunc` (4–7 % slower).
+- **From WP-29c**: interp m = 1 0.82–0.98x, interplin 0.89–1.01x of `SourceFunc` (worst cc d2:
+  8193 three-node interpolations per TG); the out-of-line multi-output `hasTrivialResult`
+  (0xc87 B) costs 5–7 % at n = 3; `std::function` call per point.
 
 ## RP-3 — Re-profiling after WP-03
 - **Source**: rule 7: WP-03 changed the mivec group by 5.08x (6.32 → 1.24 s) and its hot-spot

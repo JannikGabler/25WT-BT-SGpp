@@ -6,7 +6,7 @@
 /**
  * @file projected_sub_trie_builder.hpp
  * @brief Defines @c ProjectedSubTrieBuilder, which computes the projected sub-trie of a delta
- * tensor grid for the delta quadrature (see @c delta_quadrature_operator::compSubTrie).
+ * tensor grid for the delta quadrature (see @c tools::dsg_quadrature::compSubTrie).
  */
 #pragma once
 
@@ -22,7 +22,7 @@ namespace tools {
 
 /**
  * @brief Builds the projected sub-trie of the tensor grids @f$\vec{\ell} \geq \vec{m}@f$ of a
- * delta tensor grid of level @f$\vec{m}@f$ (see @c delta_quadrature_operator::compSubTrie) into
+ * delta tensor grid of level @f$\vec{m}@f$ (see @c tools::dsg_quadrature::compSubTrie) into
  * the scratch of the calling thread.
  *
  * Two steps: a depth-first search over the coefficient trie accumulates the projected coefficients
@@ -48,7 +48,7 @@ class [[gnu::visibility("hidden")]] ProjectedSubTrieBuilder {  // NOLINT(whitesp
                           misc::DeltaQuadratureScratch& scratch);
 
   /// @brief Sets @c scratch.projDims and fills @c scratch.trieNodes (see
-  /// @c delta_quadrature_operator::compSubTrie).
+  /// @c tools::dsg_quadrature::compSubTrie).
   void build();
 
  private:
