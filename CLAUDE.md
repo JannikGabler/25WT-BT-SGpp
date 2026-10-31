@@ -39,8 +39,8 @@ for custom / adaptive MI sets) → `SparseGrid` (list of `TensorGridCTData {mi, 
 tensorGrid}`) → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid` +
 its `quadrature` overload (C++ only) evaluates every grid point once. User functions are wrapped in
 `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators (`interpolate`, `interpolateLinear`,
-both quadratures), C++ only); nodes / weights live on [0,1]^d, the user domain enters only via
-`setDomain()`.
+both quadratures; Python: all but the C++-only DSG quadrature)); nodes / weights live on [0,1]^d,
+the user domain enters only via `setDomain()`.
 
 ```cpp
 CompleteSGGenInstr genInstr(/*maxLvl=*/10, /*nDim=*/3);
@@ -109,7 +109,7 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - **Namespaces**: `sgpp::combigrid` (public), `::tools` (under `tools/`), `::misc` (under
   `miscellaneous/`), `::constants`, per-operator namespaces for internals, anonymous namespaces for
   TU-local helpers. No `using namespace` in headers.
-- **Copyright banner** — every `.cpp`/`.hpp` starts with exactly (build fails otherwise):
+- **Copyright banner** — every `.cpp`/`.hpp` starts with exactly:
   ```
   // Copyright (C) 2008-today The SG++ project
   // This file is part of the SG++ project. For conditions of distribution and
@@ -147,8 +147,8 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - Combigrid is only built in CI's **linux-full** job.
 - The thesis predates refactors: never copy its code without checking the API (code wins).
 - Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
-  on `MIVecSGGenInstr`), Python bindings of vector-valued source functions, source-function
-  caching (shared points are re-evaluated), dimension-wise boundary offsets, Leja nodes.
+  on `MIVecSGGenInstr`), source-function caching (shared points are re-evaluated), dimension-wise
+  boundary offsets, Leja nodes.
 
 ## 7. Python bindings (pysgpp)
 

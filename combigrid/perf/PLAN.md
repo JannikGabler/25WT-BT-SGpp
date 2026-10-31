@@ -97,26 +97,31 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | RP-3 | Re-profiling after WP-03 (+ cumulative memory; re-rank with the WP-23–WP-25 results, rank WP-32 / WP-33) | accepted (2026-10-30) | measured: baseline → rp-3 e2e 69.92 → 38.45 s (1.818x; d ≥ 7 1.87x), 0 SLOWER; since RP-2 1.135x (all mivec 5.05x); memory geomean 1.014, 8 `MEM+` / 3 `MEM−`; shares unchanged, estimates confirmed |
 | – | WP-10 | Do not link Armadillo when Eigen provides the FFT (from D-3) | dropped (owner 2026-10-30, on RP-3's data) | measured (RP-3): judged warm suite nil; cold first operator call +63…+130 ms per process, floor +1…4.5 MiB → not worth the build change |
 | – | WP-29a | Vector-valued, design T (a): `VectorSourceFunc`, value types, SG quadrature + mivec | accepted (owner 2026-10-30; incl. the owner's file restructuring) | measured: scalar `^quad/sg/\|^mivec/` 10.482 → 10.457 s (1.002x, 0 SLOWER), memory geomean 1.002, refcheck OK; vector vs. m scalar runs at m = 32: d10 2.68x, b1 d20 2.48x, d2 L16 1.29x; m = 1 0.66–0.93x |
-| 1 | WP-29b–d | Vector-valued source functions: implementation, design T (b DSG, c interp + interplin, d bindings) | WP-29b in progress (prompt issued 2026-10-30); c–d ready, one session each, in order (owner 2026-10-30: before WP-26 and WP-04) | feature; scalar path ≈ 0 (WP-29a 1.002x); vector at m = 32 1.3–2.8x vs. m scalar runs (DSG b0 largest, WP-24: 2.77x) |
-| 2 | WP-26 | Caching: wrapper W, in-memory table, none / always, soft limit, end-of-operator hook, unified domain mapping, `pysgpp.CachedSourceFunc` | needs decision (API details 1–6 from WP-25, before its prompt; after WP-29a–d) | feature; judged suite 0 by construction (plain `SourceFunc` unchanged); expensive / Python functions up to the gain bound (SG 2.8–13.6, interp 34–499 over p calls) |
-| 3 | WP-28 | Caching: disk tier (temporary / persistent flat file) | needs decision (disk fields of `CacheConfig`; after WP-26) | feature; warm runs skip all evaluations |
-| 4 | WP-27 | Caching: adaptive policy (decided per operator call at the hook) | needs decision (adaptive fields; after WP-28) | feature; only matters for functions near break-even |
-| 5 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready (after WP-29b and caching) | 1.5–2.5 s (b0 d7/d10); memory ≈ −3 MiB per b0 case |
-| 6 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04; chunks over several rows / a whole TG, WP-24; `findBatch` / `insertBatch`, WP-25) | ≈ 1–1.5 s (dispatch: DSG b0 ≈ 0.9 s, b1 0.13 s, quad/sg ≈ 0.4 s); interface |
-| 7 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready | new-API callers only (integrand 67–71 % per query point); gates WP-06/WP-08 |
-| 8 | WP-06 | Global interpolation: operator overhead | ready (re-assess after WP-09 decision) | 0.6–0.7 s (d ≥ 7 ≈ 0.4 s); + alignment check of `interpolateFirstDim` |
-| 9 | WP-08 | Linear interpolation: corner loop | ready (re-assess after WP-09 decision) | ≈ 0.5 s (d ≥ 7 ≈ 0.45 s); + alignment check of the corner loop |
+| – | WP-29b | Vector-valued, design T (b): DSG quadrature | accepted (owner 2026-10-31) | measured: scalar `^quad/dsg/` 17.748 → 17.738 s (1.001x), memory 0.999, refcheck OK; vector at m = 32: b0 d10 2.96x, b1 d20 1.96x (incl. sub-tries 3.18x), bitwise; m = 1 0.93–0.96x |
+| – | WP-29c | Vector-valued, design T (c): global + linear interpolation (+ owner's refactor into `tools::`) | accepted (owner 2026-10-31) | measured: scalar `^interp/\|^interplin/` 10.258 → 10.263 s (0.999x, 0 SLOWER), memory 1.004, refcheck OK; vector at m = 32: interp 1.25–2.12x, interplin 1.21–1.59x; m = 1 0.82–1.01x |
+| – | WP-29d | Vector-valued, design T (d): Python bindings (+ WP-29c refactor leftovers) | accepted (owner 2026-10-31) | measured: C++ `.text` byte-identical (e2e `^interp/\|^interplin/` 0.995x = A/A), memory 1.001, refcheck OK; Python vector vs. m scalar runs at m = 32: 2.0–2.5x (1 t) / 24–31x (16 t); m = 1 0.68–0.76x (1 t) |
+| 1 | WP-26 | Caching: wrapper W, in-memory table, none / always, soft limit, end-of-operator hook, unified domain mapping, `pysgpp.CachedSourceFunc` | in progress (prompt issued 2026-10-31; API details 1–6 + location proposed by the session and decided with the owner in-session, owner 2026-10-31) | feature; judged suite 0 by construction (plain `SourceFunc` unchanged); expensive / Python functions up to the gain bound (SG 2.8–13.6, interp 34–499 over p calls) |
+| 2 | WP-28 | Caching: disk tier (temporary / persistent flat file) | needs decision (disk fields of `CacheConfig`; after WP-26) | feature; warm runs skip all evaluations |
+| 3 | WP-27 | Caching: adaptive policy (decided per operator call at the hook) | needs decision (adaptive fields; after WP-28) | feature; only matters for functions near break-even |
+| 4 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready (after WP-29b and caching) | 1.5–2.5 s (b0 d7/d10); memory ≈ −3 MiB per b0 case |
+| 5 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04; chunks over several rows / a whole TG, WP-24; `findBatch` / `insertBatch`, WP-25) | ≈ 1–1.5 s (dispatch: DSG b0 ≈ 0.9 s, b1 0.13 s, quad/sg ≈ 0.4 s); interface |
+| 6 | WP-36 | Interpolation operators: exploration after WP-29c (profile, re-scope WP-06/07/08/09, batching / WP-17 applicability) (owner's request) | ready (owner 2026-10-31: before any interpolation optimization; after WP-29d) | measurement only; re-estimates interp (≈ 5.7 s) / interplin (≈ 4.5 s) savings |
+| 7 | WP-09 | Multi-point interpolation API (from D-1, proposal for the owner) | ready (after WP-36) | new-API callers only (integrand 67–71 % per query point); gates WP-06/WP-08 |
+| 8 | WP-06 | Global interpolation: operator overhead | ready (after WP-36; re-assess after WP-09 decision) | 0.6–0.7 s (d ≥ 7 ≈ 0.4 s); + alignment check of `interpolateFirstDim` |
+| 9 | WP-08 | Linear interpolation: corner loop | ready (after WP-36; re-assess after WP-09 decision) | ≈ 0.5 s (d ≥ 7 ≈ 0.45 s); + alignment check of the corner loop |
 | 10 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready (after WP-04) | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 11 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
 | 12 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | ready | 0.5–0.8 s (d ≤ 3); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1072 → ≈ 280–730 MiB; + `DeltaQuadratureScratch` on demand |
-| 13 | WP-07 | Generic barycentric formula: cache the weights | ready | ≈ 0.2 s (d < 7) |
+| 13 | WP-07 | Generic barycentric formula: cache the weights | ready (after WP-36) | ≈ 0.2 s (d < 7) |
 | 14 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | 0.1–0.3 s (d2) |
 | 15 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
 | 16 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
 | 17 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
 | 18 | WP-35 | Flaky time-seeded tests: `equidistant_nodes/sin_func_random_cube_3D` + seed audit (test-only; from WP-29a) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
-| 19 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
-| 20 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x); not in the judged suite |
+| 19 | WP-38 | Code hygiene: copyright-banner check never checks C++ + combigrid leftovers (from WP-29d) | ready (low; checker fix may hit other modules → BLOCKED with options) | e2e nil; banner / TODO / warning cleanups |
+| 20 | WP-37 | pysgpp `DataVector`: `__iter__` / bounds-checked `__getitem__` (base bindings; from WP-29d) | needs decision (functional change in base's Python API; owner places it) | e2e nil; `list(dv)` / `sum(dv)` / `for x in dv` segfault today |
+| 21 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
+| 22 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x); not in the judged suite |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
 | – | D-3 | Armadillo/OpenBLAS thread pool in every process | decided 2026-10-24 → WP-10; WP-10 dropped 2026-10-30 | – |
@@ -492,6 +497,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   op-cache-placement sensitive (±1–4 %; `aligned(64)` on the collapse templates made it worse:
   op-cache misses 2.6–3.0 M → 17–18 M). Scalar formulas unchanged; vector path shares the kernel.
 
+- **From WP-36 planning** (owner 2026-10-31): runs only after WP-36 (exploration of both
+  interpolation operators after WP-29c's changes); WP-36 re-scopes this entry.
+
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
   `tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.cpp`.
@@ -517,6 +525,8 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   `exp` 2.9 % + their allocations 5.5 %; libgomp 21.3 %; 1 thread: weights 34.3 % + allocations
   8.2 %. Expected ≈ 0.2 s (d < 7).
 - **From RP-2**: unchanged (cheb1 weights 24.0 % [RP-1 25.8 %]).
+- **From WP-36 planning** (owner 2026-10-31): runs only after WP-36 (exploration of both
+  interpolation operators after WP-29c's changes); WP-36 re-scopes this entry.
 - **From WP-29c**: the generic formula still computes its weights per 1D call; in the vector
   override (innerk) `BarycentricFormula` reuses the weights vector for the factors.
 
@@ -542,6 +552,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   function's own cycles) → try `[[gnu::aligned(64)]]` on the corner loop (as WP-02's row loop).
 - **From WP-29c**: corner loop is now the template `tools::lin_interpolation::sumOverCorners<ValueType>`
   (corner weight once for all m); `computeNeighborGPWithWeight` moved to the same tools file.
+
+- **From WP-36 planning** (owner 2026-10-31): runs only after WP-36 (exploration of both
+  interpolation operators after WP-29c's changes); WP-36 re-scopes this entry.
 
 ## WP-09 — Multi-point interpolation API (from D-1; proposal, owner decides after the results)
 - **Source**: D-1. Owner, 2026-10-24: "Approve it as a work package. A new API can be considered
@@ -596,6 +609,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **From WP-25** (accepted 2026-10-30): over p single-point calls interpolation evaluates each
   distinct point 34–499 times (2.2–7.8 within one call); the multi-point API removes this
   repetition structurally (values per TG once for all points), without a cache.
+
+- **From WP-36 planning** (owner 2026-10-31): runs only after WP-36 (exploration of both
+  interpolation operators after WP-29c's changes); WP-36 re-scopes this entry.
 
 ## WP-10 — Do not link Armadillo when Eigen provides the FFT (from D-3)
 - **Source**: D-3. Owner, 2026-10-24: keep the WP; if it only reduces start-up times it is
@@ -914,6 +930,13 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **From WP-25** (accepted 2026-10-30; design W): the cache needs `findBatch` / `insertBatch` so a
   batch looks up all points, evaluates the misses as one batch (Python: one GIL acquisition) and
   inserts them; order (owner): after WP-26 → WP-28 → WP-27 and WP-04. May solve WP-34 (GIL).
+- **Interpolation scope** (owner's question 2026-10-31): the design is meant for all operators
+  ("one path"); location and expected gain name only the quadrature kernels because the evidence
+  did: dispatch 4–9 % (SG) / 4–7 % (DSG) vs. ≤ 2.5 % in interp / interplin (RP-3), where per-point
+  work around the call (node regeneration, assembly, mapping, corner weights) dominates, and the
+  natural interpolation batch (a whole TG's values for many query points) belongs to WP-09's
+  multi-point API. WP-36 measures dispatch and batch shapes in both interpolation operators; its
+  result decides whether WP-17 covers them explicitly.
 
 ## WP-18 — Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal)
 - **Source**: RP-1 summary (NEW-D). Owner, 2026-10-28: include in the plan as a candidate WP;
@@ -1362,6 +1385,16 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   addressing (lock-free reference: lookups 22–44 % faster at 1 t, but no growth); (6) unify the
   domain mapping (round-off change on non-unit domains) for cross-operator hits; plus where the
   cache lives (base or combigrid; hit path ≥ 50 ns, `SourceFunc::evaluate` stays inline either way).
+- **Owner (2026-10-31)**: decisions 1–6 and the cache location are not taken up front. The work
+  session first works out each decision (options, advantages / disadvantages with numbers from
+  WP-25 or quick measurements, impact on WP-27 / WP-28, Python, dimension-adaptive refinement,
+  its recommendation), presents them to the owner **in the session** and waits; the owner decides
+  together with the session; then it implements. Record the decisions in the summary.
+- **From WP-29d**: Python `VectorSourceFunc` is a thin `std::function` adapter (`PyCallableHolder`
+  `call` / `callVector`, registry template per function type), so a C++ cache wrapping either
+  function type sits behind it unchanged; Python hits would also skip the GIL (WP-25: 1925–2502x
+  warm at 16 t). `pysgpp.CachedSourceFunc` follows the `VectorSourceFunc.i` pattern
+  (`COMBIGRID_SOURCE_FUNC_EXCEPTION` before `%extend`, python-bindings.md "How to extend" 6).
 - **Measurement**: full judged A/B (no regression: plain `SourceFunc` unchanged, the hook is read
   once per operator call; unified mapping may shift quadrature at round-off); comparison benchmark
   `micro/cache/...` (`perf_cache_proto.hpp`) switched to or extended with the production cache:
@@ -1520,8 +1553,19 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   `build/namespaces`); cpplint TODO warning `global_interpolation.cpp:40`; stale `%ignore
   global_interpolation::*` / `linear_interpolation::*` (`combigrid.i:239–242`);
   `module-reference.md` layout / key-classes lines lack the new tools files.
+- **From WP-29d** (accepted 2026-10-31, [summary](summaries/WP-29d-vector-python-bindings.md)):
+  `pysgpp.VectorSourceFunc(callable, nOutputs)` (new `VectorSourceFunc.i`; `%extend` ctor,
+  `evaluate(point)` → `DataVector`) + `DataVector` overloads of `quadrature`, `interpolate`,
+  `interpolateLinear` (span overloads and DSG quadrature stay unbound); `PyCallableHolder` split
+  into `invoke` / `call` / `callVector` (wrong length → `ValueError`, non-number → `TypeError`,
+  re-raised after the C++ call), registry template per function type. Python vector vs. m scalar
+  runs: 1 t m = 4 1.42–1.60x, m = 32 2.02–2.46x, m = 1 0.68–0.76x; 16 t m = 32 24–31x (one GIL call
+  per point instead of m; WP-34). Binding cost ≈ 27 ns per call. C++ cleanup (Doxygen, includes,
+  no `using namespace`, stale `%ignore`s) with byte-identical `.text`. Gotcha documented:
+  `COMBIGRID_SOURCE_FUNC_EXCEPTION` must precede the `%extend` block. Follow-ups → WP-37 (base
+  `DataVector` iteration segfault), WP-38 (banner checker, leftovers).
 - **Status**: WP-29a accepted (2026-10-30); WP-29b accepted (2026-10-31); WP-29c accepted
-  (2026-10-31); WP-29d in progress (prompt issued 2026-10-31).
+  (2026-10-31); WP-29d accepted (2026-10-31). WP-29 complete.
 
 ## WP-30 — Vector-valued source functions: specific optimizations (later)
 - **Source**: owner, 2026-10-29 (low relevance, for later).
@@ -1688,6 +1732,87 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   from the rule's error bound or measured round-off). **Micro / E2E**: none (no source change).
 - **Functional change**: none (tests only). **Dependencies**: none. Status: ready (low rank; the
   owner may move it up).
+
+## WP-36 — Interpolation operators: exploration after WP-29c (owner's request)
+- **Source**: owner, 2026-10-31: WP-29c (+ the owner's refactor into
+  `tools/operators/{global,linear}_interpolation/`) changed a significant part of both operators;
+  explore them anew before any interpolation optimization (WP-06, WP-07, WP-08, WP-09) is
+  implemented. **Measurement only**: no production source change (unprotected micro cases /
+  comparison benchmarks may be added and kept, as WP-24/WP-25).
+- **Location**: `operators/global_interpolation/`, `operators/linear_interpolation/`,
+  `tools/operators/global_interpolation/global_interpolation_tools.{hpp,cpp}`
+  (`processTensorGridInternal`, collapse steps, `getInterpolationCntPerDim`),
+  `tools/operators/linear_interpolation/linear_interpolation_tools.{hpp,cpp}` (`sumOverCorners`,
+  `computeNeighborGPWithWeight`), `InterpolationMethod` + barycentric formulas, value types,
+  `TensorGrid` access used by both, `SourceFunc::evaluateNormalizedInPlace`.
+- **Questions**: (1) Profile split of every `^interp/` / `^interplin/` e2e case (16 t; top cases by
+  absolute time also at 1 t; d ≥ 7 first; method as RP-3, `results/RP-3/profile_split.py`):
+  integrand, `std::function` dispatch, node regeneration, grid-point assembly, domain mapping,
+  allocations (count per call: heap profiler, capped), `hasTrivialResult`, barycentric formulas
+  (CC / generic weights), collapse steps, corner loop, OpenMP (regions per query point, schedule,
+  libgomp spin, load balance over few TGs), op-cache / front-end stalls (cc d10 placement
+  sensitivity ±1–4 %). (2) Speed-of-light per item (e.g. integrand-only loop over the same
+  points). (3) Re-assess each hypothesis of WP-06, WP-07, WP-08 (still true after WP-29c? new
+  locations; numbers) and propose re-scoped / merged / new WPs with expected savings by the
+  ranking rule. (4) WP-09: evaluation counts per case (distinct points vs. evaluations; WP-25:
+  34–499x over p calls), multi-point design options (a)/(b) incl. `VectorSourceFunc`, memory;
+  interplin corner reuse across query points (quantify). (5) WP-17 applicability: dispatch share
+  and natural batch shapes in both operators (whole TG in global interpolation, corner sets in
+  linear), interplay with WP-09 and caching (WP-26: `findBatch`). (6) Parallelization alternatives
+  (over TGs vs. query points vs. nested) as estimates. (7) Vector path at m = 1 (WP-30: interp
+  0.82–0.98x, interplin 0.89–1.01x): what of it is shared with the scalar path.
+- **Evidence (before)**: RP-3 (`results/RP-3/profile-splits.md`): `interpolateFirstDim` +
+  barycentric 22.6 / 22.6 / 26.0 % (cc d10 / d7 / d5), cheb1 d5 generic weights 24.8 % +
+  allocations 7.2 %, corner loop 28.1 / 25.8 % (d10 / d8), dispatch ≤ 2.5 %, integrand 67–71 %;
+  rp-3 group times interp ≈ 5.7 s, interplin ≈ 4.5 s (16 t). WP-29c follow-ups (PLAN WP-06/07/08
+  "From WP-29c" lines).
+- **Measurement**: snapshot `WP-36` (= HEAD after WP-29d); `perf.py profile` of the interp /
+  interplin cases; `run micro` of `micro/interp/*`, `micro/interplin/*` (+ new cases as needed);
+  no A/B needed unless benchmarks change (then `ab micro` A/A on unchanged code); peak memory of
+  the cases. Appends "Exploration WP-36: interpolation operators" to ANALYSIS.md.
+- **Expected gain**: none directly; decision data (ranking of WP-06/07/08/09/17 for the
+  interpolation groups, ≈ 10.2 s of e2e).
+- **Risk**: low. **Tests**: none changed (pinning tests from WP-29c exist:
+  `interpolation_pinning_test.cpp`, `vector_interpolation_test.cpp`).
+- **E2E filter**: `^interp/|^interplin/` · **Functional change**: none (proposals only; interface
+  ideas go into the summary as options for the owner).
+- **Dependencies**: after WP-29d (touches the interpolation files: cleanup of the refactor). Before
+  WP-06, WP-07, WP-08, WP-09 (owner). Placement relative to caching / WP-04 / WP-17: the owner's
+  order (WP-26 → WP-28 → WP-27 → WP-04 → WP-17) stands; WP-36 is the first interpolation package
+  (rank 7). It needs no decision and may be moved up (e.g. while the WP-26 API decisions are open).
+- **Status**: ready (after WP-29d).
+
+## WP-37 — pysgpp `DataVector`: iteration / bounds-checked indexing (from WP-29d; needs decision)
+- **Source**: WP-29d summary (follow-ups).
+- **Finding**: in Python, base's `DataVector` has an unchecked `__getitem__` and no `__iter__`, so
+  `list(dv)`, `sum(dv)` and `for x in dv` read past the end and segfault (hit twice in WP-29d;
+  documented in python-bindings.md and the vector example). Every vector operator now returns a
+  `DataVector` to Python, so users hit it more often.
+- **Scope**: `__iter__` (and/or `IndexError` from `__getitem__`, `__len__` check) in base's
+  `DataVector.i`; check `DataMatrix` and other base containers for the same pattern; Python tests;
+  revert the workaround notes in python-bindings.md / the example.
+- **Expected gain**: e2e nil (Python usability / safety). **Risk**: low; base module (other
+  modules' Python code may rely on the current behavior — check `SG_ALL=1` Python tests).
+- **Functional change**: yes (base's Python API) → **needs decision** (owner: do it, scope base vs.
+  combigrid-only docs, placement). **Dependencies**: none.
+
+## WP-38 — Code hygiene: copyright-banner check + combigrid leftovers (from WP-29d)
+- **Source**: WP-29d summary (follow-ups).
+- **Finding**: `tools/check_copyright_banners.py` evaluates `processFilePy(path) or
+  processFile(path)`; `processFilePy` returns `True` for non-`.py` files, so C++ banners are never
+  checked (only cpplint `legal/copyright` when a `.lint` target is stale). CLAUDE.md §5 claims the
+  build fails otherwise (owner file). Leftovers: `TODO: Document` blocks in
+  `tools/operators/quadrature/{quadrature_tools,deltas_sparse_grid_quadrature_tools}.hpp`,
+  `// TODO: Delete` at `quadrature_tools.cpp:112`, missing banner on
+  `tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.{hpp,cpp}`,
+  `-Wunused-variable` `sum` in `grids/tensor_grid.cpp:34`.
+- **Scope**: fix the checker's logic; run it over the repo; fix combigrid files. If the fixed
+  checker fails files of other modules (the build would fail for everyone), do not change those
+  modules: BLOCKED with options (fix all / restrict to combigrid / leave the checker). Leftovers:
+  documentation and banner fixes; the `TODO: Delete` only if the code is dead.
+- **Expected gain**: e2e nil; `.text` should stay byte-identical (check as WP-29d did; then a
+  filtered A/A suffices). **Risk**: low. **Functional change**: none intended (build tooling
+  behavior → BLOCKED if it affects other modules). **Dependencies**: none. Status: ready (low).
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where

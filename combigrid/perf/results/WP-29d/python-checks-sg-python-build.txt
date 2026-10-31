@@ -1,0 +1,15 @@
+== full SG_PYTHON=1 SCons build (OPT=0 libraries) vs. the scalar dumps taken with the OPT=1 (normal) libraries before the change
+-- OMP_NUM_THREADS=1
+scalar results: 448; plain callable: {'quadrature': 'TypeError', 'interpolate': 'TypeError', 'interpolateLinear': 'TypeError'}
+scalar results vs combigrid/perf/results/WP-29d/scalar-before-t1.json: 341 of 449 identical
+  max difference 1.12e-14 (relative to max(1, |value|))
+vector vs scalar: 896 components, 896 bitwise equal, max 0.00 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
+RESULT: OK (0 failures)
+-- OMP_NUM_THREADS=16
+scalar results: 448; plain callable: {'quadrature': 'TypeError', 'interpolate': 'TypeError', 'interpolateLinear': 'TypeError'}
+scalar results vs combigrid/perf/results/WP-29d/scalar-before-t16.json: 243 of 449 identical
+  max difference 6.77e-15 (relative to max(1, |value|))
+vector vs scalar: 896 components, 559 bitwise equal, max 0.24 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
+RESULT: OK (0 failures)
+scalar results vs /tmp/claude-1000/-home-jannik-DEV-University-7--Semester-25WT-BT-SGpp/59e781f0-a20b-4f37-b180-2743c816b9e0/scratchpad/scalar-before-opt0-t1.json: 449 of 449 identical
+RESULT: OK (0 failures)

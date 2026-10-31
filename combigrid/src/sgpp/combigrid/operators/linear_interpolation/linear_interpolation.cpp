@@ -27,7 +27,6 @@
 #include <stdexcept>
 #include <vector>
 
-using namespace sgpp::combigrid::tools::lin_interpolation;
 using LinInterpScratch = sgpp::combigrid::misc::LinInterpScratch;
 
 namespace sgpp {
@@ -50,8 +49,8 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
 
 #pragma omp for schedule(static) nowait
     for (const TensorGridCTData& tgData : sparseGrid) {
-      result +=
-          tgData.coefficient * processTensorGrid(sourceFunc, normPoint, tgData, genInstr, scratch);
+      result += tgData.coefficient * tools::lin_interpolation::processTensorGrid(
+                                         sourceFunc, normPoint, tgData, genInstr, scratch);
     }
   }
 
@@ -81,7 +80,8 @@ void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVecto
 
 #pragma omp for schedule(static) nowait
     for (const TensorGridCTData& tgData : sparseGrid) {
-      processTensorGrid(sourceFunc, normPoint, tgData, genInstr, scratch, tgResult);
+      tools::lin_interpolation::processTensorGrid(sourceFunc, normPoint, tgData, genInstr, scratch,
+                                                  tgResult);
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgData.coefficient * tgResult[k];
       }

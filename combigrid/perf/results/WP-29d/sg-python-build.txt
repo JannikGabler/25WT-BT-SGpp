@@ -1,0 +1,21 @@
+Full SG_PYTHON=1 SCons build (python-bindings.md command, through .venv), 2026-10-31, exit 0, 3m10s:
+  scons -j8 OPT=0 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 SG_PYTHON=1 COMPILE_BOOST_TESTS=0 RUN_PYTHON_TESTS=0
+
+SWIG warnings (all modules): 2
+combigrid/src/sgpp/combigrid/multiindices/multiindex.hpp:231: Warning 389: operator[] ignored (consider using %extend)
+combigrid/src/sgpp/combigrid/multiindices/multiindex.hpp:233: Warning 389: operator[] ignored (consider using %extend)
+
+Compiler warnings in the wrapper mentioning combigrid / SourceFunc / VectorSourceFunc: 0
+
+Opaque std types in the generated wrapper (scratch build of the same .i files, grep from python-bindings.md):
+  SWIGTYPE_p_std__spanT_double_t
+  SWIGTYPE_p_std__unique_ptrT_sgpp__base__CloneableSLE_t
+  SWIGTYPE_p_std__unique_ptrT_sgpp__base__ScalarFunctionGradient_t
+  SWIGTYPE_p_std__unique_ptrT_sgpp__base__ScalarFunctionHessian_t
+  SWIGTYPE_p_std__unique_ptrT_sgpp__base__ScalarFunction_t
+  SWIGTYPE_p_std__unique_ptrT_sgpp__base__VectorFunctionGradient_t
+  SWIGTYPE_p_std__unique_ptrT_sgpp__base__VectorFunctionHessian_t
+  SWIGTYPE_p_std__unique_ptrT_sgpp__base__VectorFunction_t
+  std::span users: NodeGenFunc.genDeltaNodes* (in-place overloads, documented); no VectorSourceFunc / operator function
+
+pysgpp names containing 'SourceFunc': SourceFunc, VectorSourceFunc

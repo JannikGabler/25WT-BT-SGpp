@@ -1,3 +1,11 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
+#include <algorithm>
+#include <cassert>
+#include <limits>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
@@ -6,6 +14,8 @@
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
+#include <span>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -32,8 +42,6 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
                             out.data());
 }
 
-/// Tensor-product interpolation on one tensor grid; writes the values of all outputs to @p out
-/// (inlined into the exported functions, as the scalar one was before).
 template <typename ValueType>
 void processTensorGridInternal(const ValueType values, const base::DataVector& point,
                                const TensorGridCTData& tgData, const SGGenInstr& genInstr,
@@ -62,12 +70,13 @@ void processTensorGridInternal(const ValueType values, const base::DataVector& p
 /*
  * The kernels are written once for both value types (misc::ScalarValues, misc::VectorValues):
  * an intermediate result holds the values of all outputs (node-major), and the 1D rule
- * interpolates all outputs at once (ValueType::interpolate). The two collapse steps stay
- * separate functions (noinline), as the exported functions of the scalar kernel were before.
+ * interpolates all outputs at once (ValueType::interpolate). The two collapse steps are
+ * separate functions for readability only: they carry no inlining attributes, and in the
+ * optimized build (LTO) both are inlined into processTensorGridInternal, which stays one
+ * function per value type called by the exported overloads (WP-29c: no measurable difference
+ * to the former structure with noinline collapse steps).
  */
 
-/// Collapses dimension 0: evaluates the source function on the grid points and returns the
-/// @p nInterpolations interpolated values (times the number of outputs).
 template <typename ValueType>
 std::vector<double> interpolateFirstDim(const ValueType values, const double point,
                                         const TensorGridCTData& tgData, const SGGenInstr& genInstr,
@@ -97,8 +106,6 @@ std::vector<double> interpolateFirstDim(const ValueType values, const double poi
   return results;
 }
 
-/// Collapses dimension @p dim >= 1 in place: @p interpolationResults shrinks to
-/// @p nInterpolations values (times the number of outputs).
 template <typename ValueType>
 void interpolateLaterDim(const ValueType values, const size_t dim, const double point,
                          const TensorGridCTData& tgData, const SGGenInstr& genInstr,

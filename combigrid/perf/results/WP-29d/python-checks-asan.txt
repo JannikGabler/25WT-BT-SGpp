@@ -1,0 +1,10 @@
+== ASan: WP-29d bindings (scratch wrapper -O1 -fsanitize=address) against the 'perf.py build asan' libraries; LD_PRELOAD=libasan.so libstdc++.so (Python does not link libstdc++, so ASan's __cxa_throw interceptor needs it), ASAN_OPTIONS=detect_leaks=0, MemoryMax=8G
+-- OMP_NUM_THREADS=1
+scalar results: 448; plain callable: {'quadrature': 'TypeError', 'interpolate': 'TypeError', 'interpolateLinear': 'TypeError'}
+vector vs scalar: 896 components, 896 bitwise equal, max 0.00 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
+RESULT: OK (0 failures)
+-- OMP_NUM_THREADS=16
+scalar results: 448; plain callable: {'quadrature': 'TypeError', 'interpolate': 'TypeError', 'interpolateLinear': 'TypeError'}
+vector vs scalar: 896 components, 591 bitwise equal, max 0.32 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
+RESULT: OK (0 failures)
+-- example vector_func_full_sg_quadrature_interpolation.py (4 threads): exit 0, no ASan report

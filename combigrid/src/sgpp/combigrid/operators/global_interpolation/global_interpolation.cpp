@@ -24,8 +24,6 @@
 #include <stdexcept>
 #include <vector>
 
-using namespace sgpp::combigrid::tools::global_interpolation;
-
 namespace sgpp {
 namespace combigrid {
 
@@ -37,9 +35,10 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
   const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
   double result = 0;
 
-#pragma omp parallel for reduction(+ : result) schedule(guided)  // TODO: Scheduling
+#pragma omp parallel for reduction(+ : result) schedule(guided)
   for (const TensorGridCTData& tgData : sparseGrid) {
-    const double v = processTensorGrid(sourceFunc, normPoint, tgData, genInstr);
+    const double v =
+        tools::global_interpolation::processTensorGrid(sourceFunc, normPoint, tgData, genInstr);
     result += tgData.coefficient * v;
   }
 
@@ -66,7 +65,8 @@ void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& poi
 
 #pragma omp for schedule(guided) nowait
     for (const TensorGridCTData& tgData : sparseGrid) {
-      processTensorGrid(sourceFunc, normPoint, tgData, genInstr, tgResult);
+      tools::global_interpolation::processTensorGrid(sourceFunc, normPoint, tgData, genInstr,
+                                                     tgResult);
 
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgData.coefficient * tgResult[k];

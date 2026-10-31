@@ -1,0 +1,14 @@
+== WP-29d bindings (scratch build, python-bindings.md 'Fast check') against the normal libraries of snapshot WP-29d-after; scalar dumps taken with the unchanged bindings against WP-29d-before's (= same .text) normal libraries
+-- OMP_NUM_THREADS=1
+scalar results: 448; plain callable: {'quadrature': 'TypeError', 'interpolate': 'TypeError', 'interpolateLinear': 'TypeError'}
+scalar results vs combigrid/perf/results/WP-29d/scalar-before-t1.json: 449 of 449 identical
+vector vs scalar: 896 components, 820 bitwise equal, max 0.23 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
+RESULT: OK (0 failures)
+exit 0
+-- OMP_NUM_THREADS=16
+scalar results: 448; plain callable: {'quadrature': 'TypeError', 'interpolate': 'TypeError', 'interpolateLinear': 'TypeError'}
+scalar results vs combigrid/perf/results/WP-29d/scalar-before-t16.json: 286 of 449 identical
+  max difference 1.78e-15 (relative to max(1, |value|))
+vector vs scalar: 896 components, 555 bitwise equal, max 0.21 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
+RESULT: OK (0 failures)
+exit 0

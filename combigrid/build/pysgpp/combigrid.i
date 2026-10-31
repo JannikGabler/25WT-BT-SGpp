@@ -48,6 +48,7 @@ namespace std {
 
 %include "Functions.i"
 %include "SourceFunc.i"
+%include "VectorSourceFunc.i"
 
 // ---------------------------------------------------------------------------
 // Sparse grid generation instructions
@@ -232,31 +233,20 @@ namespace std {
 // Operators
 // ---------------------------------------------------------------------------
 
-// Internal per-tensor-grid helpers. SWIG flattens namespaces, so without these %ignores they would
-// be exposed as public functions (global_interpolation::interpolate and
-// linear_interpolation::interpolate would even be merged into the public interpolate /
-// interpolateLinear functions as additional overloads).
-%ignore sgpp::combigrid::global_interpolation::interpolate;
-%ignore sgpp::combigrid::global_interpolation::getInterpolationCntPerDim;
-%ignore sgpp::combigrid::linear_interpolation::interpolate;
-%ignore sgpp::combigrid::linear_interpolation::computeNeighborGPWithWeight;
-%ignore sgpp::combigrid::quadrature_operator::processTensorGrid;
-%ignore sgpp::combigrid::quadrature_operator::getWeights;
+// The operator headers declare only the public functions; their per-tensor-grid internals live in
+// tools/operators/ (not %include'd), so no internal helper needs an %ignore here.
 
-// Vector-valued source functions (VectorSourceFunc) are not exposed yet (WP-29d): hide the
-// operator overloads that take one (VectorSourceFunc has no proxy, std::span no typemap).
+// Vector-valued source functions: the overloads writing the m results to a std::span (no typemap)
+// are hidden; Python gets the overloads returning a DataVector. SWIG selects the overload by the
+// type of the first argument (SourceFunc -> float, VectorSourceFunc -> DataVector).
 %ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&, std::span<double>);
-%ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&);
 %ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
                                      const SparseGrid&, std::span<double>);
-%ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
-                                     const SparseGrid&);
 %ignore sgpp::combigrid::interpolateLinear(const VectorSourceFunc&, const base::DataVector&,
                                            const SparseGrid&, std::span<double>);
-%ignore sgpp::combigrid::interpolateLinear(const VectorSourceFunc&, const base::DataVector&,
-                                           const SparseGrid&);
 
-// Re-raise exceptions of Python source functions after the operator returns (see SourceFunc.i).
+// Re-raise exceptions of Python source functions after the operator returns (see SourceFunc.i);
+// applies to the scalar and the vector overloads.
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::interpolate)
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::interpolateLinear)
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::quadrature)

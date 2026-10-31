@@ -4,15 +4,25 @@
 // sgpp.sparsegrids.org
 
 /**
- * TODO: Document
+ * @file linear_interpolation_tools.hpp
+ * @brief Per-tensor-grid kernels of the linear interpolation operator (@c interpolateLinear).
+ *
+ * On every tensor grid, the multilinear interpolant at the query point is the weighted sum of
+ * the source function at the @f$2^d@f$ corners of the grid cell containing the point. The corner
+ * loop (@ref sumOverCorners) is written once for both value types (@c misc::ScalarValues,
+ * @c misc::VectorValues); it is defined and instantiated in the @c .cpp only, the exported entry
+ * points are the two @ref processTensorGrid overloads.
  */
 #pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <span>
+#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -56,7 +66,19 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
                        misc::LinInterpScratch& scratch, std::span<double> out);
 
 /**
- * TODO: Document
+ * @brief Kernel of both @ref processTensorGrid overloads: the corner loop. The weight of a
+ * corner (@ref computeNeighborGPWithWeight) is computed once and serves all m outputs.
+ *
+ * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues (m outputs; accumulator slot
+ *                   @c misc::LinInterpScratch::RESULT_ACC of the view's buffer).
+ * @param values   View of the source function.
+ * @param point    Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param tgData   Tensor grid + level multi-index + combination coefficient.
+ * @param genInstr Generation instruction (used for the domain).
+ * @param scratch  Per-thread scratch space (neighbors per dimension, current corner).
+ * @return Accumulator of the interpolated values (a @c double for scalar values, a pointer to
+ *         the m values in the view's buffer for vector values); zero for a 0-dimensional tensor
+ *         grid.
  */
 template <typename ValueType>
 typename ValueType::Acc sumOverCorners(ValueType values, const base::DataVector& point,

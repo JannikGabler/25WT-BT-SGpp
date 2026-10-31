@@ -31,13 +31,18 @@
 //    copies of the std::function (and thus of the SourceFunc). Because SourceFunc::func is private,
 //    the wrapper keeps a registry SourceFunc* -> holder, so that a stored exception can be found
 //    again after an operator call; entries are removed in the (extended) destructor.
+//
+// The vector-valued VectorSourceFunc (VectorSourceFunc.i) uses the same holder (callVector), its
+// own registry VectorSourceFunc* -> holder and the same exception handler.
 
 %{
+#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <unordered_map>
 
 namespace sgpp {
@@ -70,18 +75,52 @@ class PyCallableHolder {
   PyCallableHolder(const PyCallableHolder&) = delete;
   PyCallableHolder& operator=(const PyCallableHolder&) = delete;
 
-  // Calls the Python callable with the coordinates of point as a tuple of floats.
-  // May be called from any (OpenMP) thread, with or without the GIL.
+  // Calls the Python callable with the coordinates of point as a tuple of floats and returns the
+  // float it returns (NaN if the call fails). May be called from any (OpenMP) thread, with or
+  // without the GIL.
   double call(const sgpp::base::DataVector& point) {
-    const double nan = std::numeric_limits<double>::quiet_NaN();
+    double value = 0.0;
+    const bool ok = invoke(point, [&value](PyObject* ret) { value = PyFloat_AsDouble(ret); });
+    return ok ? value : std::numeric_limits<double>::quiet_NaN();
+  }
 
+  // Calls the Python callable like call and writes the values of the sequence it returns to out
+  // (all NaN if the call fails). A result that is not a sequence of exactly out.size() numbers
+  // raises a Python exception (ValueError for a wrong length, TypeError otherwise), which is
+  // recorded like an exception of the callable itself.
+  void callVector(const sgpp::base::DataVector& point, std::span<double> out) {
+    if (!invoke(point, [out](PyObject* ret) { storeSequence(ret, out); })) {
+      std::ranges::fill(out, std::numeric_limits<double>::quiet_NaN());
+    }
+  }
+
+  // Moves a recorded exception into the Python error indicator and resets the holder.
+  // Must be called with the GIL held. Returns true iff an exception was restored.
+  bool restorePendingError() {
+    if (!failed_.load()) {
+      return false;
+    }
+    PyErr_Restore(errType_, errValue_, errTraceback_);  // steals all three references
+    errType_ = nullptr;
+    errValue_ = nullptr;
+    errTraceback_ = nullptr;
+    failed_.store(false);
+    return true;
+  }
+
+ private:
+  // Calls the Python callable with point as a tuple of floats and passes its return value to
+  // convert (which may set a Python exception). Returns false iff the call failed, i.e. an
+  // exception has been recorded now or before.
+  template <typename Convert>
+  bool invoke(const sgpp::base::DataVector& point, Convert convert) {
     // Fast path without the GIL once an exception has been recorded.
     if (failed_.load()) {
-      return nan;
+      return false;
     }
 
     PyGILState_STATE gil = PyGILState_Ensure();
-    double result = nan;
+    bool ok = false;
 
     // Re-check under the GIL: another thread may have failed in the meantime.
     if (!failed_.load()) {
@@ -102,39 +141,50 @@ class PyCallableHolder {
         Py_DECREF(coords);
 
         if (ret != nullptr) {
-          const double value = PyFloat_AsDouble(ret);
+          convert(ret);
           Py_DECREF(ret);
-          if (PyErr_Occurred() == nullptr) {
-            result = value;
-          }
         }
       }
 
       if (PyErr_Occurred() != nullptr) {
         PyErr_Fetch(&errType_, &errValue_, &errTraceback_);
         failed_.store(true);
+      } else {
+        ok = true;
       }
     }
 
     PyGILState_Release(gil);
-    return result;
+    return ok;
   }
 
-  // Moves a recorded exception into the Python error indicator and resets the holder.
-  // Must be called with the GIL held. Returns true iff an exception was restored.
-  bool restorePendingError() {
-    if (!failed_.load()) {
-      return false;
+  // Writes the numbers of the sequence ret to out; sets a Python exception if ret is not a
+  // sequence of exactly out.size() numbers. Must be called with the GIL held.
+  static void storeSequence(PyObject* ret, std::span<double> out) {
+    // A new reference to ret itself for lists and tuples; other iterables are copied to a list.
+    PyObject* seq = PySequence_Fast(ret, "VectorSourceFunc: the callable must return a sequence");
+    if (seq == nullptr) {
+      return;
     }
-    PyErr_Restore(errType_, errValue_, errTraceback_);  // steals all three references
-    errType_ = nullptr;
-    errValue_ = nullptr;
-    errTraceback_ = nullptr;
-    failed_.store(false);
-    return true;
+
+    const Py_ssize_t n = PySequence_Fast_GET_SIZE(seq);
+    if (static_cast<size_t>(n) != out.size()) {
+      PyErr_Format(PyExc_ValueError,
+                   "VectorSourceFunc: the callable returned %zd values instead of nOutputs = %zu",
+                   n, out.size());
+    } else {
+      PyObject** items = PySequence_Fast_ITEMS(seq);
+      for (Py_ssize_t i = 0; i < n; i++) {
+        const double value = PyFloat_AsDouble(items[i]);
+        if ((value == -1.0) && (PyErr_Occurred() != nullptr)) {
+          break;
+        }
+        out[static_cast<size_t>(i)] = value;
+      }
+    }
+    Py_DECREF(seq);
   }
 
- private:
   PyObject* callable_;
   std::atomic<bool> failed_{false};
   PyObject* errType_ = nullptr;
@@ -149,27 +199,49 @@ struct PyCallableFunctor {
   double operator()(const sgpp::base::DataVector& point) const { return holder->call(point); }
 };
 
-// Registry SourceFunc* -> holder (see point 3 at the top of SourceFunc.i).
+// The callable object stored inside the VectorSourceFunc's std::function.
+struct PyVectorCallableFunctor {
+  std::shared_ptr<PyCallableHolder> holder;
+
+  void operator()(const sgpp::base::DataVector& point, std::span<double> out) const {
+    holder->callVector(point, out);
+  }
+};
+
+// Registries Func* -> holder for Func = SourceFunc and VectorSourceFunc (see point 3 at the top of
+// SourceFunc.i), guarded by one mutex.
 std::mutex& sourceFuncRegistryMutex() {
   static std::mutex mutex;
   return mutex;
 }
 
-std::unordered_map<const sgpp::combigrid::SourceFunc*, std::shared_ptr<PyCallableHolder>>&
-sourceFuncRegistry() {
-  static std::unordered_map<const sgpp::combigrid::SourceFunc*, std::shared_ptr<PyCallableHolder>>
-      registry;
+template <typename Func>
+std::unordered_map<const Func*, std::shared_ptr<PyCallableHolder>>& sourceFuncRegistry() {
+  static std::unordered_map<const Func*, std::shared_ptr<PyCallableHolder>> registry;
   return registry;
 }
 
-// Re-raises the exception recorded for sourceFunc, if any. Must be called with the GIL held.
-// Returns true iff a Python exception is now set.
-bool raisePendingSourceFuncError(const sgpp::combigrid::SourceFunc* sourceFunc) {
+template <typename Func>
+void registerSourceFunc(const Func* sourceFunc, std::shared_ptr<PyCallableHolder> holder) {
+  std::lock_guard<std::mutex> lock(sourceFuncRegistryMutex());
+  sourceFuncRegistry<Func>()[sourceFunc] = std::move(holder);
+}
+
+template <typename Func>
+void unregisterSourceFunc(const Func* sourceFunc) {
+  std::lock_guard<std::mutex> lock(sourceFuncRegistryMutex());
+  sourceFuncRegistry<Func>().erase(sourceFunc);
+}
+
+// Re-raises the exception recorded for sourceFunc (a SourceFunc or VectorSourceFunc), if any. Must
+// be called with the GIL held. Returns true iff a Python exception is now set.
+template <typename Func>
+bool raisePendingSourceFuncError(const Func* sourceFunc) {
   std::shared_ptr<PyCallableHolder> holder;
   {
     std::lock_guard<std::mutex> lock(sourceFuncRegistryMutex());
-    auto it = sourceFuncRegistry().find(sourceFunc);
-    if (it != sourceFuncRegistry().end()) {
+    auto it = sourceFuncRegistry<Func>().find(sourceFunc);
+    if (it != sourceFuncRegistry<Func>().end()) {
       holder = it->second;
     }
   }
@@ -181,8 +253,10 @@ bool raisePendingSourceFuncError(const sgpp::combigrid::SourceFunc* sourceFunc) 
 }  // namespace sgpp
 %}
 
-// Exception handler for every wrapped function that evaluates a SourceFunc passed as its first
-// argument (arg1; for SourceFunc's own methods, arg1 is 'this'). Replaces the global handler of
+// Exception handler for every wrapped function that evaluates a SourceFunc or VectorSourceFunc
+// passed as its first argument (arg1; for the classes' own methods, arg1 is 'this'; the registry
+// is chosen by the type of arg1, so one handler serves the scalar and the vector overloads of an
+// operator). Replaces the global handler of
 // pysgpp.i for these functions: C++ exceptions are translated to RuntimeError as usual, and an
 // exception raised by the Python callable during the call is re-raised afterwards.
 // $action contains SWIG's RAII GIL release, so the GIL is held again when the check runs.
@@ -211,17 +285,12 @@ bool raisePendingSourceFuncError(const sgpp::combigrid::SourceFunc* sourceFunc) 
     std::function<double(const sgpp::base::DataVector&)> func(
         sgpp::combigrid::python::PyCallableFunctor{holder});
     auto* sourceFunc = new sgpp::combigrid::SourceFunc(std::move(func));
-
-    std::lock_guard<std::mutex> lock(sgpp::combigrid::python::sourceFuncRegistryMutex());
-    sgpp::combigrid::python::sourceFuncRegistry()[sourceFunc] = holder;
+    sgpp::combigrid::python::registerSourceFunc(sourceFunc, std::move(holder));
     return sourceFunc;
   }
 
   ~SourceFunc() {
-    {
-      std::lock_guard<std::mutex> lock(sgpp::combigrid::python::sourceFuncRegistryMutex());
-      sgpp::combigrid::python::sourceFuncRegistry().erase($self);
-    }
+    sgpp::combigrid::python::unregisterSourceFunc($self);
     delete $self;
   }
 }

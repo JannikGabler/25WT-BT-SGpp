@@ -53,8 +53,13 @@ tools/                 (namespace tools)
   combitech_coefficients/               computeCTCoeffs, computeCTCoeffSingle
   sparse_grid_generation/               SparseGrid / DeltasSparseGrid generation, node lookup
   sparse_grid_generation_instructions/  MI generation of the complete sparse grid
-  operators/             quadrature_tools (SG), deltas_sparse_grid_quadrature_tools (DSG internals),
-                         ProjectedSubTrieBuilder (DSG), generic barycentric formula
+  operators/             per-tensor-grid kernels of the operators: quadrature/ (quadrature_tools
+                         (SG), deltas_sparse_grid_quadrature_tools (DSG internals),
+                         ProjectedSubTrieBuilder (DSG)), global_interpolation/
+                         (global_interpolation_tools, namespace tools::global_interpolation;
+                         interpolation_methods/: generic barycentric weights),
+                         linear_interpolation/ (linear_interpolation_tools, namespace
+                         tools::lin_interpolation)
   downwards_closedness, paretoMaxima, multiindex_bounding_box_generation, multiindex_domination
   multiindex/, multiindex_view/, multiindex_vector/ (component-wise max)   MI helpers
   math/ (binomial, pow, ceil), comparison/ (nearly_equal), data_vector/ (normalization
@@ -102,7 +107,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `InterpolationMethod::interpolate(pos, nodes, values /* n × m, node-major */, m, out)` (default:
   the scalar formula per output; both barycentric formulas override it: factors once per node).
   Output k equals the scalar run of component k within round-off (not bitwise). For m = 1 use
-  `SourceFunc` (the vector path is slower there).
+  `SourceFunc` (the vector path is slower there). Python: `VectorSourceFunc(callable, nOutputs)`
+  (callable returns a sequence of m numbers; [python-bindings.md](python-bindings.md)).
 - `NodeGenFunc`
   ([functions/node_generation_functions/node_generation_function.hpp](../src/sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp)):
   abstract 1D node family; also returns the matching 1D `QuadRule*` and `InterpolationMethod*`.
@@ -118,9 +124,14 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `quadrature(sourceFunc, sg)` (SparseGrid or DeltasSparseGrid); vector-valued (all operators):
   `interpolate(vectorSourceFunc, point, sg, out)`, `interpolateLinear(…, out)`,
   `quadrature(vectorSourceFunc, sg, out)` (`std::span<double>` of size m, wrong size throws
-  `std::invalid_argument`), each also returning a `base::DataVector` (no `out`). OpenMP over tensor grids in the drivers (`quadrature.cpp`,
+  `std::invalid_argument`), each also returning a `base::DataVector` (no `out`; the overloads
+  Python binds). OpenMP over tensor grids in the drivers (`quadrature.cpp`,
   `deltas_sparse_grid_quadrature.cpp`, `global_interpolation.cpp`, `linear_interpolation.cpp`);
-  generation and CT coefficients are parallel above the thresholds in `constants.hpp`.
+  the per-tensor-grid kernels live in `tools/operators/` (`tools::quadrature::processTensorGrid`,
+  `tools::dsg_quadrature::processDeltaTensorGrid`, `tools::global_interpolation::processTensorGrid`,
+  `tools::lin_interpolation::processTensorGrid`; scalar and vector overloads around one template
+  kernel each); generation and CT coefficients are parallel above the thresholds in
+  `constants.hpp`.
 - `tools::computeCTCoeffs(miVec)`: CT coefficients of a downwards-closed MI set.
 
 ## Design rationale (thesis §5)
@@ -167,8 +178,10 @@ operation machinery.
 
 - **Dimension-adaptive refinement** is not implemented; the caller builds the loop on
   `MIVecSGGenInstr` (highest-priority future work; planned by the owner).
-- **Vector-valued source functions are C++ only**: `VectorSourceFunc` works with all operators
-  (perf phase WP-29a–c); the Python bindings follow (WP-29d).
+- **Vector-valued source functions in Python** (WP-29d): `VectorSourceFunc` and the
+  `DataVector`-returning overloads of all three operators are bound; the DSG quadrature (also the
+  scalar one) and the `std::span` overloads are C++ only. Python callables run serially under the
+  GIL; a vector callable needs one call per grid point for all m outputs.
 - **No source-function caching**: shared points are re-evaluated across tensor grids and operator
   calls. Opt-in design chosen (cache in the callable stored in a plain `SourceFunc`), not
   implemented ([PLAN.md](../perf/PLAN.md) WP-26–WP-28).
