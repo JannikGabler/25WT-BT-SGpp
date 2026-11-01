@@ -3,10 +3,10 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
-// Python bindings for the source-function cache: sgpp::combigrid::CacheConfig, CacheStatistics,
-// SourceFuncCache, CachedSourceFunc and CachedVectorSourceFunc. Always wrapped; if SG++ was built
-// without Boost >= 1.81 or xxHash >= 0.8, pysgpp.SourceFuncCache.isAvailable() is False and the
-// constructors raise RuntimeError (base::not_implemented_exception).
+// Python bindings for the source-function cache: sgpp::combigrid::SourceFuncCacheConfig,
+// CacheStatistics, SourceFuncCache, CachedSourceFunc and CachedVectorSourceFunc. Always wrapped; if
+// SG++ was built without Boost >= 1.81 or xxHash >= 0.8, the constructors raise RuntimeError
+// (base::dependency_exception, the message names the reason).
 //
 //     cache = pysgpp.SourceFuncCache()                    # or SourceFuncCache(config)
 //     f = pysgpp.CachedSourceFunc(func, cache)            # or CachedSourceFunc(func[, config])
@@ -23,34 +23,32 @@
 // address). The cache is wrapped as std::shared_ptr proxy (%shared_ptr in combigrid.i): it lives
 // as long as a Python reference or a cached function uses it.
 
-// The end-of-operator hook is an internal step of the operators; requireAvailable is the
-// constructors' check (Python: isAvailable).
+// The end-of-operator hook is an internal step of the operators.
 %ignore sgpp::combigrid::SourceFuncCache::finishOperatorCall;
-%ignore sgpp::combigrid::SourceFuncCache::requireAvailable;
+%ignore sgpp::combigrid::CachedSourceFunc::finishOperatorCall;
+%ignore sgpp::combigrid::CachedVectorSourceFunc::finishOperatorCall;
 
-%include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/cache_config.hpp"
+%include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp"
 %include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp"
 
-// SourceFuncHook (the interface of the end-of-operator hook, base class of SourceFuncCache) is
-// not wrapped.
-%warnfilter(SWIGWARN_TYPE_UNDEFINED_CLASS) sgpp::combigrid::SourceFuncCache;
 %include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp"
 
 // The std::function constructors cannot be called from Python; they are replaced by the
 // PyObject* constructors below ('pyfunc' activates the callable-checking 'in' typemap, see
 // SourceFunc.i). The signatures include the default arguments, so that the overloads SWIG
 // generates for them are ignored as well. A null cache (None) or a cache of a function with
-// another number of outputs raises RuntimeError (base::data_exception).
+// another number of outputs raises RuntimeError (std::invalid_argument).
 %ignore sgpp::combigrid::CachedSourceFunc::CachedSourceFunc(
     std::function<double(const base::DataVector&)>, const std::shared_ptr<SourceFuncCache>&);
 %ignore sgpp::combigrid::CachedSourceFunc::CachedSourceFunc(
-    std::function<double(const base::DataVector&)>, const CacheConfig& config = CacheConfig());
+    std::function<double(const base::DataVector&)>,
+    const SourceFuncCacheConfig& config = SourceFuncCacheConfig());
 %ignore sgpp::combigrid::CachedVectorSourceFunc::CachedVectorSourceFunc(
     std::function<void(const base::DataVector&, std::span<double>)>, size_t,
     const std::shared_ptr<SourceFuncCache>&);
 %ignore sgpp::combigrid::CachedVectorSourceFunc::CachedVectorSourceFunc(
     std::function<void(const base::DataVector&, std::span<double>)>, size_t,
-    const CacheConfig& config = CacheConfig());
+    const SourceFuncCacheConfig& config = SourceFuncCacheConfig());
 
 %extend sgpp::combigrid::CachedSourceFunc {
   CachedSourceFunc(PyObject* pyfunc, const std::shared_ptr<sgpp::combigrid::SourceFuncCache>& cache) {
@@ -62,8 +60,8 @@
     return sourceFunc;
   }
 
-  CachedSourceFunc(PyObject* pyfunc,
-                   const sgpp::combigrid::CacheConfig& config = sgpp::combigrid::CacheConfig()) {
+  CachedSourceFunc(PyObject* pyfunc, const sgpp::combigrid::SourceFuncCacheConfig& config =
+                                         sgpp::combigrid::SourceFuncCacheConfig()) {
     auto holder = std::make_shared<sgpp::combigrid::python::PyCallableHolder>(pyfunc);
     auto* sourceFunc = new sgpp::combigrid::CachedSourceFunc(
         sgpp::combigrid::python::PyCallableFunctor{holder}, config);
@@ -91,7 +89,8 @@
   }
 
   CachedVectorSourceFunc(PyObject* pyfunc, size_t nOutputs,
-                         const sgpp::combigrid::CacheConfig& config = sgpp::combigrid::CacheConfig()) {
+                         const sgpp::combigrid::SourceFuncCacheConfig& config =
+                             sgpp::combigrid::SourceFuncCacheConfig()) {
     auto holder = std::make_shared<sgpp::combigrid::python::PyCallableHolder>(pyfunc);
     auto* sourceFunc = new sgpp::combigrid::CachedVectorSourceFunc(
         sgpp::combigrid::python::PyVectorCallableFunctor{holder}, nOutputs, config);

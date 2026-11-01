@@ -59,15 +59,15 @@ namespace source_func_cache {
 /// Number of shards of the table of a cache (each with a lock, a record arena and an index;
 /// selected by bits 24..29 of the hash, so at most 64). WP-25: one shared table at 16 threads
 /// keeps the hits that per-thread tables lose (0.82 vs. 0.47).
-constexpr size_t N_SHARDS = 64;
+constexpr size_t DEFAULT_SHARDS_CNT = 64;
+
+/// Default soft memory limit of a cache in bytes (1 GiB).
+constexpr size_t DEFAULT_MEMORY_LIMIT = size_t{1} << 30;
 
 /// Records per chunk of the record arena of a shard, as a power of two (2^7 = 128: every shard
 /// allocates whole chunks, so small caches must not pay a large chunk per shard; WP-25: 4096
 /// records cost 2.5 KB per entry at 1e4 entries).
 constexpr size_t RECORDS_PER_CHUNK_LOG2 = 7;
-
-/// Default soft memory limit of a cache in bytes (1 GiB).
-constexpr size_t DEFAULT_MEMORY_LIMIT = size_t{1} << 30;
 
 }  // namespace source_func_cache
 

@@ -43,9 +43,9 @@ both quadratures; Python: all but the C++-only DSG quadrature)); nodes / weights
 the user domain enters only via `setDomain()` (all operators map with `tools::mapToDomain` =
 `std::fma`, so they evaluate bitwise identical points). Optional caching (WP-26): `CachedSourceFunc`
 / `CachedVectorSourceFunc` (a `SourceFunc` / `VectorSourceFunc` whose callable looks every point up
-in a shared in-memory `SourceFuncCache`; `CacheConfig{.memoryLimit}`, `statistics()`; Python too);
-always compiled, but works only if Boost ≥ 1.81 and xxHash ≥ 0.8 are found at build time, else
-its constructors throw (`SourceFuncCache::isAvailable()`).
+in a shared in-memory `SourceFuncCache`; `SourceFuncCacheConfig{.memoryLimit, .nShards}`,
+`statistics()`; Python too); always compiled, but works only if Boost ≥ 1.81 and xxHash ≥ 0.8 are
+found at build time, else its constructors throw `base::dependency_exception`.
 
 ```cpp
 CompleteSGGenInstr genInstr(/*maxLvl=*/10, /*nDim=*/3);
@@ -153,13 +153,17 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - Source-function cache: one `SourceFuncCache` per function (m fixed by the first cached function,
   another m throws; points of another d bypass it); NaN values are not stored; it only pays for
   functions ≳ 0.3 µs (the judged suite uses plain `SourceFunc`). Its keys are the user-domain bit
-  patterns: any new unit → domain mapping must use `tools::mapToDomain`.
+  patterns: any new unit → domain mapping must use `tools::mapToDomain`. The end-of-operator hook
+  is the virtual `finishOperatorCall()` of `SourceFunc` / `VectorSourceFunc` (virtual destructors).
+  Copying a subclass object into the base class (slicing: would lose the override) does not
+  compile (deleted constrained converting constructor / assignment, `tools::StrictSubclassOf`);
+  pass cached functions by reference. These special members are hidden from SWIG (`#ifndef SWIG`).
 - Optional libraries are detected only in
-  [optional_libraries.hpp](combigrid/src/sgpp/combigrid/optional_libraries.hpp) (`__has_include` +
-  version macros; no SCons code): code that needs them tests its macro
-  (`SGPP_COMBIGRID_HAS_CACHE_LIBRARIES`, only in `.cpp` / internal files: it includes `xxhash.h`).
-  Public classes stay unconditional and throw without the library. Force the fallback with
-  `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_CACHE`.
+  [tools/defines/dependencies_defines.hpp](combigrid/src/sgpp/combigrid/tools/defines/dependencies_defines.hpp)
+  (`__has_include` + version macros; no SCons code): code that needs them tests its macro
+  (`SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE`, only in `.cpp` / internal files: it includes
+  `xxhash.h`; else `..._EXCEPTION` holds the reason). Public classes stay unconditional and throw
+  without the library. Force the fallback with `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE`.
 - Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
   on `MIVecSGGenInstr`), disk tier and adaptive policy of the cache (WP-28 / WP-27),
   dimension-wise boundary offsets, Leja nodes.

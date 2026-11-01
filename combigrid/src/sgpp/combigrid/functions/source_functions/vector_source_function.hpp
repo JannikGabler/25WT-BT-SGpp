@@ -11,9 +11,8 @@
 #pragma once
 
 #include <functional>
-#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/source_functions/source_function_hook.hpp>
+#include <sgpp/combigrid/tools/concepts/strict_subclass_of.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 
@@ -53,6 +52,35 @@ class VectorSourceFunc {
   VectorSourceFunc(std::function<void(const base::DataVector&, std::span<double>)>&& func,
                    size_t nOutputs);
 
+  /// @name Copy, move and destruction
+  /// @{
+
+#ifndef SWIG
+  VectorSourceFunc(const VectorSourceFunc&) = default;
+  VectorSourceFunc(VectorSourceFunc&&) = default;
+  VectorSourceFunc& operator=(const VectorSourceFunc&) = default;
+  VectorSourceFunc& operator=(VectorSourceFunc&&) = default;
+
+  /**
+   * @brief Copying or moving an object of a subclass (e.g. @c CachedVectorSourceFunc) into a
+   * @c VectorSourceFunc is not allowed: the copy would keep the subclass's callable but lose its
+   * overrides, e.g. @c finishOperatorCall (slicing). Pass such objects by reference. Not
+   * explicit, so that it also catches copy-initialization (@c VectorSourceFunc f = cached;).
+   */
+  template <tools::StrictSubclassOf<VectorSourceFunc> Subclass>
+  VectorSourceFunc(Subclass&& other) = delete;  // NOLINT(runtime/explicit)
+
+  /// @brief Assigning an object of a subclass is not allowed either (slicing, see above).
+  template <tools::StrictSubclassOf<VectorSourceFunc> Subclass>
+  VectorSourceFunc& operator=(Subclass&& other) = delete;
+
+  // Hidden from SWIG as well: the bindings replace the destructor by an %extend destructor
+  // (SourceFunc.i / VectorSourceFunc.i), which a declared destructor would shadow (warning 302).
+  virtual ~VectorSourceFunc() = default;
+#endif
+
+  /// @}
+
   /**
    * @brief Returns the number of outputs @f$m@f$.
    * @return Number of outputs.
@@ -84,35 +112,24 @@ class VectorSourceFunc {
   void evaluateNormalizedInPlace(base::DataVector& point, const HyperCubeArea& area,
                                  std::span<double> out) const;
 
-  /**
-   * @brief Notifies the hook of the source function, if any, that an operator call has
-   * finished. Every operator calls it once at its end.
-   */
-  void finishOperatorCall() const;
-
- protected:
-  /**
-   * @brief Wraps the provided callable and attaches @p hook (e.g. @c CachedVectorSourceFunc).
-   * @param func     Callable writing the @p nOutputs values at a point in problem coordinates to
-   *                 its second argument (of size @p nOutputs).
-   * @param nOutputs Number of outputs @f$m@f$.
-   * @param hook     Hook notified at the end of every operator call.
-   * @throws base::data_exception if @p nOutputs is 0.
-   */
-  VectorSourceFunc(std::function<void(const base::DataVector&, std::span<double>)> func,
-                   size_t nOutputs, std::shared_ptr<SourceFuncHook> hook);
+  /// @name Bookkeeping
+  /// @{
 
   /**
-   * @brief Returns the hook (nullptr for a plain source function).
-   * @return Hook.
+   * @brief End-of-operator hook: every operator calls it once at its end (after its parallel
+   * region). Does nothing for a plain source function; the cached functions override it to
+   * notify their cache (one virtual call per operator call, never per evaluation).
+   * @note The operators call it through a reference; copying a subclass object into the base
+   * class (which would lose the override) does not compile.
    */
-  const std::shared_ptr<SourceFuncHook>& hook() const;
+  virtual void finishOperatorCall() const;
+
+  /// @}
 
  private:
   /// Wrapped user callable.
   std::function<void(const base::DataVector&, std::span<double>)> func;
-  size_t nOutputs_;                       ///< Number of outputs.
-  std::shared_ptr<SourceFuncHook> hook_;  ///< End-of-operator hook (or nullptr).
+  size_t nOutputs_;  ///< Number of outputs.
 };
 
 }  // namespace combigrid

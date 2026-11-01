@@ -15,24 +15,25 @@
  *   interplin by a quadrature on the same grid = cross-operator reuse) vs. @c none (plain
  *   @c SourceFunc, registered by perf_cache_proto.hpp);
  * - @c micro/cache/memory/production/...: heap and cache bytes with and without a memory limit.
- * Only registered with the libraries of the cache (@c SGPP_COMBIGRID_HAS_CACHE_LIBRARIES, see
- * optional_libraries.hpp).
+ * Only registered with the libraries of the cache (@c SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE,
+ * see tools/defines/dependencies_defines.hpp).
  */
 #pragma once
 
-#include <sgpp/combigrid/optional_libraries.hpp>
+#include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 
-#ifdef SGPP_COMBIGRID_HAS_CACHE_LIBRARIES
+#ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
 
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/source_functions/caching/cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/point_value_table.hpp>
+#include <sgpp/combigrid/constants.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table.hpp>
 #include <string>
 
 #include "perf_cache_proto.hpp"
@@ -55,21 +56,22 @@ class ProductionTable {
 
   ProductionTable(const cache_proto::RecordLayout layout, size_t /*capacityHint*/,
                   const size_t memLimit)
-      : table(misc::RecordLayout{layout.d, layout.m}, memLimit) {}
+      : table(misc::boost_point_value_table::RecordLayout{layout.d, layout.m}, memLimit,
+              constants::source_func_cache::DEFAULT_SHARDS_CNT) {}
 
   bool find(const base::DataVector& x, uint64_t /*hash*/, double* out) {
-    return table.find(x.data(), misc::PointValueTable::hash(x.data(), x.size()), out);
+    return table.find(x.data(), misc::BoostPointValueTable::hash(x.data(), x.size()), out);
   }
 
   bool insert(const base::DataVector& x, uint64_t /*hash*/, const double* value) {
-    table.insert(x.data(), misc::PointValueTable::hash(x.data(), x.size()), value);
+    table.insert(x.data(), misc::BoostPointValueTable::hash(x.data(), x.size()), value);
     return true;
   }
 
   size_t size() const { return table.statistics().entries; }
 
  private:
-  misc::PointValueTable table;
+  misc::BoostPointValueTable table;
 };
 
 /// @brief Hits / lookups between two statistics.
@@ -134,7 +136,7 @@ inline void addMemoryCase(Suite& suite, const std::string& limitName, const size
       "micro/cache/memory/production/" + cfg.name() + "/" + limitName, [=](MicroRun& run) {
         const OpInstance inst(cfg);
         const size_t heapBefore = cache_proto::heapBytesInUse();
-        const CachedSourceFunc f(expSum, CacheConfig{.memoryLimit = limit});
+        const CachedSourceFunc f(expSum, SourceFuncCacheConfig{.memoryLimit = limit});
         inst.run(f);
         const CacheStatistics filled = f.statistics();
         run.setCounter("heap_mib", static_cast<double>(cache_proto::heapBytesInUse() - heapBefore) /
@@ -172,4 +174,4 @@ inline void addCacheProductionCases(Suite& suite) {
 }  // namespace combigrid
 }  // namespace sgpp
 
-#endif  // SGPP_COMBIGRID_HAS_CACHE_LIBRARIES
+#endif  // SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE

@@ -14,7 +14,7 @@ g++ -std=c++23 -O1 -g -fsanitize=thread -fno-omit-frame-pointer \
   $SRC/functions/source_functions/caching/source_function_cache.cpp \
   $SRC/functions/source_functions/caching/cached_source_function.cpp \
   $SRC/functions/source_functions/caching/cached_vector_source_function.cpp \
-  $SRC/miscellaneous/caching/point_value_table.cpp \
+  $SRC/miscellaneous/caching/boost_point_value_table.cpp \
   $SRC/tools/data_vector/normalization.cpp \
   -Llib -lsgppbase -Wl,-rpath,"$PWD/lib" -o "$OUT/tsan_cache_driver"
 OPENBLAS_NUM_THREADS=1 TSAN_OPTIONS="halt_on_error=1 second_deadlock_stack=1" \

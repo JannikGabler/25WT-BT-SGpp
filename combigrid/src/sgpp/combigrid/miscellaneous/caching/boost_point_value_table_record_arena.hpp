@@ -4,7 +4,7 @@
 // sgpp.sparsegrids.org
 
 /**
- * @file record_arena.hpp
+ * @file boost_point_value_table_record_arena.hpp
  * @brief Chunked storage of the fixed-size records of the source-function cache.
  */
 #pragma once
@@ -14,26 +14,14 @@
 #include <limits>
 #include <memory>
 #include <sgpp/combigrid/constants.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_layout.hpp>
 #include <vector>
 
 namespace sgpp {
 namespace combigrid {
+
 namespace misc {
-
-/**
- * @brief Layout of a record of the source-function cache in 8-byte words:
- * @c [hash | point (nDim doubles) | values (nOutputs doubles)].
- */
-struct RecordLayout {
-  size_t nDim;      ///< Number of coordinates d of a point.
-  size_t nOutputs;  ///< Number of values m per point.
-
-  /// @brief Number of 8-byte words of a record.
-  size_t stride() const { return 1 + nDim + nOutputs; }
-
-  /// @brief Number of bytes of a record.
-  size_t bytes() const { return sizeof(uint64_t) * stride(); }
-};
+namespace boost_point_value_table {
 
 /**
  * @brief Append-only storage of records with stable 32-bit indices, in chunks of
@@ -94,6 +82,8 @@ class RecordArena {
   size_t size_ = 0;                                  ///< Number of records.
 };
 
+}  // namespace boost_point_value_table
 }  // namespace misc
+
 }  // namespace combigrid
 }  // namespace sgpp

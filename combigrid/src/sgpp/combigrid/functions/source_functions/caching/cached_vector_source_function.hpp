@@ -14,9 +14,9 @@
 #include <functional>
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/source_functions/caching/cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <span>
 
@@ -31,20 +31,23 @@ namespace combigrid {
  * The cache holds the m values per point; it serves this function only (a cache of a function
  * with another number of outputs is rejected). See @c CachedSourceFunc and @c SourceFuncCache.
  *
- * @note @c VectorSourceFunc has no virtual destructor: do not delete a cached function through a
- * pointer to @c VectorSourceFunc.
+ * @note Pass it to the operators by reference (as they take it). Copying or moving it into a
+ * plain @c VectorSourceFunc does not compile (it would lose @c finishOperatorCall, see
+ * @c VectorSourceFunc's deleted converting constructor); copies as @c CachedVectorSourceFunc share the cache.
  */
 class CachedVectorSourceFunc final : public VectorSourceFunc {
  public:
+  /// @name Constructors
+  /// @{
+
   /**
    * @brief Wraps @p func, caching its values in @p cache.
    * @param func     Callable writing the @p nOutputs values at a point in problem coordinates to
    *                 its second argument.
    * @param nOutputs Number of outputs m.
    * @param cache    Cache (not null; holds the values of this function only).
-   * @throws base::not_implemented_exception if the cache is not available
-   * (@c SourceFuncCache::isAvailable()).
-   * @throws base::data_exception if @p nOutputs is 0, @p cache is null or holds the values of a
+   * @throws base::dependency_exception if SG++ was built without the libraries of the cache.
+   * @throws std::invalid_argument if @p nOutputs is 0, @p cache is null or holds the values of a
    * function with another number of outputs.
    */
   CachedVectorSourceFunc(std::function<void(const base::DataVector&, std::span<double>)> func,
@@ -56,12 +59,27 @@ class CachedVectorSourceFunc final : public VectorSourceFunc {
    *                 its second argument.
    * @param nOutputs Number of outputs m.
    * @param config   Configuration of the new cache.
-   * @throws base::not_implemented_exception if the cache is not available
-   * (@c SourceFuncCache::isAvailable()).
-   * @throws base::data_exception if @p nOutputs is 0.
+   * @throws base::dependency_exception if SG++ was built without the libraries of the cache.
+   * @throws std::invalid_argument if @p nOutputs is 0.
    */
   CachedVectorSourceFunc(std::function<void(const base::DataVector&, std::span<double>)> func,
-                         size_t nOutputs, const CacheConfig& config = CacheConfig());
+                         size_t nOutputs,
+                         const SourceFuncCacheConfig& config = SourceFuncCacheConfig());
+
+  /// @}
+
+  /// @name Bookkeeping
+  /// @{
+
+  /**
+   * @brief End-of-operator hook: notifies the cache (@c SourceFuncCache::finishOperatorCall).
+   */
+  void finishOperatorCall() const override;
+
+  /// @}
+
+  /// @name Getters
+  /// @{
 
   /**
    * @brief Returns the cache.
@@ -69,23 +87,41 @@ class CachedVectorSourceFunc final : public VectorSourceFunc {
    */
   std::shared_ptr<SourceFuncCache> cache() const;
 
+  /// @}
+
+  /// @name Helpers
+  /// @{
+
   /**
    * @brief Returns the statistics of the cache (@c cache()->statistics()).
    * @return Statistics.
    */
   CacheStatistics statistics() const;
 
+  /// @}
+
  private:
+  /// @name Attributes
+  /// @{
+
+  std::shared_ptr<SourceFuncCache> cache_;  ///< The cache (shared with all copies).
+
+  /// @}
+
+  /// @name Helpers
+  /// @{
+
   /**
    * @brief Returns the callable that looks points up in @p cache before calling @p func.
-   * @throws base::not_implemented_exception if the cache is not available
-   * (@c SourceFuncCache::isAvailable()).
-   * @throws base::data_exception if @p nOutputs is 0, @p cache is null or holds another number
+   * @throws base::dependency_exception if SG++ was built without the libraries of the cache.
+   * @throws std::invalid_argument if @p nOutputs is 0, @p cache is null or holds another number
    * of outputs.
    */
   static std::function<void(const base::DataVector&, std::span<double>)> wrap(
       std::function<void(const base::DataVector&, std::span<double>)> func, size_t nOutputs,
       const std::shared_ptr<SourceFuncCache>& cache);
+
+  /// @}
 };
 
 }  // namespace combigrid

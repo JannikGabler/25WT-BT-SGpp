@@ -14,15 +14,14 @@
 #include <cstddef>
 #include <memory>
 #include <mutex>
-#include <sgpp/combigrid/functions/source_functions/caching/cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
-#include <sgpp/combigrid/functions/source_functions/source_function_hook.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
 
 namespace sgpp {
 namespace combigrid {
 
 namespace misc {
-class PointValueTable;
+class BoostPointValueTable;
 }  // namespace misc
 
 /**
@@ -40,45 +39,32 @@ class PointValueTable;
  * - One cache serves one function. Its number of outputs is fixed by the first cached function
  *   built on it (another number throws), its number of coordinates by the first lookup (points
  *   of another dimension are evaluated without the cache).
- * - Thread-safe: one table of 64 shards, each with a spin lock, a record arena and a hash index
- *   (Boost.Unordered, XXH3). Two threads that miss the same point at the same time both call
+ * - Thread-safe: one table of @c SourceFuncCacheConfig::nShards shards (default 64), each with a
+ *   spin lock, a record arena and a hash index (Boost.Unordered, XXH3). Two threads that miss the same point at the same time both call
  *   the function; one value is kept.
  * - Values with a NaN are not stored (a failed evaluation, e.g. a Python exception, is retried).
  * - Memory per point: 8 (d + m + 1) bytes plus about 5-10 bytes of index; soft limit
- *   @c CacheConfig::memoryLimit.
+ *   @c SourceFuncCacheConfig::memoryLimit.
  * - Worth it for functions that cost more than a few hundred nanoseconds (WP-25: break-even of
  *   the SG quadrature 120-310 ns at 1 thread, 270-630 ns at 16 threads); cheap functions are
  *   faster without a cache.
  *
  * @note Needs Boost >= 1.81 (Boost.Unordered) and xxHash >= 0.8 when SG++ is built (detected in
- * optional_libraries.hpp). The class is always compiled; without the libraries its constructor
- * and those of the cached functions throw (@ref isAvailable).
+ * tools/defines/dependencies_defines.hpp). The class is always compiled; without the libraries
+ * its constructor, and with it those of the cached functions, throw @c base::dependency_exception.
  */
-class SourceFuncCache final : public SourceFuncHook {
+class SourceFuncCache final {
  public:
   /**
    * @brief Creates an empty cache.
    * @param config Configuration.
-   * @throws base::not_implemented_exception if SG++ was built without the libraries of the
-   * cache (@ref isAvailable).
+   * @throws base::dependency_exception if SG++ was built without the libraries of the cache
+   * (the message names the reason).
+   * @throws std::invalid_argument if @c config.nShards is not a power of two in [1, 64].
    */
-  explicit SourceFuncCache(const CacheConfig& config = CacheConfig());
+  explicit SourceFuncCache(const SourceFuncCacheConfig& config = SourceFuncCacheConfig());
 
-  ~SourceFuncCache() override;
-
-  /**
-   * @brief Whether SG++ was built with the libraries of the cache (Boost >= 1.81, xxHash >= 0.8);
-   * otherwise creating a cache or a cached function throws.
-   * @return Whether the cache is available.
-   */
-  static bool isAvailable();
-
-  /**
-   * @brief Throws if the cache is not available (@ref isAvailable); called by the constructors of
-   * the cache and of the cached functions.
-   * @throws base::not_implemented_exception if SG++ was built without the libraries.
-   */
-  static void requireAvailable();
+  ~SourceFuncCache();
 
   SourceFuncCache(const SourceFuncCache&) = delete;
   SourceFuncCache& operator=(const SourceFuncCache&) = delete;
@@ -87,7 +73,7 @@ class SourceFuncCache final : public SourceFuncHook {
    * @brief Returns the configuration.
    * @return Configuration.
    */
-  const CacheConfig& config() const;
+  const SourceFuncCacheConfig& config() const;
 
   /**
    * @brief Returns the number of outputs of the cached function (0 before a cached function is
@@ -110,9 +96,10 @@ class SourceFuncCache final : public SourceFuncHook {
   void clear();
 
   /**
-   * @brief End-of-operator hook (@c SourceFuncHook): counts the operator call.
+   * @brief End-of-operator hook (called by the cached functions' @c finishOperatorCall): counts
+   * the operator call.
    */
-  void finishOperatorCall() override;
+  void finishOperatorCall();
 
  private:
   friend class CachedSourceFunc;
@@ -122,7 +109,7 @@ class SourceFuncCache final : public SourceFuncHook {
    * @brief Fixes the number of outputs of the cached function (called by the cached functions
    * built on this cache).
    * @param nOutputs Number of outputs m (at least 1).
-   * @throws base::data_exception if the cache holds the values of a function with another m.
+   * @throws std::invalid_argument if the cache holds the values of a function with another m.
    */
   void attach(size_t nOutputs);
 
@@ -132,23 +119,23 @@ class SourceFuncCache final : public SourceFuncHook {
    * @param nDim Number of coordinates of the point to look up.
    * @return The table, or nullptr if it holds points of another dimension.
    */
-  misc::PointValueTable* table(size_t nDim);
+  misc::BoostPointValueTable* table(size_t nDim);
 
   /**
    * @brief Creates the table for points with @p nDim coordinates unless another thread did.
    * @param nDim Number of coordinates.
    * @return The table.
    */
-  misc::PointValueTable* createTable(size_t nDim);
+  misc::BoostPointValueTable* createTable(size_t nDim);
 
-  CacheConfig config_;   ///< Configuration.
-  size_t nOutputs_ = 0;  ///< Number of outputs (guarded by @c mutex_; 0: not fixed yet).
+  SourceFuncCacheConfig config_;  ///< Configuration.
+  size_t nOutputs_ = 0;           ///< Number of outputs (guarded by @c mutex_; 0: not fixed yet).
   /// Table (nullptr until the first lookup); owned by @c ownedTable_.
-  std::atomic<misc::PointValueTable*> table_{nullptr};
+  std::atomic<misc::BoostPointValueTable*> table_{nullptr};
   /// Owner of the table (guarded; a shared_ptr, so that the destructor does not need the
   /// definition of the table, which exists only with the libraries).
-  std::shared_ptr<misc::PointValueTable> ownedTable_;
-  std::atomic<size_t> operatorCalls_{0};               ///< Finished operator calls.
+  std::shared_ptr<misc::BoostPointValueTable> ownedTable_;
+  std::atomic<size_t> operatorCalls_{0};  ///< Finished operator calls.
   mutable std::mutex mutex_;  ///< Guards the creation of the table and the number of outputs.
 };
 

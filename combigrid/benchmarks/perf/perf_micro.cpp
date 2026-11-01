@@ -959,7 +959,7 @@ int main(int argc, char** argv) {
   // WP-25: source-function cache (prototypes, micro/cache/...)
   perf::cache_proto::addCacheProtoCases(suite);
 
-#ifdef SGPP_COMBIGRID_HAS_CACHE_LIBRARIES
+#ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
   // WP-26: the production source-function cache (micro/cache/.../production...)
   perf::cache_production::addCacheProductionCases(suite);
 #endif

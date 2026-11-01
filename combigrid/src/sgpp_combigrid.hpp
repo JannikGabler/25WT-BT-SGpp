@@ -19,7 +19,7 @@
  * per-operator internals) are intentionally not included. The classes of the
  * source-function cache are always declared; they work if SG++ was built with
  * Boost >= 1.81 and xxHash >= 0.8, otherwise their constructors throw
- * (@c SourceFuncCache::isAvailable()).
+ * @c base::dependency_exception.
  */
 
 #pragma once
@@ -32,11 +32,11 @@
 // Source functions
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
-#include <sgpp/combigrid/functions/source_functions/caching/cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_vector_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
 
 // Level-to-grid-point-count (growth) functions
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>

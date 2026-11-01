@@ -4,33 +4,32 @@
 // sgpp.sparsegrids.org
 
 #include <cassert>
-#include <sgpp/base/exception/data_exception.hpp>
-#include <sgpp/base/exception/not_implemented_exception.hpp>
+#include <memory>
+#include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/point_value_table.hpp>
-#include <sgpp/combigrid/optional_libraries.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_layout.hpp>
+#include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
+#include <stdexcept>
 
 namespace sgpp {
 namespace combigrid {
 
-SourceFuncCache::SourceFuncCache(const CacheConfig& config) : config_(config) {
-  requireAvailable();
+SourceFuncCache::SourceFuncCache(const SourceFuncCacheConfig& config) : config_(config) {
+  // Checked here, not when the table is created at the first lookup: that happens inside the
+  // operators' parallel regions, where an exception would terminate the program.
+#ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
+  misc::BoostPointValueTable::checkShardsCnt(config.nShards);
+#else
+  throw base::dependency_exception(
+      "SourceFuncCache: SG++ was built without the libraries of the source-function cache. "
+      SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE_EXCEPTION);
+#endif
 }
 
 SourceFuncCache::~SourceFuncCache() = default;
 
-bool SourceFuncCache::isAvailable() { return HAS_CACHE_LIBRARIES; }
-
-void SourceFuncCache::requireAvailable() {
-  if (!isAvailable()) {
-    throw base::not_implemented_exception(
-        "SourceFuncCache / CachedSourceFunc / CachedVectorSourceFunc: SG++ was built without "
-        "Boost >= 1.81 (Boost.Unordered) or xxHash >= 0.8, the source-function cache is not "
-        "available");
-  }
-}
-
-const CacheConfig& SourceFuncCache::config() const { return config_; }
+const SourceFuncCacheConfig& SourceFuncCache::config() const { return config_; }
 
 size_t SourceFuncCache::nOutputs() const {
   const std::lock_guard<std::mutex> guard(mutex_);
@@ -38,7 +37,7 @@ size_t SourceFuncCache::nOutputs() const {
 }
 
 CacheStatistics SourceFuncCache::statistics() const {
-  const misc::PointValueTable* const table = table_.load(std::memory_order_acquire);
+  const misc::BoostPointValueTable* const table = table_.load(std::memory_order_acquire);
   CacheStatistics stats = (table != nullptr) ? table->statistics() : CacheStatistics();
   stats.operatorCalls = operatorCalls_.load(std::memory_order_relaxed);
   return stats;
@@ -62,14 +61,13 @@ void SourceFuncCache::attach(const size_t nOutputs) {
   if (nOutputs_ == 0) {
     nOutputs_ = nOutputs;
   } else if (nOutputs_ != nOutputs) {
-    throw base::data_exception(
-        "SourceFuncCache: the cache holds the values of a function with another number of "
-        "outputs");
+    throw std::invalid_argument(
+        "The cache holds the values of a function with another number of outputs");
   }
 }
 
-misc::PointValueTable* SourceFuncCache::table(const size_t nDim) {
-  misc::PointValueTable* table = table_.load(std::memory_order_acquire);
+misc::BoostPointValueTable* SourceFuncCache::table(const size_t nDim) {
+  misc::BoostPointValueTable* table = table_.load(std::memory_order_acquire);
 
   if (table == nullptr) {
     table = createTable(nDim);
@@ -78,14 +76,15 @@ misc::PointValueTable* SourceFuncCache::table(const size_t nDim) {
   return (table->nDim() == nDim) ? table : nullptr;
 }
 
-misc::PointValueTable* SourceFuncCache::createTable(const size_t nDim) {
+misc::BoostPointValueTable* SourceFuncCache::createTable(const size_t nDim) {
   const std::lock_guard<std::mutex> guard(mutex_);
 
   // Another thread may have created it in the meantime.
   if (ownedTable_ == nullptr) {
     assert(nOutputs_ >= 1);
-    ownedTable_ = std::make_shared<misc::PointValueTable>(misc::RecordLayout{nDim, nOutputs_},
-                                                          config_.memoryLimit);
+    ownedTable_ = std::make_shared<misc::BoostPointValueTable>(
+        misc::boost_point_value_table::RecordLayout{nDim, nOutputs_}, config_.memoryLimit,
+        config_.nShards);
     table_.store(ownedTable_.get(), std::memory_order_release);
   }
 

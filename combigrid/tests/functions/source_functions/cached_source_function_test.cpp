@@ -29,8 +29,7 @@
 #include <limits>
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/base/exception/data_exception.hpp>
-#include <sgpp/base/exception/not_implemented_exception.hpp>
+#include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
@@ -38,6 +37,7 @@
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_vector_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
@@ -46,15 +46,16 @@
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/optional_libraries.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 using sgpp::base::DataVector;
-using sgpp::combigrid::CacheConfig;
 using sgpp::combigrid::CachedSourceFunc;
 using sgpp::combigrid::CachedVectorSourceFunc;
 using sgpp::combigrid::CacheStatistics;
@@ -65,34 +66,32 @@ using sgpp::combigrid::LvlType;
 using sgpp::combigrid::NodeGenFunc;
 using sgpp::combigrid::SourceFunc;
 using sgpp::combigrid::SourceFuncCache;
+using sgpp::combigrid::SourceFuncCacheConfig;
 using sgpp::combigrid::SparseGrid;
 using sgpp::combigrid::VectorSourceFunc;
 
 BOOST_AUTO_TEST_SUITE(source_function_cache_availability)
 
 BOOST_AUTO_TEST_CASE(constructors_throw_exactly_without_the_libraries) {
-  // The classes are always compiled; the library reports whether it was built with Boost.Unordered
-  // and xxHash (optional_libraries.hpp), and without them every constructor throws.
-  BOOST_CHECK_EQUAL(SourceFuncCache::isAvailable(), sgpp::combigrid::HAS_CACHE_LIBRARIES);
+  // The classes are always compiled; without Boost.Unordered and xxHash
+  // (tools/defines/dependencies_defines.hpp) every constructor throws, before any evaluation.
   const auto func = [](const DataVector& x) { return x[0]; };
   const auto vectorFunc = [](const DataVector& x, const std::span<double> out) { out[0] = x[0]; };
 
-  if (SourceFuncCache::isAvailable()) {
-    BOOST_CHECK_NO_THROW(SourceFuncCache());
-    BOOST_CHECK_NO_THROW(CachedSourceFunc{func});
-    BOOST_CHECK_NO_THROW(CachedVectorSourceFunc(vectorFunc, 1));
-  } else {
-    BOOST_CHECK_THROW(SourceFuncCache(), sgpp::base::not_implemented_exception);
-    BOOST_CHECK_THROW(CachedSourceFunc{func}, sgpp::base::not_implemented_exception);
-    BOOST_CHECK_THROW(CachedSourceFunc(func, std::shared_ptr<SourceFuncCache>()),
-                      sgpp::base::not_implemented_exception);
-    BOOST_CHECK_THROW(CachedVectorSourceFunc(vectorFunc, 1), sgpp::base::not_implemented_exception);
-  }
+#ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
+  BOOST_CHECK_NO_THROW(SourceFuncCache());
+  BOOST_CHECK_NO_THROW(CachedSourceFunc{func});
+  BOOST_CHECK_NO_THROW(CachedVectorSourceFunc(vectorFunc, 1));
+#else
+  BOOST_CHECK_THROW(SourceFuncCache(), sgpp::base::dependency_exception);
+  BOOST_CHECK_THROW(CachedSourceFunc{func}, sgpp::base::dependency_exception);
+  BOOST_CHECK_THROW(CachedVectorSourceFunc(vectorFunc, 1), sgpp::base::dependency_exception);
+#endif
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
-#ifdef SGPP_COMBIGRID_HAS_CACHE_LIBRARIES
+#ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
 
 namespace {
 
@@ -372,7 +371,7 @@ BOOST_AUTO_TEST_CASE(memory_limit_stops_inserting) {
                         true);
   withThreads(1, [&problem]() {
     const std::vector<double> reference = problem.run(SourceFunc(scalarFunc));
-    const CachedSourceFunc cached(scalarFunc, CacheConfig{.memoryLimit = 0});
+    const CachedSourceFunc cached(scalarFunc, SourceFuncCacheConfig{.memoryLimit = 0});
     const std::vector<double> results = problem.run(cached);
     const CacheStatistics stats = cached.statistics();
     BOOST_CHECK(bitwiseEqual(results, reference));
@@ -386,7 +385,7 @@ BOOST_AUTO_TEST_CASE(memory_limit_stops_inserting) {
   const size_t limit = size_t{1} << 20;
   const size_t nPoints = 100000;
   Counted counted(scalarFunc);
-  const CachedSourceFunc cached(counted.callable(), CacheConfig{.memoryLimit = limit});
+  const CachedSourceFunc cached(counted.callable(), SourceFuncCacheConfig{.memoryLimit = limit});
   size_t wrong = 0;
   for (size_t round = 0; round < 2; round++) {
     for (size_t i = 0; i < nPoints; i++) {
@@ -444,25 +443,47 @@ BOOST_AUTO_TEST_CASE(copies_and_shared_caches_reuse_values) {
 
   const double value = cached.evaluate(point);
   const CachedSourceFunc copy(cached);
-  const SourceFunc sliced = cached;  // a plain SourceFunc keeps the cached callable and hook
   const CachedSourceFunc sameCache(counted.callable(), cache);
 
   BOOST_CHECK_EQUAL(copy.evaluate(point), value);
-  BOOST_CHECK_EQUAL(sliced.evaluate(point), value);
   BOOST_CHECK_EQUAL(sameCache.evaluate(point), value);
   BOOST_CHECK_EQUAL(counted.count(), 1u);
   BOOST_CHECK(copy.cache() == cache);
   BOOST_CHECK(sameCache.cache() == cache);
-  BOOST_CHECK_EQUAL(cache->statistics().hits, 3u);
+  BOOST_CHECK_EQUAL(cache->statistics().hits, 2u);
 
-  sliced.finishOperatorCall();
-  BOOST_CHECK_EQUAL(cache->statistics().operatorCalls, 1u);
+  // The end-of-operator hook is a virtual function of the cached classes; the operators call it
+  // through a reference to the base class, copies notify the same cache.
+  const SourceFunc& base = copy;
+  base.finishOperatorCall();
+  cached.finishOperatorCall();
+  BOOST_CHECK_EQUAL(cache->statistics().operatorCalls, 2u);
 
   // The cache lives as long as a function uses it.
   std::weak_ptr<SourceFuncCache> weak = cache;
   cache.reset();
   BOOST_CHECK(!weak.expired());
 }
+
+// Copying or moving a cached function into a plain SourceFunc / VectorSourceFunc (slicing: the
+// copy would lose finishOperatorCall) does not compile; copies of the base class itself and of the
+// cached classes do.
+static_assert(!std::is_constructible_v<SourceFunc, const CachedSourceFunc&>);
+static_assert(!std::is_constructible_v<SourceFunc, CachedSourceFunc&>);
+static_assert(!std::is_constructible_v<SourceFunc, CachedSourceFunc&&>);
+static_assert(!std::is_convertible_v<const CachedSourceFunc&, SourceFunc>);
+static_assert(!std::is_assignable_v<SourceFunc&, const CachedSourceFunc&>);
+static_assert(!std::is_assignable_v<SourceFunc&, CachedSourceFunc&&>);
+static_assert(!std::is_constructible_v<VectorSourceFunc, const CachedVectorSourceFunc&>);
+static_assert(!std::is_constructible_v<VectorSourceFunc, CachedVectorSourceFunc&&>);
+static_assert(!std::is_assignable_v<VectorSourceFunc&, const CachedVectorSourceFunc&>);
+static_assert(std::is_copy_constructible_v<SourceFunc> && std::is_copy_assignable_v<SourceFunc>);
+static_assert(std::is_nothrow_move_constructible_v<SourceFunc>);
+static_assert(std::is_copy_constructible_v<CachedSourceFunc> &&
+              std::is_copy_assignable_v<CachedSourceFunc>);
+static_assert(std::is_copy_constructible_v<VectorSourceFunc> &&
+              std::is_nothrow_move_constructible_v<VectorSourceFunc>);
+static_assert(std::is_copy_constructible_v<CachedVectorSourceFunc>);
 
 BOOST_AUTO_TEST_CASE(misuse_is_rejected_or_bypasses_the_cache) {
   auto scalarCache = std::make_shared<SourceFuncCache>();
@@ -471,10 +492,16 @@ BOOST_AUTO_TEST_CASE(misuse_is_rejected_or_bypasses_the_cache) {
 
   // A cache serves one function: another number of outputs, no cache, no outputs.
   BOOST_CHECK_THROW(CachedVectorSourceFunc(vectorFunc, N_OUTPUTS, scalarCache),
-                    sgpp::base::data_exception);
+                    std::invalid_argument);
   BOOST_CHECK_THROW(CachedSourceFunc(scalarFunc, std::shared_ptr<SourceFuncCache>()),
-                    sgpp::base::data_exception);
-  BOOST_CHECK_THROW(CachedVectorSourceFunc(vectorFunc, 0), sgpp::base::data_exception);
+                    std::invalid_argument);
+  BOOST_CHECK_THROW(CachedVectorSourceFunc(vectorFunc, 0), std::invalid_argument);
+
+  // The number of shards must be a power of two in [1, 64] (checked at construction).
+  for (const size_t nShards : {0, 3, 48, 128}) {
+    BOOST_CHECK_THROW(SourceFuncCache(SourceFuncCacheConfig{.nShards = nShards}),
+                      std::invalid_argument);
+  }
 
   // Points of another dimension than the first one are evaluated without the cache.
   Counted counted(scalarFunc);
@@ -488,6 +515,23 @@ BOOST_AUTO_TEST_CASE(misuse_is_rejected_or_bypasses_the_cache) {
   cached.evaluate(point2);
   BOOST_CHECK_EQUAL(counted.count(), 4u);
   BOOST_CHECK_EQUAL(cached.statistics().entries, 1u);
+}
+
+BOOST_AUTO_TEST_CASE(any_shard_count_gives_the_same_results) {
+  const Problem problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 3, 4,
+                        shiftedDomain(3), true);
+  withThreads(1, [&problem]() {
+    const std::vector<double> plain = problem.run(SourceFunc(scalarFunc));
+    size_t entries = 0;
+    for (const size_t nShards : {1, 2, 8, 64}) {
+      const CachedSourceFunc cached(scalarFunc, SourceFuncCacheConfig{.nShards = nShards});
+      problem.run(cached);
+      BOOST_CHECK(bitwiseEqual(problem.run(cached), plain));
+      BOOST_CHECK_EQUAL(cached.cache()->config().nShards, nShards);
+      if (entries == 0) entries = cached.statistics().entries;
+      BOOST_CHECK_EQUAL(cached.statistics().entries, entries);
+    }
+  });
 }
 
 BOOST_AUTO_TEST_CASE(clear_removes_values_and_statistics) {
@@ -537,4 +581,4 @@ BOOST_AUTO_TEST_CASE(concurrent_evaluations) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
-#endif  // SGPP_COMBIGRID_HAS_CACHE_LIBRARIES
+#endif  // SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE

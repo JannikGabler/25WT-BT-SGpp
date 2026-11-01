@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-29d (2026-10-31) · Next free WP number: 39 · Re-profilings done: 3 (RP-1 10-28, RP-2 10-29, RP-3 10-30; RP-0 = setup)
+Last processed: WP-26 (2026-11-01) · Next free WP number: 39 · Re-profilings done: 3 (RP-1 10-28, RP-2 10-29, RP-3 10-30; RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC
   15.2, 16 threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (2.0 GHz),
@@ -40,7 +40,8 @@ Last processed: WP-29d (2026-10-31) · Next free WP number: 39 · Re-profilings 
     in the summary).
   - Caching (10-30, WP-25): design W (caching in the stored callable of a plain `SourceFunc`, no
     per-evaluation check), bitwise user-domain keys, sharded in-memory table, stop inserting at
-    the limit, flat-file disk tier; API details before WP-26.
+    the limit, flat-file disk tier. WP-26 (11-01): API decided in-session (see PLAN.md WP-26
+    "Accepted"); WP-28 disk fields likewise in-session (owner 11-01).
 - **Refcheck WARN case** (owner 10-25: tolerance stays): `interp/sg/equi/b0/d2/L5/cos-shifted`
   (Lebesgue constant ~1e16) WARNs on any FMA-placement change in `BarycentricFormula::evaluateFormula`.
 - **Commits**: the owner commits after every session ("Accept/Reject WP-NN: …": code, summary,
@@ -62,37 +63,36 @@ Last processed: WP-29d (2026-10-31) · Next free WP number: 39 · Re-profilings 
 | – | WP-29b | Vector-valued (b): DSG quadrature | accepted (10-31) | scalar 1.001x (17.748 → 17.738 s), memory 0.999, refcheck OK; vector at m = 32: b0 d10 2.96, b1 d20 1.96 (incl. sub-tries 3.18), bitwise; m = 1 0.93–0.96 | [WP-29b](summaries/WP-29b-vector-dsg-quadrature.md) |
 | – | WP-29c | Vector-valued (c): global + linear interpolation (+ owner's refactor into `tools::`) | accepted (10-31) | scalar 0.999x (10.258 → 10.263 s), memory 1.004, refcheck OK; vector at m = 32: interp 1.25–2.12, interplin 1.21–1.59; m = 1 0.82–1.01 | [WP-29c](summaries/WP-29c-vector-interpolation.md) |
 | – | WP-29d | Vector-valued (d): Python bindings (+ WP-29c refactor leftovers) | accepted (10-31) | C++ `.text` byte-identical (e2e 0.995x = A/A), memory 1.001, refcheck OK; Python vector at m = 32: 2.0–2.5x (1 t) / 24–31x (16 t); m = 1 0.68–0.76x | [WP-29d](summaries/WP-29d-vector-python-bindings.md) |
-| 1 | WP-26 | Caching: wrapper W, in-memory table, policies, `pysgpp.CachedSourceFunc` | **in progress** (10-31; API decided in-session with the owner) | | |
-| 2 | WP-28 | Caching: disk tier | needs decision (after WP-26) | | |
-| 3 | WP-27 | Caching: adaptive policy | needs decision (after WP-28) | | |
-| 4 | WP-04 | DSG quadrature: row loop (b0) (+ `TrieNode` 24 → 16 B) | ready (after caching) | | |
-| 5 | WP-17 | Batched source-function evaluation (proposal) | ready (after WP-04) | | |
-| 6 | WP-36 | Interpolation operators: exploration after WP-29c (owner's request; measurement) | ready (before WP-06/07/08/09) | | |
-| 7 | WP-09 | Multi-point interpolation API (proposal) | ready (after WP-36) | | |
-| 8 | WP-06 | Global interpolation: operator overhead | after WP-36 (re-assess after WP-09) | | |
-| 9 | WP-08 | Linear interpolation: corner loop | after WP-36 (re-assess after WP-09) | | |
-| 10 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready (after WP-04) | | |
-| 11 | WP-18 | Tensor-grid storage: shared 1D nodes + struct of arrays (memory; proposal) | ready (protected-benchmark decision first) | | |
-| 12 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
-| 13 | WP-07 | Generic barycentric formula: cache the weights | ready (after WP-36) | | |
-| 14 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
-| 15 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 in the judged build) | | |
-| 16 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
-| 17 | WP-31 | MI-set cleanups (O(n·d) closedness test, dead helpers, small cleanups) | ready (low) | | |
-| 18 | WP-35 | Flaky time-seeded tests + seed audit (test-only) | ready (low; owner may move it up) | | |
-| 19 | WP-38 | Code hygiene: banner checker never checks C++ + combigrid leftovers | ready (low) | | |
-| 20 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
-| 21 | WP-30 | Vector-valued: specific optimizations (small m) | planned (after WP-29) | | |
-| 22 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
+| – | WP-26 | Caching: `CachedSourceFunc` / `CachedVectorSourceFunc`, in-memory table, soft limit, virtual hook, `pysgpp.CachedSourceFunc` | accepted (11-01) | judged e2e 1.001x, memory 1.002, 0 MEM±, refcheck OK; virtual hook micro b1 d20 0.981 (→ WP-17); 1 µs fn SG quad 1.50–3.81x (1 t), warm 6.6–14.8x; Python warm 1309–2505x (16 t) | [WP-26](summaries/WP-26-caching-in-memory.md) |
+| 1 | WP-28 | Caching: disk tier | **in progress** (11-01; disk fields decided in-session with the owner) | | |
+| 2 | WP-27 | Caching: adaptive policy | needs decision (after WP-28) | | |
+| 3 | WP-04 | DSG quadrature: row loop (b0) (+ `TrieNode` 24 → 16 B) | ready (after caching) | | |
+| 4 | WP-17 | Batched source-function evaluation (proposal; + WP-26 virtual-hook cost) | ready (after WP-04) | | |
+| 5 | WP-36 | Interpolation operators: exploration after WP-29c (owner's request; measurement) | ready (before WP-06/07/08/09) | | |
+| 6 | WP-09 | Multi-point interpolation API (proposal) | ready (after WP-36) | | |
+| 7 | WP-06 | Global interpolation: operator overhead | after WP-36 (re-assess after WP-09) | | |
+| 8 | WP-08 | Linear interpolation: corner loop | after WP-36 (re-assess after WP-09) | | |
+| 9 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready (after WP-04) | | |
+| 10 | WP-18 | Tensor-grid storage: shared 1D nodes + struct of arrays (memory; proposal) | ready (protected-benchmark decision first) | | |
+| 11 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
+| 12 | WP-07 | Generic barycentric formula: cache the weights | ready (after WP-36) | | |
+| 13 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
+| 14 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 in the judged build) | | |
+| 15 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
+| 16 | WP-31 | MI-set cleanups (O(n·d) closedness test, dead helpers, small cleanups) | ready (low) | | |
+| 17 | WP-35 | Flaky time-seeded tests + seed audit (test-only) | ready (low; owner may move it up) | | |
+| 18 | WP-38 | Code hygiene: banner checker never checks C++ + combigrid leftovers | ready (low) | | |
+| 19 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
+| 20 | WP-30 | Vector-valued: specific optimizations (small m) | planned (after WP-29) | | |
+| 21 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
 
 ## Next action
 
-WP-26 (caching, in-memory) is running (prompt issued 2026-10-31). Owner (10-31): decisions 1–6
-and the cache location are worked out by the session (options, pros / cons, recommendation) and
-decided with the owner **in the session** before implementing. Owner: commit "Accept WP-29d: …"
-first (tree clean): bindings, example, C++ cleanup, docs, summary, `results/WP-29d/`,
-STATUS/PLAN; `compile{ASan,Debug,Normal}.sh` still untracked. Next master start: process WP-26;
-WP-28 / WP-27 disk / adaptive fields likewise in-session (ask the owner whether that applies).
+WP-28 (caching, disk tier) issued 2026-11-01; the session works out the disk fields of
+`SourceFuncCacheConfig` and decides them with the owner **in the session** before implementing.
+Owner: commit "Accept WP-26: …" first (tree clean): the uncommitted refactoring on top of
+a66876cda, summary, `results/WP-26/`, STATUS/PLAN, `compile{ASan,Debug,Normal}.sh`. Next master
+start: process WP-28; ask whether WP-27's adaptive fields are decided in-session too.
 
 ## Open decisions for the owner
 
@@ -103,12 +103,13 @@ WP-28 / WP-27 disk / adaptive fields likewise in-session (ask the owner whether 
   at d ≤ 3; −350…−800 MiB sg d2); the owner may move WP-05 up.
 - WP-33 (after WP-32): drop / restrict / align only large allocations / keep base's `operator new`
   replacement (WP-23: memory −5 %, dsg b1 −23 MiB, generation 1.1–1.4x; datadriven relies on it).
-- WP-26: API details 1–6 + location decided in-session (owner 10-31). WP-28 / WP-27: disk /
-  adaptive fields of `CacheConfig` (in-session too?).
+- WP-27: adaptive fields of `SourceFuncCacheConfig` (in-session as WP-26 / WP-28?).
 - WP-37 (from WP-29d): fix base's Python `DataVector` iteration (`__iter__` / `IndexError`;
   segfault today) — base API change: do it / placement.
 - Owner files outdated (WP-29d): CLAUDE.md §5 "build fails otherwise" for banners is not true
-  (checker never checks C++, WP-38); ANALYSIS.md WP-29c symbol names.
+  (checker never checks C++, WP-38); ANALYSIS.md WP-29c symbol names. WP-26:
+  `combigrid/claude/build-and-ci.md` (optional Boost ≥ 1.81 / xxHash ≥ 0.8, CI apt line), SG++
+  install docs; dead `source_function_hook.hpp` (fully commented out) if still present.
 - WP-34: placement and mechanism (serial operator for Python callables / WP-17 batches / document).
 - Optional: WP-36 (interpolation exploration, no decision needed) sits at rank 6 by your caching →
   WP-04 → WP-17 order; it may move up.
@@ -154,6 +155,9 @@ WP-28 / WP-27 disk / adaptive fields likewise in-session (ask the owner whether 
 - WP-29b `updateCoeffSums` out-of-line with two kernel instantiations: LTO stops inlining it into
   the scalar row loop (op-cache misses +9 %) and `childBlock` into `addChildren` → e2e 0.992x,
   5 SLOWER → header-inline.
+- WP-26 shard counters after the index: 16 t lookups 1.12–1.30x, warm operators 1.17–1.24x
+  slower → counters in the lock's cache line. Rounded / "close enough" keys: +2.7…5.0 ns/lookup,
+  merge only probabilistically, fail near 0, nondeterministic at 16 t → bitwise keys.
 - WP-29c per-call `std::vector` for the innerk factors in `OptBarycentricFormula`: 10 % of vector
   time in malloc/free (cc d2 m1 0.74x) → 64-node stack blocks; zero-filling `out` (memset per 1D
   call). V1 (templates not inlined into exported wrappers, pointer-based ops): interplin d2 micro
@@ -164,16 +168,17 @@ WP-28 / WP-27 disk / adaptive fields likewise in-session (ask the owner whether 
 
 Last: RP-3 (2026-10-30; rp-3 = 0c6ecfc4b). Accepted optimizations since: 0. Features (WP-29a–d,
 WP-26–28; scalar ≈ 0) count only if a group changes ≥ 1.3x or a hot-spot ranking shifts (WP-29a
-1.002x, WP-29b 1.001x, WP-29c 0.999x, WP-29d 0.995x A/A: no). RP-4 after 2 accepted
+1.002x, WP-29b 1.001x, WP-29c 0.999x, WP-29d 0.995x A/A, WP-26 1.001x: no). RP-4 after 2 accepted
 optimizations (WP-04, WP-17, …) or another rule-7 trigger.
 
 ## Log
 
-- 2026-10-31 WP-29d accepted (owner): `pysgpp.VectorSourceFunc` + `DataVector` overloads of the
-  three operators, exception / length checks, WP-29c cleanup; `.text` byte-identical, refcheck
-  OK, ASan + `SG_PYTHON=1` ✓. WP-29 complete. Follow-ups → WP-37 (base `DataVector` iteration),
-  WP-38 (banner checker, leftovers); WP-26 entry gets the binding pattern. No RP-4 (feature).
-  Owner: WP-26 API decided in-session. WP-26 issued.
+- 2026-11-01 WP-26 accepted (owner): caching in memory (decisions 1 B, 2 both, 3 memoryLimit +
+  nShards, 4 same class, 5 Boost.Unordered + XXH3, 6 fused `std::fma` mapping; combigrid) + the
+  owner's refactoring (virtual `finishOperatorCall()`, central dependency header, slicing rejected
+  at compile time). Owner: the virtual hook's per-evaluate cost (load + `add $8`, micro b1 d20
+  0.981) goes into WP-17 (SourceFunc evaluation). No RP-4 (feature). WP-28 issued (disk fields
+  in-session).
 - Test failures: once-seen (WP-02; 0/150 reruns); WP-29a: 2 of 16 normal runs failed a
   time-seeded test (one `equidistant_nodes/sin_func_random_cube_3D` seed 1793379453) → WP-35;
   WP-29b: 0 of 31; WP-29c 20+, WP-29d (3+3 repeats + ASan): 0. Report recurrences.
@@ -187,4 +192,5 @@ optimizations (WP-04, WP-17, …) or another rule-7 trigger.
   prototype removed (6dfcf971a), WP-23 rejected (2221501b2; 0273aa1d7). 10-30 WP-24 (8118ea9a2),
   WP-25 (5ced35885; order RP-3 → WP-29a–d → WP-26 → WP-28 → WP-27 → WP-04 → WP-17), CLAUDE.md
   compacted (0c6ecfc4b), RP-3 (e1257538d: 1.818x; WP-10 dropped), WP-29a (6dad1b375 + 984c646b5). 10-31 WP-29b (a14f723a0; STATUS.md compacted), WP-29c (fac9c5787; owner's tools refactor; WP-36
-  added before WP-06/07/08/09).
+  added before WP-06/07/08/09), WP-29d (51a6207bf; follow-ups WP-37, WP-38). 11-01 WP-26
+  checkpoint a66876cda.

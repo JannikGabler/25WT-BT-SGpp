@@ -18,15 +18,17 @@
 ## results equal those of a plain SourceFunc.
 ##
 ## The cache needs Boost >= 1.81 and xxHash >= 0.8 when SG++ is built; otherwise the classes exist,
-## but creating them raises RuntimeError (SourceFuncCache.isAvailable() tells which build this is).
+## but creating them raises RuntimeError naming the missing library.
 
 import math
 import sys
 
 import pysgpp
 
-if not pysgpp.SourceFuncCache.isAvailable():
-  print("SG++ was built without the source-function cache (needs Boost >= 1.81 and xxHash >= 0.8)")
+try:
+  pysgpp.SourceFuncCache()
+except RuntimeError as error:
+  print(f"The source-function cache is not available: {error}")
   sys.exit(0)
 
 calls = 0
@@ -46,10 +48,11 @@ genInstr.setLvl2GPCntFunc(pysgpp.doublingLvl2GPCntFunction)
 genInstr.setBoundaryLevelOffset(0)
 sg = pysgpp.SparseGrid(genInstr)
 
-## A cache of its own, configured by a CacheConfig (soft memory limit, default 1 GiB). A
+## A cache of its own, configured by a SourceFuncCacheConfig (soft memory limit, default 1 GiB;
+## number of shards, default 64). A
 ## SourceFuncCache object can also be created explicitly and shared:
 ## cache = pysgpp.SourceFuncCache(); f = pysgpp.CachedSourceFunc(func, cache).
-config = pysgpp.CacheConfig()
+config = pysgpp.SourceFuncCacheConfig()
 config.memoryLimit = 64 * 1024 * 1024
 cachedFunc = pysgpp.CachedSourceFunc(func, config)
 
@@ -65,9 +68,10 @@ print(f"function calls: {callsOfQuadrature} by the quadrature, {calls - callsOfQ
 print(f"cache: {stats.lookups} lookups, {stats.hits} hits, {stats.entries} points stored "
       f"({stats.bytes / 1024:.0f} KiB), {stats.operatorCalls} operator calls")
 
-## Same results as without the cache.
+## Same results as without the cache (up to round-off: with several threads, the operators sum the
+## tensor grids in a varying order; at one thread the results are bitwise equal).
 plainFunc = pysgpp.SourceFunc(lambda p: math.exp(-sum(x * x for x in p)))
-assert abs(integral - pysgpp.quadrature(plainFunc, sg)) <= 1e-13
+assert math.isclose(integral, pysgpp.quadrature(plainFunc, sg), rel_tol=1e-12)
 for p, value in zip(points, values):
-  assert abs(value - pysgpp.interpolate(plainFunc, p, sg)) <= 1e-13
+  assert math.isclose(value, pysgpp.interpolate(plainFunc, p, sg), rel_tol=1e-12, abs_tol=1e-14)
 assert calls == callsOfQuadrature

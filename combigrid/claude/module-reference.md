@@ -10,9 +10,6 @@ Under [combigrid/src/sgpp/combigrid/](../src/sgpp/combigrid/) (`.lint`/`.os`/`.g
 a matching source are stale build artifacts):
 
 ```
-optional_libraries.hpp the one place that detects optional libraries (__has_include + versions):
-                       SGPP_COMBIGRID_HAS_CACHE_LIBRARIES / HAS_CACHE_LIBRARIES (Boost.Unordered,
-                       xxHash); SGPP_COMBIGRID_DISABLE_CACHE forces "not available"
 constants.hpp          parallelism thresholds per subsystem (mi_vec, sg_gen_instr, ct_coefficients,
                        sg_gen_node_lookup); source_func_cache (shards, arena chunk, default limit)
 type_defs.hpp          LvlType, GPCntType, CTCoeffType, MI/MIVec aliases, HyperCubeArea
@@ -20,9 +17,9 @@ functions/
   level_to_grid_point_count_functions/  linear / doubling growth (level → #inner nodes)
   node_generation_functions/            1D node families; default_functions/ (concrete),
                                         getter/ (static singletons)
-  source_functions/                     SourceFunc, VectorSourceFunc (m outputs), SourceFuncHook
-                                        (end-of-operator hook); caching/ (always compiled):
-                                        SourceFuncCache, CacheConfig, CacheStatistics,
+  source_functions/                     SourceFunc, VectorSourceFunc (m outputs; virtual
+                                        end-of-operator hook); caching/ (always compiled):
+                                        SourceFuncCache, SourceFuncCacheConfig, CacheStatistics,
                                         CachedSourceFunc, CachedVectorSourceFunc
 grids/
   tensor_grid            anisotropic tensor grid (per-dim node lists)
@@ -41,8 +38,10 @@ miscellaneous/         (namespace misc)
   flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
   iterators/             TensorGridIterator (grid points + MIs without materializing the grid)
   bounding_boxes/        discrete rectangular / unit boxes over MI grids + iterators
-  caching/               PointValueTable (sharded table of the source-function cache: per shard a
-                         spin lock, RecordArena and boost::unordered_flat_set of record ids; XXH3)
+  caching/               BoostPointValueTable (sharded table of the source-function cache) and its
+                         parts in namespace misc::boost_point_value_table: Shard (spin lock,
+                         counters, RecordArena, boost::unordered_flat_set of record ids), Probe,
+                         RecordHash (XXH3 stored in the record), RecordEqual, RecordLayout
   concurrency/           ConcurrentTaskQueue (node-lookup pipeline, commented out), SpinLock
   hashing/               std::pair hasher
   vector_map/            VectorMap (tiny linear-search map)
@@ -105,22 +104,27 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
     `tools::computeCTCoeffs()` (dimension-separated O(|I|·d)), (3) drops zero-coefficient MIs.
 - `SourceFunc` ([functions/source_functions/source_function.hpp](../src/sgpp/combigrid/functions/source_functions/source_function.hpp)):
   wraps `std::function<double(const base::DataVector&)>`; maps `[0,1]^d → domain` before calling it
-  (`tools::mapToDomain`). Optional end-of-operator hook (`SourceFuncHook`, `std::shared_ptr`,
-  null for plain functions): every operator calls `finishOperatorCall()` once at its end (read once
-  per call, no per-evaluation check). Same for `VectorSourceFunc`.
+  (`tools::mapToDomain`). End-of-operator hook: every operator calls the virtual
+  `finishOperatorCall()` once at its end (empty for plain functions, overridden by the cached
+  classes; never per evaluation). Same for `VectorSourceFunc`. Virtual destructor, defaulted copy /
+  move; copying or assigning a subclass object (slicing) is a deleted overload
+  (`tools::StrictSubclassOf`, [tools/concepts/](../src/sgpp/combigrid/tools/concepts/)).
 - Caching ([functions/source_functions/caching/](../src/sgpp/combigrid/functions/source_functions/caching/),
-  WP-26; works if Boost ≥ 1.81 + xxHash ≥ 0.8 were found when building, see `optional_libraries.hpp`;
-  otherwise every constructor throws `base::not_implemented_exception`, `SourceFuncCache::isAvailable()`):
-  `CachedSourceFunc(func, cache | CacheConfig{})` / `CachedVectorSourceFunc(func, m, …)` are final
-  subclasses without data or virtuals: the stored callable looks the point up in a
-  `SourceFuncCache` (held by `shared_ptr`, attached as hook) and calls `func` on misses only, so
-  operators and plain functions are unchanged (design W) and slicing to `SourceFunc` keeps the
-  caching. Keys = bit patterns of the user-domain point (identical across operators, grids,
+  WP-26; works if Boost ≥ 1.81 + xxHash ≥ 0.8 were found when building, see
+  `tools/defines/dependencies_defines.hpp`; otherwise the `SourceFuncCache` constructor, and with it
+  every cached function, throws `base::dependency_exception` naming the reason):
+  `CachedSourceFunc(func, cache | SourceFuncCacheConfig{})` / `CachedVectorSourceFunc(func, m, …)`
+  are final subclasses holding the cache (`shared_ptr`): the stored callable looks the point up in
+  the `SourceFuncCache` and calls `func` on misses only; `finishOperatorCall()` is overridden to
+  notify the cache. Operators and plain functions are unchanged (design W); they must be passed by
+  reference (copying into a plain `SourceFunc` does not compile). Keys = bit patterns of the user-domain point (identical across operators, grids,
   refinement steps and calls); one cache per function (m fixed by the first cached function,
   another m throws; d by the first lookup, other d bypass); NaN values are not stored;
-  `CacheConfig::memoryLimit` (default 1 GiB) is a soft limit split over 64 shards (at the limit:
-  stop inserting); `statistics()` (lookups, hits, inserts, rejectedInserts, entries, bytes,
-  operatorCalls); `clear()`. Table: `misc::PointValueTable` (8 (d + m + 1) bytes per record + index).
+  `SourceFuncCacheConfig::memoryLimit` (default 1 GiB) is a soft limit split over `nShards` shards
+  (power of two in [1, 64], default 64; at the limit: stop inserting); `statistics()` (lookups,
+  hits, inserts, rejectedInserts, entries, bytes, operatorCalls); `clear()`. Misuse throws
+  `std::invalid_argument`. Table: `misc::BoostPointValueTable` (8 (d + m + 1) bytes per record +
+  index).
   Pays for functions ≳ 0.3 µs (WP-25 break-even) and Python callables (hits skip the GIL).
 - `VectorSourceFunc` ([functions/source_functions/vector_source_function.hpp](../src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp)):
   f: Ω → ℝ^m; wraps `std::function<void(const base::DataVector&, std::span<double>)>` + `nOutputs`

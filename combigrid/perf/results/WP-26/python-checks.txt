@@ -1,4 +1,4 @@
-# WP-26 python_checks.py (SG_PYTHON=1 OPT=0 build, with the cache libraries)
+# WP-26 python_checks.py (SG_PYTHON=1 OPT=0 build, with the cache libraries; final code incl. deleted slicing conversions)
 pysgpp: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/lib/pysgpp/__init__.py, OMP_NUM_THREADS=1, cache available: True
 check_results: OK
 check_cross_operator: OK
@@ -17,7 +17,7 @@ ALL OK
 # WP-29d python_checks.py (regression of the existing bindings)
 vector vs scalar: 896 components, 896 bitwise equal, max 0.00 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
 RESULT: OK (0 failures)
-vector vs scalar: 896 components, 555 bitwise equal, max 0.20 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
+vector vs scalar: 896 components, 585 bitwise equal, max 0.21 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
 RESULT: OK (0 failures)
 
-# build with -DSGPP_COMBIGRID_DISABLE_CACHE: python_checks.py at 1 / 16 t -> check_unavailable OK, ALL OK; WP-29d checks OK; example exits early
+# build with -DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE (refactored code): python_checks.py at 1 / 16 t -> check_unavailable OK, ALL OK; WP-29d checks OK; example exits early naming the reason

@@ -6,45 +6,65 @@
 #include <memory>
 #include <sgpp/base/exception/data_exception.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_vector_source_function.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/point_value_table.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table.hpp>
+#include <stdexcept>
 #include <utility>
 
 namespace sgpp {
 namespace combigrid {
 
+/// @name Constructors
+/// @{
+
 CachedVectorSourceFunc::CachedVectorSourceFunc(
     std::function<void(const base::DataVector&, std::span<double>)> func, const size_t nOutputs,
     const std::shared_ptr<SourceFuncCache>& cache)
-    : VectorSourceFunc(wrap(std::move(func), nOutputs, cache), nOutputs, cache) {}
+    : VectorSourceFunc(wrap(std::move(func), nOutputs, cache), nOutputs), cache_(cache) {}
 
 CachedVectorSourceFunc::CachedVectorSourceFunc(
     std::function<void(const base::DataVector&, std::span<double>)> func, const size_t nOutputs,
-    const CacheConfig& config)
+    const SourceFuncCacheConfig& config)
     : CachedVectorSourceFunc(std::move(func), nOutputs, std::make_shared<SourceFuncCache>(config)) {
 }
 
-std::shared_ptr<SourceFuncCache> CachedVectorSourceFunc::cache() const {
-  // The hook of a cached function is always its cache (see the constructors).
-  return std::static_pointer_cast<SourceFuncCache>(hook());
-}
+/// @name Bookkeeping
+/// @{
+
+void CachedVectorSourceFunc::finishOperatorCall() const { cache_->finishOperatorCall(); }
+
+/// @}
+
+/// @name Getters
+/// @{
+
+std::shared_ptr<SourceFuncCache> CachedVectorSourceFunc::cache() const { return cache_; }
+
+/// @}
+
+/// @name Helpers
+/// @{
 
 CacheStatistics CachedVectorSourceFunc::statistics() const { return cache()->statistics(); }
+
+/// @}
+
+/// @name Private helpers
+/// @{
 
 std::function<void(const base::DataVector&, std::span<double>)> CachedVectorSourceFunc::wrap(
     std::function<void(const base::DataVector&, std::span<double>)> func, const size_t nOutputs,
     const std::shared_ptr<SourceFuncCache>& cache) {
-  SourceFuncCache::requireAvailable();
   if (nOutputs == 0) {
-    throw base::data_exception("VectorSourceFunc: the number of outputs must be at least 1");
+    throw std::invalid_argument("The number of outputs must be at least 1");
   }
   if (cache == nullptr) {
-    throw base::data_exception("CachedVectorSourceFunc: the cache must not be null");
+    throw std::invalid_argument("The cache must not be null");
   }
   cache->attach(nOutputs);
 
   return
       [func = std::move(func), cache](const base::DataVector& point, const std::span<double> out) {
-        misc::PointValueTable* const table = cache->table(point.size());
+        misc::BoostPointValueTable* const table = cache->table(point.size());
         if (table == nullptr) {
           func(point, out);
           return;
@@ -53,6 +73,8 @@ std::function<void(const base::DataVector&, std::span<double>)> CachedVectorSour
         table->lookUpOrEvaluate(point, out, func);
       };
 }
+
+/// @}
 
 }  // namespace combigrid
 }  // namespace sgpp

@@ -16,9 +16,9 @@ SourceFunc::SourceFunc(const std::function<double(const base::DataVector&)>& fun
 SourceFunc::SourceFunc(std::function<double(const base::DataVector&)>&& func)
     : func(std::move(func)) {}
 
-SourceFunc::SourceFunc(std::function<double(const base::DataVector&)> func,
-                       std::shared_ptr<SourceFuncHook> hook)
-    : func(std::move(func)), hook_(std::move(hook)) {}
+// SourceFunc::SourceFunc(std::function<double(const base::DataVector&)> func,
+//                        std::shared_ptr<SourceFuncHook> hook)
+//     : func(std::move(func)), hook_(std::move(hook)) {}
 
 double SourceFunc::evaluate(const base::DataVector& point) const { return func(point); }
 
@@ -38,13 +38,16 @@ double SourceFunc::evaluateNormalizedOutOfPlace(const base::DataVector& point,
   return evaluate(tools::denormalizeDataVector(point, area));
 }
 
-void SourceFunc::finishOperatorCall() const {
-  if (hook_ != nullptr) {
-    hook_->finishOperatorCall();
-  }
-}
+// Intentionally empty
+void SourceFunc::finishOperatorCall() const {}
 
-const std::shared_ptr<SourceFuncHook>& SourceFunc::hook() const { return hook_; }
+// void SourceFunc::finishOperatorCall() const {
+//   if (hook_ != nullptr) {
+//     hook_->finishOperatorCall();
+//   }
+// }
+
+// const std::shared_ptr<SourceFuncHook>& SourceFunc::hook() const { return hook_; }
 
 }  // namespace combigrid
 

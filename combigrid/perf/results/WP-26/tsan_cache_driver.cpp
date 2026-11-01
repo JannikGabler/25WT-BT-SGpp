@@ -22,11 +22,11 @@
 #include <vector>
 
 using sgpp::base::DataVector;
-using sgpp::combigrid::CacheConfig;
 using sgpp::combigrid::CachedSourceFunc;
 using sgpp::combigrid::CachedVectorSourceFunc;
 using sgpp::combigrid::CacheStatistics;
 using sgpp::combigrid::SourceFuncCache;
+using sgpp::combigrid::SourceFuncCacheConfig;
 
 namespace {
 
@@ -41,14 +41,14 @@ int run(const size_t limit) {
   constexpr size_t N_DISTINCT = 20000;
   constexpr size_t N_PER_THREAD = 40000;
 
-  auto cache = std::make_shared<SourceFuncCache>(CacheConfig{.memoryLimit = limit});
+  auto cache = std::make_shared<SourceFuncCache>(SourceFuncCacheConfig{.memoryLimit = limit});
   const CachedSourceFunc scalar(f, cache);
   const CachedVectorSourceFunc vector(
       [](const DataVector& x, const std::span<double> out) {
         out[0] = f(x);
         out[1] = -f(x);
       },
-      2, CacheConfig{.memoryLimit = limit});
+      2, SourceFuncCacheConfig{.memoryLimit = limit});
   std::atomic<size_t> wrong{0};
   std::atomic<bool> done{false};
 

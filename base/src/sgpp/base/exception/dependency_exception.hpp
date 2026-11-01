@@ -14,24 +14,24 @@ namespace base {
 /**
  * Exception that is thrown in case of missing dependencies.
  */
-class dependencies_missing_exception : public std::exception {
+class dependency_exception : public std::exception {
  public:
   /**
    * Constructor
    *
    * @param msg the exception message
    */
-  explicit dependencies_missing_exception(const char* msg) noexcept : msg(msg) {}
+  explicit dependency_exception(const char* msg) noexcept : msg(msg) {}
 
   /**
    * Standard Constructor
    */
-  dependencies_missing_exception() noexcept : msg(nullptr) {}
+  dependency_exception() noexcept : msg(nullptr) {}
 
   /**
    * Destructor
    */
-  ~dependencies_missing_exception() noexcept override {}
+  ~dependency_exception() noexcept override {}
 
   /**
    * throw method that have to be implemented
@@ -42,7 +42,7 @@ class dependencies_missing_exception : public std::exception {
     if (msg) {
       return msg;
     } else {
-      return "dependencies_missing_exception: general failure";
+      return "dependency_exception: general failure";
     }
   }
 

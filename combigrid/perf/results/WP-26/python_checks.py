@@ -9,12 +9,12 @@ Usage (from the repo root, through the repo's .venv):
   VectorSourceFunc for quadrature, interpolate and interpolateLinear (bitwise at one thread, else
   within round-off), cold and warm; the Python callable is called on misses only.
 - Cross-operator reuse on a shifted domain: interpolate after quadrature calls Python 0 times.
-- Constructors, CacheConfig, statistics, sharing one SourceFuncCache, cache().
+- Constructors, SourceFuncCacheConfig (memory limit, number of shards), statistics, sharing one
+  SourceFuncCache, cache().
 - Exceptions inside the callable are re-raised after the operator, failed points are not cached
   (retried next call); wrong vector length -> ValueError; misuse -> RuntimeError.
 - Reference counts of the callable and lifetime of a shared cache.
-- Built without the libraries of the cache (SourceFuncCache.isAvailable() is False): every
-  constructor raises RuntimeError.
+- Built without the libraries of the cache: every constructor raises RuntimeError.
 Exit code 1 if any check fails.
 """
 import gc
@@ -151,15 +151,30 @@ def check_cross_operator():
 
 
 def check_api():
-    cfg = pysgpp.CacheConfig()
+    cfg = pysgpp.SourceFuncCacheConfig()
     check(cfg.memoryLimit == 2 ** 30, "default memory limit 1 GiB")
+    check(cfg.nShards == 64, "default number of shards 64")
+    for n_shards in (0, 3, 128):
+        bad = pysgpp.SourceFuncCacheConfig()
+        bad.nShards = n_shards
+        try:
+            pysgpp.SourceFuncCache(bad)
+            check(False, f"nShards = {n_shards} accepted")
+        except (RuntimeError, ValueError):
+            pass
+    one = pysgpp.SourceFuncCacheConfig()
+    one.nShards = 1
+    one_shard = pysgpp.CachedSourceFunc(Counted(), one)
+    one_shard.evaluate(pysgpp.DataVector([0.3, 0.6]))
+    check(one_shard.evaluate(pysgpp.DataVector([0.3, 0.6])) == Counted()((0.3, 0.6))
+          and one_shard.statistics().hits == 1, "one shard")
     cfg.memoryLimit = 0
     cache = pysgpp.SourceFuncCache(cfg)
     check(cache.config().memoryLimit == 0, "config of the cache")
     check(cache.nOutputs() == 0, "nOutputs before use")
     counted = Counted()
     f = pysgpp.CachedSourceFunc(counted, cache)
-    g = pysgpp.CachedSourceFunc(counted, pysgpp.CacheConfig())
+    g = pysgpp.CachedSourceFunc(counted, pysgpp.SourceFuncCacheConfig())
     check(isinstance(f, pysgpp.SourceFunc), "CachedSourceFunc is a SourceFunc")
     check(isinstance(pysgpp.CachedVectorSourceFunc(vector_f, 3), pysgpp.VectorSourceFunc),
           "CachedVectorSourceFunc is a VectorSourceFunc")
@@ -227,7 +242,7 @@ def check_errors():
         try:
             make()
             check(False, f"misuse not rejected: {label}")
-        except RuntimeError:
+        except (RuntimeError, ValueError):
             pass
     try:
         pysgpp.CachedSourceFunc(42)
@@ -273,7 +288,11 @@ def check_unavailable():
 
 
 def main():
-    available = pysgpp.SourceFuncCache.isAvailable()
+    try:
+        pysgpp.SourceFuncCache()
+        available = True
+    except RuntimeError:
+        available = False
     print(f"pysgpp: {pysgpp.__file__}, OMP_NUM_THREADS={THREADS or 'default'}, "
           f"cache available: {available}")
     checks = ((check_results, check_cross_operator, check_api, check_errors, check_lifetime)

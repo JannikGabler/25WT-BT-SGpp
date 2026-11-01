@@ -53,7 +53,7 @@ namespace std {
 %include "SourceFunc.i"
 %include "VectorSourceFunc.i"
 // Always wrapped; without Boost >= 1.81 and xxHash >= 0.8 the constructors raise RuntimeError
-// (SourceFuncCache.isAvailable()).
+// (base::dependency_exception).
 %include "CachedSourceFunc.i"
 
 // ---------------------------------------------------------------------------
