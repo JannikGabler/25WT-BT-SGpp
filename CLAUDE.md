@@ -43,9 +43,13 @@ both quadratures; Python: all but the C++-only DSG quadrature)); nodes / weights
 the user domain enters only via `setDomain()` (all operators map with `tools::mapToDomain` =
 `std::fma`, so they evaluate bitwise identical points). Optional caching (WP-26): `CachedSourceFunc`
 / `CachedVectorSourceFunc` (a `SourceFunc` / `VectorSourceFunc` whose callable looks every point up
-in a shared in-memory `SourceFuncCache`; `SourceFuncCacheConfig{.memoryLimit, .nShards}`,
-`statistics()`; Python too); always compiled, but works only if Boost ≥ 1.81 and xxHash ≥ 0.8 are
-found at build time, else its constructors throw `base::dependency_exception`.
+in a shared `SourceFuncCache`; `SourceFuncCacheConfig{.memoryLimit, .nShards, .policy, .file,
+.storageSpaceLimit}`, `statistics()`, `flush()`, `clear(deletePersistentFile)`; Python too); always
+compiled, but works only if Boost ≥ 1.81 and xxHash ≥ 0.8 are found at build time, else its
+constructors throw `base::dependency_exception`. Policies (WP-28): `CachePolicy::MemoryOnly`
+(default), `TemporaryStorage` (values beyond memory go to an unnamed LMDB file, deleted with the
+process), `PersistentStorage` (LMDB file `file` loaded at creation, written at every operator end);
+both need LMDB (linked by SCons if found).
 
 ```cpp
 CompleteSGGenInstr genInstr(/*maxLvl=*/10, /*nDim=*/3);
@@ -151,8 +155,13 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - Combigrid is only built in CI's **linux-full** job.
 - The thesis predates refactors: never copy its code without checking the API (code wins).
 - Source-function cache: one `SourceFuncCache` per function (m fixed by the first cached function,
-  another m throws; points of another d bypass it); NaN values are not stored; it only pays for
-  functions ≳ 0.3 µs (the judged suite uses plain `SourceFunc`). Its keys are the user-domain bit
+  another m throws; points of another d bypass it, with the storage policies the operator then
+  throws); NaN values are not stored; it only pays for functions ≳ 0.3 µs (the judged suite uses
+  plain `SourceFunc`); the disk tier only for much more expensive ones (LMDB writes ≈ 1–5 µs per
+  new point, serialized). A persistent file is identified by d and m only (no function id), locked
+  exclusively, never corrupted by program crashes; damaged / mismatching files throw
+  `base::file_exception` (`misc::CacheFileException`: base exceptions keep only the `const char*`,
+  so composed messages need it). Its keys are the user-domain bit
   patterns: any new unit → domain mapping must use `tools::mapToDomain`. The end-of-operator hook
   is the virtual `finishOperatorCall()` of `SourceFunc` / `VectorSourceFunc` (virtual destructors).
   Copying a subclass object into the base class (slicing: would lose the override) does not
@@ -160,12 +169,14 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   pass cached functions by reference. These special members are hidden from SWIG (`#ifndef SWIG`).
 - Optional libraries are detected only in
   [tools/defines/dependencies_defines.hpp](combigrid/src/sgpp/combigrid/tools/defines/dependencies_defines.hpp)
-  (`__has_include` + version macros; no SCons code): code that needs them tests its macro
-  (`SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE`, only in `.cpp` / internal files: it includes
-  `xxhash.h`; else `..._EXCEPTION` holds the reason). Public classes stay unconditional and throw
-  without the library. Force the fallback with `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE`.
+  (`__has_include` + version macros; the only SCons code is `detectLMDB`, which links LMDB and
+  defines `SGPP_COMBIGRID_LMDB_LINKED`): code that needs them tests its macro
+  (`SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE`, `SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE`,
+  only in `.cpp` / internal files: it includes `xxhash.h` / `lmdb.h`; else `..._EXCEPTION` holds the
+  reason). Public classes stay unconditional and throw without the library. Force the fallbacks
+  with `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE` / `-DSGPP_COMBIGRID_DISABLE_LMDB_STORE`.
 - Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
-  on `MIVecSGGenInstr`), disk tier and adaptive policy of the cache (WP-28 / WP-27),
+  on `MIVecSGGenInstr`), adaptive policy of the cache (WP-27),
   dimension-wise boundary offsets, Leja nodes.
 
 ## 7. Python bindings (pysgpp)

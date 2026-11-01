@@ -11,7 +11,8 @@ a matching source are stale build artifacts):
 
 ```
 constants.hpp          parallelism thresholds per subsystem (mi_vec, sg_gen_instr, ct_coefficients,
-                       sg_gen_node_lookup); source_func_cache (shards, arena chunk, default limit)
+                       sg_gen_node_lookup); source_func_cache (shards, arena chunk, default limits,
+                       spill batch, records per LMDB transaction)
 type_defs.hpp          LvlType, GPCntType, CTCoeffType, MI/MIVec aliases, HyperCubeArea
 functions/
   level_to_grid_point_count_functions/  linear / doubling growth (level → #inner nodes)
@@ -19,8 +20,8 @@ functions/
                                         getter/ (static singletons)
   source_functions/                     SourceFunc, VectorSourceFunc (m outputs; virtual
                                         end-of-operator hook); caching/ (always compiled):
-                                        SourceFuncCache, SourceFuncCacheConfig, CacheStatistics,
-                                        CachedSourceFunc, CachedVectorSourceFunc
+                                        SourceFuncCache, SourceFuncCacheConfig, CachePolicy,
+                                        CacheStatistics, CachedSourceFunc, CachedVectorSourceFunc
 grids/
   tensor_grid            anisotropic tensor grid (per-dim node lists)
   sparse_grid_base       common base: nDim, vector<TensorGridCTData> (not SWIG-wrapped)
@@ -41,7 +42,9 @@ miscellaneous/         (namespace misc)
   caching/               BoostPointValueTable (sharded table of the source-function cache) and its
                          parts in namespace misc::boost_point_value_table: Shard (spin lock,
                          counters, RecordArena, boost::unordered_flat_set of record ids), Probe,
-                         RecordHash (XXH3 stored in the record), RecordEqual, RecordLayout
+                         RecordHash (XXH3 stored in the record), RecordEqual, RecordLayout;
+                         LmdbPointValueStore (disk store of the storage policies, LMDB file),
+                         CacheFileException (file_exception owning its message)
   concurrency/           ConcurrentTaskQueue (node-lookup pipeline, commented out), SpinLock
   hashing/               std::pair hasher
   vector_map/            VectorMap (tiny linear-search map)
@@ -126,6 +129,26 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `std::invalid_argument`. Table: `misc::BoostPointValueTable` (8 (d + m + 1) bytes per record +
   index).
   Pays for functions ≳ 0.3 µs (WP-25 break-even) and Python callables (hits skip the GIL).
+  Storage policies (WP-28, `SourceFuncCacheConfig::policy` = `CachePolicy::MemoryOnly` (default) |
+  `TemporaryStorage` | `PersistentStorage`, fields `file`, `storageSpaceLimit`; need LMDB ≥ 0.9.14,
+  linked by SCons if found (`SGppConfigure.detectLMDB` → `SGPP_COMBIGRID_LMDB_LINKED`), else they
+  throw `base::dependency_exception`): memory stays primary (records + indices ≤ `memoryLimit`);
+  beyond it, values go to an LMDB file (`misc::LmdbPointValueStore`: key = XXH3 of the point,
+  value = point + values; per-shard batches of 256 records, found in the shard meanwhile) up to
+  `storageSpaceLimit` (then one `std::cerr` warning, `rejectedInserts`); misses read the file only
+  once it holds points memory does not. Persistent: `file` created or loaded at construction
+  (header magic / version / key scheme / d / m, size vs. last page, every key = hash of its point;
+  mismatch or damage → `base::file_exception`; exclusive `flock`; LMDB lock file `file-lock`);
+  every `finishOperatorCall()` writes the call's new values (sorted, one transaction per 64Ki
+  records, `MDB_NOSYNC`: crash-safe against program crashes); `flush()` also `fsync`s; the
+  destructor writes like the hook (no `fsync`). Temporary: unnamed file (created + unlinked at construction in `$TMPDIR`,
+  else `/var/tmp`), `config().file = /proc/self/fd/N`, holds only the values beyond memory.
+  Points of another d than the file's / first lookup's throw at the end of the operator call.
+  `clear(deletePersistentFile = false)`: persistent + false keeps the file (values found from
+  disk). Statistics + `diskHits`, `diskEntries`, `loadedEntries`, `fileBytes`. Costs (WP-28, 1
+  thread, d5 / d20): disk hit 0.58 / 0.73 µs (memory 0.09 / 0.17), new point persistent 1.0–1.5
+  / 2.2–3.2 µs (memory 0.17), spill 3.7 / 4.9 µs, load 0.16 / 0.29 µs per record; LMDB writes are
+  serialized. No `functionId`: a file of another function with the same d, m is used silently.
 - `VectorSourceFunc` ([functions/source_functions/vector_source_function.hpp](../src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp)):
   f: Ω → ℝ^m; wraps `std::function<void(const base::DataVector&, std::span<double>)>` + `nOutputs`
   (m ≥ 1; 0 throws `base::data_exception`); `nOutputs()`, `evaluate(point, out)`,
@@ -212,9 +235,11 @@ operation machinery.
   `DataVector`-returning overloads of all three operators are bound; the DSG quadrature (also the
   scalar one) and the `std::span` overloads are C++ only. Python callables run serially under the
   GIL; a vector callable needs one call per grid point for all m outputs.
-- **Source-function caching** (WP-26): in memory only, policy "always" (`CachedSourceFunc`; "none"
-  = plain `SourceFunc`); disk tier (WP-28) and adaptive policy (WP-27) are planned
-  ([PLAN.md](../perf/PLAN.md)). Unavailable (constructors throw) without Boost ≥ 1.81 + xxHash ≥ 0.8. Without a cache,
+- **Source-function caching** (WP-26, WP-28): policy "always" (`CachedSourceFunc`; "none" = plain
+  `SourceFunc`) in memory or with a temporary / persistent LMDB file; the adaptive policy (WP-27)
+  is planned ([PLAN.md](../perf/PLAN.md)). Unavailable (constructors throw) without Boost ≥ 1.81 +
+  xxHash ≥ 0.8 (storage policies: also LMDB). Disk writes cost µs per new point and are
+  serialized (one LMDB writer), so files pay only for expensive functions. Without a cache,
   shared points are re-evaluated across tensor grids and operator calls. Python misses still run
   serially under the GIL.
 - **Reduced representation**: `SparseGrid` operators process full tensor grids, so shared points are

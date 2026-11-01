@@ -23,6 +23,7 @@
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_hash.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_layout.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -33,16 +34,18 @@ namespace boost_point_value_table {
 #ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
 
 /// @brief A shard: its lock, records, index and counters (all used under the lock). The counters
-/// share the cache line of the lock, which every lookup writes anyway.
+/// share the cache line of the lock, which every lookup writes anyway; the fields of the disk
+/// store (storage policies only) come last.
 struct Shard {
   explicit Shard(const RecordLayout layout)
       : arena(layout), index(0, RecordHash{&arena}, RecordEqual{&arena}) {}
 
-  /// @brief Bytes of the records and the index (groups of 15 slots of 4 bytes + 16 bytes of
-  /// metadata).
+  /// @brief Bytes of the records, the index (groups of 15 slots of 4 bytes + 16 bytes of
+  /// metadata) and the buffer of records for the disk store.
   size_t bytes() const {
     const size_t nGroups = (index.bucket_count() + 1) / 15;
-    return arena.allocatedBytes() + nGroups * (15 * sizeof(uint32_t) + 16);
+    return arena.allocatedBytes() + nGroups * (15 * sizeof(uint32_t) + 16) +
+           pending.capacity() * sizeof(uint64_t);
   }
 
   alignas(64) SpinLock lock;
@@ -52,6 +55,10 @@ struct Shard {
   size_t rejectedInserts = 0;
   RecordArena arena;
   boost::unordered_flat_set<uint32_t, RecordHash, RecordEqual> index;
+  /// Records of the arena that are in the disk store already (persistent policy).
+  size_t flushed = 0;
+  /// Records beyond the memory limit not yet written to the disk store (storage policies).
+  std::vector<uint64_t> pending;
 };
 
 #else

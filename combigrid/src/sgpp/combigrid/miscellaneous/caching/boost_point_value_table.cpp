@@ -10,10 +10,13 @@
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_shard.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 #include <stdexcept>
+#include <vector>
 
 #ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
 #include <mutex>
+#include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_probe.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp>
 
 // dependencies_defines.hpp included xxhash.h for its version check; with XXH_INLINE_ALL, xxhash.h
@@ -35,8 +38,13 @@ namespace combigrid {
 namespace misc {
 
 BoostPointValueTable::BoostPointValueTable(const RecordLayout layout, const size_t memoryLimit,
-                                           const size_t nShards)
-    : nShards_(nShards), layout_(layout), shardMemoryLimit_(0) {
+                                           const size_t nShards, LmdbPointValueStore* store,
+                                           const bool storeAllRecords)
+    : nShards_(nShards),
+      layout_(layout),
+      shardMemoryLimit_(0),
+      store_(store),
+      storeAllRecords_(storeAllRecords) {
   checkShardsCnt(nShards);
   shardMemoryLimit_ = memoryLimit / nShards;
   shards_.reserve(nShards);
@@ -68,23 +76,109 @@ bool BoostPointValueTable::find(const double* point, const uint64_t hash, double
 
 void BoostPointValueTable::insert(const double* point, const uint64_t hash, const double* values) {
   Shard& s = shard(hash);
+  {
+    const std::lock_guard<SpinLock> guard(s.lock);
+
+    if (s.index.contains(Probe{point, hash})) {
+      return;
+    }
+    if (s.arena.full() || s.bytes() + s.arena.bytesOfNextRecord() > shardMemoryLimit_) {
+      [[unlikely]] if (store_ == nullptr) {
+        s.rejectedInserts++;
+        return;
+      }
+    } else {
+      const uint32_t idx = s.arena.allocate();
+      uint64_t* const record = s.arena.record(idx);
+      record[0] = hash;
+      std::memcpy(record + 1, point, sizeof(double) * layout_.nDim);
+      std::memcpy(record + 1 + layout_.nDim, values, sizeof(double) * layout_.nOutputs);
+      s.index.insert(idx);
+      s.inserts++;
+      return;
+    }
+  }
+
+  // Memory is full and there is a disk store (out of line: the memory path stays as without it).
+  spill(s, point, hash, values);
+}
+
+void BoostPointValueTable::spill(Shard& s, const double* point, const uint64_t hash,
+                                 const double* values) {
+  std::vector<uint64_t> batch;
+  {
+    const std::lock_guard<SpinLock> guard(s.lock);
+    if (store_->full()) {
+      s.rejectedInserts++;
+      return;
+    }
+    s.inserts++;
+    if (!appendPending(s, point, hash, values)) {
+      return;
+    }
+    batch.swap(s.pending);
+  }
+
+  // Outside the lock: the batch is invisible until it is committed (a concurrent miss of one of
+  // its points evaluates it again, the store keeps one value).
+  writePending(batch);
+}
+
+bool BoostPointValueTable::findOnDisk(const double* point, const uint64_t hash, double* values) {
+  {
+    // The shard's batch of records beyond the memory limit that are not written yet.
+    Shard& s = shard(hash);
+    const std::lock_guard<SpinLock> guard(s.lock);
+    if (!s.pending.empty() && findPending(s, point, hash, values)) {
+      s.hits++;
+      return true;
+    }
+  }
+  return store_->find(shardIndex(hash), layout_, hash, point, values);
+}
+
+bool BoostPointValueTable::insertLoaded(const uint64_t* record) {
+  const double* const point = reinterpret_cast<const double*>(record + 1);
+  Shard& s = shard(record[0]);
   const std::lock_guard<SpinLock> guard(s.lock);
 
-  if (s.index.contains(Probe{point, hash})) {
-    return;
+  if (s.index.contains(Probe{point, record[0]})) {
+    return true;
   }
   if (s.arena.full() || s.bytes() + s.arena.bytesOfNextRecord() > shardMemoryLimit_) {
-    s.rejectedInserts++;
-    return;
+    return false;
+  }
+  const uint32_t idx = s.arena.allocate();
+  std::memcpy(s.arena.record(idx), record, layout_.bytes());
+  s.index.insert(idx);
+  return true;
+}
+
+void BoostPointValueTable::markFlushed() {
+  for (const std::unique_ptr<Shard>& s : shards_) {
+    const std::lock_guard<SpinLock> guard(s->lock);
+    s->flushed = s->arena.size();
+  }
+}
+
+void BoostPointValueTable::collectUnflushed(std::vector<const uint64_t*>& records,
+                                            std::vector<uint64_t>& pendingRecords) {
+  for (const std::unique_ptr<Shard>& s : shards_) {
+    const std::lock_guard<SpinLock> guard(s->lock);
+    if (storeAllRecords_) {
+      // Records are immutable once inserted and their chunks never move.
+      for (size_t idx = s->flushed; idx < s->arena.size(); idx++) {
+        records.push_back(s->arena.record(static_cast<uint32_t>(idx)));
+      }
+      s->flushed = s->arena.size();
+    }
+    pendingRecords.insert(pendingRecords.end(), s->pending.begin(), s->pending.end());
+    s->pending.clear();
   }
 
-  const uint32_t idx = s.arena.allocate();
-  uint64_t* const record = s.arena.record(idx);
-  record[0] = hash;
-  std::memcpy(record + 1, point, sizeof(double) * layout_.nDim);
-  std::memcpy(record + 1 + layout_.nDim, values, sizeof(double) * layout_.nOutputs);
-  s.index.insert(idx);
-  s.inserts++;
+  for (size_t offset = 0; offset < pendingRecords.size(); offset += layout_.stride()) {
+    records.push_back(pendingRecords.data() + offset);
+  }
 }
 
 CacheStatistics BoostPointValueTable::statistics() const {
@@ -106,8 +200,42 @@ CacheStatistics BoostPointValueTable::statistics() const {
 /// @name Private helpers
 /// @{
 
-Shard& BoostPointValueTable::shard(const uint64_t hash) const {
-  return *shards_[(hash >> 24) & (nShards_ - 1)];
+Shard& BoostPointValueTable::shard(const uint64_t hash) const { return *shards_[shardIndex(hash)]; }
+
+bool BoostPointValueTable::appendPending(Shard& s, const double* point, const uint64_t hash,
+                                         const double* values) {
+  if (s.pending.empty()) {
+    s.pending.reserve(layout_.stride() * constants::source_func_cache::SPILL_BATCH_RECORDS);
+    markOnDisk();
+  }
+  const size_t offset = s.pending.size();
+  s.pending.resize(offset + layout_.stride());
+  uint64_t* const record = s.pending.data() + offset;
+  record[0] = hash;
+  std::memcpy(record + 1, point, sizeof(double) * layout_.nDim);
+  std::memcpy(record + 1 + layout_.nDim, values, sizeof(double) * layout_.nOutputs);
+  return s.pending.size() >= layout_.stride() * constants::source_func_cache::SPILL_BATCH_RECORDS;
+}
+
+bool BoostPointValueTable::findPending(const Shard& s, const double* point, const uint64_t hash,
+                                       double* values) const {
+  for (size_t offset = 0; offset < s.pending.size(); offset += layout_.stride()) {
+    const uint64_t* const record = s.pending.data() + offset;
+    if (boost_point_value_table::RecordEqual::holds(record, layout_.nDim, Probe{point, hash})) {
+      std::memcpy(values, record + 1 + layout_.nDim, sizeof(double) * layout_.nOutputs);
+      return true;
+    }
+  }
+  return false;
+}
+
+void BoostPointValueTable::writePending(const std::vector<uint64_t>& records) {
+  std::vector<const uint64_t*> pointers;
+  pointers.reserve(records.size() / layout_.stride());
+  for (size_t offset = 0; offset < records.size(); offset += layout_.stride()) {
+    pointers.push_back(records.data() + offset);
+  }
+  store_->write(pointers, layout_);
 }
 
 /// @}
@@ -129,8 +257,13 @@ namespace misc {
 // as well.
 
 BoostPointValueTable::BoostPointValueTable(const RecordLayout layout, const size_t /*memoryLimit*/,
-                                           const size_t nShards)
-    : nShards_(nShards), layout_(layout), shardMemoryLimit_(0) {
+                                           const size_t nShards, LmdbPointValueStore* store,
+                                           const bool storeAllRecords)
+    : nShards_(nShards),
+      layout_(layout),
+      shardMemoryLimit_(0),
+      store_(store),
+      storeAllRecords_(storeAllRecords) {
   throw base::dependency_exception(
       "BoostPointValueTable: SG++ was built without the libraries of the source-function cache. "
       SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE_EXCEPTION);
@@ -147,6 +280,18 @@ bool BoostPointValueTable::find(const double* /*point*/, const uint64_t /*hash*/
 
 void BoostPointValueTable::insert(const double* /*point*/, const uint64_t /*hash*/,
                                   const double* /*values*/) {}
+
+bool BoostPointValueTable::findOnDisk(const double* /*point*/, const uint64_t /*hash*/,
+                                      double* /*values*/) {
+  return false;
+}
+
+bool BoostPointValueTable::insertLoaded(const uint64_t* /*record*/) { return false; }
+
+void BoostPointValueTable::markFlushed() {}
+
+void BoostPointValueTable::collectUnflushed(std::vector<const uint64_t*>& /*records*/,
+                                            std::vector<uint64_t>& /*pendingRecords*/) {}
 
 CacheStatistics BoostPointValueTable::statistics() const { return CacheStatistics(); }
 

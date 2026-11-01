@@ -1,0 +1,12 @@
+policy 0 limit 1073741824: lookups 640000 hits 617870 (disk 0) entries 20000 disk 0 rejected 0 wrong 0
+policy 0 limit 1048576: lookups 640000 hits 506153 (disk 0) entries 16384 disk 0 rejected 115712 wrong 0
+policy 1 limit 1073741824: lookups 640000 hits 617971 (disk 0) entries 20000 disk 0 rejected 0 wrong 0
+policy 1 limit 1048576: lookups 640000 hits 612723 (disk 104311) entries 16384 disk 3616 rejected 0 wrong 0
+policy 1 limit 0: lookups 640000 hits 600074 (disk 578495) entries 0 disk 20000 rejected 0 wrong 0
+policy 2 limit 1073741824: lookups 640000 hits 618232 (disk 0) entries 20000 disk 20000 rejected 0 wrong 0
+  reloaded 20000 entries
+policy 2 limit 1048576: lookups 640000 hits 610529 (disk 88785) entries 16384 disk 20000 rejected 0 wrong 0
+  reloaded 20000 entries
+policy 2 limit 0: lookups 640000 hits 601930 (disk 580500) entries 0 disk 20000 rejected 0 wrong 0
+  reloaded 20000 entries
+OK

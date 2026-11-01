@@ -15,6 +15,7 @@
 #pragma once
 
 #include <cstddef>
+#include <limits>
 
 // Pareto Maximum calculations
 
@@ -68,6 +69,21 @@ constexpr size_t DEFAULT_MEMORY_LIMIT = size_t{1} << 30;
 /// allocates whole chunks, so small caches must not pay a large chunk per shard; WP-25: 4096
 /// records cost 2.5 KB per entry at 1e4 entries).
 constexpr size_t RECORDS_PER_CHUNK_LOG2 = 7;
+
+/// Default limit of the file of the storage policies in bytes: unlimited (bounded by the free
+/// space of the file system when the cache is created).
+constexpr size_t DEFAULT_STORAGE_SPACE_LIMIT = std::numeric_limits<size_t>::max();
+
+/// Records a shard of the table collects beyond the memory limit before it writes them to the
+/// disk store in one transaction (storage policies; they are found in the buffer meanwhile).
+constexpr size_t SPILL_BATCH_RECORDS = 256;
+
+/// Records per write transaction of the disk store (LMDB holds the dirty pages of a transaction
+/// in memory; WP-28: 64Ki records of 56 B cost ~25 ms).
+constexpr size_t STORE_RECORDS_PER_TXN = size_t{1} << 16;
+
+/// Smallest size of the file of the disk store in pages (LMDB needs a few pages of its own).
+constexpr size_t MIN_STORE_PAGES = 16;
 
 }  // namespace source_func_cache
 

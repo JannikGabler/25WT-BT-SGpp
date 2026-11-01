@@ -1,0 +1,32 @@
+== OMP_NUM_THREADS=1
+ok    defaults: MemoryOnly, empty file
+ok    persistent cold run equals the uncached quadrature
+ok    file holds every point after the operator (1985)
+ok    second cache on the locked file raises: SourceFuncCache: '/tmp/sgpp-wp28-py-21racw8u/values.cache' is used by another cache (it is locked)
+ok    reloaded every point
+ok    warm run: same result, no Python call
+ok    clear() keeps the file
+ok    clear(True) empties the file
+ok    another number of outputs raises
+ok    temporary file: /proc/self/fd/5
+ok    temporary storage (memory limit 0): same results
+ok    hits come from disk
+ok    persistent without file raises
+ok    foreign file raises: SourceFuncCache: '/tmp/sgpp-wp28-py-21racw8u/foreign' is no file of a source-function cache
+all checks passed
+== OMP_NUM_THREADS=16
+ok    defaults: MemoryOnly, empty file
+ok    persistent cold run equals the uncached quadrature
+ok    file holds every point after the operator (1985)
+ok    second cache on the locked file raises: SourceFuncCache: '/tmp/sgpp-wp28-py-l63xpa2b/values.cache' is used by another cache (it is locked)
+ok    reloaded every point
+ok    warm run: same result, no Python call
+ok    clear() keeps the file
+ok    clear(True) empties the file
+ok    another number of outputs raises
+ok    temporary file: /proc/self/fd/5
+ok    temporary storage (memory limit 0): same results
+ok    hits come from disk
+ok    persistent without file raises
+ok    foreign file raises: SourceFuncCache: '/tmp/sgpp-wp28-py-l63xpa2b/foreign' is no file of a source-function cache
+all checks passed

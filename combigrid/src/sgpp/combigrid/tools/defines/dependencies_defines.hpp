@@ -19,6 +19,15 @@
  *   @c CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE);
  * - @c SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE_EXCEPTION: otherwise, the reason (a string
  *   literal for the message of the @c base::dependency_exception thrown when a cache is created).
+ *
+ * Disk store of the storage policies of the source-function cache
+ * (@c misc::LmdbPointValueStore, @c CachePolicy::TemporaryStorage / @c PersistentStorage): LMDB
+ * (>= 0.9.14, not header-only) and POSIX file I/O. SCons links LMDB if it finds the library and
+ * its header (site_scons/SGppConfigure.py, @c detectLMDB) and then defines
+ * @c SGPP_COMBIGRID_LMDB_LINKED.
+ * - @c SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE: defined if LMDB is linked, @c lmdb.h and
+ *   the POSIX headers are found, unless @c SGPP_COMBIGRID_DISABLE_LMDB_STORE is defined;
+ * - @c SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE_EXCEPTION: otherwise, the reason.
  */
 #pragma once
 
@@ -44,4 +53,27 @@
 #else
 #define SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE_EXCEPTION \
   "Flag 'SGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE' is set."
+#endif
+
+#ifndef SGPP_COMBIGRID_DISABLE_LMDB_STORE
+#ifdef SGPP_COMBIGRID_LMDB_LINKED
+#if __has_include(<lmdb.h>) && __has_include(<unistd.h>) && __has_include(<sys/file.h>)
+#include <lmdb.h>
+#if MDB_VERSION_FULL >= MDB_VERINT(0, 9, 14)
+#define SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE 1
+#else
+#define SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE_EXCEPTION \
+  "Library LMDB doesn't meet minimum version requirements of 0.9.14."
+#endif
+#else
+#define SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE_EXCEPTION \
+  "Include <lmdb.h> or the POSIX file headers are not available."
+#endif
+#else
+#define SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE_EXCEPTION \
+  "Library LMDB was not found when SG++ was configured."
+#endif
+#else
+#define SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE_EXCEPTION \
+  "Flag 'SGPP_COMBIGRID_DISABLE_LMDB_STORE' is set."
 #endif

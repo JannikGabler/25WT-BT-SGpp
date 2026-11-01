@@ -12,6 +12,9 @@ additionalDependencies = []
 # Optional FFT backend for the Clenshaw-Curtis weights (Eigen is header-only, preferred if both set)
 if env["USE_ARMADILLO"] and not env["USE_EIGEN"]:
   additionalDependencies += ["armadillo"]
+# Optional disk store of the source-function cache (detected in SGppConfigure.detectLMDB)
+if env.get("USE_LMDB", False):
+  additionalDependencies += ["lmdb"]
 
 module = ModuleHelper.Module(moduleDependencies, additionalDependencies)
 

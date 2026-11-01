@@ -14,6 +14,12 @@
 //     pysgpp.interpolate(f, point, sparseGrid)            # values of the quadrature are hits
 //     f.statistics().hits
 //     g = pysgpp.CachedVectorSourceFunc(vfunc, m[, cache | config])
+//     config = pysgpp.SourceFuncCacheConfig()             # values kept in a file across runs
+//     config.policy = pysgpp.CachePolicy_PersistentStorage
+//     config.file = "values.cache"
+//     f = pysgpp.CachedSourceFunc(func, config)
+//
+// The storage policies need LMDB at build time (else RuntimeError, base::dependency_exception).
 //
 // The Python callable is held exactly as for SourceFunc / VectorSourceFunc (SourceFunc.i); the
 // cache sits in front of it in C++, so hits neither call Python nor take the GIL. An evaluation
@@ -28,6 +34,10 @@
 %ignore sgpp::combigrid::CachedSourceFunc::finishOperatorCall;
 %ignore sgpp::combigrid::CachedVectorSourceFunc::finishOperatorCall;
 
+// CachePolicy is an enum class: pysgpp.CachePolicy_MemoryOnly, CachePolicy_TemporaryStorage,
+// CachePolicy_PersistentStorage. The config's file is a Python str; clear(deletePersistentFile)
+// and flush() are wrapped as declared (file errors raise RuntimeError, base::file_exception).
+%include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/cache_policy.hpp"
 %include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp"
 %include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp"
 
