@@ -17,24 +17,22 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace misc {
-
-namespace cache_file_exception {
+namespace {
+// TODO: Cache design
 
 /// @brief Holds the message; a base class, so that it is constructed before the exception.
 struct MessageHolder {
   std::string message;
 };
 
-}  // namespace cache_file_exception
+}  // namespace
 
 /**
  * @brief A @c base::file_exception that owns its message (@c base::file_exception keeps only
  * the pointer it receives, so a composed message would dangle). Caught as
  * @c base::file_exception.
  */
-class CacheFileException : private cache_file_exception::MessageHolder,
-                           public base::file_exception {
+class CacheFileException : private MessageHolder, public base::file_exception {
  public:
   /**
    * @brief Creates the exception.
@@ -52,8 +50,6 @@ class CacheFileException : private cache_file_exception::MessageHolder,
     return *this;
   }
 };
-
-}  // namespace misc
 
 }  // namespace combigrid
 }  // namespace sgpp

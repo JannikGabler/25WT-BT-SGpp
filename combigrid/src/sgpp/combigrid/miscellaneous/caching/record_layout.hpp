@@ -11,7 +11,7 @@ namespace sgpp {
 namespace combigrid {
 
 namespace misc {
-namespace boost_point_value_table {
+namespace source_func_caching {
 
 /**
  * @brief Layout of a record of the source-function cache in 8-byte words:
@@ -28,7 +28,7 @@ struct RecordLayout {
   size_t bytes() const { return sizeof(uint64_t) * stride(); }
 };
 
-}  // namespace boost_point_value_table
+}  // namespace source_func_caching
 }  // namespace misc
 
 }  // namespace combigrid

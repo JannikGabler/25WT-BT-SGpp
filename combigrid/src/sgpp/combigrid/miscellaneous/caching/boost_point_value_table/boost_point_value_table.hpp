@@ -17,8 +17,9 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_arena.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_shard.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_shard.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <span>
 #include <vector>
 
@@ -26,8 +27,6 @@ namespace sgpp {
 namespace combigrid {
 
 namespace misc {
-
-class LmdbPointValueStore;
 
 /**
  * @brief Concurrent table of the records of a @c SourceFuncCache: the values of points, keyed by
@@ -65,9 +64,8 @@ class BoostPointValueTable {
    *                    beyond the memory limit (temporary).
    * @throws base::dependency_exception if SG++ was built without the libraries.
    */
-  BoostPointValueTable(boost_point_value_table::RecordLayout layout, size_t memoryLimit,
-                       size_t nShards, LmdbPointValueStore* store = nullptr,
-                       bool storeAllRecords = false);
+  BoostPointValueTable(source_func_caching::RecordLayout layout, size_t memoryLimit, size_t nShards,
+                       LMDBPointValueStore* store = nullptr, bool storeAllRecords = false);
 
   ~BoostPointValueTable();
 
@@ -78,7 +76,7 @@ class BoostPointValueTable {
   size_t nDim() const { return layout_.nDim; }
 
   /// @brief Returns the layout of the records.
-  boost_point_value_table::RecordLayout layout() const { return layout_; }
+  source_func_caching::RecordLayout layout() const { return layout_; }
 
   /**
    * @brief Hash of the bit patterns of a point (XXH3; -0.0 and 0.0 differ).
@@ -122,9 +120,7 @@ class BoostPointValueTable {
       return;
     }
     if (onDisk_.load(std::memory_order_relaxed)) {
-      [[unlikely]] if (findOnDisk(point.data(), pointHash, values.data())) {
-        return;
-      }
+      [[unlikely]] if (findOnDisk(point.data(), pointHash, values.data())) { return; }
     }
 
     evaluate(point, values);
@@ -187,11 +183,11 @@ class BoostPointValueTable {
 
   const size_t nShards_;  ///< Number of shards.
 
-  boost_point_value_table::RecordLayout layout_;  ///< Layout of the records.
-  size_t shardMemoryLimit_;                       ///< Share of the memory limit per shard.
+  source_func_caching::RecordLayout layout_;  ///< Layout of the records.
+  size_t shardMemoryLimit_;                   ///< Share of the memory limit per shard.
   std::vector<std::unique_ptr<boost_point_value_table::Shard>> shards_;  ///< The shards.
-  LmdbPointValueStore* store_;  ///< Disk store (nullptr: memory only).
-  bool storeAllRecords_;        ///< Whether the store receives the records of memory as well.
+  LMDBPointValueStore* store_;       ///< Disk store (nullptr: memory only).
+  bool storeAllRecords_;             ///< Whether the store receives the records of memory as well.
   std::atomic<bool> onDisk_{false};  ///< Whether the store holds records that memory does not.
 
   /// @}

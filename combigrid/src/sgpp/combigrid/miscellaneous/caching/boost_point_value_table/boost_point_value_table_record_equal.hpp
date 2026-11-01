@@ -6,8 +6,8 @@
 
 #include <cstdint>
 #include <cstring>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_probe.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_arena.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_probe.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_arena.hpp>
 
 namespace sgpp {
 namespace combigrid {

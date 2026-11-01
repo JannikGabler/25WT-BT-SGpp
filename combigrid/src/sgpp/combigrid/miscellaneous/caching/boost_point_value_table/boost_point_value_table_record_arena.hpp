@@ -14,7 +14,7 @@
 #include <limits>
 #include <memory>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_layout.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <vector>
 
 namespace sgpp {
@@ -34,10 +34,10 @@ class RecordArena {
    * @brief Creates an empty arena.
    * @param layout Layout of the records.
    */
-  explicit RecordArena(const RecordLayout layout) : layout_(layout) {}
+  explicit RecordArena(const source_func_caching::RecordLayout layout) : layout_(layout) {}
 
   /// @brief Returns the layout of the records.
-  const RecordLayout& layout() const { return layout_; }
+  const source_func_caching::RecordLayout& layout() const { return layout_; }
 
   /// @brief Returns the number of records.
   size_t size() const { return size_; }
@@ -77,7 +77,7 @@ class RecordArena {
 
   size_t chunkBytes() const { return layout_.bytes() << CHUNK_LOG2; }
 
-  RecordLayout layout_;                              ///< Layout of the records.
+  source_func_caching::RecordLayout layout_;         ///< Layout of the records.
   std::vector<std::unique_ptr<uint64_t[]>> chunks_;  ///< Chunks of records.
   size_t size_ = 0;                                  ///< Number of records.
 };

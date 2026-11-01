@@ -199,6 +199,8 @@ vars.Add(BoolVariable("USE_CGAL", "Set if Computational Geometry Algorithms Libr
 
 vars.Add(BoolVariable("USE_ZLIB", "Set if zlib should be used " +
                                      "(relevant for sgpp::datadriven to read compressed dataset files), not available for windows", False))
+vars.Add(BoolVariable("USE_LMDB", "Set if LMDB library should be used " +
+                                     "(relevant for sgpp::combigrid to cache data)", False))
 vars.Add(BoolVariable("USE_SCALAPACK", "Set if the ScaLAPACK library should be used " +
                                           "(requires MPI, only relevant for sgpp::datadriven)", None))
 vars.Add(BoolVariable("BUILD_STATICLIB", "Set if static libraries should be built " +

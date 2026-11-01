@@ -16,14 +16,15 @@
 #include <mutex>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 
 namespace sgpp {
 namespace combigrid {
 
-namespace misc {
-class BoostPointValueTable;
-class LmdbPointValueStore;
-}  // namespace misc
+// namespace misc {
+// class BoostPointValueTable;
+// class LMDBPointValueStore;
+// }  // namespace misc
 
 /**
  * @brief Cache of the values of one source function, keyed by the bit patterns of the points in
@@ -43,8 +44,8 @@ class LmdbPointValueStore;
  *   of another dimension are evaluated without the cache; with the storage policies, the
  *   operator call then throws at its end) - or both by an existing persistent file.
  * - Thread-safe: one table of @c SourceFuncCacheConfig::nShards shards (default 64), each with a
- *   spin lock, a record arena and a hash index (Boost.Unordered, XXH3). Two threads that miss the same point at the same time both call
- *   the function; one value is kept.
+ *   spin lock, a record arena and a hash index (Boost.Unordered, XXH3). Two threads that miss the
+ * same point at the same time both call the function; one value is kept.
  * - Values with a NaN are not stored (a failed evaluation, e.g. a Python exception, is retried).
  * - Memory per point: 8 (d + m + 1) bytes plus about 5-10 bytes of index; soft limit
  *   @c SourceFuncCacheConfig::memoryLimit.
@@ -197,7 +198,7 @@ class SourceFuncCache final {
   SourceFuncCacheConfig config_;  ///< Configuration.
   size_t nOutputs_ = 0;           ///< Number of outputs (guarded by @c mutex_; 0: not fixed yet).
   /// Disk store of the storage policies (nullptr: memory only); outlives the table.
-  std::unique_ptr<misc::LmdbPointValueStore> store_;
+  std::unique_ptr<misc::LMDBPointValueStore> store_;
   /// Table (nullptr until the first lookup or the load of a file); owned by @c ownedTable_.
   std::atomic<misc::BoostPointValueTable*> table_{nullptr};
   /// Owner of the table (guarded; a shared_ptr, so that the destructor does not need the

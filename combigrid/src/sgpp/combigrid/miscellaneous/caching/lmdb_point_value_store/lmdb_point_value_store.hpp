@@ -16,7 +16,8 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_layout.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_file_interface.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <span>
 #include <string>
 
@@ -54,7 +55,7 @@ namespace misc {
  * dependencies_defines.hpp); without them the class compiles, but its factories throw
  * @c base::dependency_exception.
  */
-class LmdbPointValueStore {
+class LMDBPointValueStore {
  public:
   /**
    * @brief Opens (or creates) a persistent store.
@@ -66,7 +67,7 @@ class LmdbPointValueStore {
    * source-function cache, is truncated or has another format version or key scheme.
    * @throws base::dependency_exception without LMDB.
    */
-  static std::unique_ptr<LmdbPointValueStore> openPersistent(const std::string& path,
+  static std::unique_ptr<LMDBPointValueStore> openPersistent(const std::string& path,
                                                              size_t storageSpaceLimit,
                                                              size_t nReadSlots);
 
@@ -79,7 +80,7 @@ class LmdbPointValueStore {
    * @throws base::file_exception if the file cannot be created.
    * @throws base::dependency_exception without LMDB.
    */
-  static std::unique_ptr<LmdbPointValueStore> createTemporary(const std::string& directory,
+  static std::unique_ptr<LMDBPointValueStore> createTemporary(const std::string& directory,
                                                               size_t storageSpaceLimit,
                                                               size_t nReadSlots);
 
@@ -87,17 +88,17 @@ class LmdbPointValueStore {
   /// (@c /tmp is a RAM file system on many systems).
   static std::string temporaryDirectory();
 
-  ~LmdbPointValueStore();
+  ~LMDBPointValueStore();
 
-  LmdbPointValueStore(const LmdbPointValueStore&) = delete;
-  LmdbPointValueStore& operator=(const LmdbPointValueStore&) = delete;
+  LMDBPointValueStore(const LMDBPointValueStore&) = delete;
+  LMDBPointValueStore& operator=(const LMDBPointValueStore&) = delete;
 
   /// @brief Returns the path of the file (temporary: @c /proc/self/fd/N, Linux).
   const std::string& path() const { return path_; }
 
   /// @brief Returns the layout of the records of the header ({0, 0}: no header yet, i.e. no
   /// records).
-  boost_point_value_table::RecordLayout header() const;
+  source_func_caching::RecordLayout header() const;
 
   /**
    * @brief Looks a point up.
@@ -108,7 +109,7 @@ class LmdbPointValueStore {
    * @param values Output: the values on a hit (@c layout.nOutputs).
    * @return Whether the point is stored.
    */
-  bool find(size_t slot, boost_point_value_table::RecordLayout layout, uint64_t hash,
+  bool find(size_t slot, source_func_caching::RecordLayout layout, uint64_t hash,
             const double* point, double* values);
 
   /**
@@ -120,7 +121,7 @@ class LmdbPointValueStore {
    * @note Never throws (it is called inside parallel regions): an error is kept and thrown by
    * @ref rethrowError.
    */
-  void write(std::span<const uint64_t*> records, boost_point_value_table::RecordLayout layout);
+  void write(std::span<const uint64_t*> records, source_func_caching::RecordLayout layout);
 
   /**
    * @brief Calls @p visit for every stored record (@c [hash | point | values], of the layout of
@@ -158,12 +159,11 @@ class LmdbPointValueStore {
   void resetStatistics();
 
  private:
-  struct Impl;
-
-  LmdbPointValueStore(std::unique_ptr<Impl> impl, std::string path);
+  LMDBPointValueStore(std::unique_ptr<lmdb_point_value_store::FileInterface> interface,
+                      std::string path);
 
   /// @brief @ref openPersistent without the cleanup of the files it created on errors.
-  static std::unique_ptr<LmdbPointValueStore> openPersistentFile(const std::string& path,
+  static std::unique_ptr<LMDBPointValueStore> openPersistentFile(const std::string& path,
                                                                  size_t storageSpaceLimit,
                                                                  size_t nReadSlots);
 
@@ -173,15 +173,16 @@ class LmdbPointValueStore {
   /// @brief Keeps the first error for @ref rethrowError.
   void keepError(const std::string& message);
 
-  std::unique_ptr<Impl> impl_;   ///< LMDB environment and handles.
-  std::string path_;             ///< Path of the file.
-  std::atomic<bool> full_{false};        ///< Whether no further records fit.
-  std::atomic<bool> warned_{false};      ///< Whether the warning was printed.
-  std::atomic<size_t> hits_{0};          ///< Lookups answered.
-  std::atomic<size_t> rejected_{0};      ///< Records not stored.
-  std::atomic<bool> hasError_{false};    ///< Whether @c error_ holds an error.
-  std::mutex errorMutex_;                ///< Guards @c error_.
-  std::string error_;                    ///< First error of @ref write.
+  std::unique_ptr<lmdb_point_value_store::FileInterface>
+      interface_;                      ///< LMDB environment and handles.
+  std::string path_;                   ///< Path of the file.
+  std::atomic<bool> full_{false};      ///< Whether no further records fit.
+  std::atomic<bool> warned_{false};    ///< Whether the warning was printed.
+  std::atomic<size_t> hits_{0};        ///< Lookups answered.
+  std::atomic<size_t> rejected_{0};    ///< Records not stored.
+  std::atomic<bool> hasError_{false};  ///< Whether @c error_ holds an error.
+  std::mutex errorMutex_;              ///< Guards @c error_.
+  std::string error_;                  ///< First error of @ref write.
 };
 
 }  // namespace misc

@@ -6,7 +6,7 @@
 #include <memory>
 #include <sgpp/base/exception/data_exception.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_vector_source_function.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 #include <stdexcept>
 #include <utility>
 

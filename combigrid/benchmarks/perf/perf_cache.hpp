@@ -22,8 +22,8 @@
  *   @c persistent_cold (new file per call, incl. the final sync), @c persistent_warm (cache
  *   created on the filled file: load + operator, all hits), @c temporary_spill (memory limit 0,
  *   new cache per call) and @c temporary_spill_warm (all hits from disk).
- * Only registered with the libraries of the cache (@c SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE,
- * see tools/defines/dependencies_defines.hpp).
+ * Only registered with the libraries of the cache (@c
+ * SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE, see tools/defines/dependencies_defines.hpp).
  */
 #pragma once
 
@@ -40,14 +40,14 @@
 #include <memory>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_policy.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
-#include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 #include <string>
 #include <vector>
 
@@ -71,7 +71,7 @@ class ProductionTable {
 
   ProductionTable(const cache_proto::RecordLayout layout, size_t /*capacityHint*/,
                   const size_t memLimit)
-      : table(misc::boost_point_value_table::RecordLayout{layout.d, layout.m}, memLimit,
+      : table(misc::source_func_caching::RecordLayout{layout.d, layout.m}, memLimit,
               constants::source_func_cache::DEFAULT_SHARDS_CNT) {}
 
   bool find(const base::DataVector& x, uint64_t /*hash*/, double* out) {
@@ -233,21 +233,21 @@ inline double evaluateAll(const CachedSourceFunc& f, const std::vector<base::Dat
 /// evaluations (temporary0).
 inline void addDiskWriteCase(Suite& suite, const std::string& variant, const size_t nDim,
                              const size_t n) {
-  suite.addMicro("micro/cache/disk/write/" + variant + "/d" + std::to_string(nDim) + "/n" +
-                     std::to_string(n),
-                 [=](MicroRun& run) {
-                   const std::vector<base::DataVector> points = diskBenchPoints(nDim, n);
-                   const BenchFile file("write");
-                   run.setItems(static_cast<double>(n));
-                   run.setCounter("threads", omp_get_max_threads());
-                   run.measure([&]() {
-                     file.remove();
-                     const CachedSourceFunc f(expSum, diskConfig(variant, file.path()));
-                     doNotOptimize(evaluateAll(f, points));
-                     run.setCounter("file_mib", static_cast<double>(f.statistics().fileBytes) /
-                                                    (1024.0 * 1024.0));
-                   });
-                 });
+  suite.addMicro(
+      "micro/cache/disk/write/" + variant + "/d" + std::to_string(nDim) + "/n" + std::to_string(n),
+      [=](MicroRun& run) {
+        const std::vector<base::DataVector> points = diskBenchPoints(nDim, n);
+        const BenchFile file("write");
+        run.setItems(static_cast<double>(n));
+        run.setCounter("threads", omp_get_max_threads());
+        run.measure([&]() {
+          file.remove();
+          const CachedSourceFunc f(expSum, diskConfig(variant, file.path()));
+          doNotOptimize(evaluateAll(f, points));
+          run.setCounter("file_mib",
+                         static_cast<double>(f.statistics().fileBytes) / (1024.0 * 1024.0));
+        });
+      });
 }
 
 /// @brief Append throughput of a long-lived persistent cache whose file holds @p nExisting
@@ -280,37 +280,37 @@ inline void addDiskAppendCase(Suite& suite, const size_t nDim, const size_t n,
 /// (temporary0: memory limit 0).
 inline void addDiskLookupCase(Suite& suite, const std::string& variant, const size_t nDim,
                               const size_t n) {
-  suite.addMicro("micro/cache/disk/lookup/" + variant + "/d" + std::to_string(nDim) + "/n" +
-                     std::to_string(n),
-                 [=](MicroRun& run) {
-                   const std::vector<base::DataVector> points = diskBenchPoints(nDim, n);
-                   const CachedSourceFunc f(expSum, diskConfig(variant, ""));
-                   evaluateAll(f, points);
-                   const CacheStatistics before = f.statistics();
-                   run.setItems(static_cast<double>(n));
-                   run.setCounter("threads", omp_get_max_threads());
-                   run.measure([&]() { doNotOptimize(evaluateAll(f, points)); });
-                   run.setCounter("hit_rate", hitRate(before, f.statistics()));
-                 });
+  suite.addMicro(
+      "micro/cache/disk/lookup/" + variant + "/d" + std::to_string(nDim) + "/n" + std::to_string(n),
+      [=](MicroRun& run) {
+        const std::vector<base::DataVector> points = diskBenchPoints(nDim, n);
+        const CachedSourceFunc f(expSum, diskConfig(variant, ""));
+        evaluateAll(f, points);
+        const CacheStatistics before = f.statistics();
+        run.setItems(static_cast<double>(n));
+        run.setCounter("threads", omp_get_max_threads());
+        run.measure([&]() { doNotOptimize(evaluateAll(f, points)); });
+        run.setCounter("hit_rate", hitRate(before, f.statistics()));
+      });
 }
 
 /// @brief Load throughput: creating a cache on a persistent file with n records.
 inline void addDiskLoadCase(Suite& suite, const size_t nDim, const size_t n) {
-  suite.addMicro("micro/cache/disk/load/persistent/d" + std::to_string(nDim) + "/n" +
-                     std::to_string(n),
-                 [=](MicroRun& run) {
-                   const BenchFile file("load");
-                   {
-                     const CachedSourceFunc f(expSum, diskConfig("persistent", file.path()));
-                     evaluateAll(f, diskBenchPoints(nDim, n));
-                   }
-                   run.setItems(static_cast<double>(n));
-                   run.setCounter("threads", omp_get_max_threads());
-                   run.measure([&]() {
-                     const SourceFuncCache cache(diskConfig("persistent", file.path()));
-                     doNotOptimize(cache.statistics().loadedEntries);
-                   });
-                 });
+  suite.addMicro(
+      "micro/cache/disk/load/persistent/d" + std::to_string(nDim) + "/n" + std::to_string(n),
+      [=](MicroRun& run) {
+        const BenchFile file("load");
+        {
+          const CachedSourceFunc f(expSum, diskConfig("persistent", file.path()));
+          evaluateAll(f, diskBenchPoints(nDim, n));
+        }
+        run.setItems(static_cast<double>(n));
+        run.setCounter("threads", omp_get_max_threads());
+        run.measure([&]() {
+          const SourceFuncCache cache(diskConfig("persistent", file.path()));
+          doNotOptimize(cache.statistics().loadedEntries);
+        });
+      });
 }
 
 /// @brief An operator with a cached cost-controlled integrand and a storage policy (see the file

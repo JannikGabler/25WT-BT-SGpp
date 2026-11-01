@@ -12,16 +12,17 @@
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 
 #ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
+
 #include <boost/unordered/unordered_flat_set.hpp>
-#endif
+
 #include <cstddef>
 #include <cstdint>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_arena.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_equal.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_hash.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_layout.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_arena.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_equal.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_hash.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp>
 #include <vector>
 
@@ -31,13 +32,11 @@ namespace combigrid {
 namespace misc {
 namespace boost_point_value_table {
 
-#ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
-
 /// @brief A shard: its lock, records, index and counters (all used under the lock). The counters
 /// share the cache line of the lock, which every lookup writes anyway; the fields of the disk
 /// store (storage policies only) come last.
 struct Shard {
-  explicit Shard(const RecordLayout layout)
+  explicit Shard(const source_func_caching::RecordLayout layout)
       : arena(layout), index(0, RecordHash{&arena}, RecordEqual{&arena}) {}
 
   /// @brief Bytes of the records, the index (groups of 15 slots of 4 bytes + 16 bytes of

@@ -3,34 +3,30 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
-#include <cstring>
-#include <sgpp/base/exception/dependency_exception.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_record_layout.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_shard.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
-#include <stdexcept>
-#include <vector>
 
 #ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
+
 #include <mutex>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table_probe.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_probe.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_equal.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_shard.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp>
+#include <stdexcept>
+#include <vector>
 
 // dependencies_defines.hpp included xxhash.h for its version check; with XXH_INLINE_ALL, xxhash.h
 // may be included again and then defines XXH3 inline (no xxHash library at link or run time).
 #define XXH_INLINE_ALL
 #include <xxhash.h>
-#endif
-
-using sgpp::combigrid::misc::boost_point_value_table::RecordLayout;
-using sgpp::combigrid::misc::boost_point_value_table::Shard;
-
-#ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
 
 using sgpp::combigrid::misc::boost_point_value_table::Probe;
+using sgpp::combigrid::misc::boost_point_value_table::Shard;
+using sgpp::combigrid::misc::source_func_caching::RecordLayout;
 
 namespace sgpp {
 namespace combigrid {
@@ -38,7 +34,7 @@ namespace combigrid {
 namespace misc {
 
 BoostPointValueTable::BoostPointValueTable(const RecordLayout layout, const size_t memoryLimit,
-                                           const size_t nShards, LmdbPointValueStore* store,
+                                           const size_t nShards, LMDBPointValueStore* store,
                                            const bool storeAllRecords)
     : nShards_(nShards),
       layout_(layout),
@@ -247,6 +243,10 @@ void BoostPointValueTable::writePending(const std::vector<uint64_t>& records) {
 
 #else  // SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
 
+#include <sgpp/base/exception/dependency_exception.hpp>
+
+using sgpp::combigrid::misc::source_func_caching::RecordLayout;
+
 namespace sgpp {
 namespace combigrid {
 
@@ -265,8 +265,8 @@ BoostPointValueTable::BoostPointValueTable(const RecordLayout layout, const size
       store_(store),
       storeAllRecords_(storeAllRecords) {
   throw base::dependency_exception(
-      "BoostPointValueTable: SG++ was built without the libraries of the source-function cache. "
-      SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE_EXCEPTION);
+      "BoostPointValueTable: SG++ was built without the libraries of the source-function "
+      "cache. " SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE_EXCEPTION);
 }
 
 BoostPointValueTable::~BoostPointValueTable() = default;

@@ -737,17 +737,14 @@ def detectZlib(config):
     Helper.printInfo("ZLIB support could not be enabled.")
 
 def detectLMDB(config):
-  # Optional disk store of the combigrid source-function cache (storage policies); without it,
-  # those policies throw at run time. Detected only here; the sources test the define in
-  # combigrid/src/sgpp/combigrid/tools/defines/dependencies_defines.hpp.
-  if not config.env["SG_COMBIGRID"]:
-    return
   if config.CheckLibWithHeader("lmdb", "lmdb.h", "c", autoadd=0):
-    Helper.printInfo("LMDB is installed, enabling the disk storage of the combigrid cache.")
+    Helper.printInfo("LMDB is installed, enabling LMDB support.")
     config.env["USE_LMDB"] = True
     config.env["CPPDEFINES"]["SGPP_COMBIGRID_LMDB_LINKED"] = "1"
+  elif config.env["USE_LMDB"]:
+    Helper.printErrorAndExit("USE_LMDB is set but either liblmdb or lmdb.h is missing!")
   else:
-    Helper.printInfo("LMDB not found: the combigrid cache supports memory only.")
+    Helper.printInfo("LMDB support could not be enabled.")
 
 def detectScaLAPACK(config):
   if "SCALAPACK_LIBRARY_PATH" in config.env:

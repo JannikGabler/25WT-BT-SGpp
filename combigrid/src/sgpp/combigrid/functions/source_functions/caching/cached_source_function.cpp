@@ -7,7 +7,7 @@
 #include <sgpp/base/exception/data_exception.hpp>
 #include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 #include <span>
 #include <stdexcept>
