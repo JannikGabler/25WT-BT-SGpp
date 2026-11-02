@@ -1,0 +1,16 @@
+cheap limit 1073741824: mode 0 switches 23 none-calls 452 lookups 1347 hits 430 (disk 0) entries 908 disk 0 function 444 ns hit 3409 ns wrong 0
+expensive limit 1073741824: mode 1 switches 0 none-calls 0 lookups 4800 hits 2978 (disk 0) entries 435 disk 0 function 23273 ns hit 2197 ns wrong 0
+expensive limit 0: mode 2 switches 1 none-calls 0 lookups 4800 hits 3279 (disk 1846) entries 0 disk 435 function 23285 ns hit 0 ns wrong 0
+OK
+policy 0 limit 1073741824: lookups 640000 hits 617751 (disk 0) entries 20000 disk 0 rejected 0 wrong 0
+policy 0 limit 1048576: lookups 640000 hits 506182 (disk 0) entries 16384 disk 0 rejected 115712 wrong 0
+policy 1 limit 1073741824: lookups 640000 hits 615897 (disk 0) entries 20000 disk 0 rejected 0 wrong 0
+policy 1 limit 1048576: lookups 640000 hits 612425 (disk 104649) entries 16384 disk 3616 rejected 0 wrong 0
+policy 1 limit 0: lookups 640000 hits 598110 (disk 578625) entries 0 disk 20000 rejected 0 wrong 0
+policy 2 limit 1073741824: lookups 640000 hits 618183 (disk 0) entries 20000 disk 20000 rejected 0 wrong 0
+  reloaded 20000 entries
+policy 2 limit 1048576: lookups 640000 hits 611664 (disk 93405) entries 16384 disk 20000 rejected 0 wrong 0
+  reloaded 20000 entries
+policy 2 limit 0: lookups 640000 hits 602053 (disk 579834) entries 0 disk 20000 rejected 0 wrong 0
+  reloaded 20000 entries
+OK

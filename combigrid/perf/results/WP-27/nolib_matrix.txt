@@ -1,0 +1,18 @@
+=== CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE
+scons exit 0; boost tests: 2 x 'No errors detected', 0 failure/error lines
+  policy 0: SourceFuncCache: SG++ was built without the libraries of the source-function cache. Flag 'SGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE' is set.
+  policy 1: SourceFuncCache: SG++ was built without the libraries of the source-function cache. Flag 'SGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE' is set.
+  policy 3: SourceFuncCache: SG++ was built without the libraries of the source-function cache. Flag 'SGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE' is set.
+  undefined mdb_ symbols: 24
+=== CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_LMDB_STORE
+scons exit 0; boost tests: 2 x 'No errors detected', 0 failure/error lines
+  policy 0: created
+  policy 1: SourceFuncCache: SG++ was built without the libraries of the storage policies. Flag 'SGPP_COMBIGRID_DISABLE_LMDB_STORE' is set.
+  policy 3: created
+  undefined mdb_ symbols: 0
+=== CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE -DSGPP_COMBIGRID_DISABLE_LMDB_STORE
+scons exit 0; boost tests: 2 x 'No errors detected', 0 failure/error lines
+  policy 0: SourceFuncCache: SG++ was built without the libraries of the source-function cache. Flag 'SGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE' is set.
+  policy 1: SourceFuncCache: SG++ was built without the libraries of the source-function cache. Flag 'SGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE' is set.
+  policy 3: SourceFuncCache: SG++ was built without the libraries of the source-function cache. Flag 'SGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE' is set.
+  undefined mdb_ symbols: 0

@@ -1,0 +1,32 @@
+# SG_PYTHON=1 build (OPT=0); SWIG 4.4.0
+== OMP_NUM_THREADS=1
+ok    enum CachePolicy_Adaptive
+ok    enum AdaptiveCacheMode
+ok    starts in MemoryOnly
+ok    adaptive quadrature equals the uncached one
+ok    a Python callable stays cached (function 1171 ns, hit 598 ns)
+ok    costs measured
+ok    Python called on misses only (1985)
+ok    interpolation equals the uncached one
+ok    interpolation after the quadrature: all hits
+ok    vector-valued adaptive quadrature
+ok    clear() resets the measurements
+all checks passed
+== OMP_NUM_THREADS=16
+ok    enum CachePolicy_Adaptive
+ok    enum AdaptiveCacheMode
+ok    starts in MemoryOnly
+ok    adaptive quadrature equals the uncached one
+ok    a Python callable stays cached (function 28669 ns, hit 798 ns)
+ok    costs measured
+ok    Python called on misses only (2029)
+ok    interpolation equals the uncached one
+ok    interpolation after the quadrature: all hits
+ok    vector-valued adaptive quadrature
+ok    clear() resets the measurements
+all checks passed
+WP-26 t1: ALL OK
+WP-28 t1: all checks passed
+WP-26 t16: ALL OK
+WP-28 t16: all checks passed
+examples: all 10 ok (combigrid/examples/python/*.py)

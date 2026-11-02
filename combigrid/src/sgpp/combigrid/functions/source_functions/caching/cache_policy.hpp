@@ -18,7 +18,8 @@ namespace combigrid {
  * With the storage policies, memory stays the primary store (@c SourceFuncCacheConfig::memoryLimit,
  * records and indices) and every further value goes to a file of at most
  * @c SourceFuncCacheConfig::storageSpaceLimit bytes, so that every evaluation is cached until the
- * file is full. Python: @c pysgpp.CachePolicy_MemoryOnly, ...
+ * file is full. @c Adaptive chooses among no caching and the first two by itself. Python:
+ * @c pysgpp.CachePolicy_MemoryOnly, ...
  */
 enum class CachePolicy {
   /// Memory only (default): no file; once the memory limit is reached, no further values are
@@ -34,6 +35,13 @@ enum class CachePolicy {
   /// uninterrupted run, all values the call evaluated are in the file; a crash never corrupts
   /// it (values of an interrupted operator call may be lost).
   PersistentStorage,
+  /// Picks None (no caching), MemoryOnly or TemporaryStorage by itself, from the measured cost of
+  /// the function, of the cache's lookups and its hit rate (WP-27; starts in MemoryOnly; the
+  /// current mode: @c CacheStatistics::adaptiveMode). The temporary file is created at the first
+  /// value beyond the memory limit in TemporaryStorage mode (only with LMDB, else never) and kept
+  /// until the cache is destroyed. @c SourceFuncCacheConfig::file must be empty. Results are
+  /// bitwise those of the uncached function in every mode. See @c SourceFuncCache.
+  Adaptive,
 };
 
 }  // namespace combigrid

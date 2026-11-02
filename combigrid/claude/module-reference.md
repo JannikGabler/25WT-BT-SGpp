@@ -12,7 +12,7 @@ a matching source are stale build artifacts):
 ```
 constants.hpp          parallelism thresholds per subsystem (mi_vec, sg_gen_instr, ct_coefficients,
                        sg_gen_node_lookup); source_func_cache (shards, arena chunk, default limits,
-                       spill batch, records per LMDB transaction)
+                       spill batch, records per LMDB transaction, ADAPTIVE_* factors / windows)
 type_defs.hpp          LvlType, GPCntType, CTCoeffType, MI/MIVec aliases, HyperCubeArea
 functions/
   level_to_grid_point_count_functions/  linear / doubling growth (level → #inner nodes)
@@ -21,7 +21,8 @@ functions/
   source_functions/                     SourceFunc, VectorSourceFunc (m outputs; virtual
                                         end-of-operator hook); caching/ (always compiled):
                                         SourceFuncCache, SourceFuncCacheConfig, CachePolicy,
-                                        CacheStatistics, CachedSourceFunc, CachedVectorSourceFunc
+                                        AdaptiveCacheMode, CacheStatistics, CachedSourceFunc,
+                                        CachedVectorSourceFunc
 grids/
   tensor_grid            anisotropic tensor grid (per-dim node lists)
   sparse_grid_base       common base: nDim, vector<TensorGridCTData> (not SWIG-wrapped)
@@ -51,7 +52,13 @@ miscellaneous/         (namespace misc)
                          forward-declare the next layer (table, store; Shard; FileInterface);
                          only shard, file_interface, read_slot (and tools/caching/lmdb_tools,
                          dependencies_defines) include Boost.Unordered / xxhash.h / lmdb.h or
-                         test configuration macros, and only .cpp files include those
+                         test configuration macros, and only .cpp files include those;
+                         adaptive/: AdaptiveCacheController (state machine of
+                         CachePolicy::Adaptive) and its parts in misc::adaptive_caching: CostTimer
+                         (rdtscp / steady_clock, calibrated), CostSample(Kind), CostSampleWindow
+                         (lock-free 64-slot windows, CostSampleSlot = sequence lock),
+                         CostEstimate, HitRateTracker, AdaptiveCounters, AdaptiveRuleInput,
+                         adaptive_rules (nextAdaptiveMode: pure, tested with injected costs)
   exceptions/            CacheFileException (namespace sgpp::combigrid; file_exception owning
                          its message)
   concurrency/           ConcurrentTaskQueue (node-lookup pipeline, commented out), SpinLock
@@ -158,6 +165,27 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   thread, d5 / d20): disk hit 0.58 / 0.73 µs (memory 0.09 / 0.17), new point persistent 1.0–1.5
   / 2.2–3.2 µs (memory 0.17), spill 3.7 / 4.9 µs, load 0.16 / 0.29 µs per record; LMDB writes are
   serialized. No `functionId`: a file of another function with the same d, m is used silently.
+  Adaptive policy (WP-27, `CachePolicy::Adaptive`, decisions:
+  [perf/results/WP-27/decisions.md](../perf/results/WP-27/decisions.md)): picks
+  `AdaptiveCacheMode` None / MemoryOnly (start) / TemporaryStorage from sampled costs. One point in
+  P (hash bits 32.., P = 2^k from the calibrated timer cost: rdtscp 37 ns → 64; steady_clock with
+  HPET 1.9 µs → 2048) is timed (hit, miss + function alone, disk); every 64 samples the completing
+  thread decides (`try_lock`): c_f vs. E = (h c_hit + (1 − h) o_miss) / h per tier, factors 0.8
+  (→ None) / 1.25 (probe stays) / 1.5 (→ TemporaryStorage, memory full) / 1.2 (→ MemoryOnly) in
+  `constants.hpp`; h = exact marginal hit rate of the last 2^14 lookups, used from 2^16 lookups on
+  (before: bound h = 1, cold start never switches off); while the file is in use only its rule
+  applies (chain None ← MemoryOnly ← TemporaryStorage). Switches act at once (also mid-call;
+  results bitwise the same). None: the callable checks the mode word and calls the function (cost-0
+  integrands incl. probes, steady state: 0.82–0.91x of plain at 1 thread, 0.85–1.09x at 16;
+  one fresh call 0.71–0.86x / 0.57–0.82x vs. "always" 0.14–0.30x / 0.07–0.17x; WP-27); left only by probes at the hook (after 1, 2, 4, … 64 calls in
+  None; the call that switched off does not count). Each mode uses only its tiers; the temporary
+  file is created at the first value beyond memory in TemporaryStorage (inside the parallel region,
+  under the cache mutex; failure → MemoryOnly for good and one `base::file_exception` at the end of
+  that operator call) and kept until destruction; `config().file` stays empty. Other d bypass
+  silently. `CacheStatistics`: `adaptiveMode`, `modeSwitches`, `noneOperatorCalls`,
+  `functionCostNs`, `memoryHitCostNs`, `memoryMissOverheadNs`, `diskHitCostNs`,
+  `diskMissOverheadNs`. Works without LMDB (never TemporaryStorage). Memory hits stay inline in
+  the callable (an out-of-line hit path cost +17 ns per evaluation).
 - `VectorSourceFunc` ([functions/source_functions/vector_source_function.hpp](../src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp)):
   f: Ω → ℝ^m; wraps `std::function<void(const base::DataVector&, std::span<double>)>` + `nOutputs`
   (m ≥ 1; 0 throws `base::data_exception`); `nOutputs()`, `evaluate(point, out)`,
@@ -244,9 +272,11 @@ operation machinery.
   `DataVector`-returning overloads of all three operators are bound; the DSG quadrature (also the
   scalar one) and the `std::span` overloads are C++ only. Python callables run serially under the
   GIL; a vector callable needs one call per grid point for all m outputs.
-- **Source-function caching** (WP-26, WP-28): policy "always" (`CachedSourceFunc`; "none" = plain
-  `SourceFunc`) in memory or with a temporary / persistent LMDB file; the adaptive policy (WP-27)
-  is planned ([PLAN.md](../perf/PLAN.md)). Unavailable (constructors throw) without Boost ≥ 1.81 +
+- **Source-function caching** (WP-26, WP-28, WP-27): policy "always" (`CachedSourceFunc`; "none"
+  = plain `SourceFunc`) in memory or with a temporary / persistent LMDB file, or adaptive
+  (`CachePolicy::Adaptive`: None / MemoryOnly / TemporaryStorage from measured costs; not the
+  default; never persistent; decisions are myopic: a function at hit rate 0 in the current
+  operator (DSG quadrature) is switched off even if later calls would reuse its values). Unavailable (constructors throw) without Boost ≥ 1.81 +
   xxHash ≥ 0.8 (storage policies: also LMDB). Disk writes cost µs per new point and are
   serialized (one LMDB writer), so files pay only for expensive functions. Without a cache,
   shared points are re-evaluated across tensor grids and operator calls. Python misses still run

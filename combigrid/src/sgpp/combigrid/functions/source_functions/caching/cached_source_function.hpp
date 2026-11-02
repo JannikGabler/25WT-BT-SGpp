@@ -126,6 +126,12 @@ class CachedSourceFunc final : public SourceFunc {
       std::function<double(const base::DataVector&)> func,
       const std::shared_ptr<SourceFuncCache>& cache);
 
+  /// @brief The callable of @ref wrap for @c CachePolicy::Adaptive (calls @p func directly in
+  /// mode None).
+  static std::function<double(const base::DataVector&)> wrapAdaptive(
+      std::function<double(const base::DataVector&)> func,
+      const std::shared_ptr<SourceFuncCache>& cache);
+
   /// @}
 };
 

@@ -33,7 +33,8 @@ namespace combigrid {
  *
  * @note Pass it to the operators by reference (as they take it). Copying or moving it into a
  * plain @c VectorSourceFunc does not compile (it would lose @c finishOperatorCall, see
- * @c VectorSourceFunc's deleted converting constructor); copies as @c CachedVectorSourceFunc share the cache.
+ * @c VectorSourceFunc's deleted converting constructor); copies as @c CachedVectorSourceFunc share
+ * the cache.
  */
 class CachedVectorSourceFunc final : public VectorSourceFunc {
  public:
@@ -119,6 +120,12 @@ class CachedVectorSourceFunc final : public VectorSourceFunc {
    */
   static std::function<void(const base::DataVector&, std::span<double>)> wrap(
       std::function<void(const base::DataVector&, std::span<double>)> func, size_t nOutputs,
+      const std::shared_ptr<SourceFuncCache>& cache);
+
+  /// @brief The callable of @ref wrap for @c CachePolicy::Adaptive (calls @p func directly in
+  /// mode None).
+  static std::function<void(const base::DataVector&, std::span<double>)> wrapAdaptive(
+      std::function<void(const base::DataVector&, std::span<double>)> func,
       const std::shared_ptr<SourceFuncCache>& cache);
 
   /// @}

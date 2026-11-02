@@ -62,6 +62,33 @@ constexpr size_t STORE_RECORDS_PER_TXN = size_t{1} << 16;
 /// Smallest size of the file of the disk store in pages (LMDB needs a few pages of its own).
 constexpr size_t MIN_STORE_PAGES = 16;
 
+// Adaptive policy (CachePolicy::Adaptive, WP-27). c_f = measured cost of the function, E = the
+// expected overhead of a cache tier per evaluation it avoids, (h c_hit + (1 - h) o_miss) / h.
+
+/// MemoryOnly / TemporaryStorage -> None if c_f < factor * E_memory.
+constexpr double ADAPTIVE_TO_NONE_FACTOR = 0.8;
+/// None -> MemoryOnly (a probe stays) only if c_f > factor * E_memory.
+constexpr double ADAPTIVE_FROM_NONE_FACTOR = 1.25;
+/// MemoryOnly -> TemporaryStorage (memory full) if c_f > factor * E_disk.
+constexpr double ADAPTIVE_TO_DISK_FACTOR = 1.5;
+/// TemporaryStorage -> MemoryOnly if c_f <= factor * E_disk.
+constexpr double ADAPTIVE_FROM_DISK_FACTOR = 1.2;
+
+/// Timed evaluations per decision window (the thread that completes a window decides).
+constexpr size_t ADAPTIVE_WINDOW_SAMPLES = 64;
+/// Lookups before the hit rate enters the rules (before: the bound for hit rate 1, so that the
+/// cold start of a cache never switches caching off; WP-27: the hit rate of the first 4k lookups
+/// is far below that of the whole operator call).
+constexpr size_t ADAPTIVE_WARMUP_LOOKUPS = size_t{1} << 16;
+/// The hit rate is that of the last one to two spans of this many lookups (marginal).
+constexpr size_t ADAPTIVE_HIT_RATE_LOOKUPS = size_t{1} << 14;
+/// Largest number of operator calls in None between two probes (backoff 1, 2, 4, ...).
+constexpr size_t ADAPTIVE_MAX_PROBE_INTERVAL = 64;
+/// Timer cost per evaluation the sampling may add on average, in ns: one evaluation in P is
+/// timed, P a power of two from the calibrated cost of a timer read (rdtscp 37 ns -> P = 64,
+/// steady_clock with HPET 1.9 us -> P = 2048).
+constexpr double ADAPTIVE_TIMER_BUDGET_NS = 2.0;
+
 }  // namespace source_func_cache
 
 /**

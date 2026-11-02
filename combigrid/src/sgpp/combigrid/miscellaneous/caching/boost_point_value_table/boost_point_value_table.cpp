@@ -70,18 +70,19 @@ bool BoostPointValueTable::find(const double* point, const uint64_t hash, double
   return true;
 }
 
-void BoostPointValueTable::insert(const double* point, const uint64_t hash, const double* values) {
+bool BoostPointValueTable::insert(const double* point, const uint64_t hash, const double* values,
+                                  const bool allowSpill) {
   Shard& s = shard(hash);
   {
     const std::lock_guard<SpinLock> guard(s.lock);
 
     if (s.index.contains(Probe{point, hash})) {
-      return;
+      return true;
     }
     if (s.arena.full() || s.bytes() + s.arena.bytesOfNextRecord() > shardMemoryLimit_) {
-      [[unlikely]] if (store_ == nullptr) {
+      [[unlikely]] if (!allowSpill || store_.load(std::memory_order_acquire) == nullptr) {
         s.rejectedInserts++;
-        return;
+        return false;
       }
     } else {
       const uint32_t idx = s.arena.allocate();
@@ -91,26 +92,26 @@ void BoostPointValueTable::insert(const double* point, const uint64_t hash, cons
       std::memcpy(record + 1 + layout_.nDim, values, sizeof(double) * layout_.nOutputs);
       s.index.insert(idx);
       s.inserts++;
-      return;
+      return true;
     }
   }
 
   // Memory is full and there is a disk store (out of line: the memory path stays as without it).
-  spill(s, point, hash, values);
+  return spill(s, point, hash, values);
 }
 
-void BoostPointValueTable::spill(Shard& s, const double* point, const uint64_t hash,
+bool BoostPointValueTable::spill(Shard& s, const double* point, const uint64_t hash,
                                  const double* values) {
   std::vector<uint64_t> batch;
   {
     const std::lock_guard<SpinLock> guard(s.lock);
-    if (store_->full()) {
+    if (store_.load(std::memory_order_acquire)->full()) {
       s.rejectedInserts++;
-      return;
+      return false;
     }
     s.inserts++;
     if (!appendPending(s, point, hash, values)) {
-      return;
+      return true;
     }
     batch.swap(s.pending);
   }
@@ -118,6 +119,7 @@ void BoostPointValueTable::spill(Shard& s, const double* point, const uint64_t h
   // Outside the lock: the batch is invisible until it is committed (a concurrent miss of one of
   // its points evaluates it again, the store keeps one value).
   writePending(batch);
+  return true;
 }
 
 bool BoostPointValueTable::findOnDisk(const double* point, const uint64_t hash, double* values) {
@@ -130,7 +132,8 @@ bool BoostPointValueTable::findOnDisk(const double* point, const uint64_t hash, 
       return true;
     }
   }
-  return store_->find(shardIndex(hash), layout_, hash, point, values);
+  LMDBPointValueStore* const store = store_.load(std::memory_order_acquire);
+  return store != nullptr && store->find(shardIndex(hash), layout_, hash, point, values);
 }
 
 bool BoostPointValueTable::insertLoaded(const uint64_t* record) {
@@ -231,7 +234,7 @@ void BoostPointValueTable::writePending(const std::vector<uint64_t>& records) {
   for (size_t offset = 0; offset < records.size(); offset += layout_.stride()) {
     pointers.push_back(records.data() + offset);
   }
-  store_->write(pointers, layout_);
+  store_.load(std::memory_order_acquire)->write(pointers, layout_);
 }
 
 /// @}
@@ -278,8 +281,10 @@ bool BoostPointValueTable::find(const double* /*point*/, const uint64_t /*hash*/
   return false;
 }
 
-void BoostPointValueTable::insert(const double* /*point*/, const uint64_t /*hash*/,
-                                  const double* /*values*/) {}
+bool BoostPointValueTable::insert(const double* /*point*/, const uint64_t /*hash*/,
+                                  const double* /*values*/, const bool /*allowSpill*/) {
+  return false;
+}
 
 bool BoostPointValueTable::findOnDisk(const double* /*point*/, const uint64_t /*hash*/,
                                       double* /*values*/) {

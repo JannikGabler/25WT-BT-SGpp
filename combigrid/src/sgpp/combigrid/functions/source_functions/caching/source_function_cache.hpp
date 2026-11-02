@@ -12,10 +12,15 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <mutex>
+#include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/adaptive_cache_mode.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
+#include <span>
+#include <string>
 
 namespace sgpp {
 namespace combigrid {
@@ -23,8 +28,13 @@ namespace combigrid {
 // Declared only: their headers (internal) include the optional libraries and depend on the
 // configuration, a public header must not (one class layout in every translation unit).
 namespace misc {
+class AdaptiveCacheController;
 class BoostPointValueTable;
 class LMDBPointValueStore;
+namespace adaptive_caching {
+enum class CostSampleKind : uint8_t;
+struct AdaptiveCounters;
+}  // namespace adaptive_caching
 }  // namespace misc
 
 /**
@@ -72,6 +82,25 @@ class LMDBPointValueStore;
  *   disappears with the cache or the process.
  * - A mismatching or corrupted file, a write error or points of another dimension throw
  *   @c base::file_exception (the last two at the end of the operator call).
+ *
+ * Adaptive policy (@c CachePolicy::Adaptive, WP-27; decisions of the owner and measurements:
+ * combigrid/perf/results/WP-27/):
+ * - Picks the mode (@c AdaptiveCacheMode: None, MemoryOnly, TemporaryStorage; start
+ *   MemoryOnly) from sampled costs: one evaluation in P is timed (P a power of two calibrated
+ *   from the cost of the timer, 64 with @c rdtscp), every 64 samples the rules of
+ *   @c constants::source_func_cache (ADAPTIVE_*) compare the cost of the function c_f with the
+ *   expected overhead E of a tier per avoided evaluation, (h c_hit + (1 - h) o_miss) / h:
+ *   to None below 0.8 E_memory, to TemporaryStorage (memory full) above 1.5 E_disk, back below
+ *   1.2 E_disk. The hit rate h is the marginal one of the last 2^14 lookups from 2^16 lookups on
+ *   (before: h = 1, so that the cold start never switches caching off). Switches act at once,
+ *   also in the middle of an operator call.
+ * - None calls the function directly (one atomic load per evaluation; WP-27, cost-0 integrands
+ *   incl. probes: 0.82-0.91x of a plain @c SourceFunc at 1 thread, 0.85-1.09x at 16). It is left by probes: after k operator calls in None (k = 1, 2, 4, ...
+ *   64) one call runs in MemoryOnly and stays only if caching wins by 1.25.
+ * - Each mode uses only its own tiers; values stored in another mode stay. The temporary file is
+ *   created at the first value beyond the memory limit in TemporaryStorage mode (needs LMDB; if
+ *   its creation fails, the cache stays in memory and the end of that operator call throws
+ *   @c base::file_exception once). Points of another dimension are evaluated without the cache.
  *
  * @note Needs Boost >= 1.81 (Boost.Unordered) and xxHash >= 0.8 when SG++ is built (detected in
  * tools/defines/dependencies_defines.hpp); the storage policies need LMDB >= 0.9.14 as well.
@@ -193,13 +222,94 @@ class SourceFuncCache final {
    */
   void writeToStore(bool sync);
 
-  /// @brief Whether the policy keeps a file.
-  bool hasStore() const { return store_ != nullptr; }
+  /// @brief Returns the disk store (nullptr: none yet).
+  misc::LMDBPointValueStore* store() const { return storeView_.load(std::memory_order_acquire); }
+
+  /// @brief Whether the cache keeps a file (storage policies; adaptive: once created).
+  bool hasStore() const { return store() != nullptr; }
+
+  /// @name Adaptive policy (source_function_cache_adaptive.cpp)
+  /// @{
+
+  /// @brief Callback of @ref evaluateAdaptive: writes the values of the wrapped function.
+  using EvaluateCallback = void (*)(const void* context, const base::DataVector& point,
+                                    std::span<double> values);
+
+  /// @brief Returns the controller of the adaptive policy (nullptr for the other policies).
+  misc::AdaptiveCacheController* adaptiveController() const { return adaptive_.get(); }
+
+  /**
+   * @brief Evaluation of a cached function with the adaptive policy after the inline part of the
+   * cached function (mode not None, point hashed; memory searched unless sampled): a sampled
+   * point is timed and looked up in all tiers of the mode, a memory miss continues with the file
+   * and the function.
+   * @param table    The table.
+   * @param mode     The mode read by the caller.
+   * @param hash     Hash of the point.
+   * @param sampled  Whether the point is timed (then memory was not searched yet).
+   * @param point    Point in problem coordinates.
+   * @param values   Output: its values.
+   * @param evaluate Evaluates the wrapped function.
+   * @param context  Argument of @p evaluate.
+   */
+  void evaluateAdaptive(misc::BoostPointValueTable& table, AdaptiveCacheMode mode, uint64_t hash,
+                        bool sampled, const base::DataVector& point, std::span<double> values,
+                        EvaluateCallback evaluate, const void* context);
+
+  /// @brief As @ref evaluateAdaptive for a sampled point: times it and reports the sample.
+  void evaluateTimed(misc::BoostPointValueTable& table, AdaptiveCacheMode mode,
+                     const base::DataVector& point, std::span<double> values,
+                     EvaluateCallback evaluate, const void* context);
+
+  /**
+   * @brief Continues after a memory miss: looks the point up in the file (TemporaryStorage),
+   * evaluates and stores it on a miss.
+   * @param functionTicks Output: the ticks of the function call (nullptr: not timed; the
+   * maximum if the thread changed CPUs).
+   * @return The path the evaluation took (MemoryMiss, DiskHit or DiskMiss).
+   */
+  misc::adaptive_caching::CostSampleKind missAdaptive(misc::BoostPointValueTable& table,
+                                                      AdaptiveCacheMode mode, uint64_t hash,
+                                                      const base::DataVector& point,
+                                                      std::span<double> values,
+                                                      EvaluateCallback evaluate,
+                                                      const void* context, uint64_t* functionTicks);
+
+  /// @brief Stores a value in the tiers of @p mode (creates the temporary file if needed).
+  void insertAdaptive(misc::BoostPointValueTable& table, AdaptiveCacheMode mode,
+                      const double* point, uint64_t hash, const double* values);
+
+  /**
+   * @brief Creates the temporary file of the adaptive policy unless it exists or failed before
+   * (errors are kept for @ref finishOperatorCall: called inside the operators' parallel regions).
+   * @param table The table to attach it to.
+   * @return Whether the file exists.
+   */
+  bool createTemporaryStore(misc::BoostPointValueTable& table);
+
+  /// @brief Returns the exact counters of the table for the adaptive policy.
+  static misc::adaptive_caching::AdaptiveCounters adaptiveCounters(
+      const misc::BoostPointValueTable& table);
+
+  /// @brief End-of-operator part of the adaptive policy (probes, a failed temporary file).
+  void finishAdaptiveOperatorCall();
+
+  /// @}
 
   SourceFuncCacheConfig config_;  ///< Configuration.
   size_t nOutputs_ = 0;           ///< Number of outputs (guarded by @c mutex_; 0: not fixed yet).
-  /// Disk store of the storage policies (nullptr: memory only); outlives the table.
+  /// Disk store of the storage policies or the adaptive policy (nullptr: memory only; the
+  /// adaptive policy creates it once, guarded by @c mutex_); outlives the table.
   std::unique_ptr<misc::LMDBPointValueStore> store_;
+  /// @c store_ for lock-free readers (set once, after the store is complete).
+  std::atomic<misc::LMDBPointValueStore*> storeView_{nullptr};
+  /// Controller of the adaptive policy (nullptr for the other policies).
+  std::unique_ptr<misc::AdaptiveCacheController> adaptive_;
+  /// Whether evaluations at points of another dimension are an error (storage policies).
+  bool otherDimIsError_ = false;
+  std::string storeError_;           ///< Error of the temporary file (adaptive; guarded).
+  bool storeFailed_ = false;         ///< Whether its creation failed (adaptive; guarded).
+  bool storeErrorReported_ = false;  ///< Whether a hook threw it (adaptive; guarded).
   /// Table (nullptr until the first lookup or the load of a file); owned by @c ownedTable_.
   std::atomic<misc::BoostPointValueTable*> table_{nullptr};
   /// Owner of the table (guarded; a shared_ptr: its deleter is bound where the table is created,

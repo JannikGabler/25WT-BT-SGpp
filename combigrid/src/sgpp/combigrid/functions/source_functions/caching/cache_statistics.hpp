@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstddef>
+#include <sgpp/combigrid/functions/source_functions/caching/adaptive_cache_mode.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -23,19 +24,33 @@ namespace combigrid {
  * threads at the same time are not.
  */
 struct CacheStatistics {
-  size_t lookups = 0;          ///< Evaluations of the cached functions looked up in the cache.
-  size_t hits = 0;             ///< Lookups answered from the cache (memory or file).
-  size_t inserts = 0;          ///< Points whose values were stored (memory or file).
+  size_t lookups = 0;  ///< Evaluations of the cached functions looked up in the cache.
+  size_t hits = 0;     ///< Lookups answered from the cache (memory or file).
+  size_t inserts = 0;  ///< Points whose values were stored (memory or file).
   /// Values not stored because of the memory limit (memory only) or the storage space limit
   /// (persistent: also values kept in memory but not written to the full file).
   size_t rejectedInserts = 0;
-  size_t entries = 0;          ///< Points stored in memory at present.
-  size_t bytes = 0;            ///< Memory counted against the limit (records and index).
-  size_t operatorCalls = 0;    ///< Finished operator calls with a function of the cache.
-  size_t diskHits = 0;         ///< Lookups answered from the file (part of @c hits).
-  size_t diskEntries = 0;      ///< Points stored in the file (persistent: also those in memory).
-  size_t loadedEntries = 0;    ///< Points the persistent file held when the cache was created.
-  size_t fileBytes = 0;        ///< Size of the file in bytes (0 for memory only).
+  size_t entries = 0;        ///< Points stored in memory at present.
+  size_t bytes = 0;          ///< Memory counted against the limit (records and index).
+  size_t operatorCalls = 0;  ///< Finished operator calls with a function of the cache.
+  size_t diskHits = 0;       ///< Lookups answered from the file (part of @c hits).
+  size_t diskEntries = 0;    ///< Points stored in the file (persistent: also those in memory).
+  size_t loadedEntries = 0;  ///< Points the persistent file held when the cache was created.
+  size_t fileBytes = 0;      ///< Size of the file in bytes (0 for memory only).
+
+  /// @name CachePolicy::Adaptive only (else defaults)
+  /// Costs are sampled means per evaluation (0: not measured yet); evaluations in mode None
+  /// are not counted (no lookups).
+  /// @{
+  AdaptiveCacheMode adaptiveMode = AdaptiveCacheMode::MemoryOnly;  ///< Current mode.
+  size_t modeSwitches = 0;                                         ///< Changes of the mode.
+  size_t noneOperatorCalls = 0;     ///< Operator calls that ended in mode None.
+  double functionCostNs = 0;        ///< The wrapped function alone.
+  double memoryHitCostNs = 0;       ///< Evaluation answered from memory.
+  double memoryMissOverheadNs = 0;  ///< Evaluation missing memory, without the function.
+  double diskHitCostNs = 0;         ///< Evaluation answered from the temporary file.
+  double diskMissOverheadNs = 0;    ///< Evaluation missing memory and file, without the function.
+  /// @}
 };
 
 }  // namespace combigrid
