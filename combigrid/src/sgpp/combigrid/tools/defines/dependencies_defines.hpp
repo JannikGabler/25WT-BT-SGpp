@@ -21,7 +21,7 @@
  *   literal for the message of the @c base::dependency_exception thrown when a cache is created).
  *
  * Disk store of the storage policies of the source-function cache
- * (@c misc::LmdbPointValueStore, @c CachePolicy::TemporaryStorage / @c PersistentStorage): LMDB
+ * (@c misc::LMDBPointValueStore, @c CachePolicy::TemporaryStorage / @c PersistentStorage): LMDB
  * (>= 0.9.14, not header-only) and POSIX file I/O. SCons links LMDB if it finds the library and
  * its header (site_scons/SGppConfigure.py, @c detectLMDB) and then defines
  * @c SGPP_COMBIGRID_LMDB_LINKED.

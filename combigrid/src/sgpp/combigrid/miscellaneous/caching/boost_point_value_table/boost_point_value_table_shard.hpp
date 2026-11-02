@@ -60,16 +60,28 @@ struct Shard {
   std::vector<uint64_t> pending;
 };
 
+}  // namespace boost_point_value_table
+}  // namespace misc
+
+}  // namespace combigrid
+}  // namespace sgpp
+
 #else
+
+namespace sgpp {
+namespace combigrid {
+
+namespace misc {
+namespace boost_point_value_table {
 
 /// @brief Without the libraries the table is never created (complete type, so that the table
 /// still compiles).
 struct Shard {};
-
-#endif
 
 }  // namespace boost_point_value_table
 }  // namespace misc
 
 }  // namespace combigrid
 }  // namespace sgpp
+
+#endif

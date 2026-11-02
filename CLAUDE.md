@@ -135,8 +135,8 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - **Declarations / definitions** (guideline): documented declaration in the header, definition in
   the `.cpp` (comments explain complex parts, not a copy of the docs). Header-inline only where
   measurably faster even with LTO.
-- **One type per file** (exceptions: small helpers, optimization). **Methods > 30 lines** get
-  decomposed (rare exceptions for optimization).
+- **One type per file** avoid multiple or nested structs, classes, etc. in a single file. 
+- **Methods > 30 lines** get decomposed (rare exceptions for optimization).
 - **Errors**: `assert` for internal invariants; otherwise throw an exception
 - **Parallelism**: OpenMP in the operator drivers and internally (gated by `constants.hpp`).
 
@@ -160,7 +160,7 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   plain `SourceFunc`); the disk tier only for much more expensive ones (LMDB writes ≈ 1–5 µs per
   new point, serialized). A persistent file is identified by d and m only (no function id), locked
   exclusively, never corrupted by program crashes; damaged / mismatching files throw
-  `base::file_exception` (`misc::CacheFileException`: base exceptions keep only the `const char*`,
+  `base::file_exception` (`CacheFileException`: base exceptions keep only the `const char*`,
   so composed messages need it). Its keys are the user-domain bit
   patterns: any new unit → domain mapping must use `tools::mapToDomain`. The end-of-operator hook
   is the virtual `finishOperatorCall()` of `SourceFunc` / `VectorSourceFunc` (virtual destructors).

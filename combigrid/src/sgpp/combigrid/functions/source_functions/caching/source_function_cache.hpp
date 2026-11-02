@@ -54,7 +54,7 @@ namespace combigrid {
  *   faster without a cache.
  *
  * Storage policies (@c CachePolicy::TemporaryStorage, @c PersistentStorage; disk store
- * @c misc::LmdbPointValueStore, an LMDB file):
+ * @c misc::LMDBPointValueStore, an LMDB file):
  * - Memory stays the primary store; values beyond the memory limit go to the file (in batches
  *   per shard, found in memory until written), so every evaluation is cached until the file
  *   reaches @c SourceFuncCacheConfig::storageSpaceLimit (then one warning on @c std::cerr).

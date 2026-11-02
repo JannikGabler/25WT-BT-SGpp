@@ -101,8 +101,9 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | WP-29c | Vector-valued, design T (c): global + linear interpolation (+ owner's refactor into `tools::`) | accepted (owner 2026-10-31) | measured: scalar `^interp/\|^interplin/` 10.258 → 10.263 s (0.999x, 0 SLOWER), memory 1.004, refcheck OK; vector at m = 32: interp 1.25–2.12x, interplin 1.21–1.59x; m = 1 0.82–1.01x |
 | – | WP-29d | Vector-valued, design T (d): Python bindings (+ WP-29c refactor leftovers) | accepted (owner 2026-10-31) | measured: C++ `.text` byte-identical (e2e `^interp/\|^interplin/` 0.995x = A/A), memory 1.001, refcheck OK; Python vector vs. m scalar runs at m = 32: 2.0–2.5x (1 t) / 24–31x (16 t); m = 1 0.68–0.76x (1 t) |
 | – | WP-26 | Caching: wrapper W, in-memory table, none / always, soft limit, end-of-operator hook, unified domain mapping, `pysgpp.CachedSourceFunc` | accepted (owner 2026-11-01; incl. the owner's refactoring: virtual `finishOperatorCall()`, `dependencies_defines.hpp`) | measured: judged e2e 38.379 → 38.348 s (1.001x), memory 1.002, 0 MEM±, refcheck OK; virtual hook: `micro/quad/process_all_tgs/equi/b1/d20/L4` 0.981 (→ WP-17); 1 µs function SG quad always 1.50–3.81x (1 t), warm 6.6–14.8x; Python warm 1309–2505x (16 t) |
-| 1 | WP-28 | Caching: disk tier (temporary / persistent flat file) | in progress (prompt issued 2026-11-01; disk fields of `SourceFuncCacheConfig` worked out and decided with the owner in-session, owner 2026-11-01) | feature; warm runs skip all evaluations; judged suite 0 (flush at the existing hook) |
-| 2 | WP-27 | Caching: adaptive policy (decided per operator call at the hook) | needs decision (adaptive fields; after WP-28; in-session?) | feature; only matters for functions near break-even |
+| – | WP-28 | Caching: disk tier (LMDB; `CachePolicy` MemoryOnly / TemporaryStorage / PersistentStorage) | accepted (owner 2026-11-02; incl. the owner's refactoring 1e279c1d0 + the re-check's 4 fixes) | measured: judged e2e 1.000x (re-check 1.002x, refactoring alone 0.999x), memory 1.004, refcheck OK; persistent warm (1 µs fn) cc d5 9.0x / 1.6x (1 / 16 t), d20 16 t 0.44x (serial load) |
+| 1 | WP-40 | Caching: library-free public headers (pimpl / forward declarations) + caching leftovers (from the WP-28 re-check) | ready (owner 2026-11-02: new WP; before WP-27) | e2e nil (must stay); user TUs no longer need Boost.Unordered / xxHash / LMDB headers, no configuration-dependent class layouts in public headers (ODR) |
+| 2 | WP-27 | Caching: adaptive policy (decided per operator call at the hook) | ready (after WP-40; all open decisions worked out and decided with the owner in-session, owner 2026-11-01) | feature; only matters for functions near break-even |
 | 3 | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | ready (after WP-29b and caching) | 1.5–2.5 s (b0 d7/d10); memory ≈ −3 MiB per b0 case |
 | 4 | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | ready (after WP-04; chunks over several rows / a whole TG, WP-24; `findBatch` / `insertBatch`, WP-25) | ≈ 1–1.5 s (dispatch: DSG b0 ≈ 0.9 s, b1 0.13 s, quad/sg ≈ 0.4 s); interface |
 | 5 | WP-36 | Interpolation operators: exploration after WP-29c (profile, re-scope WP-06/07/08/09, batching / WP-17 applicability) (owner's request) | ready (owner 2026-10-31: before any interpolation optimization; after WP-29d) | measurement only; re-estimates interp (≈ 5.7 s) / interplin (≈ 4.5 s) savings |
@@ -121,6 +122,7 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | 18 | WP-38 | Code hygiene: copyright-banner check never checks C++ + combigrid leftovers (from WP-29d) | ready (low; checker fix may hit other modules → BLOCKED with options) | e2e nil; banner / TODO / warning cleanups |
 | 19 | WP-37 | pysgpp `DataVector`: `__iter__` / bounds-checked `__getitem__` (base bindings; from WP-29d) | needs decision (functional change in base's Python API; owner places it) | e2e nil; `list(dv)` / `sum(dv)` / `for x in dv` segfault today |
 | 20 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
+| 22 | WP-39 | Caching disk tier: append-only log for the persistent hook + parallel load (from WP-28) | planned (owner places it; after WP-27) | storage-policy callers only: LMDB writes 0.7–4.8 µs/point serialized vs. log 25–67 ns/record; load 0.15–0.27 µs/record serial vs. 26–70 ns at 16 t |
 | 21 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x); not in the judged suite |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
@@ -1443,6 +1445,13 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   measurements); results bitwise identical whatever the decision.
 - **Dependencies**: WP-26 and WP-28 (owner 2026-10-30: 26 → 28 → 27); the owner decides the
   adaptive fields of `CacheConfig` before the prompt.
+- **Owner (2026-11-01)**: as WP-26 / WP-28, **all** open decisions of the adaptive caching (config
+  fields, `CachePolicy::Adaptive` semantics, decision point / hysteresis, "off" mechanism, interplay
+  with the WP-28 storage policies) are worked out by the session (options, pros / cons with numbers,
+  recommendation), presented to the owner **in the session** and decided before implementing.
+- **From WP-28**: `CachePolicy` enum (MemoryOnly / TemporaryStorage / PersistentStorage) is
+  extensible; `Adaptive` was left to WP-27 (spill / persist only above a measured cost). Storage
+  policies pay for functions ≳ 10 µs (16 t) / ≳ 1–3 µs (1 t); spill only for clearly more expensive ones.
 - **From WP-26**: "off" per call needs a callable swap at the hook (operators get `const
   SourceFunc&`; races if one function runs in concurrent operator calls) or a per-evaluation flag
   (WP-25: 0.69–0.97x) → decide there; add the policy field to `SourceFuncCacheConfig` (aggregate →
@@ -1485,6 +1494,71 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   `SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE` (only in `.cpp` / internal files). Python:
   `CachedSourceFunc.i`. Shard counters must stay in the lock's cache line (after the index: 16 t
   lookups 1.12–1.30x slower).
+
+- **Summary (2026-11-01)**: PROPOSED (`summaries/WP-28-caching-disk-tier.md`, decisions
+  `results/WP-28/decisions.md`): LMDB store (`misc::LmdbPointValueStore`), `CachePolicy`,
+  `file`, `storageSpaceLimit`, `flush()`, `clear(bool)`; judged e2e 1.000x, memory 1.004.
+  Owner's refactoring 1e279c1d0 (file moves / split of the LMDB store, `tools/caching/lmdb_tools`,
+  `constants.hpp`, `SConstruct`, `SGppConfigure.py`, `perf_cache.hpp`) → re-check session
+  (correctness + benchmarks) before the decision.
+- **Accepted (owner 2026-11-02)** with the re-check (`summaries/WP-28-recheck.md`): owner's
+  refactoring (store split into `misc::lmdb_point_value_store::FileInterface` / `ReadSlot` /
+  `FileHeader`, `LMDBPointValueStore`, `tools/caching/lmdb_tools`, `constants::lmdb_point_value_store`,
+  SCons `USE_LMDB`) + 4 fixes (no-Boost / no-LMDB builds, `CacheFileException` base in a named
+  namespace); e2e 1.002x vs. WP-28-before, refcheck OK, disk numbers reproduced. Owner's decisions
+  on the findings: default `storageSpaceLimit` = 32 GiB (`constants.hpp`; doc fixed by the owner);
+  public headers reaching `lmdb.h` / `xxhash.h` / Boost → WP-40; `detectLMDB` / `USE_LMDB` match
+  `detectGSL` / `detectZlib` (always run, auto-enable if found, `USE_X=1` aborts if missing) →
+  by design, only `build-and-ci.md` lacks `USE_LMDB` (→ WP-40).
+
+## WP-39 — Caching disk tier: append-only log write path + parallel load (from WP-28)
+- **Source**: WP-28 summary, "Profile shift / follow-ups".
+- **Idea**: the persistent hook appends new records to an own append-only log (25–67 ns per
+  record, `results/WP-28/iobench.cpp`) instead of serialized LMDB writes (0.72–3.23 µs per new
+  point, one writer, ≈ one dirty 4 KiB page per record); LMDB (or own sorted index runs) only for
+  points beyond memory; larger spill batches (4096 instead of 256: −30 %). Load persistent files
+  in parallel (WP-25: 26–70 ns/record at 16 t vs. 0.15–0.27 µs serial; d20 16 t warm is
+  load-bound: 0.44x vs. uncached).
+- **Status**: planned; the owner places it (after WP-27). File format change → needs the owner's
+  OK on compatibility with WP-28 files.
+
+## WP-40 — Caching: library-free public headers + caching leftovers (from the WP-28 re-check)
+- **Source**: WP-28 re-check summary, findings 2, 3 (doc only) and 5; owner 2026-11-02.
+- **Finding**: the owner's refactoring 1e279c1d0 removed the store's pimpl and the forward
+  declarations (left commented out, `// namespace misc {...}`). The umbrella / public
+  `source_function_cache.hpp` now includes `boost_point_value_table.hpp` → shard →
+  `boost/unordered`, `dependencies_defines.hpp` (`xxhash.h`, `lmdb.h`) →
+  `lmdb_point_value_store_file_interface.hpp` (`lmdb.h`). User TUs need these headers, and the
+  layouts of `Shard` / `FileInterface` depend on the configuration defines (a user TU compiled
+  without `-DSGPP_COMBIGRID_DISABLE_*` against a library built with them sees different
+  definitions: ODR). Breaks the CLAUDE.md rule "only `.cpp` / internal files include `xxhash.h` /
+  `lmdb.h`". SWIG unaffected.
+- **Scope**: (1) public headers library-free again: pimpl or forward declarations so that no
+  public header (umbrella closure) includes `boost/unordered*`, `xxhash.h`, `lmdb.h` or depends on
+  `SGPP_COMBIGRID_*` configuration macros for a class layout; the state at 73d6b3ac6 (pimpl
+  `Impl`, forward-declared table) cost nothing (refactoring 0.999x) — keep at least its hot-path
+  indirection count. Respect the owner's file structure (`miscellaneous/caching/...`, one type per
+  file, no nested types: CLAUDE.md §5). (2) Leftovers in the caching files: "TODO: Document" on
+  `FileInterface`, `ReadSlot`, `lmdb_tools`, `constants::lmdb_point_value_store`; "TODO: Cache
+  design" in `cache_file_exception.hpp`; `lmdb_point_value_store_file_header.hpp` without
+  `#pragma once` / `<cstdint>`; `read_slot.hpp` uses `MDB_txn` without `<lmdb.h>`;
+  `file_interface.hpp` lacks `<memory>`, `<mutex>`, `<string>`; `lmdb_tools.{hpp,cpp}` lack
+  `<cstddef>` / `<algorithm>`; quoted include in the stub branch of `lmdb_point_value_store.cpp`;
+  `using namespace` in two `.cpp` files (cpplint). (3) `combigrid/claude/build-and-ci.md`: add
+  `USE_LMDB` (same semantics as `USE_GSL` / `USE_ZLIB`) and the optional caching dependencies;
+  CLAUDE.md §6 caching line if names change.
+- **Tests**: full suite (debug, normal, ASan); build matrix of the re-check
+  (`-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE`, `-DSGPP_COMBIGRID_DISABLE_LMDB_STORE`, both);
+  a check that the umbrella header's include closure contains none of the three libraries
+  (e.g. `g++ -H` / `-M` on a TU that includes `sgpp_combigrid.hpp`); Python rebuild
+  (`SG_PYTHON=1`) + `python_checks.py`.
+- **Benchmarks**: memory-only cache micro (`micro/cache/...`, the 42 cases of the re-check) and
+  the disk cases; judged e2e: `.text` of the operators unchanged → filtered A/A suffices
+  (WP-29d precedent), else full suite.
+- **Expected gain**: none (hygiene / correctness); must stay runtime-neutral (cache lookups ±1 %).
+  **Risk**: low–medium (an extra indirection on the lookup path). **Functional change**: none
+  intended. **Dependencies**: WP-28 accepted. Status: ready; before WP-27 (which extends the same
+  classes).
 
 ## WP-29 — Vector-valued source functions: implementation (WP-29a–d)
 - **Source**: owner, 2026-10-29; design decided 2026-10-30 on WP-24 (design **T**).

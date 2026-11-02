@@ -1,0 +1,10 @@
+cached_func_full_sg_quadrature_interpolation.py: exit 0
+extended_const_func_full_sg_interpolation.py: exit 0
+extended_const_func_full_sg_quadrature.py: exit 0
+simple_const_func_full_sg_interpolation.py: exit 0
+simple_const_func_full_sg_quadrature.py: exit 0
+sin_func_full_sg_interpolation.py: exit 0
+sin_func_full_sg_quadrature.py: exit 0
+sin_func_multiindex_vector_sg_interpolation.py: exit 0
+sin_func_multiindex_vector_sg_quadrature.py: exit 0
+vector_func_full_sg_quadrature_interpolation.py: exit 0

@@ -39,12 +39,16 @@ miscellaneous/         (namespace misc)
   flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
   iterators/             TensorGridIterator (grid points + MIs without materializing the grid)
   bounding_boxes/        discrete rectangular / unit boxes over MI grids + iterators
-  caching/               BoostPointValueTable (sharded table of the source-function cache) and its
-                         parts in namespace misc::boost_point_value_table: Shard (spin lock,
-                         counters, RecordArena, boost::unordered_flat_set of record ids), Probe,
-                         RecordHash (XXH3 stored in the record), RecordEqual, RecordLayout;
-                         LmdbPointValueStore (disk store of the storage policies, LMDB file),
-                         CacheFileException (file_exception owning its message)
+  caching/               boost_point_value_table/: BoostPointValueTable (sharded table of the
+                         source-function cache) and its parts in namespace
+                         misc::boost_point_value_table: Shard (spin lock, counters, RecordArena,
+                         boost::unordered_flat_set of record ids), Probe, RecordHash (XXH3 stored
+                         in the record), RecordEqual; lmdb_point_value_store/: LMDBPointValueStore
+                         (disk store of the storage policies, LMDB file) and its parts in
+                         misc::lmdb_point_value_store (FileInterface, FileHeader, ReadSlot);
+                         record_layout.hpp: misc::source_func_caching::RecordLayout
+  exceptions/            CacheFileException (namespace sgpp::combigrid; file_exception owning
+                         its message)
   concurrency/           ConcurrentTaskQueue (node-lookup pipeline, commented out), SpinLock
   hashing/               std::pair hasher
   vector_map/            VectorMap (tiny linear-search map)
@@ -133,7 +137,7 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `TemporaryStorage` | `PersistentStorage`, fields `file`, `storageSpaceLimit`; need LMDB ≥ 0.9.14,
   linked by SCons if found (`SGppConfigure.detectLMDB` → `SGPP_COMBIGRID_LMDB_LINKED`), else they
   throw `base::dependency_exception`): memory stays primary (records + indices ≤ `memoryLimit`);
-  beyond it, values go to an LMDB file (`misc::LmdbPointValueStore`: key = XXH3 of the point,
+  beyond it, values go to an LMDB file (`misc::LMDBPointValueStore`: key = XXH3 of the point,
   value = point + values; per-shard batches of 256 records, found in the shard meanwhile) up to
   `storageSpaceLimit` (then one `std::cerr` warning, `rejectedInserts`); misses read the file only
   once it holds points memory does not. Persistent: `file` created or loaded at construction

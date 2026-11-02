@@ -63,10 +63,9 @@ struct SourceFuncCacheConfig {
   std::string file{};
 
   /**
-   * @brief Limit of the size of the file of the storage policies in bytes (default unlimited,
-   * i.e. the free space of the file system when the cache is created; at least 16 pages). Once
-   * it is reached, the cache prints one warning on @c std::cerr and stores no further values
-   * (counted in @c CacheStatistics::rejectedInserts); values stored before are still found.
+   * @brief Limit of the size of the file of the storage policies in bytes. Once it is reached,
+   * the cache prints one warning on @c std::cerr and stores no further values (counted in @c
+   * CacheStatistics::rejectedInserts); values stored before are still found.
    */
   size_t storageSpaceLimit = constants::source_func_cache::DEFAULT_STORAGE_SPACE_LIMIT;
 };

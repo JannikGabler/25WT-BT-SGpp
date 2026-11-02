@@ -68,7 +68,19 @@ struct FileInterface {
 
 #else  // SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE
 
+namespace sgpp {
+namespace combigrid {
+
+namespace misc {
+namespace lmdb_point_value_store {
+
 // Empty definition to let the library link.
 struct FileInterface {};
+
+}  // namespace lmdb_point_value_store
+}  // namespace misc
+
+}  // namespace combigrid
+}  // namespace sgpp
 
 #endif  // SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE

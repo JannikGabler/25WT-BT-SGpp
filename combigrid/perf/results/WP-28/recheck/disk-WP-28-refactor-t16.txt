@@ -1,0 +1,65 @@
+| case | time/call | time/item |
+|---|---|---|
+| micro/cache/op/quad/sg/cc/b0/d5/L4/none/c0 | 657.55us | 3.19 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/none/c100 | 1.88ms | 9.11 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/none/c1000 | 14.96ms | 72.47 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/none/c0 | 603.21us | 3.66 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/none/c100 | 1.34ms | 8.13 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/none/c1000 | 10.78ms | 65.36 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/none/c0 | 5.21ms | 11.83 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/none/c100 | 7.85ms | 17.82 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/none/c1000 | 37.76ms | 85.67 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/always_production/c0 | 4.10ms | 19.89 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/warm_production/c0 | 2.54ms | 12.33 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/always_production/c1000 | 6.63ms | 32.15 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/warm_production/c1000 | 2.64ms | 12.78 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/always_production/c0 | 9.14ms | 55.41 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/warm_production/c0 | 2.45ms | 14.85 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/always_production/c1000 | 12.40ms | 75.16 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/warm_production/c1000 | 2.47ms | 14.97 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/always_production/c0 | 6.87ms | 15.58 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/warm_production/c0 | 5.94ms | 13.47 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/always_production/c1000 | 7.92ms | 17.96 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/warm_production/c1000 | 6.26ms | 14.21 ns |
+| micro/cache/disk/write/memory/d5/n100000 | 3.33ms | 33.32 ns |
+| micro/cache/disk/write/persistent/d5/n100000 | 54.93ms | 549.34 ns |
+| micro/cache/disk/write/temporary0/d5/n100000 | 345.27ms | 3452.67 ns |
+| micro/cache/disk/lookup/memory/d5/n100000 | 1.23ms | 12.30 ns |
+| micro/cache/disk/lookup/temporary0/d5/n100000 | 10.13ms | 101.29 ns |
+| micro/cache/disk/load/persistent/d5/n100000 | 15.28ms | 152.83 ns |
+| micro/cache/disk/append/persistent/d5/n100000/e1000000 | 139.78ms | 1397.81 ns |
+| micro/cache/disk/write/memory/d20/n100000 | 4.75ms | 47.53 ns |
+| micro/cache/disk/write/persistent/d20/n100000 | 74.87ms | 748.67 ns |
+| micro/cache/disk/write/temporary0/d20/n100000 | 456.84ms | 4568.37 ns |
+| micro/cache/disk/lookup/memory/d20/n100000 | 2.15ms | 21.55 ns |
+| micro/cache/disk/lookup/temporary0/d20/n100000 | 10.91ms | 109.13 ns |
+| micro/cache/disk/load/persistent/d20/n100000 | 27.63ms | 276.34 ns |
+| micro/cache/disk/append/persistent/d20/n100000/e1000000 | 305.06ms | 3050.60 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/persistent_cold_production/c0 | 23.60ms | 114.35 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/persistent_warm_production/c0 | 9.18ms | 44.46 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/temporary_spill_production/c0 | 95.86ms | 464.52 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/temporary_spill_warm_production/c0 | 21.10ms | 102.27 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/persistent_cold_production/c1000 | 25.85ms | 125.27 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/persistent_warm_production/c1000 | 9.22ms | 44.68 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/temporary_spill_production/c1000 | 98.41ms | 476.90 ns |
+| micro/cache/op/quad/sg/cc/b0/d5/L4/temporary_spill_warm_production/c1000 | 21.52ms | 104.28 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/persistent_cold_production/c0 | 61.94ms | 375.45 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/persistent_warm_production/c0 | 26.80ms | 162.48 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/temporary_spill_production/c0 | 370.95ms | 2248.55 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/temporary_spill_warm_production/c0 | 16.84ms | 102.11 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/persistent_cold_production/c1000 | 67.47ms | 408.96 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/persistent_warm_production/c1000 | 26.70ms | 161.86 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/temporary_spill_production/c1000 | 370.61ms | 2246.50 ns |
+| micro/cache/op/quad/sg/equi/b1/d20/L3/temporary_spill_warm_production/c1000 | 17.01ms | 103.11 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/persistent_cold_production/c0 | 13.56ms | 30.76 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/persistent_warm_production/c0 | 8.35ms | 18.93 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/temporary_spill_production/c0 | 49.70ms | 112.75 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/temporary_spill_warm_production/c0 | 44.55ms | 101.07 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/persistent_cold_production/c1000 | 14.63ms | 33.20 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/persistent_warm_production/c1000 | 8.37ms | 19.00 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/temporary_spill_production/c1000 | 49.30ms | 111.84 ns |
+| micro/cache/op/interp/sg/cc/b0/d5/L3/p8/temporary_spill_warm_production/c1000 | 43.79ms | 99.34 ns |
+
+foreign CPU load during the run: 0.2%
+
+raw results: combigrid/perf/results/WP-28/recheck/disk-WP-28-refactor-t16.json

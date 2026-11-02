@@ -1,0 +1,39 @@
+WP-28 re-check: no-library builds (scons -j16 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 OPT=0 CPPFLAGS=...)
+
+BEFORE the fixes (HEAD 1e279c1d0 as committed): both configurations fail to compile.
+
+-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE: scons exit 2
+  boost_point_value_table_shard.hpp:71:1: error: expected declaration before '}' token   (x4, lines 71-75)
+  boost_point_value_table.hpp:188:31: error: 'boost_point_value_table' was not declared in this scope
+  boost_point_value_table.hpp:202/205/212/216: 'boost_point_value_table' does not name a type ...
+  cause: the namespaces of the shard header were opened inside #ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE,
+         the #else stub `struct Shard {};` and the closing braces are outside it;
+         and the stub constructor in boost_point_value_table.cpp still used the old name LmdbPointValueStore.
+
+-DSGPP_COMBIGRID_DISABLE_LMDB_STORE: scons exit 2
+  lmdb_point_value_store.hpp:162:39: error: 'lmdb_point_value_store' was not declared in this scope
+  lmdb_point_value_store.hpp:176:19: (same, member interface_)
+  lmdb_point_value_store.cpp:357:30: error: 'sgpp::combigrid::misc::lmdb_point_value_store' has not been declared
+  lmdb_point_value_store.cpp:382:1: error: no declaration matches 'LMDBPointValueStore::LMDBPointValueStore(std::unique_ptr<FileInterface>, std::string)'
+  cause: the #else stub `struct FileInterface {};` of lmdb_point_value_store_file_interface.hpp is in the global namespace.
+
+Default build (both libraries): warning in every TU that includes cache_file_exception.hpp:
+  cache_file_exception.hpp:35:7: warning: 'sgpp::combigrid::CacheFileException' has a base
+  'sgpp::combigrid::{anonymous}::MessageHolder' which uses the anonymous namespace [-Wsubobject-linkage]
+  (one class definition per TU with a different base type: ODR violation)
+
+AFTER the fixes (shard namespaces outside the #ifdef, LMDBPointValueStore in the stub, FileInterface stub in
+misc::lmdb_point_value_store, MessageHolder in namespace cache_file_exception as at 73d6b3ac6):
+
+-DSGPP_COMBIGRID_DISABLE_LMDB_STORE: scons exit 0, boost tests "No errors detected" (full suite, run by SCons);
+  undefined mdb_ symbols in libsgppcombigrid.so: 0;
+  TemporaryStorage / PersistentStorage -> base::dependency_exception "SourceFuncCache: SG++ was built without the
+  libraries of the storage policies. Flag 'SGPP_COMBIGRID_DISABLE_LMDB_STORE' is set."; MemoryOnly works.
+-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE: scons exit 0, full suite "No errors detected";
+  SourceFuncCache -> base::dependency_exception "SourceFuncCache: SG++ was built without the libraries of the
+  source-function cache. Flag 'SGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE' is set." (LMDB store still compiled and
+  linked: 24 undefined mdb_ symbols; unchanged vs. 73d6b3ac6, dependencies_defines.hpp is not part of the refactoring).
+Default build: no -Wsubobject-linkage warning.
+Build without LMDB detected: not built separately (needs LMDB uninstalled); it takes the same #else branches as
+  -DSGPP_COMBIGRID_DISABLE_LMDB_STORE (SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE undefined), only the reason text
+  and the missing -llmdb differ.

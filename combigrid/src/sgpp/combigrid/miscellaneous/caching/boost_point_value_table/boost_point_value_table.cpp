@@ -257,7 +257,7 @@ namespace misc {
 // as well.
 
 BoostPointValueTable::BoostPointValueTable(const RecordLayout layout, const size_t /*memoryLimit*/,
-                                           const size_t nShards, LmdbPointValueStore* store,
+                                           const size_t nShards, LMDBPointValueStore* store,
                                            const bool storeAllRecords)
     : nShards_(nShards),
       layout_(layout),
