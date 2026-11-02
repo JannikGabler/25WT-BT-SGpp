@@ -49,7 +49,9 @@ compiled, but works only if Boost ≥ 1.81 and xxHash ≥ 0.8 are found at build
 constructors throw `base::dependency_exception`. Policies (WP-28): `CachePolicy::MemoryOnly`
 (default), `TemporaryStorage` (values beyond memory go to an unnamed LMDB file, deleted with the
 process), `PersistentStorage` (LMDB file `file` loaded at creation, written at every operator end);
-both need LMDB (linked by SCons if found).
+both need LMDB (linked by SCons if found). `CachePolicy::Adaptive` (WP-27) switches itself between
+None / MemoryOnly (start) / TemporaryStorage from sampled costs (`CacheStatistics::adaptiveMode`;
+factors and windows `ADAPTIVE_*` in `constants.hpp`; internals `miscellaneous/caching/adaptive/`).
 
 ```cpp
 CompleteSGGenInstr genInstr(/*maxLvl=*/10, /*nDim=*/3);
@@ -130,6 +132,11 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   `clang-format -i <file>`. cpplint runs in the build (line length 100).
 - **Doxygen**: Javadoc blocks (`/** */`, `@brief`, `@param`, `@return`, `@note`, `@f$…@f$`) for
   public API; new files get `@file` + `@brief`.
+- **Comments stay general**: code comments / Doxygen (sources, tests, benchmarks, `.i`, examples)
+  are written for every SG++ reader. Optimization reasoning and measurements are welcome but
+  self-contained (what was compared, on what, the outcome); no WP- / RP- ids, "owner decided …",
+  session / summary / `perf/results/` references or decision dates — those belong in
+  `combigrid/perf/` and `combigrid/claude/`.
 - **Naming**: `PascalCase` types, `camelCase` functions / members (or trailing `_`),
   `SCREAMING_SNAKE_CASE` constexpr constants, `snake_case` files.
 - **Declarations / definitions** (guideline): documented declaration in the header, definition in
@@ -177,9 +184,12 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   forward-declare the table / store (no library header, no configuration-dependent layout; check:
   `combigrid/perf/results/WP-40/check_public_headers.sh`). Force the fallbacks with
   `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE` / `-DSGPP_COMBIGRID_DISABLE_LMDB_STORE`.
+- Adaptive cache policy: the mode word is read per evaluation; None leaves only by probes at the
+  end-of-operator hook; one point in P is timed with `misc::adaptive_caching::CostTimer` (rdtscp;
+  `steady_clock` costs 1.9 µs on the owner's laptop: HPET clocksource). Tests force timing of every
+  evaluation with `CostTimer::overrideSamplingShift(0)` and test the rules with injected costs.
 - Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
-  on `MIVecSGGenInstr`), adaptive policy of the cache (WP-27),
-  dimension-wise boundary offsets, Leja nodes.
+  on `MIVecSGGenInstr`), dimension-wise boundary offsets, Leja nodes.
 
 ## 7. Python bindings (pysgpp)
 

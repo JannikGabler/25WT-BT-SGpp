@@ -18,6 +18,8 @@
 //     config.policy = pysgpp.CachePolicy_PersistentStorage
 //     config.file = "values.cache"
 //     f = pysgpp.CachedSourceFunc(func, config)
+//     config = pysgpp.SourceFuncCacheConfig()             # caches only if it pays (WP-27)
+//     config.policy = pysgpp.CachePolicy_Adaptive
 //
 // The storage policies need LMDB at build time (else RuntimeError, base::dependency_exception).
 //
@@ -35,8 +37,17 @@
 %ignore sgpp::combigrid::CachedVectorSourceFunc::finishOperatorCall;
 
 // CachePolicy is an enum class: pysgpp.CachePolicy_MemoryOnly, CachePolicy_TemporaryStorage,
-// CachePolicy_PersistentStorage. The config's file is a Python str; clear(deletePersistentFile)
-// and flush() are wrapped as declared (file errors raise RuntimeError, base::file_exception).
+// CachePolicy_PersistentStorage, CachePolicy_Adaptive (WP-27; the current mode of an adaptive
+// cache: statistics().adaptiveMode == pysgpp.AdaptiveCacheMode_None / _MemoryOnly /
+// _TemporaryStorage, plus the measured costs functionCostNs, memoryHitCostNs, ...). The config's
+// file is a Python str; clear(deletePersistentFile) and flush() are wrapped as declared (file
+// errors raise RuntimeError, base::file_exception).
+// 'None' is a Python keyword, so SWIG would name the enumerator AdaptiveCacheMode__None; the
+// flattened attribute pysgpp.AdaptiveCacheMode_None is none. The keyword rule (pythonkw.swg) is
+// lifted for this header only and restored afterwards.
+%namewarn("") "None";
+%include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/adaptive_cache_mode.hpp"
+%keywordwarn("'None' is a python keyword", rename="_%s") "None";
 %include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/cache_policy.hpp"
 %include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp"
 %include "combigrid/src/sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp"

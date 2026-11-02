@@ -104,12 +104,16 @@ class BoostPointValueTable {
   /**
    * @brief Stores the values of a point, unless it is stored already (by a concurrent insert),
    * the shard reached its share of the memory limit, or its arena is full; in the last two
-   * cases the values go to the disk store, if there is one and it is not full.
+   * cases the values go to the disk store, if there is one, @p allowSpill is set and the store
+   * is not full.
    * @param point  Coordinates (@ref nDim).
    * @param hash   @ref hash of the point.
    * @param values Values of the point (@c nOutputs).
+   * @param allowSpill Whether values beyond the memory limit may go to the disk store (the
+   *               adaptive policy passes false in mode MemoryOnly).
+   * @return False if the values were rejected (memory full and not spilled), else true.
    */
-  void insert(const double* point, uint64_t hash, const double* values);
+  bool insert(const double* point, uint64_t hash, const double* values, bool allowSpill = true);
 
   /**
    * @brief Looks @p point up and, on a miss, evaluates it and stores the values unless one of
@@ -157,6 +161,16 @@ class BoostPointValueTable {
   /// @brief Marks that the disk store holds records that memory does not: misses look it up.
   void markOnDisk() { onDisk_.store(true, std::memory_order_relaxed); }
 
+  /// @brief Whether the disk store holds records that memory does not.
+  bool onDisk() const { return onDisk_.load(std::memory_order_relaxed); }
+
+  /**
+   * @brief Attaches a disk store to a table created without one (the adaptive policy creates its
+   * temporary file at the first value beyond the memory limit; once, concurrently with lookups).
+   * @param store The store (must outlive the table and have at least @c nShards read slots).
+   */
+  void setStore(LMDBPointValueStore* store) { store_.store(store, std::memory_order_release); }
+
   /**
    * @brief Hands out the records that are not in the disk store yet: the collected records
    * beyond the memory limit (copied to @p pendingRecords, removed from the shards) and, with
@@ -192,7 +206,8 @@ class BoostPointValueTable {
   source_func_caching::RecordLayout layout_;  ///< Layout of the records.
   size_t shardMemoryLimit_;                   ///< Share of the memory limit per shard.
   std::vector<std::unique_ptr<boost_point_value_table::Shard>> shards_;  ///< The shards.
-  LMDBPointValueStore* store_;       ///< Disk store (nullptr: memory only).
+  /// Disk store (nullptr: memory only; set once later by @ref setStore).
+  std::atomic<LMDBPointValueStore*> store_;
   bool storeAllRecords_;             ///< Whether the store receives the records of memory as well.
   std::atomic<bool> onDisk_{false};  ///< Whether the store holds records that memory does not.
 
@@ -207,8 +222,11 @@ class BoostPointValueTable {
   /// @brief Returns the shard of a hash.
   boost_point_value_table::Shard& shard(uint64_t hash) const;
 
-  /// @brief Stores the values of a point in the disk store (memory is full; shard not locked).
-  void spill(boost_point_value_table::Shard& s, const double* point, uint64_t hash,
+  /**
+   * @brief Stores the values of a point in the disk store (memory is full; shard not locked).
+   * @return False if the store is full (rejected).
+   */
+  bool spill(boost_point_value_table::Shard& s, const double* point, uint64_t hash,
              const double* values);
 
   /**

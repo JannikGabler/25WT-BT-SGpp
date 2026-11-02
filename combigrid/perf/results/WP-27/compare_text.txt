@@ -1,0 +1,143 @@
+functions: A 767, B 830, common 762, identical 693, changed 69
+  changed (491 -> 503 instructions): .plt
+  changed (194 -> 193 instructions): boost::unordered::detail::foa::table_locator<boost::unordered::detail::foa::group15<boost::unordered::detail::foa::plain_integral>, unsigned int> boost::unorder
+  changed (71 -> 71 instructions): sgpp::combigrid::CachedSourceFunc::CachedSourceFunc(std::function<double (sgpp::base::DataVector const&)>, sgpp::combigrid::SourceFuncCacheConfig const&)
+  changed (28 -> 28 instructions): sgpp::combigrid::CachedSourceFunc::CachedSourceFunc(std::function<double (sgpp::base::DataVector const&)>, sgpp::combigrid::SourceFuncCacheConfig const&) [clone
+  changed (80 -> 48 instructions): sgpp::combigrid::CachedSourceFunc::statistics() const
+  changed (10 -> 10 instructions): sgpp::combigrid::CachedSourceFunc::statistics() const [clone .cold]
+  changed (115 -> 137 instructions): sgpp::combigrid::CachedSourceFunc::wrap(std::function<double (sgpp::base::DataVector const&)>, std::shared_ptr<sgpp::combigrid::SourceFuncCache> const&)
+  changed (71 -> 87 instructions): sgpp::combigrid::CachedSourceFunc::wrap(std::function<double (sgpp::base::DataVector const&)>, std::shared_ptr<sgpp::combigrid::SourceFuncCache> const&) [clone 
+  changed (135 -> 135 instructions): sgpp::combigrid::CachedVectorSourceFunc::CachedVectorSourceFunc(std::function<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>)>, 
+  changed (56 -> 56 instructions): sgpp::combigrid::CachedVectorSourceFunc::CachedVectorSourceFunc(std::function<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>)>, 
+  changed (5 -> 9 instructions): sgpp::combigrid::CachedVectorSourceFunc::finishOperatorCall() const
+  changed (117 -> 142 instructions): sgpp::combigrid::CachedVectorSourceFunc::wrap(std::function<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>)>, unsigned long, std
+  changed (96 -> 113 instructions): sgpp::combigrid::CachedVectorSourceFunc::wrap(std::function<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>)>, unsigned long, std
+  changed (842 -> 841 instructions): sgpp::combigrid::MIVec<unsigned int>::lookup() const
+  changed (81 -> 84 instructions): sgpp::combigrid::MIVecSGGenInstr::genReducedMIVec() const
+  changed (114 -> 115 instructions): sgpp::combigrid::MIVecSGGenInstr::internalGenMIVecWithCoeffs(bool) const [clone .cold]
+  changed (91 -> 157 instructions): sgpp::combigrid::SourceFuncCache::SourceFuncCache(sgpp::combigrid::SourceFuncCacheConfig const&)
+  changed (101 -> 84 instructions): sgpp::combigrid::SourceFuncCache::SourceFuncCache(sgpp::combigrid::SourceFuncCacheConfig const&) [clone .cold]
+  changed (52 -> 52 instructions): sgpp::combigrid::SourceFuncCache::attach(unsigned long)
+  changed (226 -> 226 instructions): sgpp::combigrid::SourceFuncCache::attach(unsigned long) [clone .cold]
+  changed (56 -> 58 instructions): sgpp::combigrid::SourceFuncCache::clear(bool)
+  changed (16 -> 16 instructions): sgpp::combigrid::SourceFuncCache::clear(bool) [clone .cold]
+  changed (107 -> 110 instructions): sgpp::combigrid::SourceFuncCache::createTable(unsigned long)
+  changed (16 -> 16 instructions): sgpp::combigrid::SourceFuncCache::createTable(unsigned long) [clone .cold]
+  changed (35 -> 49 instructions): sgpp::combigrid::SourceFuncCache::finishOperatorCall()
+  changed (268 -> 270 instructions): sgpp::combigrid::SourceFuncCache::finishOperatorCall() [clone .cold]
+  changed (12 -> 11 instructions): sgpp::combigrid::SourceFuncCache::flush()
+  changed (144 -> 143 instructions): sgpp::combigrid::SourceFuncCache::loadStore()
+  changed (20 -> 19 instructions): sgpp::combigrid::SourceFuncCache::nOutputs() const
+  changed (2 -> 3 instructions): sgpp::combigrid::SourceFuncCache::nOutputs() const [clone .cold]
+  changed (189 -> 191 instructions): sgpp::combigrid::SourceFuncCache::openStore()
+  changed (21 -> 21 instructions): sgpp::combigrid::SourceFuncCache::openStore() [clone .cold]
+  changed (90 -> 107 instructions): sgpp::combigrid::SourceFuncCache::statistics() const
+  changed (35 -> 38 instructions): sgpp::combigrid::SourceFuncCache::table(unsigned long)
+  changed (95 -> 82 instructions): sgpp::combigrid::SourceFuncCache::writeToStore(bool)
+  changed (36 -> 30 instructions): sgpp::combigrid::SourceFuncCache::writeToStore(bool) [clone .cold]
+  changed (110 -> 126 instructions): sgpp::combigrid::SourceFuncCache::~SourceFuncCache()
+  changed (109 -> 110 instructions): sgpp::combigrid::TensorGrid::getNeighborsForLinInterpolation(sgpp::base::DataVector const&)
+  changed (315 -> 314 instructions): sgpp::combigrid::getBarycentricFormula(sgpp::combigrid::NodeGenFunc const*)
+  changed (7 -> 6 instructions): sgpp::combigrid::interpolate(sgpp::combigrid::VectorSourceFunc const&, sgpp::base::DataVector const&, sgpp::combigrid::SparseGrid const&, std::span<double, 1844
+  changed (450 -> 446 instructions): sgpp::combigrid::interpolateLinear(sgpp::combigrid::SourceFunc const&, sgpp::base::DataVector const&, sgpp::combigrid::SparseGrid const&) [clone ._omp_fn.0]
+  changed (19 -> 18 instructions): sgpp::combigrid::interpolateLinear(sgpp::combigrid::SourceFunc const&, sgpp::base::DataVector const&, sgpp::combigrid::SparseGrid const&) [clone ._omp_fn.0] [cl
+  changed (495 -> 496 instructions): sgpp::combigrid::misc::BoostPointValueTable::collectUnflushed(std::vector<unsigned long const*, std::allocator<unsigned long const*> >&, std::vector<unsigned lo
+  changed (85 -> 96 instructions): sgpp::combigrid::misc::BoostPointValueTable::findOnDisk(double const*, unsigned long, double*)
+  changed (53 -> 54 instructions): sgpp::combigrid::misc::BoostPointValueTable::markFlushed()
+  changed (97 -> 94 instructions): sgpp::combigrid::misc::BoostPointValueTable::spill(sgpp::combigrid::misc::boost_point_value_table::Shard&, double const*, unsigned long, double const*)
+  changed (24 -> 24 instructions): sgpp::combigrid::misc::BoostPointValueTable::spill(sgpp::combigrid::misc::boost_point_value_table::Shard&, double const*, unsigned long, double const*) [clone .
+  changed (93 -> 96 instructions): sgpp::combigrid::misc::BoostPointValueTable::statistics() const
+  changed (639 -> 640 instructions): sgpp::combigrid::misc::LMDBPointValueStore::createTemporary(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned lon
+  changed (100 -> 98 instructions): sgpp::combigrid::misc::LMDBPointValueStore::find(unsigned long, sgpp::combigrid::misc::source_func_caching::RecordLayout, unsigned long, double const*, double*)
+  changed (5250 -> 5501 instructions): sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT(unsigned long) const
+  changed (70 -> 68 instructions): sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT(unsigned long) const [clone .cold]
+  changed (110 -> 109 instructions): sgpp::combigrid::quadrature_rules::SimpsonQuadRule::genWeightsInplace(std::span<double, 18446744073709551615ul>) const
+  changed (23 -> 22 instructions): sgpp::combigrid::quadrature_rules::SimpsonQuadRule::genWeightsInplace(std::span<double, 18446744073709551615ul>) const [clone .cold]
+  changed (738 -> 739 instructions): sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren(unsigned long, unsigned long, unsigned long, unsigned int, sgpp::combigrid::tools::ProjectedSubTrie
+  changed (18 -> 17 instructions): sgpp::combigrid::tools::dsg_quadrature::compNodeIdxLvlMapFuncs(sgpp::combigrid::DeltasSparseGrid const&) [clone .cold]
+  changed (27 -> 26 instructions): sgpp::combigrid::tools::genReducedMIVecForCompleteSG(unsigned int, unsigned long) [clone .cold]
+  changed (44 -> 45 instructions): sgpp::combigrid::tools::partitionRangeForConcurrency(unsigned long, unsigned long, unsigned long)
+  changed (107 -> 112 instructions): std::_Function_handler<double (sgpp::base::DataVector const&), sgpp::combigrid::CachedSourceFunc::wrap(std::function<double (sgpp::base::DataVector const&)>, st
+  changed (96 -> 88 instructions): std::_Function_handler<double (sgpp::base::DataVector const&), sgpp::combigrid::CachedSourceFunc::wrap(std::function<double (sgpp::base::DataVector const&)>, st
+  changed (415 -> 416 instructions): std::_Function_handler<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>), sgpp::combigrid::CachedVectorSourceFunc::wrap(std::funct
+  changed (96 -> 88 instructions): std::_Function_handler<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>), sgpp::combigrid::CachedVectorSourceFunc::wrap(std::funct
+  changed (16 -> 15 instructions): std::_Function_handler<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>), sgpp::combigrid::CachedVectorSourceFunc::wrap(std::funct
+  changed (20 -> 20 instructions): std::_Function_handler<void (unsigned long const*), sgpp::combigrid::SourceFuncCache::loadStore()::{lambda(unsigned long const*)#1}>::_M_invoke(std::_Any_data c
+  changed (4 -> 4 instructions): std::_Sp_counted_ptr_inplace<sgpp::combigrid::SourceFuncCache, std::allocator<void>, (__gnu_cxx::_Lock_policy)2>::_M_destroy()
+  changed (111 -> 5 instructions): std::_Sp_counted_ptr_inplace<sgpp::combigrid::SourceFuncCache, std::allocator<void>, (__gnu_cxx::_Lock_policy)2>::_M_dispose()
+  changed (4 -> 4 instructions): std::_Sp_counted_ptr_inplace<sgpp::combigrid::SourceFuncCache, std::allocator<void>, (__gnu_cxx::_Lock_policy)2>::~_Sp_counted_ptr_inplace()
+  changed (19 -> 20 instructions): std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*,
+  changed (421 -> 420 instructions): void std::__introsort_loop<__gnu_cxx::__normal_iterator<unsigned long const**, std::span<unsigned long const*, 18446744073709551615ul>::__iter_tag>, long, __gnu
+  only in A: sgpp::combigrid::interpolateLinear(sgpp::combigrid::VectorSourceFunc const&, sgpp::base::DataVector const&, sgpp::combigrid::SparseGrid const&, std::span<double
+  only in A: sgpp::combigrid::interpolateLinear(sgpp::combigrid::VectorSourceFunc const&, sgpp::base::DataVector const&, sgpp::combigrid::SparseGrid const&, std::span<double
+  only in A: sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*)
+  only in A: sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*) [clone .cold]
+  only in A: std::_Sp_counted_ptr_inplace<sgpp::combigrid::SourceFuncCache, std::allocator<void>, (__gnu_cxx::_Lock_policy)2>::_M_dispose() [clone .cold]
+  only in B: log2@plt
+  only in B: pthread_mutex_trylock@plt
+  only in B: sgpp::combigrid::(anonymous namespace)::evaluateScalar(void const*, sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>)
+  only in B: sgpp::combigrid::(anonymous namespace)::evaluateScalar(void const*, sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>) [clone .cold]
+  only in B: sgpp::combigrid::(anonymous namespace)::evaluateVector(void const*, sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>)
+  only in B: sgpp::combigrid::(anonymous namespace)::evaluateVector(void const*, sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>) [clone .cold]
+  only in B: sgpp::combigrid::CachedSourceFunc::wrapAdaptive(std::function<double (sgpp::base::DataVector const&)>, std::shared_ptr<sgpp::combigrid::SourceFuncCache> const&)
+  only in B: sgpp::combigrid::CachedSourceFunc::wrapAdaptive(std::function<double (sgpp::base::DataVector const&)>, std::shared_ptr<sgpp::combigrid::SourceFuncCache> const&)
+  only in B: sgpp::combigrid::CachedVectorSourceFunc::wrapAdaptive(std::function<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>)>, std::share
+  only in B: sgpp::combigrid::CachedVectorSourceFunc::wrapAdaptive(std::function<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>)>, std::share
+  only in B: sgpp::combigrid::SourceFuncCache::adaptiveCounters(sgpp::combigrid::misc::BoostPointValueTable const&)
+  only in B: sgpp::combigrid::SourceFuncCache::createTemporaryStore(sgpp::combigrid::misc::BoostPointValueTable&)
+  only in B: sgpp::combigrid::SourceFuncCache::createTemporaryStore(sgpp::combigrid::misc::BoostPointValueTable&) [clone .cold]
+  only in B: sgpp::combigrid::SourceFuncCache::evaluateAdaptive(sgpp::combigrid::misc::BoostPointValueTable&, sgpp::combigrid::AdaptiveCacheMode, unsigned long, bool, sgpp::
+  only in B: sgpp::combigrid::SourceFuncCache::evaluateTimed(sgpp::combigrid::misc::BoostPointValueTable&, sgpp::combigrid::AdaptiveCacheMode, sgpp::base::DataVector const&,
+  only in B: sgpp::combigrid::SourceFuncCache::finishAdaptiveOperatorCall()
+  only in B: sgpp::combigrid::SourceFuncCache::finishAdaptiveOperatorCall() [clone .cold]
+  only in B: sgpp::combigrid::SourceFuncCache::insertAdaptive(sgpp::combigrid::misc::BoostPointValueTable&, sgpp::combigrid::AdaptiveCacheMode, double const*, unsigned long,
+  only in B: sgpp::combigrid::SourceFuncCache::missAdaptive(sgpp::combigrid::misc::BoostPointValueTable&, sgpp::combigrid::AdaptiveCacheMode, unsigned long, sgpp::base::Data
+  only in B: sgpp::combigrid::interpolateLinear(sgpp::combigrid::VectorSourceFunc const&, sgpp::base::DataVector const&, sgpp::combigrid::SparseGrid const&, std::span<double
+  only in B: sgpp::combigrid::interpolateLinear(sgpp::combigrid::VectorSourceFunc const&, sgpp::base::DataVector const&, sgpp::combigrid::SparseGrid const&, std::span<double
+  only in B: sgpp::combigrid::misc::(anonymous namespace)::addTrimmed(sgpp::combigrid::misc::adaptive_caching::CostEstimate&, std::vector<double, std::allocator<double> >&)
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::AdaptiveCacheController(bool, unsigned int, double)
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::addStatistics(sgpp::combigrid::CacheStatistics&, double) const
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::addStatistics(sgpp::combigrid::CacheStatistics&, double) const [clone .cold]
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::apply(sgpp::combigrid::misc::adaptive_caching::AdaptiveCounters const&)
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::decide(unsigned long, sgpp::combigrid::misc::adaptive_caching::AdaptiveCounters const&)
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::decide(unsigned long, sgpp::combigrid::misc::adaptive_caching::AdaptiveCounters const&) [clone .cold]
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::disableDisk()
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::disableDisk() [clone .cold]
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::finishOperatorCall(sgpp::combigrid::misc::adaptive_caching::AdaptiveCounters const&)
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::finishOperatorCall(sgpp::combigrid::misc::adaptive_caching::AdaptiveCounters const&) [clone .cold]
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::finishProbe(sgpp::combigrid::misc::adaptive_caching::AdaptiveCounters const&)
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::reset()
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::reset() [clone .cold]
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::ruleInput(sgpp::combigrid::misc::adaptive_caching::AdaptiveCounters const&) const
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::setMode(sgpp::combigrid::AdaptiveCacheMode)
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::startProbe(sgpp::combigrid::misc::adaptive_caching::AdaptiveCounters const&)
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::update(std::vector<sgpp::combigrid::misc::adaptive_caching::CostSample, std::allocator<sgpp::combigrid::misc::ad
+  only in B: sgpp::combigrid::misc::AdaptiveCacheController::update(std::vector<sgpp::combigrid::misc::adaptive_caching::CostSample, std::allocator<sgpp::combigrid::misc::ad
+  only in B: sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*, bool)
+  only in B: sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*, bool) [clone .cold]
+  only in B: sgpp::combigrid::misc::adaptive_caching::CostSampleWindow::add(sgpp::combigrid::misc::adaptive_caching::CostSample const&)
+  only in B: sgpp::combigrid::misc::adaptive_caching::CostSampleWindow::clear()
+  only in B: sgpp::combigrid::misc::adaptive_caching::CostSampleWindow::collect(unsigned long) const
+  only in B: sgpp::combigrid::misc::adaptive_caching::CostSampleWindow::collect(unsigned long) const [clone .cold]
+  only in B: sgpp::combigrid::misc::adaptive_caching::CostTimer::overrideSamplingShift(int)
+  only in B: sgpp::combigrid::misc::adaptive_caching::CostTimer::readCostTicks()
+  only in B: sgpp::combigrid::misc::adaptive_caching::CostTimer::samplingShift()
+  only in B: sgpp::combigrid::misc::adaptive_caching::CostTimer::ticksPerNs()
+  only in B: sgpp::combigrid::misc::adaptive_caching::HitRateTracker::rate(unsigned long, unsigned long, unsigned long) const
+  only in B: sgpp::combigrid::misc::adaptive_caching::HitRateTracker::reset(unsigned long, unsigned long)
+  only in B: sgpp::combigrid::misc::adaptive_caching::HitRateTracker::update(unsigned long, unsigned long, unsigned long)
+  only in B: sgpp::combigrid::misc::adaptive_caching::diskOverhead(sgpp::combigrid::misc::adaptive_caching::AdaptiveRuleInput const&)
+  only in B: sgpp::combigrid::misc::adaptive_caching::expectedOverhead(double, double, double)
+  only in B: sgpp::combigrid::misc::adaptive_caching::memoryOverhead(sgpp::combigrid::misc::adaptive_caching::AdaptiveRuleInput const&)
+  only in B: sgpp::combigrid::misc::adaptive_caching::nextAdaptiveMode(sgpp::combigrid::misc::adaptive_caching::AdaptiveRuleInput const&)
+  only in B: std::_Function_handler<double (sgpp::base::DataVector const&), sgpp::combigrid::CachedSourceFunc::wrapAdaptive(std::function<double (sgpp::base::DataVector cons
+  only in B: std::_Function_handler<double (sgpp::base::DataVector const&), sgpp::combigrid::CachedSourceFunc::wrapAdaptive(std::function<double (sgpp::base::DataVector cons
+  only in B: std::_Function_handler<double (sgpp::base::DataVector const&), sgpp::combigrid::CachedSourceFunc::wrapAdaptive(std::function<double (sgpp::base::DataVector cons
+  only in B: std::_Function_handler<double (sgpp::base::DataVector const&), sgpp::combigrid::CachedSourceFunc::wrapAdaptive(std::function<double (sgpp::base::DataVector cons
+  only in B: std::_Function_handler<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>), sgpp::combigrid::CachedVectorSourceFunc::wrapAdaptive(st
+  only in B: std::_Function_handler<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>), sgpp::combigrid::CachedVectorSourceFunc::wrapAdaptive(st
+  only in B: std::_Function_handler<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>), sgpp::combigrid::CachedVectorSourceFunc::wrapAdaptive(st
+  only in B: std::_Function_handler<void (sgpp::base::DataVector const&, std::span<double, 18446744073709551615ul>), sgpp::combigrid::CachedVectorSourceFunc::wrapAdaptive(st
+  only in B: std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count(std::__shared_count<(__gnu_cxx::_Lock_policy)2> const&) [clone .isra.0]
+  only in B: std::chrono::_V2::steady_clock::now()@plt
+  only in B: void std::__introsort_loop<__gnu_cxx::__normal_iterator<double*, std::vector<double, std::allocator<double> > >, long, __gnu_cxx::__ops::_Iter_less_iter>(__gnu_

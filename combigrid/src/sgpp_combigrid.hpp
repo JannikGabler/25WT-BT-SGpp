@@ -32,6 +32,7 @@
 // Source functions
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/adaptive_cache_mode.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_policy.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>

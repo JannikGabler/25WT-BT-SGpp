@@ -1,0 +1,4 @@
+closure of sgpp_combigrid.hpp: 386 headers, 61 of them SG++ headers
+OK 1: no boost/unordered*, xxhash.h or lmdb.h
+OK 2: no public header tests a configuration macro
+OK 3: same closure with and without the SGPP_COMBIGRID_DISABLE_* flags

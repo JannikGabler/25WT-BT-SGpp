@@ -9,6 +9,8 @@
 #include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/base/exception/file_exception.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/adaptive/adaptive_cache_controller.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/adaptive/cost_timer.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
@@ -18,8 +20,10 @@
 #include <string>
 #include <vector>
 
+using sgpp::combigrid::misc::AdaptiveCacheController;
 using sgpp::combigrid::misc::BoostPointValueTable;
 using sgpp::combigrid::misc::LMDBPointValueStore;
+using sgpp::combigrid::misc::adaptive_caching::CostTimer;
 using sgpp::combigrid::misc::source_func_caching::RecordLayout;
 
 namespace sgpp {
@@ -36,8 +40,18 @@ SourceFuncCache::SourceFuncCache(const SourceFuncCacheConfig& config) : config_(
       "cache. " SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE_EXCEPTION);
 #endif
   checkConfig();
-  if (config_.policy != CachePolicy::MemoryOnly) {
+  otherDimIsError_ = config_.policy == CachePolicy::TemporaryStorage ||
+                     config_.policy == CachePolicy::PersistentStorage;
+  if (otherDimIsError_) {
     openStore();
+  } else if (config_.policy == CachePolicy::Adaptive) {
+#ifdef SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE
+    const bool diskAvailable = true;
+#else
+    const bool diskAvailable = false;
+#endif
+    adaptive_ = std::make_unique<AdaptiveCacheController>(diskAvailable, CostTimer::samplingShift(),
+                                                          CostTimer::readCostTicks());
   }
 }
 
@@ -66,12 +80,15 @@ CacheStatistics SourceFuncCache::statistics() const {
   CacheStatistics stats = (table != nullptr) ? table->statistics() : CacheStatistics();
   stats.operatorCalls = operatorCalls_.load(std::memory_order_relaxed);
   if (hasStore()) {
-    stats.diskHits = store_->hits();
+    stats.diskHits = store()->hits();
     stats.hits += stats.diskHits;
-    stats.rejectedInserts += store_->rejected();
-    stats.diskEntries = store_->entries();
-    stats.fileBytes = store_->fileBytes();
+    stats.rejectedInserts += store()->rejected();
+    stats.diskEntries = store()->entries();
+    stats.fileBytes = store()->fileBytes();
     stats.loadedEntries = loadedEntries_;
+  }
+  if (adaptive_ != nullptr) {
+    adaptive_->addStatistics(stats, CostTimer::ticksPerNs());
   }
   return stats;
 }
@@ -86,10 +103,13 @@ void SourceFuncCache::clear(const bool deletePersistentFile) {
   loadedEntries_ = 0;
 
   if (hasStore()) {
-    if (config_.policy == CachePolicy::TemporaryStorage || deletePersistentFile) {
-      store_->clear();
+    if (config_.policy != CachePolicy::PersistentStorage || deletePersistentFile) {
+      store()->clear();
     }
-    store_->resetStatistics();
+    store()->resetStatistics();
+  }
+  if (adaptive_ != nullptr) {
+    adaptive_->reset();
   }
 }
 
@@ -101,11 +121,16 @@ void SourceFuncCache::flush() {
 
 void SourceFuncCache::finishOperatorCall() {
   operatorCalls_.fetch_add(1, std::memory_order_relaxed);
-  if (!hasStore()) {
+  if (hasStore()) {
+    writeToStore(false);
+  }
+  if (adaptive_ != nullptr) {
+    finishAdaptiveOperatorCall();
+  }
+  if (!otherDimIsError_) {
     return;
   }
 
-  writeToStore(false);
   const size_t otherDim = otherDimLookups_.exchange(0, std::memory_order_relaxed);
   if (otherDim > 0) {
     const BoostPointValueTable* const table = table_.load(std::memory_order_acquire);
@@ -123,7 +148,7 @@ void SourceFuncCache::attach(const size_t nOutputs) {
   if (nOutputs_ == 0) {
     nOutputs_ = nOutputs;
   } else if (nOutputs_ != nOutputs) {
-    if (hasStore() && store_->header().nOutputs == nOutputs_) {
+    if (hasStore() && store()->header().nOutputs == nOutputs_) {
       throw CacheFileException("SourceFuncCache: the file '" + config_.file + "' holds " +
                                std::to_string(nOutputs_) + " values per point, the function " +
                                std::to_string(nOutputs));
@@ -143,7 +168,7 @@ BoostPointValueTable* SourceFuncCache::table(const size_t nDim) {
   if (table->nDim() == nDim) {
     return table;
   }
-  if (hasStore()) {
+  if (otherDimIsError_) {
     otherDimLookups_.fetch_add(1, std::memory_order_relaxed);
   }
   return nullptr;
@@ -156,10 +181,10 @@ BoostPointValueTable* SourceFuncCache::createTable(const size_t nDim) {
   if (ownedTable_ == nullptr) {
     assert(nOutputs_ >= 1);
     // A file with records fixes the dimension (e.g. after clear(false)).
-    const size_t fileDim = hasStore() ? store_->header().nDim : 0;
+    const size_t fileDim = hasStore() ? store()->header().nDim : 0;
     ownedTable_ = std::make_shared<BoostPointValueTable>(
         RecordLayout{(fileDim != 0) ? fileDim : nDim, nOutputs_}, config_.memoryLimit,
-        config_.nShards, store_.get(), config_.policy == CachePolicy::PersistentStorage);
+        config_.nShards, store(), config_.policy == CachePolicy::PersistentStorage);
     if (fileDim != 0) {
       ownedTable_->markOnDisk();
     }
@@ -188,11 +213,13 @@ void SourceFuncCache::openStore() {
     store_ = LMDBPointValueStore::createTemporary(LMDBPointValueStore::temporaryDirectory(),
                                                   config_.storageSpaceLimit, config_.nShards);
     config_.file = store_->path();
+    storeView_.store(store_.get(), std::memory_order_release);
     return;
   }
 
   store_ =
       LMDBPointValueStore::openPersistent(config_.file, config_.storageSpaceLimit, config_.nShards);
+  storeView_.store(store_.get(), std::memory_order_release);
   if (store_->header().nDim != 0) {
     loadStore();
   }
@@ -224,12 +251,12 @@ void SourceFuncCache::writeToStore(const bool sync) {
     std::vector<uint64_t> pendingRecords;
     table->collectUnflushed(records, pendingRecords);
     if (!records.empty()) {
-      store_->write(records, table->layout());
+      store()->write(records, table->layout());
     }
   }
-  store_->rethrowError();
+  store()->rethrowError();
   if (sync) {
-    store_->sync();
+    store()->sync();
   }
 }
 

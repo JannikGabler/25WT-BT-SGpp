@@ -97,11 +97,15 @@ BOOST_AUTO_TEST_CASE(constructors_throw_exactly_without_the_libraries) {
   const auto func = [](const DataVector& x) { return x[0]; };
   const auto vectorFunc = [](const DataVector& x, const std::span<double> out) { out[0] = x[0]; };
 
+  // The adaptive policy needs the table only (without LMDB it never uses a file).
+  const SourceFuncCacheConfig adaptive{.policy = CachePolicy::Adaptive};
 #ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
   BOOST_CHECK_NO_THROW(SourceFuncCache());
   BOOST_CHECK_NO_THROW(CachedSourceFunc{func});
   BOOST_CHECK_NO_THROW(CachedVectorSourceFunc(vectorFunc, 1));
+  BOOST_CHECK_NO_THROW(CachedSourceFunc(func, adaptive));
 #else
+  BOOST_CHECK_THROW(CachedSourceFunc(func, adaptive), sgpp::base::dependency_exception);
   BOOST_CHECK_THROW(SourceFuncCache(), sgpp::base::dependency_exception);
   BOOST_CHECK_THROW(CachedSourceFunc{func}, sgpp::base::dependency_exception);
   BOOST_CHECK_THROW(CachedVectorSourceFunc(vectorFunc, 1), sgpp::base::dependency_exception);

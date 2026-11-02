@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-40 (2026-11-02; WP-40 accepted) · Next free WP number: 41 ·
+Last processed: WP-27 (2026-11-03; WP-27 accepted) · Next free WP number: 44 ·
 Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC 15.2,
@@ -18,6 +18,8 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
   MemoryMax=8G`. OpenBLAS pool +63…+130 ms on the first operator call (not in `total`). Hot loops
   shift ±3–4 % with unrelated changes (op-cache misses; check before attributing); LTO may
   recompile unchanged code; generation ±20 ms page-fault noise. DSG row loop `[[gnu::aligned(64)]]`.
+  Clocksource HPET (WP-27: kernel marked the TSC unstable at boot): `steady_clock::now()` 1.9 µs,
+  `rdtscp` 37 ns; harness unaffected; owner may check BIOS / firmware.
 - **Toolchain**: also Clang 21.1.8 + libomp + lld, JDK 21; `perf/scripts/toolchain.py` variants
   (`gcc-sa` WP-14, `gcc-nsa` WP-20).
 - **Owner's rules**: acceptance by the owner only; minimal gains may be proposed (labelled, weighed
@@ -51,37 +53,40 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 | – | WP-29a–d | Vector-valued: SG, DSG, interpolation, Python | accepted (10-30/31) | scalar 0.995–1.002x; m = 32: SG 1.29–2.68x, DSG 1.96–2.96x, interp 1.25–2.12x, interplin 1.21–1.59x, Python 16 t 24–31x; m = 1 0.66–1.01x | [a](summaries/WP-29a-vector-sg-quadrature.md) [b](summaries/WP-29b-vector-dsg-quadrature.md) [c](summaries/WP-29c-vector-interpolation.md) [d](summaries/WP-29d-vector-python-bindings.md) |
 | – | WP-26 | Caching in memory (`CachedSourceFunc` / `CachedVectorSourceFunc`, virtual hook, Python) | accepted (11-01) | e2e 1.001x, memory 1.002; hook micro b1 d20 0.981 (→ WP-17); 1 µs fn warm 6.6–14.8x; Python warm 1309–2505x | [WP-26](summaries/WP-26-caching-in-memory.md) |
 | – | WP-28 | Caching: disk tier (LMDB; `CachePolicy` MemoryOnly / TemporaryStorage / PersistentStorage) | accepted (11-02, ef1e4aaf4; + owner's refactoring, re-check fixes) | e2e 1.000x (re-check 1.002x), memory 1.004, refcheck OK; persistent warm, 1 µs fn: cc d5 9.0x / 1.6x (1 / 16 t), d20 16 t 0.44x (serial load) | [WP-28](summaries/WP-28-caching-disk-tier.md), [re-check](summaries/WP-28-recheck.md) |
-| – | WP-40 | Caching: library-free public headers (fwd decls) + leftovers + micro compaction | accepted (11-02, commit pending) | e2e 0.998x (114 noise), memory 1.005, refcheck OK; umbrella closure 685 → 385 headers, 3 / 3 header checks in 4 configs; micro 827 → 305 cases (build 27.0 → 17.7 s) | [WP-40](summaries/WP-40-caching-headers-micro-compaction.md) |
-| 1 | WP-27 | Caching: adaptive policy | **in progress** (prompt 11-02; all decisions in-session, owner 11-01) | | |
-| 2 | WP-04 | DSG quadrature: row loop (b0) (+ `TrieNode` 24 → 16 B) | ready (after caching) | | |
-| 3 | WP-17 | Batched source-function evaluation (proposal; + WP-26 hook cost) | ready (after WP-04) | | |
-| 4 | WP-36 | Interpolation operators: exploration (measurement) | ready (before WP-06/07/08/09) | | |
-| 5 | WP-09 | Multi-point interpolation API (proposal) | ready (after WP-36) | | |
-| 6 | WP-06 | Global interpolation: operator overhead | after WP-36 / WP-09 | | |
-| 7 | WP-08 | Linear interpolation: corner loop | after WP-36 / WP-09 | | |
-| 8 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready (after WP-04) | | |
-| 9 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
-| 10 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
-| 11 | WP-07 | Generic barycentric formula: cache the weights | ready (after WP-36) | | |
-| 12 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
-| 13 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
-| 14 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
-| 15 | WP-31 | MI-set cleanups | ready (low) | | |
-| 16 | WP-35 | Flaky time-seeded tests + seed audit (test-only) | ready (low; may move up) | | |
-| 17 | WP-38 | Code hygiene: banner checker + combigrid leftovers | ready (low) | | |
-| 18 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
-| 19 | WP-30 | Vector-valued: small-m optimizations | planned | | |
-| 20 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
-| 21 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it; after WP-27) | | |
+| – | WP-40 | Caching: library-free public headers (fwd decls) + leftovers + micro compaction | accepted (11-02, 08df92b69) | e2e 0.998x (114 noise), memory 1.005, refcheck OK; umbrella closure 685 → 385 headers, 3 / 3 header checks in 4 configs; micro 827 → 305 cases (build 27.0 → 17.7 s) | [WP-40](summaries/WP-40-caching-headers-micro-compaction.md) |
+| – | WP-27 | Caching: adaptive policy (`CachePolicy::Adaptive`: None / MemoryOnly / TemporaryStorage, hit-rate-weighted rules, in-call windows, probes) | accepted (11-03, commit pending) | e2e 0.999x, memory 1.003, refcheck OK; cost-0 fn 0.57–0.86x of plain (vs. "always" 0.07–0.30x); 1 µs fn 0.91–1.03x of "always" | [WP-27](summaries/WP-27-caching-adaptive-policy.md) |
+| 1 | WP-04 | DSG quadrature: row loop (b0) (+ `TrieNode` 24 → 16 B) | ready (caching done) | | |
+| 2 | WP-17 | Batched source-function evaluation (proposal; + WP-26 hook cost) | ready (after WP-04) | | |
+| 3 | WP-36 | Interpolation operators: exploration (measurement) | ready (before WP-06/07/08/09) | | |
+| 4 | WP-09 | Multi-point interpolation API (proposal) | ready (after WP-36) | | |
+| 5 | WP-06 | Global interpolation: operator overhead | after WP-36 / WP-09 | | |
+| 6 | WP-08 | Linear interpolation: corner loop | after WP-36 / WP-09 | | |
+| 7 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready (after WP-04) | | |
+| 8 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
+| 9 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
+| 10 | WP-07 | Generic barycentric formula: cache the weights | ready (after WP-36) | | |
+| 11 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
+| 12 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
+| 13 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
+| 14 | WP-31 | MI-set cleanups | ready (low) | | |
+| 15 | WP-35 | Flaky time-seeded tests + seed audit (test-only) | ready (low; may move up) | | |
+| 16 | WP-38 | Code hygiene: banner checker + combigrid leftovers | ready (low) | | |
+| 17 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
+| 18 | WP-30 | Vector-valued: small-m optimizations | planned | | |
+| 19 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
+| 20 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it) | | |
+| 21 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late, owner 11-03) | | |
+| 22 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late, owner 11-03) | | |
+| last | WP-43 | Final clean-up: phase references out of code docs + phase leftovers | ready (always last, owner 11-03) | | |
 
 ## Next action
 
-WP-40 accepted (owner 11-02). The owner commits "Accept WP-40: …" (code, new test
-`tests/miscellaneous/cache_file_exception_test.cpp`, summary, `results/WP-40/`, STATUS, PLAN,
-`perf-work` SKILL micro-count fix; untracked `compile*.sh` / `run_benchmarks.py`: commit or
-ignore); the tree must be clean before the session. **WP-27 prompt issued 2026-11-02**
-(adaptive caching; decisions in-session). Next master start: add the WP-40 hash; process the
-WP-27 summary; then WP-04 (owner's order).
+WP-27 accepted (owner 11-03). The owner commits "Accept WP-27: …" (code, new files under
+`caching/` and `miscellaneous/caching/adaptive/`, tests `tests/miscellaneous/caching/` and
+`adaptive_cached_source_function_test.cpp`, docs, summary, `results/WP-27/`, STATUS, PLAN;
+untracked `compile*.sh`: commit or ignore); the tree must be clean before the session.
+**Next: WP-04** (DSG b0 row loop; caching block done, owner's order). Prompt held back on the
+owner's request (11-03): write it when the owner says so. Next master start: add the WP-27 hash.
 
 ## Open decisions for the owner
 
@@ -92,6 +97,8 @@ WP-27 summary; then WP-04 (owner's order).
   (WP-23: memory −5 %, dsg b1 −23 MiB, generation 1.1–1.4x; datadriven relies on it).
 - WP-37: base's Python `DataVector` iteration (segfault today) — base API change, placement.
 - WP-34: mechanism (serial operator for Python callables / WP-17 batches / document). WP-39: placement.
+- Adaptive as the default `CachePolicy` (WP-27 follow-up; not planned, owner 11-03): cheap
+  functions 0.57–0.91x of plain instead of 0.07–0.30x; expensive pay ≈ 3–7 ns per hit.
 - Optional moves: WP-05 before WP-18 (0.5–0.8 s at d ≤ 3 vs. ≈ 0.05 s); WP-36 up; WP-35 up (test
   runs hit it: WP-29a 2 of 16, WP-28 1 of 15; re-check 0 of ≈ 12).
 - Owner files outdated: CLAUDE.md §5 banner "build fails otherwise" (checker never checks C++,
@@ -133,23 +140,29 @@ WP-27 summary; then WP-04 (owner's order).
 - WP-28 `MDB_WRITEMAP` (cold writes / loads slower, sparse preallocation to the map size); pending
   lookup in `find` / spill inline in `insert` (memory-only inserts 2.6–4.8 % slower) → out of line +
   `[[unlikely]]`; fsync in the destructor (cold persistent runs 1.3–5x slower).
+- WP-27 out-of-line adaptive hit path (+17 ns/evaluation vs. "always") → inline hits; window hit
+  rate during the cold start (switches mid-cost functions off early) → bound h = 1, then marginal
+  rate after 2^16 lookups; memory hit rate in TemporaryStorage (misses the file's hits) → file
+  rule only; counting the switching-off call as a None call (immediate probe); callable swap at
+  the hook (races with concurrent calls) → mode word; `atomic_thread_fence` in the seqlock (TSan
+  cannot model it) → release / acquire on the fields.
 
 ## Re-profiling
 
 Last: RP-3 (2026-10-30; rp-3 = 0c6ecfc4b). Accepted optimizations since: 0. Features (WP-29a–d,
-WP-26, WP-28, WP-40 accepted 11-02; WP-27; scalar 0.995–1.002x) count only if a group changes
-≥ 1.3x or a hot-spot ranking shifts.
+WP-26, WP-28, WP-40, WP-27 accepted 11-03; scalar 0.995–1.002x) count only if a group changes
+≥ 1.3x or a hot-spot ranking shifts (none did).
 RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another rule-7 trigger.
 
 ## Log
 
-- 2026-11-02 WP-40 summary processed; **WP-40 accepted** by the owner (e2e 0.998x, memory
-  1.005, refcheck OK; flagged micro SLOWERs = perf_micro binary placement, library alone
-  neutral). `perf-work` SKILL micro count fixed (owner's OK). Follow-ups (cpplint backlog,
-  commented-out `SourceFuncHook` lines) → WP-38. No RP-4 (hygiene). WP-27 prompt issued.
-- 2026-11-02 WP-28 accepted (ef1e4aaf4) after the re-check; WP-40 issued (owner: micro
-  compaction, keep production / `sol` / `none` / disk / flat-file cases); work-session files
-  cleaned up on the owner's request.
+- 2026-11-03 WP-40 hash 08df92b69. WP-27 summary processed; **WP-27 accepted** by the owner
+  (e2e 0.999x, memory 1.003, refcheck OK; 1 SLOWER `quad/dsg/equi-exp/b0/d3/L16` 0.972 =
+  known noisy, plain `SourceFunc` untouched). Follow-ups → WP-41 (thread-weighted disk rule),
+  WP-42 ("keep" hint), both late (owner); Adaptive-as-default not planned. No RP-4 (feature).
+  Next WP-04; prompt held back on the owner's request. Owner: comments rule in CLAUDE.md §5
+  (prompts point to it) → final WP-43.
+- 2026-11-02 WP-40 accepted (micro 827 → 305; follow-ups → WP-38); WP-27 prompt issued.
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone) → WP-35. Report recurrences.
 
@@ -168,3 +181,4 @@ RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another rule-7 trigge
   XXH3, 6 fused `std::fma`; owner's refactoring: virtual `finishOperatorCall()`, dependency header,
   slicing rejected at compile time; hook cost → WP-17); WP-28 issued (disk fields in-session),
   checkpoint 73d6b3ac6, refactoring 1e279c1d0 → re-check; owner: all WP-27 decisions in-session.
+  11-02 WP-28 accepted (ef1e4aaf4) after the re-check; WP-40 issued (owner: micro compaction).

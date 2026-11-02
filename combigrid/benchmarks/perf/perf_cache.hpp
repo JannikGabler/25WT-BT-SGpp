@@ -23,6 +23,11 @@
  *   @c persistent_cold (new file per call, incl. the final sync), @c persistent_warm (cache
  *   created on the filled file: load + operator, all hits), @c temporary_spill (memory limit 0,
  *   new cache per call) and @c temporary_spill_warm (all hits from disk).
+ * - WP-27, adaptive policy (@c CachePolicy::Adaptive): @c micro/cache/op/<cfg>/adaptive_production
+ *   (a new cache per call: one operator call decides), @c adaptive_steady_production (one cache
+ *   for all calls, after its decisions and probes), @c adaptive_spill_production (memory limit 0:
+ *   the temporary-file tier, only with LMDB) and @c micro/cache/adaptive/decide (one window
+ *   decision: 64 samples and the rules).
  * Only registered with the libraries of the cache (@c
  * SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE, see tools/defines/dependencies_defines.hpp).
  */
@@ -47,6 +52,10 @@
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/adaptive/adaptive_cache_controller.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/adaptive/adaptive_counters.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/adaptive/cost_sample.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/adaptive/cost_sample_window.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 #include <string>
 #include <vector>
@@ -97,8 +106,25 @@ inline double hitRate(const CacheStatistics& before, const CacheStatistics& afte
              : static_cast<double>(after.hits - before.hits) / static_cast<double>(lookups);
 }
 
+/// @brief Configuration of the cache of an op variant (adaptive variants: @c CachePolicy::Adaptive).
+inline SourceFuncCacheConfig opCacheConfig(const std::string& variant) {
+  if (variant == "adaptive_spill") {
+    return SourceFuncCacheConfig{.memoryLimit = 0, .policy = CachePolicy::Adaptive};
+  }
+  if (variant.starts_with("adaptive")) {
+    return SourceFuncCacheConfig{.policy = CachePolicy::Adaptive};
+  }
+  return SourceFuncCacheConfig();
+}
+
+/// @brief The adaptive mode as a number (counter of the op cases: 0 None, 1 MemoryOnly, 2
+/// TemporaryStorage).
+inline double modeNumber(const CacheStatistics& stats) {
+  return static_cast<double>(static_cast<int>(stats.adaptiveMode));
+}
+
 /// @brief An operator with a cost-controlled integrand: plain (variant none, the reference) or
-/// cached (always / warm).
+/// cached (always / warm; adaptive / adaptive_steady / adaptive_spill with the adaptive policy).
 inline void addOpCase(Suite& suite, const OpConfig& cfg, const std::string& variant,
                       const double costNs) {
   const std::string name = "micro/cache/op/" + cfg.name() + "/" +
@@ -121,6 +147,7 @@ inline void addOpCase(Suite& suite, const OpConfig& cfg, const std::string& vari
     run.setCounter("threads", omp_get_max_threads());
     run.setItems(static_cast<double>(cold.lookups));
 
+    const SourceFuncCacheConfig config = opCacheConfig(variant);
     std::optional<CachedSourceFunc> warm;
     if (variant == "warm") {
       warm.emplace(costed);
@@ -129,8 +156,12 @@ inline void addOpCase(Suite& suite, const OpConfig& cfg, const std::string& vari
       } else {
         inst.run(*warm);
       }
+    } else if (variant == "adaptive_steady") {
+      warm.emplace(costed, config);
+      inst.run(*warm);
     }
     const CacheStatistics before = warm ? warm->statistics() : CacheStatistics();
+    CacheStatistics last;
 
     run.measure([&]() {
       if (variant == "none") {
@@ -138,13 +169,45 @@ inline void addOpCase(Suite& suite, const OpConfig& cfg, const std::string& vari
       } else if (warm) {
         doNotOptimize(inst.run(*warm));
       } else {
-        const CachedSourceFunc fresh(costed);
+        const CachedSourceFunc fresh(costed, config);
         doNotOptimize(inst.run(fresh));
+        last = fresh.statistics();
       }
     });
     if (warm) {
-      run.setCounter("hit_rate", hitRate(before, warm->statistics()));
+      last = warm->statistics();
+      run.setCounter("hit_rate", hitRate(before, last));
     }
+    if (variant.starts_with("adaptive")) {
+      run.setCounter("mode", modeNumber(last));
+      run.setCounter("mode_switches", static_cast<double>(last.modeSwitches));
+      run.setCounter("function_ns", last.functionCostNs);
+      run.setCounter("hit_ns", last.memoryHitCostNs);
+    }
+  });
+}
+
+/// @brief One window decision of the adaptive policy: 64 samples and the rules (cost per window).
+inline void addAdaptiveDecideCase(Suite& suite) {
+  suite.addMicro("micro/cache/adaptive/decide", [](MicroRun& run) {
+    using misc::adaptive_caching::CostSample;
+    using misc::adaptive_caching::CostSampleKind;
+    misc::AdaptiveCacheController controller(true, 0, 0.0);
+    const misc::adaptive_caching::AdaptiveCounters counters{1 << 20, 1 << 19, false};
+    uint64_t i = 0;
+    run.setItems(1.0);
+    run.measure([&]() {
+      for (;;) {
+        const bool hit = (i++ % 4) != 0;
+        const CostSample sample = hit ? CostSample{CostSampleKind::MemoryHit, 200 + (i % 7), 0}
+                                      : CostSample{CostSampleKind::MemoryMiss, 2400, 2000};
+        if (const auto window = controller.addSample(sample)) {
+          controller.decide(*window, counters);
+          break;
+        }
+      }
+    });
+    run.setCounter("mode", static_cast<double>(static_cast<int>(controller.mode())));
   });
 }
 
@@ -374,6 +437,7 @@ inline void addDiskCases(Suite& suite) {
            {"persistent_cold", "persistent_warm", "temporary_spill", "temporary_spill_warm"}) {
         addDiskOpCase(suite, configs[idx], variant, cost);
       }
+      addOpCase(suite, configs[idx], "adaptive_spill", cost);
     }
   }
 }
@@ -392,8 +456,11 @@ inline void addCacheProductionCases(Suite& suite) {
     for (const double cost : {0.0, 1000.0}) {
       addOpCase(suite, cfg, "always", cost);
       addOpCase(suite, cfg, "warm", cost);
+      addOpCase(suite, cfg, "adaptive", cost);
+      addOpCase(suite, cfg, "adaptive_steady", cost);
     }
   }
+  addAdaptiveDecideCase(suite);
 
   addMemoryCase(suite, "limit1GiB", size_t{1} << 30);
   addMemoryCase(suite, "limit16MiB", size_t{16} << 20);
