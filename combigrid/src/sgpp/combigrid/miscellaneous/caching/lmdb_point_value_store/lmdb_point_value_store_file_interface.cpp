@@ -17,17 +17,22 @@
 #include <cstdlib>
 #include <cstring>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_file_header.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_file_interface.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp>
 #include <sgpp/combigrid/miscellaneous/exceptions/cache_file_exception.hpp>
 #include <sgpp/combigrid/tools/caching/lmdb_tools.hpp>
+#include <string>
 
-using namespace sgpp::combigrid::tools::lmdb;
-using namespace sgpp::combigrid::constants::lmdb_point_value_store;
+using sgpp::combigrid::constants::lmdb_point_value_store::HEADER_KEY;
+using sgpp::combigrid::constants::lmdb_point_value_store::KEY_SCHEME;
+using sgpp::combigrid::constants::lmdb_point_value_store::MAGIC;
+using sgpp::combigrid::constants::lmdb_point_value_store::VERSION;
 using sgpp::combigrid::misc::source_func_caching::RecordLayout;
+using sgpp::combigrid::tools::lmdb::directoryOf;
+using sgpp::combigrid::tools::lmdb::lmdbMessage;
+using sgpp::combigrid::tools::lmdb::mapSize;
 
 namespace sgpp {
 namespace combigrid {

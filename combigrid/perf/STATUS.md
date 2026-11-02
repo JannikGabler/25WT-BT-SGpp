@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-28 re-check (2026-11-02; WP-28 accepted) · Next free WP number: 41 ·
+Last processed: WP-40 (2026-11-02; WP-40 accepted) · Next free WP number: 41 ·
 Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC 15.2,
@@ -50,42 +50,41 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 | – | WP-24, 25 | Explorations: vector-valued (T); caching (W) | accepted | proto benchmarks `perf_vector_proto.hpp`, `perf_cache_proto.hpp`, `perf_cache_counts.cpp` kept | [24](summaries/WP-24-vector-valued-exploration.md), [25](summaries/WP-25-caching-exploration.md) |
 | – | WP-29a–d | Vector-valued: SG, DSG, interpolation, Python | accepted (10-30/31) | scalar 0.995–1.002x; m = 32: SG 1.29–2.68x, DSG 1.96–2.96x, interp 1.25–2.12x, interplin 1.21–1.59x, Python 16 t 24–31x; m = 1 0.66–1.01x | [a](summaries/WP-29a-vector-sg-quadrature.md) [b](summaries/WP-29b-vector-dsg-quadrature.md) [c](summaries/WP-29c-vector-interpolation.md) [d](summaries/WP-29d-vector-python-bindings.md) |
 | – | WP-26 | Caching in memory (`CachedSourceFunc` / `CachedVectorSourceFunc`, virtual hook, Python) | accepted (11-01) | e2e 1.001x, memory 1.002; hook micro b1 d20 0.981 (→ WP-17); 1 µs fn warm 6.6–14.8x; Python warm 1309–2505x | [WP-26](summaries/WP-26-caching-in-memory.md) |
-| – | WP-28 | Caching: disk tier (LMDB; `CachePolicy` MemoryOnly / TemporaryStorage / PersistentStorage) | accepted (11-02; + owner's refactoring, re-check fixes) | e2e 1.000x (re-check 1.002x), memory 1.004, refcheck OK; persistent warm, 1 µs fn: cc d5 9.0x / 1.6x (1 / 16 t), d20 16 t 0.44x (serial load) | [WP-28](summaries/WP-28-caching-disk-tier.md), [re-check](summaries/WP-28-recheck.md) |
-| 1 | WP-40 | Caching: library-free public headers (pimpl / fwd decls) + caching leftovers | ready (owner 11-02) | | |
-| 2 | WP-27 | Caching: adaptive policy | ready (after WP-40; all decisions in-session, owner 11-01) | | |
-| 3 | WP-04 | DSG quadrature: row loop (b0) (+ `TrieNode` 24 → 16 B) | ready (after caching) | | |
-| 4 | WP-17 | Batched source-function evaluation (proposal; + WP-26 hook cost) | ready (after WP-04) | | |
-| 5 | WP-36 | Interpolation operators: exploration (measurement) | ready (before WP-06/07/08/09) | | |
-| 6 | WP-09 | Multi-point interpolation API (proposal) | ready (after WP-36) | | |
-| 7 | WP-06 | Global interpolation: operator overhead | after WP-36 / WP-09 | | |
-| 8 | WP-08 | Linear interpolation: corner loop | after WP-36 / WP-09 | | |
-| 9 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready (after WP-04) | | |
-| 10 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
-| 11 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
-| 12 | WP-07 | Generic barycentric formula: cache the weights | ready (after WP-36) | | |
-| 13 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
-| 14 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
-| 15 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
-| 16 | WP-31 | MI-set cleanups | ready (low) | | |
-| 17 | WP-35 | Flaky time-seeded tests + seed audit (test-only) | ready (low; may move up) | | |
-| 18 | WP-38 | Code hygiene: banner checker + combigrid leftovers | ready (low) | | |
-| 19 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
-| 20 | WP-30 | Vector-valued: small-m optimizations | planned | | |
-| 21 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
-| 22 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it; after WP-27) | | |
+| – | WP-28 | Caching: disk tier (LMDB; `CachePolicy` MemoryOnly / TemporaryStorage / PersistentStorage) | accepted (11-02, ef1e4aaf4; + owner's refactoring, re-check fixes) | e2e 1.000x (re-check 1.002x), memory 1.004, refcheck OK; persistent warm, 1 µs fn: cc d5 9.0x / 1.6x (1 / 16 t), d20 16 t 0.44x (serial load) | [WP-28](summaries/WP-28-caching-disk-tier.md), [re-check](summaries/WP-28-recheck.md) |
+| – | WP-40 | Caching: library-free public headers (fwd decls) + leftovers + micro compaction | accepted (11-02, commit pending) | e2e 0.998x (114 noise), memory 1.005, refcheck OK; umbrella closure 685 → 385 headers, 3 / 3 header checks in 4 configs; micro 827 → 305 cases (build 27.0 → 17.7 s) | [WP-40](summaries/WP-40-caching-headers-micro-compaction.md) |
+| 1 | WP-27 | Caching: adaptive policy | **in progress** (prompt 11-02; all decisions in-session, owner 11-01) | | |
+| 2 | WP-04 | DSG quadrature: row loop (b0) (+ `TrieNode` 24 → 16 B) | ready (after caching) | | |
+| 3 | WP-17 | Batched source-function evaluation (proposal; + WP-26 hook cost) | ready (after WP-04) | | |
+| 4 | WP-36 | Interpolation operators: exploration (measurement) | ready (before WP-06/07/08/09) | | |
+| 5 | WP-09 | Multi-point interpolation API (proposal) | ready (after WP-36) | | |
+| 6 | WP-06 | Global interpolation: operator overhead | after WP-36 / WP-09 | | |
+| 7 | WP-08 | Linear interpolation: corner loop | after WP-36 / WP-09 | | |
+| 8 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready (after WP-04) | | |
+| 9 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
+| 10 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
+| 11 | WP-07 | Generic barycentric formula: cache the weights | ready (after WP-36) | | |
+| 12 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
+| 13 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
+| 14 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
+| 15 | WP-31 | MI-set cleanups | ready (low) | | |
+| 16 | WP-35 | Flaky time-seeded tests + seed audit (test-only) | ready (low; may move up) | | |
+| 17 | WP-38 | Code hygiene: banner checker + combigrid leftovers | ready (low) | | |
+| 18 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
+| 19 | WP-30 | Vector-valued: small-m optimizations | planned | | |
+| 20 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
+| 21 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it; after WP-27) | | |
 
 ## Next action
 
-WP-28 accepted (owner 11-02) with the re-check; the owner commits "Accept WP-28" (code incl. the
-4 fixes, both summaries, `results/WP-28/` incl. `recheck/`, STATUS/PLAN, CLAUDE.md /
-`module-reference.md`; untracked `compile*.sh`, `compile_commands (old).json`: commit or ignore).
-Next: **WP-40** (library-free public caching headers + leftovers), then WP-27. Prompt on the
-owner's go.
+WP-40 accepted (owner 11-02). The owner commits "Accept WP-40: …" (code, new test
+`tests/miscellaneous/cache_file_exception_test.cpp`, summary, `results/WP-40/`, STATUS, PLAN,
+`perf-work` SKILL micro-count fix; untracked `compile*.sh` / `run_benchmarks.py`: commit or
+ignore); the tree must be clean before the session. **WP-27 prompt issued 2026-11-02**
+(adaptive caching; decisions in-session). Next master start: add the WP-40 hash; process the
+WP-27 summary; then WP-04 (owner's order).
 
 ## Open decisions for the owner
 
-- WP-25 cases `micro/cache/disk/flat_*` write `/var/tmp/sgpp_perf_cache_*` files they never delete
-  (none found at the re-check) → fix the cases (if not protected)?
 - WP-09 / WP-17 / WP-18 (after their summaries): adopt the proposed interface or not. WP-18 (before
   its prompt): protected `perf_e2e.cpp:81` / `perf_reference.cpp:136-144` read `tgData.mi`,
   `.coefficient`, `.tensorGrid.*` → proxy keeps the names, or the owner adapts them.
@@ -97,7 +96,7 @@ owner's go.
   runs hit it: WP-29a 2 of 16, WP-28 1 of 15; re-check 0 of ≈ 12).
 - Owner files outdated: CLAUDE.md §5 banner "build fails otherwise" (checker never checks C++,
   WP-38); ANALYSIS.md WP-29c symbol names; SG++ install docs (optional Boost ≥ 1.81 / xxHash ≥ 0.8,
-  LMDB, CI `liblmdb-dev`; `build-and-ci.md` → WP-40); dead `source_function_hook.hpp` if present.
+  LMDB, CI `liblmdb-dev`; `build-and-ci.md` done in WP-40).
 
 ## Do not retry
 
@@ -138,18 +137,19 @@ owner's go.
 ## Re-profiling
 
 Last: RP-3 (2026-10-30; rp-3 = 0c6ecfc4b). Accepted optimizations since: 0. Features (WP-29a–d,
-WP-26, WP-28 accepted 11-02; WP-27, WP-40; scalar 0.995–1.002x) count only if a group changes
+WP-26, WP-28, WP-40 accepted 11-02; WP-27; scalar 0.995–1.002x) count only if a group changes
 ≥ 1.3x or a hot-spot ranking shifts.
 RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another rule-7 trigger.
 
 ## Log
 
-- 2026-11-02 WP-28 re-check processed (e2e 1.002x, refcheck OK, 4 fixes); **WP-28 accepted** by
-  the owner (commit pending). Findings: 32 GiB default kept (doc fixed by the owner); public headers
-  → new WP-40 (before WP-27); `USE_LMDB` = GSL / zlib convention. No RP-4 (features only).
-- 2026-11-01 WP-28 summary processed (PROPOSED; checkpoint 73d6b3ac6). Owner refactored
-  (1e279c1d0) → re-check session issued before the decision; WP-39 planned; no RP-4 (feature).
-  STATUS.md compacted. Owner: all WP-27 decisions in its session → WP-27 ready.
+- 2026-11-02 WP-40 summary processed; **WP-40 accepted** by the owner (e2e 0.998x, memory
+  1.005, refcheck OK; flagged micro SLOWERs = perf_micro binary placement, library alone
+  neutral). `perf-work` SKILL micro count fixed (owner's OK). Follow-ups (cpplint backlog,
+  commented-out `SourceFuncHook` lines) → WP-38. No RP-4 (hygiene). WP-27 prompt issued.
+- 2026-11-02 WP-28 accepted (ef1e4aaf4) after the re-check; WP-40 issued (owner: micro
+  compaction, keep production / `sol` / `none` / disk / flat-file cases); work-session files
+  cleaned up on the owner's request.
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone) → WP-35. Report recurrences.
 
@@ -167,4 +167,4 @@ RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another rule-7 trigge
   (ce575ac0d; decisions 1 B, 2 both, 3 memoryLimit + nShards, 4 same class, 5 Boost.Unordered +
   XXH3, 6 fused `std::fma`; owner's refactoring: virtual `finishOperatorCall()`, dependency header,
   slicing rejected at compile time; hook cost → WP-17); WP-28 issued (disk fields in-session),
-  checkpoint 73d6b3ac6, refactoring 1e279c1d0.
+  checkpoint 73d6b3ac6, refactoring 1e279c1d0 → re-check; owner: all WP-27 decisions in-session.

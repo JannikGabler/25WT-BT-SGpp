@@ -127,16 +127,20 @@ constexpr size_t FOR_ITERATIONS_TO_TASK_QUEUE_PUSH = 100;
 }  // namespace sg_gen_node_lookup
 
 /**
- * TODO: Document
+ * @brief File format of the disk store of the source-function cache
+ * (@c misc::LMDBPointValueStore): the header record (@c misc::lmdb_point_value_store::FileHeader)
+ * in the sub-database @c meta. A file with another magic, version or key scheme is rejected.
  */
 namespace lmdb_point_value_store {
 
+/// Magic bytes at the start of the header ("SGPPCGSF", not null-terminated).
 constexpr char MAGIC[8] = {'S', 'G', 'P', 'P', 'C', 'G', 'S', 'F'};
 /// Format version of the file (records and header).
 constexpr uint32_t VERSION = 1;
 /// Key scheme 1: XXH3-64 of the bit patterns of the point in problem coordinates (the points the
 /// function receives, mapped with tools::mapToDomain).
 constexpr uint32_t KEY_SCHEME = 1;
+/// Key of the header in the sub-database @c meta (with its terminating null byte).
 constexpr char HEADER_KEY[] = "header";
 
 }  // namespace lmdb_point_value_store

@@ -16,15 +16,16 @@
 #include <mutex>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache_config.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
 
 namespace sgpp {
 namespace combigrid {
 
-// namespace misc {
-// class BoostPointValueTable;
-// class LMDBPointValueStore;
-// }  // namespace misc
+// Declared only: their headers (internal) include the optional libraries and depend on the
+// configuration, a public header must not (one class layout in every translation unit).
+namespace misc {
+class BoostPointValueTable;
+class LMDBPointValueStore;
+}  // namespace misc
 
 /**
  * @brief Cache of the values of one source function, keyed by the bit patterns of the points in
@@ -201,8 +202,8 @@ class SourceFuncCache final {
   std::unique_ptr<misc::LMDBPointValueStore> store_;
   /// Table (nullptr until the first lookup or the load of a file); owned by @c ownedTable_.
   std::atomic<misc::BoostPointValueTable*> table_{nullptr};
-  /// Owner of the table (guarded; a shared_ptr, so that the destructor does not need the
-  /// definition of the table, which exists only with the libraries).
+  /// Owner of the table (guarded; a shared_ptr: its deleter is bound where the table is created,
+  /// so no code of this header needs the definition of the table).
   std::shared_ptr<misc::BoostPointValueTable> ownedTable_;
   std::atomic<size_t> operatorCalls_{0};  ///< Finished operator calls.
   /// Lookups of points of another dimension than the table's (storage policies only).

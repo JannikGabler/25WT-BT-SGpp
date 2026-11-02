@@ -173,8 +173,10 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   defines `SGPP_COMBIGRID_LMDB_LINKED`): code that needs them tests its macro
   (`SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE`, `SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE`,
   only in `.cpp` / internal files: it includes `xxhash.h` / `lmdb.h`; else `..._EXCEPTION` holds the
-  reason). Public classes stay unconditional and throw without the library. Force the fallbacks
-  with `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE` / `-DSGPP_COMBIGRID_DISABLE_LMDB_STORE`.
+  reason). Public classes stay unconditional and throw without the library; public headers only
+  forward-declare the table / store (no library header, no configuration-dependent layout; check:
+  `combigrid/perf/results/WP-40/check_public_headers.sh`). Force the fallbacks with
+  `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE` / `-DSGPP_COMBIGRID_DISABLE_LMDB_STORE`.
 - Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
   on `MIVecSGGenInstr`), adaptive policy of the cache (WP-27),
   dimension-wise boundary offsets, Leja nodes.

@@ -1,0 +1,63 @@
+== OMP_NUM_THREADS=1 combigrid/perf/results/WP-26/python_checks.py
+pysgpp: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/lib/pysgpp/__init__.py, OMP_NUM_THREADS=1, cache available: True
+check_results: OK
+check_cross_operator: OK
+check_api: OK
+check_errors: OK
+check_lifetime: OK
+ALL OK
+exit 0
+== OMP_NUM_THREADS=1 combigrid/perf/results/WP-28/python_checks.py
+ok    defaults: MemoryOnly, empty file
+ok    persistent cold run equals the uncached quadrature
+ok    file holds every point after the operator (1985)
+ok    second cache on the locked file raises: SourceFuncCache: '/tmp/sgpp-wp28-py-pdnzr7a3/values.cache' is used by another cache (it is locked)
+ok    reloaded every point
+ok    warm run: same result, no Python call
+ok    clear() keeps the file
+ok    clear(True) empties the file
+ok    another number of outputs raises
+ok    temporary file: /proc/self/fd/5
+ok    temporary storage (memory limit 0): same results
+ok    hits come from disk
+ok    persistent without file raises
+ok    foreign file raises: SourceFuncCache: '/tmp/sgpp-wp28-py-pdnzr7a3/foreign' is no file of a source-function cache
+all checks passed
+exit 0
+== OMP_NUM_THREADS=16 combigrid/perf/results/WP-26/python_checks.py
+pysgpp: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/lib/pysgpp/__init__.py, OMP_NUM_THREADS=16, cache available: True
+check_results: OK
+check_cross_operator: OK
+check_api: OK
+check_errors: OK
+check_lifetime: OK
+ALL OK
+exit 0
+== OMP_NUM_THREADS=16 combigrid/perf/results/WP-28/python_checks.py
+ok    defaults: MemoryOnly, empty file
+ok    persistent cold run equals the uncached quadrature
+ok    file holds every point after the operator (1985)
+ok    second cache on the locked file raises: SourceFuncCache: '/tmp/sgpp-wp28-py-jovz_0t6/values.cache' is used by another cache (it is locked)
+ok    reloaded every point
+ok    warm run: same result, no Python call
+ok    clear() keeps the file
+ok    clear(True) empties the file
+ok    another number of outputs raises
+ok    temporary file: /proc/self/fd/5
+ok    temporary storage (memory limit 0): same results
+ok    hits come from disk
+ok    persistent without file raises
+ok    foreign file raises: SourceFuncCache: '/tmp/sgpp-wp28-py-jovz_0t6/foreign' is no file of a source-function cache
+all checks passed
+exit 0
+== examples
+cached_func_full_sg_quadrature_interpolation.py: exit 0
+extended_const_func_full_sg_interpolation.py: exit 0
+extended_const_func_full_sg_quadrature.py: exit 0
+simple_const_func_full_sg_interpolation.py: exit 0
+simple_const_func_full_sg_quadrature.py: exit 0
+sin_func_full_sg_interpolation.py: exit 0
+sin_func_full_sg_quadrature.py: exit 0
+sin_func_multiindex_vector_sg_interpolation.py: exit 0
+sin_func_multiindex_vector_sg_quadrature.py: exit 0
+vector_func_full_sg_quadrature_interpolation.py: exit 0

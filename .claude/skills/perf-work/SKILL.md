@@ -22,9 +22,13 @@ reference and methodology: `combigrid/perf/README.md` (read it first). `perf.py`
 4. **Functional or interface changes** (public API or observable behavior, results beyond a
    refcheck WARN, new dependencies, compiler flags, build configuration) are not made on your
    own. If the WP turns out to need one: stop before implementing it, finish with status
-   `BLOCKED` and describe the options with their expected gain. Internal helpers in
+   `BLOCKED` and describe the options with their expected gain — unless the prompt quotes the
+   owner's decision for it, or the WP is a feature WP whose prompt says the decisions are made
+   **in the session**: then present the options (pros / cons with numbers, recommendation) to the
+   owner, wait for the decision and record it in the summary. Internal helpers in
    `*_operator` / `tools` / `misc` namespaces may change; keep the Python bindings
-   (`combigrid/build/pysgpp/`) unaffected, and if a bound header changes, say so.
+   (`combigrid/build/pysgpp/`) working: if a header in the umbrella header changes, rebuild with
+   `SG_PYTHON=1` and run the Python checks (CLAUDE.md §7), and say so in the summary.
 5. **Tests first**: tests that pin the current behavior of the code you change are written (or
    identified) and **pass on the unchanged code** before you change it. New code gets new tests.
 6. **Evidence at every level**: L1 micro-benchmark at the optimized spot, L2 phase (`operator`
@@ -40,9 +44,14 @@ reference and methodology: `combigrid/perf/README.md` (read it first). `perf.py`
    `perf.py run/ab/profile` runs. If `envcheck` fails, fix or wait; `--no-envcheck` only for
    exploratory numbers that do not go into the summary. A report with a foreign-CPU-load WARN
    (another process was busy during the measurement) is repeated, not used.
-10. Code style per CLAUDE.md (banner, includes, Doxygen, naming). Efficiency matters: no
-    allocations on hot paths, measure claims, prefer generic designs over special-case dispatch
-    (see the user memories, if available).
+10. Code style per CLAUDE.md (banner, includes, Doxygen, naming, one type per file, methods
+    ≤ 30 lines). Efficiency matters: no allocations on hot paths, measure claims, prefer generic
+    designs over special-case dispatch (see the user memories, if available).
+11. **Environment**: Python other than `perf.py` runs with the repo's `.venv/bin/python` (NumPy,
+    SciPy, SymPy; the system Python has none). Sanitizer / heap-profiler runs and anything that
+    may need several GB run under `systemd-run --user --scope -q -p MemoryMax=8G` (12 GB laptop).
+    Documentation affected by the change (CLAUDE.md, `combigrid/claude/*.md`, Doxygen) is
+    updated by the session; list it under "Change".
 
 ## Steps
 
@@ -63,11 +72,16 @@ reference and methodology: `combigrid/perf/README.md` (read it first). `perf.py`
   pinned, including edge cases (d = 1, boundary offsets 0/1, non-unit domains, empty/size-1
   grids where applicable).
 - `perf.py build debug` then `perf.py test --repeat 3` on the **unchanged** source: must pass.
-  Record which tests pin the behavior.
+  Record which tests pin the behavior. Known flaky (time-seeded, WP-35):
+  `equidistant_nodes/sin_func_random_cube_3D` — rerun alone, report recurrences; any other
+  failure is real.
 
 **2. Micro-benchmark at the spot**
 - Use an existing `micro/...` case or add one to `perf_micro.cpp` (README: "Adding a
   micro-benchmark"). It must compile against the unchanged code.
+- The micro suite has 305 cases (WP-40), most of them feature benchmarks (129 `micro/cache/`,
+  130 vector-valued `*_vec` / `*_scalar_x_m`): **always run micro with `--filter`** (README:
+  "Micro suite composition").
 
 **3. "Before" snapshot**
 - `perf.py build normal`, `perf.py test`, `perf.py snapshot WP-NN-before`.
@@ -82,18 +96,26 @@ reference and methodology: `combigrid/perf/README.md` (read it first). `perf.py`
 
 **5. Verify**
 - Debug: `perf.py build debug`, `perf.py test --repeat 3`.
-- ASan (if memory handling, indexing or lifetimes changed): `perf.py build asan`, `perf.py test`.
+- ASan (if memory handling, indexing or lifetimes changed): `perf.py build asan`, `perf.py test`
+  (memory-capped, rule 11). Concurrency of the cache changed: TSan via
+  `combigrid/perf/results/WP-28/tsan.sh` (README: "Profiling and tools").
+- Configuration-dependent code (optional libraries, `SGPP_COMBIGRID_DISABLE_*`): build and test
+  the fallbacks too (CLAUDE.md §6).
 - Normal: `perf.py build normal`, `perf.py test --repeat 3`,
   `perf.py refcheck --save combigrid/perf/results/WP-NN/refcheck.txt`.
   FAIL → fix (or BLOCKED if inherent); WARN/INFO → keep only if justified, state it.
 
 **6. Measure**
 - `perf.py snapshot WP-NN-after`.
+- Let the machine settle after the last build; micro before e2e (README: "A/B methodology").
 - L1: `perf.py ab micro WP-NN-before WP-NN-after --filter '<spot cases>' --save combigrid/perf/results/WP-NN --name micro`
 - L2+L3: `perf.py ab e2e WP-NN-before WP-NN-after --filter '<relevant cases>' --save combigrid/perf/results/WP-NN --name e2e`
   (relevant = every case that runs the changed code; the prompt names them; if in doubt, the
-  full suite). If CIs are too wide to decide, repeat with `--rounds 8` (more processes help;
-  more samples per process do not).
+  full suite, ≈ 18–23 min). If CIs are too wide to decide, repeat with `--rounds 8` (more
+  processes help; more samples per process do not). The e2e suite uses plain `SourceFunc`
+  only: feature changes (vector values, caching) are judged by their own micro cases plus an
+  e2e A/B that must stay neutral. Small shifts (±3–4 %) of untouched hot loops are code
+  placement (README: "Pitfalls"): check before attributing them.
 - Optional: `perf.py profile` of the main case after the change ("profile shift").
 
 **7. Assess**

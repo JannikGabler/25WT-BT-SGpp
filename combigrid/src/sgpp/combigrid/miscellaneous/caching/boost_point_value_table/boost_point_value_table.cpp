@@ -4,6 +4,7 @@
 // sgpp.sparsegrids.org
 
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_shard.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 
 #ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE
@@ -12,7 +13,6 @@
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_probe.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_equal.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_shard.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp>

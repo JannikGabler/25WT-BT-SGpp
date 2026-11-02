@@ -3,7 +3,10 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
+#include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_file_interface.hpp>
+#include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 
 #ifdef SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE
@@ -21,21 +24,20 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
-#include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/base/exception/file_exception.hpp>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_file_interface.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_read_slot.hpp>
 #include <sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp>
 #include <sgpp/combigrid/miscellaneous/exceptions/cache_file_exception.hpp>
 #include <sgpp/combigrid/tools/caching/lmdb_tools.hpp>
 #include <string>
+#include <vector>
 
-using namespace sgpp::combigrid::tools::lmdb;
 using sgpp::combigrid::misc::lmdb_point_value_store::FileInterface;
 using sgpp::combigrid::misc::lmdb_point_value_store::ReadSlot;
 using sgpp::combigrid::misc::source_func_caching::RecordLayout;
+using sgpp::combigrid::tools::lmdb::lmdbMessage;
 
 namespace sgpp {
 namespace combigrid {
@@ -349,10 +351,6 @@ void LMDBPointValueStore::keepError(const std::string& message) {
 }  // namespace sgpp
 
 #else  // SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE
-
-#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_file_interface.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
-#include "sgpp/base/exception/dependency_exception.hpp"
 
 using sgpp::combigrid::misc::lmdb_point_value_store::FileInterface;
 using sgpp::combigrid::misc::source_func_caching::RecordLayout;

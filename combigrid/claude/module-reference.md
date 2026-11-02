@@ -45,8 +45,13 @@ miscellaneous/         (namespace misc)
                          boost::unordered_flat_set of record ids), Probe, RecordHash (XXH3 stored
                          in the record), RecordEqual; lmdb_point_value_store/: LMDBPointValueStore
                          (disk store of the storage policies, LMDB file) and its parts in
-                         misc::lmdb_point_value_store (FileInterface, FileHeader, ReadSlot);
-                         record_layout.hpp: misc::source_func_caching::RecordLayout
+                         misc::lmdb_point_value_store (FileInterface = its pimpl, FileHeader,
+                         ReadSlot); record_layout.hpp: misc::source_func_caching::RecordLayout.
+                         Library-free headers (WP-40): SourceFuncCache, the table and the store
+                         forward-declare the next layer (table, store; Shard; FileInterface);
+                         only shard, file_interface, read_slot (and tools/caching/lmdb_tools,
+                         dependencies_defines) include Boost.Unordered / xxhash.h / lmdb.h or
+                         test configuration macros, and only .cpp files include those
   exceptions/            CacheFileException (namespace sgpp::combigrid; file_exception owning
                          its message)
   concurrency/           ConcurrentTaskQueue (node-lookup pipeline, commented out), SpinLock

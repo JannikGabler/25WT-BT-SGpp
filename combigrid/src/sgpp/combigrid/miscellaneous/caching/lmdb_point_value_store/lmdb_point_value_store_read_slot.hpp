@@ -4,13 +4,19 @@
 // sgpp.sparsegrids.org
 
 /**
- * TODO: Document
+ * @file lmdb_point_value_store_read_slot.hpp
+ * @brief Reusable read transaction of a @c misc::LMDBPointValueStore.
+ *
+ * Internal header (includes @c lmdb.h; only with
+ * @c SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE).
  */
 #pragma once
 
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 
 #ifdef SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE
+
+#include <lmdb.h>
 
 #include <sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp>
 
@@ -20,10 +26,14 @@ namespace combigrid {
 namespace misc {
 namespace lmdb_point_value_store {
 
-/// A reusable read transaction (reset between lookups).
+/**
+ * @brief A read transaction (@c MDB_RDONLY, @c MDB_NOTLS) that lookups renew and reset, so that
+ * a lookup does not begin a transaction; the lock serializes the lookups of one slot. One cache
+ * line per slot (no false sharing between the slots of different shards).
+ */
 struct alignas(64) ReadSlot {
-  SpinLock lock;
-  MDB_txn* txn = nullptr;
+  SpinLock lock;           ///< Serializes the lookups of the slot.
+  MDB_txn* txn = nullptr;  ///< The transaction (reset while unused).
 };
 
 }  // namespace lmdb_point_value_store

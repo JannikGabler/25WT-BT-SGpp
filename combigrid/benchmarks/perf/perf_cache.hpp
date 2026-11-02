@@ -6,14 +6,15 @@
 /**
  * @file perf_cache.hpp
  * @brief WP-26 micro-benchmarks of the production source-function cache (@c CachedSourceFunc,
- * @c misc::PointValueTable), next to the WP-25 prototypes of perf_cache_proto.hpp (same harness,
- * same configurations, same binary):
+ * @c misc::BoostPointValueTable), next to the WP-25 references of perf_cache_proto.hpp (same
+ * harness, same configurations, same binary):
  * - @c micro/cache/lookup|insert/production/d<d>/n<n>: the production table (XXH3 included)
- *   in the WP-25 table cases (compare with @c sharded_spin, which hashes with an own wyhash);
+ *   in the WP-25 table cases (compare with @c sol, the speed-of-light reference);
  * - @c micro/cache/op/<cfg>/{always,warm}_production/c<ns>: whole operators with a
  *   @c CachedSourceFunc (always: a new cache per call; warm: filled before, for interp /
- *   interplin by a quadrature on the same grid = cross-operator reuse) vs. @c none (plain
- *   @c SourceFunc, registered by perf_cache_proto.hpp);
+ *   interplin by a quadrature on the same grid = cross-operator reuse) vs.
+ *   @c micro/cache/op/<cfg>/none/c<ns> (plain @c SourceFunc: the reference; registered by
+ *   perf_cache_proto.hpp until WP-40);
  * - @c micro/cache/memory/production/...: heap and cache bytes with and without a memory limit;
  * - WP-28, storage policies (only with LMDB, files in @c $SGPP_PERF_CACHE_DIR, else /var/tmp):
  *   @c micro/cache/disk/{write,lookup,load}/<variant>/d<d>/n<n> (throughput of the disk store:
@@ -35,7 +36,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -97,18 +97,21 @@ inline double hitRate(const CacheStatistics& before, const CacheStatistics& afte
              : static_cast<double>(after.hits - before.hits) / static_cast<double>(lookups);
 }
 
-/// @brief An operator with a cached cost-controlled integrand (variant always / warm).
+/// @brief An operator with a cost-controlled integrand: plain (variant none, the reference) or
+/// cached (always / warm).
 inline void addOpCase(Suite& suite, const OpConfig& cfg, const std::string& variant,
                       const double costNs) {
-  const std::string name = "micro/cache/op/" + cfg.name() + "/" + variant + "_production/c" +
+  const std::string name = "micro/cache/op/" + cfg.name() + "/" +
+                           (variant == "none" ? variant : variant + "_production") + "/c" +
                            std::to_string(static_cast<int64_t>(costNs));
   suite.addMicro(name, [=](MicroRun& run) {
     const OpInstance inst(cfg);
     const cache_proto::CostedFunc costed(cfg.integrand, costNs);
+    const SourceFunc plain(costed);
 
     const CachedSourceFunc counting(costed);
     const double cachedResult = inst.run(counting);
-    const double plainResult = inst.run(SourceFunc(costed));
+    const double plainResult = inst.run(plain);
     const CacheStatistics cold = counting.statistics();
     run.setCounter("evals_per_call", static_cast<double>(cold.lookups));
     run.setCounter("distinct", static_cast<double>(cold.entries));
@@ -130,7 +133,9 @@ inline void addOpCase(Suite& suite, const OpConfig& cfg, const std::string& vari
     const CacheStatistics before = warm ? warm->statistics() : CacheStatistics();
 
     run.measure([&]() {
-      if (warm) {
+      if (variant == "none") {
+        doNotOptimize(inst.run(plain));
+      } else if (warm) {
         doNotOptimize(inst.run(*warm));
       } else {
         const CachedSourceFunc fresh(costed);
@@ -168,18 +173,11 @@ inline void addMemoryCase(Suite& suite, const std::string& limitName, const size
 
 #ifdef SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE
 
-/// @brief Directory of the benchmark files ($SGPP_PERF_CACHE_DIR, else /var/tmp: /tmp may be a
-/// RAM file system).
-inline std::string diskBenchDir() {
-  const char* const dir = std::getenv("SGPP_PERF_CACHE_DIR");
-  return (dir != nullptr && dir[0] != '\0') ? dir : "/var/tmp";
-}
-
 /// @brief A benchmark file (removed with its lock file at construction and destruction).
 class BenchFile {
  public:
   explicit BenchFile(const std::string& tag)
-      : path_(diskBenchDir() + "/sgpp-perf-cache-" + std::to_string(getpid()) + "-" + tag) {
+      : path_(cache_proto::diskDir() + "/sgpp-perf-cache-" + std::to_string(getpid()) + "-" + tag) {
     remove();
   }
   ~BenchFile() { remove(); }
@@ -390,6 +388,7 @@ inline void addCacheProductionCases(Suite& suite) {
   }
 
   for (const OpConfig& cfg : cache_proto::opConfigs()) {
+    for (const double cost : {0.0, 100.0, 1000.0}) addOpCase(suite, cfg, "none", cost);
     for (const double cost : {0.0, 1000.0}) {
       addOpCase(suite, cfg, "always", cost);
       addOpCase(suite, cfg, "warm", cost);

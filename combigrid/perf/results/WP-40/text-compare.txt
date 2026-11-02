@@ -1,0 +1,23 @@
+functions: A 767, B 767, common 767, identical 745, changed 22
+  changed (23 -> 23 instructions): sgpp::combigrid::CacheFileException::~CacheFileException()
+  changed (116 -> 114 instructions): sgpp::combigrid::MIVecSGGenInstr::internalGenMIVecWithCoeffs(bool) const [clone .cold]
+  changed (224 -> 226 instructions): sgpp::combigrid::SourceFuncCache::attach(unsigned long) [clone .cold]
+  changed (268 -> 268 instructions): sgpp::combigrid::SourceFuncCache::finishOperatorCall() [clone .cold]
+  changed (447 -> 450 instructions): sgpp::combigrid::interpolateLinear(sgpp::combigrid::SourceFunc const&, sgpp::base::DataVector const&, sgpp::combigrid::SparseGrid const&) [clone ._omp_fn.0]
+  changed (2237 -> 2238 instructions): sgpp::combigrid::misc::CTCoeffTrie::CTCoeffTrie(std::span<sgpp::combigrid::TensorGridCTData const, 18446744073709551615ul>, unsigned long)
+  changed (59 -> 61 instructions): sgpp::combigrid::misc::LMDBPointValueStore::clear() [clone .cold]
+  changed (240 -> 240 instructions): sgpp::combigrid::misc::LMDBPointValueStore::createTemporary(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned lon
+  changed (315 -> 314 instructions): sgpp::combigrid::misc::LMDBPointValueStore::forEachRecord(std::function<void (unsigned long const*)> const&) const
+  changed (286 -> 288 instructions): sgpp::combigrid::misc::LMDBPointValueStore::forEachRecord(std::function<void (unsigned long const*)> const&) const [clone .cold]
+  changed (166 -> 168 instructions): sgpp::combigrid::misc::LMDBPointValueStore::openPersistentFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsigned 
+  changed (139 -> 141 instructions): sgpp::combigrid::misc::LMDBPointValueStore::rethrowError()
+  changed (68 -> 70 instructions): sgpp::combigrid::misc::LMDBPointValueStore::sync() [clone .cold]
+  changed (68 -> 68 instructions): sgpp::combigrid::misc::lmdb_point_value_store::FileInterface::checkSize(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) 
+  changed (251 -> 251 instructions): sgpp::combigrid::misc::lmdb_point_value_store::FileInterface::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsig
+  changed (179 -> 185 instructions): sgpp::combigrid::misc::lmdb_point_value_store::FileInterface::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, unsig
+  changed (151 -> 151 instructions): sgpp::combigrid::misc::lmdb_point_value_store::FileInterface::openDatabases(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > cons
+  changed (100 -> 102 instructions): sgpp::combigrid::misc::lmdb_point_value_store::FileInterface::openDatabases(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > cons
+  changed (75 -> 75 instructions): sgpp::combigrid::misc::lmdb_point_value_store::FileInterface::readHeader(MDB_txn*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>
+  changed (570 -> 575 instructions): sgpp::combigrid::misc::lmdb_point_value_store::FileInterface::readHeader(MDB_txn*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>
+  changed (1036 -> 1052 instructions): sgpp::combigrid::tools::dsg_quadrature::comp1DWeights(sgpp::combigrid::DeltasSparseGrid const&)
+  changed (70 -> 70 instructions): sgpp::combigrid::tools::dsg_quadrature::comp1DWeights(sgpp::combigrid::DeltasSparseGrid const&) [clone .cold]

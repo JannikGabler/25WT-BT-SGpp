@@ -5,32 +5,27 @@
 
 /**
  * @file perf_cache_proto.hpp
- * @brief WP-25 prototypes of a source-function cache (comparison benchmark, not production code).
+ * @brief WP-25 prototypes of a source-function cache kept as references for the production cache
+ * (comparison benchmark, not production code), and the helpers the cache benchmarks share.
  *
- * Everything lives in this header so that all designs are compiled alike (judged flags, LTO):
- * - keys: the bit patterns of the user-domain point (the @c base::DataVector the operators pass to
- *   the user function), hashed with @ref hashPoint (wyhash-style products of independent word
- *   pairs) or with the removed prototype's @c misc::DataVectorHash (copied here as
- *   @ref OldProtoHash; the header was deleted in WP-26);
- * - records: fixed size, @c [hash | d key doubles | m value doubles] (m = 1 for @c SourceFunc,
- *   m outputs for a @c VectorSourceFunc, WP-24), stored in chunked arenas; the hash tables only
- *   hold 4-byte record indices (heterogeneous lookup with a @ref Probe), so the bytes per entry
- *   are 8 (d + m + 1) + index;
- * - tables (all thread-safe for the operators' OpenMP loops): @ref OldProtoTable (the prototype
- *   removed in 6dfcf971a: 256 mutex shards of @c std::unordered_map<DataVector, double>),
- *   @ref ShardedTable (S shards, each a lock + arena + @c boost::unordered_flat_set),
- *   @ref BoostConcurrentTable (@c boost::concurrent_flat_set + concurrent arena),
- *   @ref PhmapTable (@c phmap::parallel_flat_hash_set, only if installed), @ref SolTable
- *   (fixed-capacity lock-free open addressing: speed-of-light reference, no growth),
- *   @ref PerThreadTable (one lock-free table per thread, no sharing: lower bound of a
- *   per-thread-and-merge design within one operator call);
- * - @ref makeCachedSourceFunc: a plain @c SourceFunc whose callable looks the point up before
- *   calling the user function (the "wrapper" design: today's @c SourceFunc and operators stay
- *   unchanged, policy "none" costs nothing), with a run-time bypass mode (adaptive policy
- *   deciding not to cache);
+ * The other WP-25 / WP-26 prototypes (tables oldproto, sharded_mutex, sharded_spin,
+ * sharded_oa_spin, boost_cfs, phmap, perthread; the hashes wy / fnv_proto; the bypass variant)
+ * were decided and removed in WP-40; their results stay in combigrid/perf/results/WP-25/ and
+ * WP-26/. Kept:
+ * - keys: the bit patterns of the user-domain point; records of fixed size,
+ *   @c [hash | d key doubles | m value doubles], in chunked arenas; the tables hold 4-byte
+ *   record indices (heterogeneous lookup with a @ref Probe);
+ * - @ref SolTable (fixed-capacity lock-free open addressing: speed-of-light reference of the
+ *   lookup / insert cases, no growth) and @ref ShardedTable (the design the production table
+ *   implements; used by the flat-file load case);
+ * - @ref hashPoint (wyhash-style, keys of the flat-file records and of perf_cache_counts) and
+ *   @c XXH3 (@c micro/cache/hash/xxh3, the production hash);
  * - @ref CostedFunc: an e2e integrand plus a calibrated dependent FMA chain of configurable
  *   duration; the chain is scaled by 1e-300 and does not change the value (bitwise);
- * - @ref FlatFile: the disk tier as an append-only file of records behind a header.
+ * - @ref OpConfig / @ref OpInstance: the operator configurations of the @c micro/cache/op/...
+ *   cases (perf_cache.hpp);
+ * - @ref FlatFile: a disk tier as an append-only file of records behind a header (comparison for
+ *   the LMDB store, @c micro/cache/disk/{flat_write,flat_write_sync,flat_load,pread_hit}).
  */
 #pragma once
 
@@ -40,14 +35,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// Boost's concurrent containers include <execution>, whose libstdc++ implementation uses TBB
-// (and needs -ltbb) as soon as TBB headers are installed: not needed here.
+// Boost's concurrent containers (perf_cache_counts includes boost::concurrent_flat_set after
+// this header) include <execution>, whose libstdc++ implementation uses TBB (and needs -ltbb) as
+// soon as TBB headers are installed: not needed here.
 #define BOOST_UNORDERED_DISABLE_PARALLEL_ALGORITHMS
 
 #include <algorithm>
 #include <atomic>
 #include <bit>
-#include <boost/unordered/concurrent_flat_set.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <chrono>
 #include <cmath>
@@ -56,10 +51,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <functional>
 #include <memory>
 #include <mutex>
-#include <numeric>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
@@ -72,14 +65,8 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
-
-#if __has_include(<parallel_hashmap/phmap.h>)
-#include <parallel_hashmap/phmap.h>
-#define PERF_CACHE_HAVE_PHMAP 1
-#endif
 
 #if __has_include(<xxhash.h>)
 #define XXH_INLINE_ALL
@@ -128,24 +115,6 @@ inline uint64_t hashPoint(const double* x, const size_t d) {
   const uint64_t last = (k < d) ? bitsOf(x[k]) : 0;
   return mum(acc ^ SECRET3, last ^ SECRET2);
 }
-
-/**
- * @brief The removed prototype's hash @c misc::DataVectorHash (FNV-style combine; header deleted
- * in WP-26): its low byte is independent of the key for dyadic coordinates (all keys in one of
- * 256 shards).
- */
-struct OldProtoHash {
-  size_t operator()(const base::DataVector& v) const noexcept {
-    size_t h = 1469598103934665603ULL;
-    for (const double d : v) {
-      h ^= static_cast<size_t>(bitsOf(d)) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-    }
-    return h;
-  }
-};
-
-/// @brief The removed prototype's hash (@ref OldProtoHash).
-inline uint64_t hashPointFnv(const base::DataVector& x) { return OldProtoHash()(x); }
 
 #ifdef PERF_CACHE_HAVE_XXH3
 inline uint64_t hashPointXxh3(const double* x, const size_t d) {
@@ -313,58 +282,6 @@ Tables. Interface: find(x, hash, out) -> bool, insert(x, hash, value) -> bool (f
 or rejected by the memory limit), size(), bytes() (own accounting).
 *******************************************************************************/
 
-/// @brief The prototype removed in 6dfcf971a (256 mutex shards, node-based map, DataVector keys).
-class OldProtoTable {
- public:
-  static constexpr bool OWN_HASH = true;  // hashes the DataVector itself (as the prototype)
-
-  OldProtoTable(const RecordLayout layout, size_t /*capacityHint*/, size_t memLimit)
-      : layout_(layout), shards_(256), memLimit_(memLimit) {}
-
-  bool find(const base::DataVector& x, uint64_t /*hash*/, double* out) {
-    Shard& s = shards_[OldProtoHash()(x) % shards_.size()];
-    std::lock_guard<std::mutex> guard(s.mutex);
-    const auto it = s.map.find(x);
-    if (it == s.map.end()) return false;
-    out[0] = it->second;
-    return true;
-  }
-
-  bool insert(const base::DataVector& x, uint64_t /*hash*/, const double* value) {
-    Shard& s = shards_[OldProtoHash()(x) % shards_.size()];
-    std::lock_guard<std::mutex> guard(s.mutex);
-    // ~ node (64-byte aligned by base's operator new) + key heap block + bucket pointer
-    const size_t entryBytes = 128 + 8 * layout_.d + 8;
-    if (s.bytes + entryBytes > memLimit_ / shards_.size()) return false;
-    if (!s.map.emplace(x, value[0]).second) return false;
-    s.bytes += entryBytes;
-    return true;
-  }
-
-  size_t size() const {
-    size_t n = 0;
-    for (const Shard& s : shards_) n += s.map.size();
-    return n;
-  }
-
-  /// @brief Largest shard / mean shard size (1 = even distribution of the keys).
-  double shardImbalance() const {
-    size_t largest = 0;
-    for (const Shard& s : shards_) largest = std::max(largest, s.map.size());
-    return static_cast<double>(largest * shards_.size()) / static_cast<double>(size());
-  }
-
- private:
-  struct Shard {
-    std::mutex mutex;
-    std::unordered_map<base::DataVector, double, OldProtoHash> map;
-    size_t bytes = 0;
-  };
-  RecordLayout layout_;
-  std::vector<Shard> shards_;
-  size_t memLimit_;
-};
-
 /**
  * @brief S shards (selected by hash bits 24..), each a lock, an own arena and a
  * @c boost::unordered_flat_set of record indices. The memory limit is split evenly.
@@ -439,207 +356,6 @@ class ShardedTable {
 };
 
 /**
- * @brief WP-26 decision 5: as @ref ShardedTable, but the index of a shard is an own open-addressing
- * table (linear probing, 8-byte slots = 32-bit hash fingerprint | record index + 1, grown at load
- * 3/4 under the shard lock) instead of @c boost::unordered_flat_set. A probe touches a record only
- * on a fingerprint match.
- */
-template <typename Lock>
-class ShardedOATable {
- public:
-  ShardedOATable(const RecordLayout layout, const size_t capacityHint, const size_t memLimit,
-                 const size_t nShards = 64)
-      : layout_(layout), nShards_(nShards), shardMemLimit_(memLimit / nShards) {
-    shards_ = std::make_unique<std::optional<Shard>[]>(nShards);
-    for (size_t s = 0; s < nShards; s++) {
-      shards_[s].emplace(layout);
-      shards_[s]->reserve(capacityHint / nShards + 1);
-    }
-  }
-
-  bool find(const base::DataVector& x, const uint64_t hash, double* out) {
-    Shard& s = shard(hash);
-    std::lock_guard<Lock> guard(s.lock);
-    const uint64_t* record = s.find(Probe{x.data(), hash}, layout_);
-    if (record == nullptr) return false;
-    std::memcpy(out, record + 1 + layout_.d, 8 * layout_.m);
-    return true;
-  }
-
-  bool insert(const base::DataVector& x, const uint64_t hash, const double* value) {
-    Shard& s = shard(hash);
-    std::lock_guard<Lock> guard(s.lock);
-    const Probe p{x.data(), hash};
-    if (s.find(p, layout_) != nullptr) return false;
-    if (s.bytes() + layout_.bytes() > shardMemLimit_) return false;
-    const uint32_t idx = s.arena.allocate();
-    writeRecord(s.arena.record(idx), layout_, x.data(), hash, value);
-    s.add(hash, idx);
-    return true;
-  }
-
-  size_t size() const {
-    size_t n = 0;
-    for (size_t s = 0; s < nShards_; s++) n += shards_[s]->arena.size();
-    return n;
-  }
-
-  size_t bytes() const {
-    size_t n = 0;
-    for (size_t s = 0; s < nShards_; s++) n += shards_[s]->bytes();
-    return n;
-  }
-
- private:
-  struct Shard {
-    explicit Shard(const RecordLayout layout) : arena(layout) {}
-
-    static uint64_t slotOf(const uint64_t hash, const uint32_t idx) {
-      return (hash & 0xffffffff00000000ull) | (static_cast<uint64_t>(idx) + 1);
-    }
-
-    void reserve(const size_t n) {
-      size_t capacity = 16;
-      while (capacity * 3 < n * 4) capacity *= 2;
-      rehash(capacity);
-    }
-
-    const uint64_t* find(const Probe& p, const RecordLayout layout) const {
-      const uint64_t fp = p.hash & 0xffffffff00000000ull;
-      for (size_t i = p.hash & mask;; i = (i + 1) & mask) {
-        const uint64_t slot = slots[i];
-        if (slot == 0) return nullptr;
-        if ((slot & 0xffffffff00000000ull) == fp) {
-          const uint64_t* record = arena.record(static_cast<uint32_t>(slot) - 1);
-          if (recordMatches(record, layout, p)) return record;
-        }
-      }
-    }
-
-    void add(const uint64_t hash, const uint32_t idx) {
-      if ((arena.size()) * 4 > (mask + 1) * 3) rehash(2 * (mask + 1));
-      place(slotOf(hash, idx), hash);
-    }
-
-    void place(const uint64_t slot, const uint64_t hash) {
-      size_t i = hash & mask;
-      while (slots[i] != 0) i = (i + 1) & mask;
-      slots[i] = slot;
-    }
-
-    void rehash(const size_t capacity) {
-      std::unique_ptr<uint64_t[]> old = std::move(slots);
-      const size_t oldCapacity = old ? mask + 1 : 0;
-      slots.reset(new uint64_t[capacity]());
-      mask = capacity - 1;
-      for (size_t i = 0; i < oldCapacity; i++) {
-        if (old[i] != 0) place(old[i], arena.record(static_cast<uint32_t>(old[i]) - 1)[0]);
-      }
-    }
-
-    size_t bytes() const { return arena.allocatedBytes() + 8 * (mask + 1); }
-
-    alignas(64) Lock lock;
-    ChunkedArena arena;
-    std::unique_ptr<uint64_t[]> slots;
-    size_t mask = 0;
-  };
-
-  Shard& shard(const uint64_t hash) { return *shards_[(hash >> 24) & (nShards_ - 1)]; }
-
-  RecordLayout layout_;
-  size_t nShards_;
-  size_t shardMemLimit_;
-  std::unique_ptr<std::optional<Shard>[]> shards_;
-};
-
-/// @brief @c boost::concurrent_flat_set of record indices + a concurrent arena.
-class BoostConcurrentTable {
- public:
-  BoostConcurrentTable(const RecordLayout layout, const size_t capacityHint, const size_t memLimit)
-      : layout_(layout),
-        arena_(layout),
-        set_(capacityHint, IdxHash<ConcurrentArena>{&arena_},
-             IdxEq<ConcurrentArena>{&arena_, layout}),
-        memLimit_(memLimit) {}
-
-  bool find(const base::DataVector& x, const uint64_t hash, double* out) {
-    const uint64_t* record = nullptr;
-    set_.visit(Probe{x.data(), hash}, [&](const uint32_t idx) { record = arena_.record(idx); });
-    if (record == nullptr) return false;
-    std::memcpy(out, record + 1 + layout_.d, 8 * layout_.m);
-    return true;
-  }
-
-  bool insert(const base::DataVector& x, const uint64_t hash, const double* value) {
-    if (set_.contains(Probe{x.data(), hash})) return false;
-    if (bytes() + layout_.bytes() > memLimit_) return false;
-    const uint32_t idx = arena_.allocate();
-    writeRecord(arena_.record(idx), layout_, x.data(), hash, value);
-    if (!set_.insert(idx)) {
-      wasted_.fetch_add(1, std::memory_order_relaxed);  // inserted concurrently by another thread
-      return false;
-    }
-    return true;
-  }
-
-  size_t size() const { return set_.size(); }
-  size_t bytes() const {
-    return arena_.allocatedBytes() +
-           static_cast<size_t>(static_cast<double>(set_.bucket_count()) * (4 + 16.0 / 15));
-  }
-  size_t wasted() const { return wasted_.load(); }
-
- private:
-  RecordLayout layout_;
-  ConcurrentArena arena_;
-  boost::concurrent_flat_set<uint32_t, IdxHash<ConcurrentArena>, IdxEq<ConcurrentArena>> set_;
-  size_t memLimit_;
-  std::atomic<size_t> wasted_{0};
-};
-
-#ifdef PERF_CACHE_HAVE_PHMAP
-/// @brief @c phmap::parallel_flat_hash_set (2^6 submaps, each with a @c std::mutex) of indices.
-class PhmapTable {
- public:
-  PhmapTable(const RecordLayout layout, const size_t capacityHint, const size_t memLimit)
-      : layout_(layout),
-        arena_(layout),
-        set_(capacityHint, IdxHash<ConcurrentArena>{&arena_},
-             IdxEq<ConcurrentArena>{&arena_, layout}),
-        memLimit_(memLimit) {}
-
-  bool find(const base::DataVector& x, const uint64_t hash, double* out) {
-    const uint64_t* record = nullptr;
-    set_.if_contains(Probe{x.data(), hash},
-                     [&](const uint32_t idx) { record = arena_.record(idx); });
-    if (record == nullptr) return false;
-    std::memcpy(out, record + 1 + layout_.d, 8 * layout_.m);
-    return true;
-  }
-
-  bool insert(const base::DataVector& x, const uint64_t hash, const double* value) {
-    if (set_.contains(Probe{x.data(), hash})) return false;
-    if (arena_.allocatedBytes() + layout_.bytes() > memLimit_) return false;
-    const uint32_t idx = arena_.allocate();
-    writeRecord(arena_.record(idx), layout_, x.data(), hash, value);
-    return set_.insert(idx).second;
-  }
-
-  size_t size() const { return set_.size(); }
-  size_t bytes() const { return arena_.allocatedBytes() + set_.capacity() * 5; }
-
- private:
-  RecordLayout layout_;
-  ConcurrentArena arena_;
-  phmap::parallel_flat_hash_set<uint32_t, IdxHash<ConcurrentArena>, IdxEq<ConcurrentArena>,
-                                std::allocator<uint32_t>, 6, std::mutex>
-      set_;
-  size_t memLimit_;
-};
-#endif
-
-/**
  * @brief Speed-of-light reference: fixed capacity (power of two >= 2 * capacityHint), lock-free
  * linear probing over 8-byte slots @c (fingerprint << 32 | index + 1) published with one CAS.
  * No growth: inserts beyond the capacity are rejected.
@@ -703,45 +419,11 @@ class SolTable {
   std::unique_ptr<std::atomic<uint64_t>[]> slots_;
 };
 
-/// @brief One unsynchronized table per OpenMP thread: hits only on points the same thread saw.
-class PerThreadTable {
- public:
-  PerThreadTable(const RecordLayout layout, const size_t capacityHint, const size_t memLimit)
-      : layout_(layout) {
-    const size_t nThreads = static_cast<size_t>(omp_get_max_threads());
-    tables_.reserve(nThreads);
-    for (size_t t = 0; t < nThreads; t++) {
-      tables_.push_back(std::make_unique<ShardedTable<NoLock>>(layout, capacityHint / nThreads,
-                                                               memLimit / nThreads, 1));
-    }
-  }
-
-  bool find(const base::DataVector& x, const uint64_t hash, double* out) {
-    return tables_[omp_get_thread_num()]->find(x, hash, out);
-  }
-  bool insert(const base::DataVector& x, const uint64_t hash, const double* value) {
-    return tables_[omp_get_thread_num()]->insert(x, hash, value);
-  }
-  size_t size() const {
-    size_t n = 0;
-    for (const auto& t : tables_) n += t->size();
-    return n;
-  }
-
- private:
-  struct NoLock {
-    void lock() {}
-    void unlock() {}
-  };
-  RecordLayout layout_;
-  std::vector<std::unique_ptr<ShardedTable<NoLock>>> tables_;
-};
-
 /*******************************************************************************
-Cached source function (wrapper design)
+Counters and table hashing
 *******************************************************************************/
 
-/// @brief Hit / miss statistics of a cached source function (padded per-thread counters).
+/// @brief Padded per-thread lookup / hit counters (perf_cache_counts).
 struct CacheStats {
   struct alignas(64) PerThread {
     uint64_t lookups = 0;
@@ -761,10 +443,6 @@ struct CacheStats {
   }
 };
 
-/**
- * @brief Wraps @p func into a plain @c SourceFunc that looks every point up in @p table first.
- * @p bypass (adaptive policy decided not to cache) is read per evaluation and skips the lookup.
- */
 /// @brief Hash passed to the tables (0 for tables that hash the key themselves).
 template <typename Table>
 uint64_t keyHash(const base::DataVector& x) {
@@ -773,27 +451,6 @@ uint64_t keyHash(const base::DataVector& x) {
   } else {
     return hashPoint(x.data(), x.size());
   }
-}
-
-template <typename Table>
-SourceFunc makeCachedSourceFunc(std::function<double(const base::DataVector&)> func,
-                                std::shared_ptr<Table> table, std::shared_ptr<CacheStats> stats,
-                                std::shared_ptr<std::atomic<bool>> bypass = nullptr) {
-  return SourceFunc([func = std::move(func), table = std::move(table), stats = std::move(stats),
-                     bypass = std::move(bypass)](const base::DataVector& x) {
-    if (bypass && bypass->load(std::memory_order_relaxed)) return func(x);
-    CacheStats::PerThread& st = stats->perThread[omp_get_thread_num()];
-    st.lookups++;
-    const uint64_t hash = keyHash<Table>(x);
-    double value;
-    if (table->find(x, hash, &value)) {
-      st.hits++;
-      return value;
-    }
-    value = func(x);
-    table->insert(x, hash, &value);
-    return value;
-  });
 }
 
 /*******************************************************************************
@@ -814,9 +471,9 @@ inline double spinIterationsPerNs() {
     for (int r = 0; r < 3; r++) {
       const auto start = std::chrono::steady_clock::now();
       doNotOptimize(spin(0.5, n));
-      best = std::min(best, std::chrono::duration<double, std::nano>(
-                                std::chrono::steady_clock::now() - start)
-                                .count());
+      best = std::min(
+          best, std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - start)
+                    .count());
     }
     return static_cast<double>(n) / best;
   }();
@@ -853,10 +510,17 @@ struct FlatFileHeader {
   char functionId[64] = {};
 };
 
-/// @brief Minimal POSIX flat-file tier (the format the summary proposes).
+/// @brief Minimal POSIX flat-file tier (the format the summary proposes); the file is removed at
+/// construction and destruction.
 class FlatFile {
  public:
-  FlatFile(const std::string& path, const RecordLayout layout) : path_(path), layout_(layout) {}
+  FlatFile(const std::string& path, const RecordLayout layout) : path_(path), layout_(layout) {
+    std::remove(path_.c_str());
+  }
+  ~FlatFile() { std::remove(path_.c_str()); }
+
+  FlatFile(const FlatFile&) = delete;
+  FlatFile& operator=(const FlatFile&) = delete;
 
   /// @brief Writes header + @p n records from @p records (stride words each), optionally synced.
   double write(const uint64_t* records, const size_t n, const bool sync) const {
@@ -926,10 +590,11 @@ class FlatFile {
   RecordLayout layout_;
 };
 
-/// @brief Directory for disk-tier measurements (on the SSD, not tmpfs).
+/// @brief Directory of the benchmark files: @c $SGPP_PERF_CACHE_DIR, else /var/tmp (on the
+/// SSD; /tmp may be a RAM file system).
 inline std::string diskDir() {
-  const char* env = std::getenv("PERF_CACHE_DIR");
-  return env ? env : "/var/tmp";
+  const char* const dir = std::getenv("SGPP_PERF_CACHE_DIR");
+  return (dir != nullptr && dir[0] != '\0') ? dir : "/var/tmp";
 }
 
 /*******************************************************************************
@@ -982,32 +647,23 @@ inline std::string dn(const size_t nDim, const size_t n) {
   return "d" + std::to_string(nDim) + "/n" + std::to_string(n);
 }
 
+#ifdef PERF_CACHE_HAVE_XXH3
+/// @brief XXH3 (the hash of the production table) over 4096 distinct grid points.
 inline void addHashCases(Suite& suite, const size_t nDim) {
   const size_t nKeys = 4096;
-  auto keys = std::make_shared<std::vector<base::DataVector>>();
-  auto addCase = [&](const std::string& name, auto hashFunc) {
-    suite.addMicro("micro/cache/hash/" + name + "/d" + std::to_string(nDim),
-                   [=](MicroRun& run) {
-                     if (keys->empty()) {
-                       const std::vector<double> flat = distinctGridPoints(nDim, nKeys);
-                       for (size_t i = 0; i < nKeys; i++) {
-                         keys->push_back(pointAt(flat, nDim, i));
-                       }
-                     }
-                     run.setItems(static_cast<double>(nKeys));
-                     run.measure([&]() {
-                       uint64_t acc = 0;
-                       for (const base::DataVector& k : *keys) acc += hashFunc(k);
-                       doNotOptimize(acc);
-                     });
-                   });
-  };
-  addCase("wy", [](const base::DataVector& k) { return hashPoint(k.data(), k.size()); });
-  addCase("fnv_proto", [](const base::DataVector& k) { return hashPointFnv(k); });
-#ifdef PERF_CACHE_HAVE_XXH3
-  addCase("xxh3", [](const base::DataVector& k) { return hashPointXxh3(k.data(), k.size()); });
-#endif
+  suite.addMicro("micro/cache/hash/xxh3/d" + std::to_string(nDim), [=](MicroRun& run) {
+    std::vector<base::DataVector> keys;
+    const std::vector<double> flat = distinctGridPoints(nDim, nKeys);
+    for (size_t i = 0; i < nKeys; i++) keys.push_back(pointAt(flat, nDim, i));
+    run.setItems(static_cast<double>(nKeys));
+    run.measure([&]() {
+      uint64_t acc = 0;
+      for (const base::DataVector& k : keys) acc += hashPointXxh3(k.data(), k.size());
+      doNotOptimize(acc);
+    });
+  });
 }
+#endif
 
 /// @brief Shared input of the lookup / insert cases of one (d, n): keys and their values.
 struct KeySet {
@@ -1067,8 +723,7 @@ size_t unknownSizeHint(const size_t n) {
 constexpr size_t NO_LIMIT = size_t{1} << 62;
 
 template <typename Table>
-void addTableCases(Suite& suite, const std::string& tableName, const size_t nDim,
-                   const size_t n) {
+void addTableCases(Suite& suite, const std::string& tableName, const size_t nDim, const size_t n) {
   const RecordLayout layout{nDim, 1};
 
   suite.addMicro("micro/cache/lookup/" + tableName + "/" + dn(nDim, n), [=](MicroRun& run) {
@@ -1076,13 +731,10 @@ void addTableCases(Suite& suite, const std::string& tableName, const size_t nDim
     const double before = static_cast<double>(heapBytesInUse());
     Table table(layout, unknownSizeHint<Table>(n), NO_LIMIT);  // grown as without a hint
     fillTable(table, *ks);
-    run.setCounter("bytes_per_entry", (static_cast<double>(heapBytesInUse()) - before) /
-                                          static_cast<double>(n));
+    run.setCounter("bytes_per_entry",
+                   (static_cast<double>(heapBytesInUse()) - before) / static_cast<double>(n));
     run.setCounter("entries", static_cast<double>(table.size()));
     run.setCounter("threads", omp_get_max_threads());
-    if constexpr (requires { table.shardImbalance(); }) {
-      run.setCounter("shard_imbalance", table.shardImbalance());
-    }
     // The queried point is hot as in the operators (their scratch point): the keys are read
     // sequentially from a contiguous copy into a per-thread DataVector.
     const size_t nQueries = ks->queryOrder.size();
@@ -1118,19 +770,6 @@ void addTableCases(Suite& suite, const std::string& tableName, const size_t nDim
       doNotOptimize(table.size());
     });
   });
-}
-
-/// @brief All tables for one (d, n), so that consecutive cases share the key set.
-inline void addTableCaseSet(Suite& suite, const size_t nDim, const size_t n) {
-  addTableCases<OldProtoTable>(suite, "oldproto", nDim, n);
-  addTableCases<ShardedTable<std::mutex>>(suite, "sharded_mutex", nDim, n);
-  addTableCases<ShardedTable<SpinLock>>(suite, "sharded_spin", nDim, n);
-  addTableCases<ShardedOATable<SpinLock>>(suite, "sharded_oa_spin", nDim, n);
-  addTableCases<BoostConcurrentTable>(suite, "boost_cfs", nDim, n);
-#ifdef PERF_CACHE_HAVE_PHMAP
-  addTableCases<PhmapTable>(suite, "phmap", nDim, n);
-#endif
-  addTableCases<SolTable>(suite, "sol", nDim, n);
 }
 
 /*******************************************************************************
@@ -1191,89 +830,14 @@ struct OpInstance {
   }
 };
 
-/**
- * @brief Variants: @c none (plain SourceFunc), @c always (fresh cache per operator call),
- * @c warm (cache filled before: by the same operator for quadrature = second run / persistent
- * load, by a quadrature on the same grid for interp / interplin = cross-operator reuse),
- * @c bypass (wrapper in bypass mode: adaptive policy that decided not to cache).
- */
-template <typename Table>
-void addOpCase(Suite& suite, const OpConfig& cfg, const std::string& variant,
-               const std::string& tableName, const double costNs) {
-  const std::string name = "micro/cache/op/" + cfg.name() + "/" + variant +
-                           (variant == "none" ? "" : "_" + tableName) + "/c" +
-                           std::to_string(static_cast<int64_t>(costNs));
-  suite.addMicro(name, [=](MicroRun& run) {
-    const OpInstance inst(cfg);
-    const CostedFunc costed(cfg.integrand, costNs);
-    const SourceFunc plain(costed);
-    const RecordLayout layout{cfg.nDim, 1};
-
-    // Counts of one call: evaluations and distinct points (cache without limit, 1 table)
-    auto countStats = std::make_shared<CacheStats>();
-    auto countTable = std::make_shared<ShardedTable<SpinLock>>(layout, 0, NO_LIMIT);
-    const double cachedResult = inst.run(makeCachedSourceFunc(costed, countTable, countStats));
-    const double plainResult = inst.run(plain);
-    run.setCounter("evals_per_call", static_cast<double>(countStats->lookups()));
-    run.setCounter("distinct", static_cast<double>(countTable->size()));
-    run.setCounter("bitwise_equal_or_1thread_only",
-                   (omp_get_max_threads() > 1) ? -1.0 : (cachedResult == plainResult ? 1.0 : 0.0));
-    run.setCounter("threads", omp_get_max_threads());
-    run.setItems(static_cast<double>(countStats->lookups()));
-
-    std::shared_ptr<Table> warmTable;
-    if (variant == "warm") {
-      warmTable = std::make_shared<Table>(layout, countTable->size(), NO_LIMIT);
-      auto st = std::make_shared<CacheStats>();
-      if (cfg.op == "interp" || cfg.op == "interplin") {
-        inst.runQuadrature(makeCachedSourceFunc(costed, warmTable, st));
-      } else {
-        inst.run(makeCachedSourceFunc(costed, warmTable, st));
-      }
-    }
-
-    auto stats = std::make_shared<CacheStats>();
-    auto bypass = std::make_shared<std::atomic<bool>>(true);
-    run.measure([&]() {
-      if (variant == "none") {
-        doNotOptimize(inst.run(plain));
-      } else if (variant == "bypass") {
-        auto table = std::make_shared<Table>(layout, 0, NO_LIMIT);
-        doNotOptimize(inst.run(makeCachedSourceFunc(costed, table, stats, bypass)));
-      } else if (variant == "always") {
-        auto table = std::make_shared<Table>(layout, 0, NO_LIMIT);
-        doNotOptimize(inst.run(makeCachedSourceFunc(costed, table, stats)));
-      } else {
-        doNotOptimize(inst.run(makeCachedSourceFunc(costed, warmTable, stats)));
-      }
-    });
-    if (stats->lookups() > 0) {
-      run.setCounter("hit_rate",
-                     static_cast<double>(stats->hits()) / static_cast<double>(stats->lookups()));
-    }
-  });
-}
-
 inline std::vector<OpConfig> opConfigs() {
   // ~1e5 evaluations per call (a 1 us integrand then takes ~0.1 s per call at 1 thread)
   return {
-      {"quad", "cc", uqIntegrand, 0, 5, 4, 0},     {"quad", "equi", expSum, 1, 20, 3, 0},
-      {"quad", "equi", expSum, 0, 2, 11, 0},       {"quad", "equi", expSum, 1, 10, 4, 0},
-      {"dsgquad", "cc", uqIntegrand, 0, 5, 5, 0},  {"interp", "cc", cosProd, 0, 5, 3, 8},
+      {"quad", "cc", uqIntegrand, 0, 5, 4, 0},    {"quad", "equi", expSum, 1, 20, 3, 0},
+      {"quad", "equi", expSum, 0, 2, 11, 0},      {"quad", "equi", expSum, 1, 10, 4, 0},
+      {"dsgquad", "cc", uqIntegrand, 0, 5, 5, 0}, {"interp", "cc", cosProd, 0, 5, 3, 8},
       {"interplin", "equi", cosProd, 1, 8, 3, 8},
   };
-}
-
-template <typename Table>
-void addOpCases(Suite& suite, const std::string& tableName, const bool withNone) {
-  for (const OpConfig& cfg : opConfigs()) {
-    for (const double cost : {0.0, 100.0, 1000.0}) {
-      if (withNone) addOpCase<Table>(suite, cfg, "none", tableName, cost);
-      addOpCase<Table>(suite, cfg, "always", tableName, cost);
-      addOpCase<Table>(suite, cfg, "warm", tableName, cost);
-    }
-    if (withNone) addOpCase<Table>(suite, cfg, "bypass", tableName, 0.0);
-  }
 }
 
 /*******************************************************************************
@@ -1295,19 +859,19 @@ inline void addDiskCases(Suite& suite, const size_t nDim, const size_t n) {
     }
     return records;
   };
-  const std::string path = diskDir() + "/sgpp_perf_cache_" + std::to_string(nDim) + "_" +
-                           std::to_string(n) + ".bin";
+  const std::string path = diskDir() + "/sgpp-perf-cache-" + std::to_string(getpid()) + "-flat-" +
+                           std::to_string(nDim) + "-" + std::to_string(n) + ".bin";
 
   for (const bool sync : {false, true}) {
-    suite.addMicro(std::string("micro/cache/disk/flat_write") + (sync ? "_sync/" : "/") +
-                       dn(nDim, n),
-                   [=](MicroRun& run) {
-                     const auto recs = getRecords();
-                     const FlatFile file(path, layout);
-                     run.setItems(static_cast<double>(n));
-                     run.setCounter("bytes_per_record", static_cast<double>(layout.bytes()));
-                     run.measure([&]() { doNotOptimize(file.write(recs->data(), n, sync)); });
-                   });
+    suite.addMicro(
+        std::string("micro/cache/disk/flat_write") + (sync ? "_sync/" : "/") + dn(nDim, n),
+        [=](MicroRun& run) {
+          const auto recs = getRecords();
+          const FlatFile file(path, layout);
+          run.setItems(static_cast<double>(n));
+          run.setCounter("bytes_per_record", static_cast<double>(layout.bytes()));
+          run.measure([&]() { doNotOptimize(file.write(recs->data(), n, sync)); });
+        });
   }
 
   suite.addMicro("micro/cache/disk/flat_load/" + dn(nDim, n), [=](MicroRun& run) {
@@ -1359,17 +923,16 @@ inline void addDiskCases(Suite& suite, const size_t nDim, const size_t n) {
 Registration
 *******************************************************************************/
 
+/// @brief The reference cases: hash xxh3, tables sol, the flat-file disk tier (the op cases
+/// incl. @c none are registered by perf_cache.hpp).
 inline void addCacheProtoCases(Suite& suite) {
+#ifdef PERF_CACHE_HAVE_XXH3
   for (const size_t nDim : {2, 5, 10, 20}) addHashCases(suite, nDim);
+#endif
 
   for (const size_t nDim : {2, 10, 20}) {
-    for (const size_t n : {10'000, 1'000'000}) addTableCaseSet(suite, nDim, n);
+    for (const size_t n : {10'000, 1'000'000}) addTableCases<SolTable>(suite, "sol", nDim, n);
   }
-
-  addOpCases<ShardedTable<SpinLock>>(suite, "sharded_spin", true);
-  addOpCases<BoostConcurrentTable>(suite, "boost_cfs", false);
-  addOpCases<OldProtoTable>(suite, "oldproto", false);
-  addOpCases<PerThreadTable>(suite, "perthread", false);
 
   for (const size_t nDim : {2, 10, 20}) addDiskCases(suite, nDim, 1'000'000);
 }

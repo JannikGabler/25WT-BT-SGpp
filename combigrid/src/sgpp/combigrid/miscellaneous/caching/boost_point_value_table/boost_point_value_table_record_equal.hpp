@@ -2,6 +2,11 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+
+/**
+ * @file boost_point_value_table_record_equal.hpp
+ * @brief Equality of the record indices in the index of a @c misc::BoostPointValueTable.
+ */
 #pragma once
 
 #include <cstdint>

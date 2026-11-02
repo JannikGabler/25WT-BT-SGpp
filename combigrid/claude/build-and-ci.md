@@ -32,6 +32,25 @@ On-demand reference for [CLAUDE.md](../../CLAUDE.md). The everyday commands are 
   otherwise O(n²). Eigen wins if both are set (FFT 1.2–3.7× faster). Checked in
   [base/SConscript](../../base/SConscript) (adds `-DUSE_EIGEN` / `-DUSE_ARMADILLO`); the code checks
   these macros, never `__has_include`.
+- Source-function cache (`SourceFuncCache`, `CachedSourceFunc`, `CachedVectorSourceFunc`; always
+  compiled, its constructors throw `base::dependency_exception` with the reason if a library is
+  missing):
+  - point table (every policy): Boost ≥ 1.81 (Boost.Unordered) + xxHash ≥ 0.8, both header-only;
+    detected in the preprocessor only
+    ([dependencies_defines.hpp](../src/sgpp/combigrid/tools/defines/dependencies_defines.hpp),
+    `__has_include` + version macros), no SCons variable.
+  - storage policies (`TemporaryStorage`, `PersistentStorage`): LMDB ≥ 0.9.14 (+ POSIX).
+    `USE_LMDB` follows the convention of `USE_GSL` / `USE_ZLIB` (owner's decision 2026-11-02):
+    `detectLMDB` ([SGppConfigure.py](../../site_scons/SGppConfigure.py)) always runs, links
+    `-llmdb` and defines `SGPP_COMBIGRID_LMDB_LINKED` for every module when it finds `liblmdb` +
+    `lmdb.h` (default `USE_LMDB=0` does not disable it); `USE_LMDB=1` aborts the configure step if
+    LMDB is missing. `dependencies_defines.hpp` then checks the header and the version.
+  - Fallbacks (the stubs that throw): `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE` and / or
+    `-DSGPP_COMBIGRID_DISABLE_LMDB_STORE`.
+  - Only `.cpp` files and internal headers include `dependencies_defines.hpp` (and thus `xxhash.h`,
+    `lmdb.h`, Boost.Unordered); the public headers forward-declare the table and the store, so
+    user code needs none of these libraries and sees the same class layouts in every
+    configuration. Check: `bash combigrid/perf/results/WP-40/check_public_headers.sh`.
 - `USE_DAKOTA=1`: declared combigrid-only, described in
   [combigrid/doc/doxygen/install_dakota.doxy](../doc/doxygen/install_dakota.doxy), but no use in
   `combigrid/src/` (dormant; unverified whether it is still meant to be wired up).

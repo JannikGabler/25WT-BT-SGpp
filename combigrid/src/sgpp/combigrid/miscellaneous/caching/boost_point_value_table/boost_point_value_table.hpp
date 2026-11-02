@@ -17,8 +17,6 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cache_statistics.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_shard.hpp>
-#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <span>
 #include <vector>
@@ -27,6 +25,14 @@ namespace sgpp {
 namespace combigrid {
 
 namespace misc {
+
+// Declared only: the shard holds the Boost index and depends on the configuration
+// (boost_point_value_table_shard.hpp, included by the implementation).
+namespace boost_point_value_table {
+struct Shard;
+}  // namespace boost_point_value_table
+
+class LMDBPointValueStore;
 
 /**
  * @brief Concurrent table of the records of a @c SourceFuncCache: the values of points, keyed by

@@ -16,7 +16,6 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_file_interface.hpp>
 #include <sgpp/combigrid/miscellaneous/caching/record_layout.hpp>
 #include <span>
 #include <string>
@@ -25,6 +24,12 @@ namespace sgpp {
 namespace combigrid {
 
 namespace misc {
+
+// Declared only (pimpl): the interface holds the LMDB handles and depends on the configuration
+// (lmdb_point_value_store_file_interface.hpp, included by the implementation).
+namespace lmdb_point_value_store {
+struct FileInterface;
+}  // namespace lmdb_point_value_store
 
 /**
  * @brief Disk store of the records of a @c SourceFuncCache (@c CachePolicy::TemporaryStorage
@@ -173,8 +178,8 @@ class LMDBPointValueStore {
   /// @brief Keeps the first error for @ref rethrowError.
   void keepError(const std::string& message);
 
-  std::unique_ptr<lmdb_point_value_store::FileInterface>
-      interface_;                      ///< LMDB environment and handles.
+  /// LMDB environment and handles.
+  std::unique_ptr<lmdb_point_value_store::FileInterface> interface_;
   std::string path_;                   ///< Path of the file.
   std::atomic<bool> full_{false};      ///< Whether no further records fit.
   std::atomic<bool> warned_{false};    ///< Whether the warning was printed.

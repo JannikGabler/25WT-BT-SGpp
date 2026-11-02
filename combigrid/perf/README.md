@@ -23,6 +23,7 @@ combigrid/perf/
   reference/         [protected] reference outputs (reference.jsonl) + tolerances.json
   protected.sha256   [protected] checksum manifest of all protected files
   scripts/perf.py    [protected] the driver (stdlib-only Python)
+  scripts/toolchain.py, scripts/wrappers/   toolchain / flag variants (WP-11, WP-14, WP-20)
   .work/             git-ignored: snapshots, logs, raw runs, profiles, build stamp
 combigrid/benchmarks/perf/   (SCons builds them with the configuration flags, never runs them)
   perf_harness.hpp   [protected] dependency-free harness (sampling, calibration, JSON output)
@@ -30,6 +31,11 @@ combigrid/benchmarks/perf/   (SCons builds them with the configuration flags, ne
   perf_e2e.cpp       [protected] L3 end-to-end pipelines with L2 phase timings, public API only
   perf_reference.cpp [protected] reference outputs, public API only
   perf_micro.cpp     L1 micro-benchmarks of internals (extended/adapted by work packages)
+  perf_cache_proto.hpp    micro/cache/...: WP-25 references (hash xxh3, table sol, flat-file disk
+                          tier) + helpers shared by the cache cases, included by perf_micro
+  perf_cache.hpp          micro/cache/...: production cache incl. disk tier (WP-26, WP-28) and the
+                          plain-SourceFunc reference op/.../none
+  perf_cache_counts.cpp   separate binary: evaluation / hit counts per operator (WP-25)
 ```
 
 Commits before the benchmark move (666b3c601, 2026-10-28; e.g. the baseline commit) have the
@@ -97,8 +103,33 @@ then quadrature); grids `sg` (`SparseGrid`), `dsg` (`DeltasSparseGrid`); integra
 (cheap: one `exp` per evaluation, exposes framework overhead), `uq` (forward-UQ integrand of the
 thesis, Chapter 7), `sin` (product of sines, as the older benchmarks). All grids use the doubling
 growth. Sizes (chosen with boost on): 0.05–7 s per pipeline at 16 threads with boost off; one
-pass over all 38 cases ≈ 70 s. **High
+pass over all 38 cases ≈ 70 s at baseline, ≈ 38 s since RP-3 (2026-10-30). **High
 dimensions have priority** (they run longest): rank by absolute time saved.
+
+The e2e and reference suites are protected and unchanged since the setup: they use plain
+`SourceFunc` (no caching, no vector values), so the judged numbers measure the operators only.
+
+**Micro suite composition**: `perf_micro --list` has 305 cases (WP-40, 2026-11-02; 827 before
+the decided WP-24 / WP-25 prototypes were removed, their results stay in `results/WP-24..26/`):
+- 46 classic hot-spot cases (`micro/{quad,dsg,interp,interplin,quadrule,gen,mivec,tg,
+  sourcefunc,sol}/...` without the `_vec` / `_scalar_x_m` variants);
+- 130 vector-valued production cases `*_vec` / `*_scalar_x_m` (WP-29);
+- 129 `micro/cache/...` cases: production table `lookup|insert/production` vs. the
+  speed-of-light reference `lookup|insert/sol`, `hash/xxh3`, `memory/production`, the operators
+  `op/<cfg>/{none,always_production,warm_production}` and the storage-policy variants
+  `op/<cfg>/{persistent_cold,persistent_warm,temporary_spill,temporary_spill_warm}_production`,
+  the disk store `disk/{write,lookup,load,append}/...` and the flat-file references
+  `disk/{flat_write,flat_write_sync,flat_load,pread_hit}/...` (for an append-only log). The
+  production cases are registered only if Boost ≥ 1.81 and xxHash ≥ 0.8 are found, the disk
+  store and storage-policy cases only with LMDB; the disk cases write files in
+  `$SGPP_PERF_CACHE_DIR`, else `/var/tmp`, and delete them.
+
+**Always pass `--filter`** to `run micro` / `ab micro`: the unfiltered suite runs long and its sum
+of medians is dominated by the caching cases. All 46 classic cases:
+`--filter '^micro/(?!cache/)(?!.*(_vec|_scalar_x_m)/)'` (Python `re.search`; for snapshots before
+WP-40, which still have `micro/vec/`: `'^micro/(?!vec/|cache/)(?!.*(_vec|_scalar_x_m)/)'`); a 30-case
+cross-section for runtime-neutral changes was used by WP-11/13/14 and the WP-28 re-check
+(`results/WP-28/recheck/micro.md`).
 
 Warm runs: every pipeline runs `--warmups` times before the measured samples (first runs pay
 for OpenMP thread creation, page faults and the OpenBLAS thread pool that Armadillo pulls in).
@@ -131,6 +162,9 @@ session: unattended upgrades after a reboot slowed 16-thread runs by 1.6x for 30
 
 Rules: compare against a **fresh "before" snapshot built in the same session** (never against
 old stored numbers: the laptop drifts). Do not build or run anything else while measuring.
+Order: let the machine settle after builds, `calibrate`, then micro, then e2e (micro runs right
+after an e2e A/B were 10–25 % slow). Statistics: the per-round paired t-interval above (a
+bootstrap within rounds gave 18/114 false positives; std instead of MAD likewise rejected).
 Results of a work session go to `combigrid/perf/results/WP-NN/` (`--save`).
 
 ## Peak memory
@@ -148,7 +182,7 @@ and of the benchmark below it still counts as own, not foreign load (`RUSAGE_CHI
 waited-for grandchildren).
 
 - Peaks read as **process floor + case memory**. Floor: `perf_e2e --list` (libraries loaded, no
-  case run) 10.1–10.3 MiB; the smallest cases peak at 11.5–12.2 MiB (+ OpenMP threads, data);
+  case run) 10.1–10.3 MiB at WP-15, 10.4–10.5 MiB since WP-28; the smallest cases peak at 11.5–12.2 MiB (+ OpenMP threads, data);
   22 of the 38 cases stay below 20 MiB, the largest reaches ~1.07 GiB
   (`quad/sg/cc-uq/b0/d2/L20`). Reports print the floor of each snapshot.
 - **Noise**: peaks vary from process to process (presumably thread-dependent malloc arenas):
@@ -223,9 +257,18 @@ It must compile against the unoptimized code (it is part of the "before" snapsho
 
 - `perf` works (`kernel.perf_event_paranoid = 1`, persisted): `perf.py profile`, or
   `perf record -g` / `perf annotate` / `perf stat` directly (set `LD_LIBRARY_PATH` to the
-  snapshot's `lib/`).
+  snapshot's `lib/`). Under LTO most helpers are inlined: `perf script` callchains and
+  `--sort symoff` do not attribute them; use `perf script -F ip,sym,symoff,dso -G` +
+  `addr2line -a -i` as in `results/RP-3/profile_split.py`. libgomp / OpenBLAS shares of
+  millisecond-long processes are thread-pool spin-up, not work.
 - valgrind/callgrind (deterministic instruction counts, 1 thread), heaptrack (allocations),
-  hyperfine are installed. No Google Benchmark, no NumPy (the scripts use the stdlib only).
+  hyperfine are installed. No Google Benchmark. `perf.py` uses the stdlib only; for other Python
+  (NumPy / SciPy / SymPy, pysgpp checks) use the repo's `.venv/` (`.venv/bin/python`; the system
+  Python has no NumPy).
+- Sanitizers: `perf.py build asan` (ASan). ThreadSanitizer for the cache: `bash
+  combigrid/perf/results/WP-28/tsan.sh <out-dir>` (compiles the caching sources directly: update
+  its file list if they move). TySan needs > 12 GB and gives false positives: use
+  `-Wstrict-aliasing` instead.
 - `objdump -dr lib/libsgppcombigrid.so` shows whether helpers are inlined (exported functions go
   through the PLT under `-fPIC` without `-fno-semantic-interposition`; GCC `OPT=1` builds have
   that flag since WP-13, see `configureGNUCompiler` in `site_scons/SGppConfigure.py`).
@@ -242,7 +285,18 @@ It must compile against the unoptimized code (it is part of the "before" snapsho
   to benchmark a build it did not make (build stamp) or a non-`normal` build.
 - Snapshots are copies of `lib/libsgpp{base,combigrid}.so` + perf binaries, run via
   `LD_LIBRARY_PATH`; they stay valid while the working tree changes.
-- The Boost tests seed from the clock; run them several times (`--repeat 3`).
+- The Boost tests seed from the clock; run them several times (`--repeat 3`). Known flaky:
+  `equidistant_nodes/sin_func_random_cube_3D` (near-zero relative tolerance for some seeds, ≈ 1 in
+  15 full runs; WP-35): rerun it alone; report a recurrence in the summary, do not "fix" it in an
+  unrelated WP. Any other failure is real.
+- **Memory caps**: sanitizer and heap-profiler runs (and anything that may need several GB) run
+  under `systemd-run --user --scope -q -p MemoryMax=8G <cmd>`; the laptop has 12 GB and an
+  uncapped run crashed it.
+- **Code placement**: hot loops shift by ±3–4 % with unrelated code changes (op-cache misses,
+  alignment; WP-02, WP-29b/c). Before attributing a small micro shift to a change, check the
+  op-cache misses (`perf stat -e ...`) or an untouched control case; LTO may recompile unchanged
+  code. Generation timings carry ±20 ms page-fault noise. OpenBLAS (via Armadillo) adds
+  +63…+130 ms to each process's first operator call (outside `total`).
 - **`run e2e` runs one process per case** since WP-15 (like `ab`); before, one process ran all
   cases, as when `baseline/e2e_t16.jsonl` was recorded. The suite sum is the same (53.4 vs.
   53.5 s), but a few small cases differ systematically between the two modes:

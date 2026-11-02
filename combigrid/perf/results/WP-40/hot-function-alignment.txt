@@ -1,0 +1,19 @@
+WP-40: addresses of the table hot functions (nm), before / after; all moved by +0x80, same offset mod 64
+== WP-40-before
+00000000000139c2 mod64= 2 sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*) [cl
+0000000000025430 mod64=48 sgpp::combigrid::misc::BoostPointValueTable::hash(double const*, unsigned long)
+0000000000025440 mod64= 0 sgpp::combigrid::misc::BoostPointValueTable::find(double const*, unsigned long, double*)
+0000000000025440 mod64= 0 sgpp::combigrid::misc::BoostPointValueTable::find(double const*, unsigned long, double*) [clone .loc
+0000000000028c90 mod64=16 sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*)
+0000000000028c90 mod64=16 sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*) [cl
+000000000002aa40 mod64= 0 boost::unordered::detail::foa::table_core<boost::unordered::detail::foa::flat_set_types<unsigned int
+000000000002c480 mod64= 0 boost::unordered::detail::foa::table_locator<boost::unordered::detail::foa::group15<boost::unordered
+== WP-40-after
+00000000000139d0 mod64=16 sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*) [cl
+00000000000254b0 mod64=48 sgpp::combigrid::misc::BoostPointValueTable::hash(double const*, unsigned long)
+00000000000254c0 mod64= 0 sgpp::combigrid::misc::BoostPointValueTable::find(double const*, unsigned long, double*)
+00000000000254c0 mod64= 0 sgpp::combigrid::misc::BoostPointValueTable::find(double const*, unsigned long, double*) [clone .loc
+0000000000028d10 mod64=16 sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*)
+0000000000028d10 mod64=16 sgpp::combigrid::misc::BoostPointValueTable::insert(double const*, unsigned long, double const*) [cl
+000000000002aac0 mod64= 0 boost::unordered::detail::foa::table_core<boost::unordered::detail::foa::flat_set_types<unsigned int
+000000000002c500 mod64= 0 boost::unordered::detail::foa::table_locator<boost::unordered::detail::foa::group15<boost::unordered

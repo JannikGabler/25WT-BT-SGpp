@@ -1,0 +1,8 @@
+run 1: compile 16.1 s, link 11.0 s, total 27.1 s
+run 2: compile 16.0 s, link 11.0 s, total 27.0 s
+object: 14846864 bytes; binary: 14438664 bytes (stripped: 1125760 bytes)
+cases: 827
+  micro/cache/: 384
+  micro/vec/:   267
+  *_vec / *_scalar_x_m (WP-29): 130
+  classic: 46

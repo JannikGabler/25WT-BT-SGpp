@@ -7,16 +7,15 @@
 
 #ifdef SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE
 
-#include <fcntl.h>
 #include <lmdb.h>
-#include <sys/file.h>
-#include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
-#include <string>
 
+#include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <sgpp/combigrid/constants.hpp>
+#include <string>
 
 namespace sgpp {
 namespace combigrid {
@@ -28,7 +27,6 @@ std::string lmdbMessage(const std::string& what, const std::string& path, const 
   return "SourceFuncCache: " + what + " '" + path + "': " + mdb_strerror(rc);
 }
 
-/// Map size: the limit, bounded by the free space of the file system plus the existing file.
 size_t mapSize(const size_t storageSpaceLimit, const std::string& directory,
                const size_t existingBytes) {
   const size_t pageSize = static_cast<size_t>(sysconf(_SC_PAGESIZE));

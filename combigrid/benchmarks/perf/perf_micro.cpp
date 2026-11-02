@@ -21,8 +21,11 @@
  */
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
+#include <cstdio>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
@@ -59,7 +62,6 @@
 #include "perf_cache_proto.hpp"
 #include "perf_harness.hpp"
 #include "perf_problems.hpp"
-#include "perf_vector_proto.hpp"
 
 using sgpp::combigrid::CompleteSGGenInstr;
 using sgpp::combigrid::DeltasSparseGrid;
@@ -85,6 +87,54 @@ std::string cfg(const std::string& nodes, const LvlType boundary, const size_t n
                 const LvlType maxLvl) {
   return nodes + "/b" + std::to_string(boundary) + "/d" + std::to_string(nDim) + "/L" +
          std::to_string(maxLvl);
+}
+
+/// Tensor grids processed by a quadrature case: the largest one, or all (allTGs).
+template <typename Grid>
+std::vector<const TensorGridCTData*> selectTGs(const Grid& grid, const bool allTGs) {
+  std::vector<const TensorGridCTData*> tgs;
+  const TensorGridCTData* largest = &*grid.begin();
+  for (const TensorGridCTData& tgData : grid) {
+    if (allTGs) tgs.push_back(&tgData);
+    if (tgData.tensorGrid.nGP() > largest->tensorGrid.nGP()) largest = &tgData;
+  }
+  if (!allTGs) tgs.push_back(largest);
+  return tgs;
+}
+
+/// Output k of the vector integrands: exp(1/2 sum_i s_k x_i) with s_k = 1 + k/64 (output 0 is
+/// perf::expSum). The factor inside the sum keeps the compiler from sharing work between outputs:
+/// an m-output evaluation costs m scalar evaluations.
+double expSumK(const DataVector& x, const size_t k) {
+  const double scale = 1.0 + static_cast<double>(k) / 64.0;
+  double sum = 0.0;
+  for (size_t i = 0; i < x.size(); i++) sum += x[i] * scale;
+  return std::exp(0.5 * sum);
+}
+
+/// Output k of the vector interpolation targets: perf::cosProd shifted by 0.01 k.
+double cosProdK(const DataVector& x, const size_t k) {
+  const double shift = 0.01 * static_cast<double>(k);
+  double result = 1.0;
+  for (size_t i = 0; i < x.size(); i++) {
+    result *= std::cos(1.5 * x[i] + 0.2 * static_cast<double>(i) + shift);
+  }
+  return result;
+}
+
+/// Sets the counters bitwise_equal (1 if vec equals scalars bitwise) and max_ulp (largest
+/// distance in units in the last place) of a case; reports distances above 16 ulp on stderr.
+void compareResults(MicroRun& run, const std::string& name, const std::vector<double>& vec,
+                    const std::vector<double>& scalars) {
+  double maxUlp = 0.0;
+  for (size_t k = 0; k < vec.size(); k++) {
+    const int64_t a = std::bit_cast<int64_t>(vec[k]);
+    const int64_t b = std::bit_cast<int64_t>(scalars[k]);
+    maxUlp = std::max(maxUlp, std::abs(static_cast<double>(a - b)));
+  }
+  if (maxUlp > 16.0) std::fprintf(stderr, "WARN %s: %.0f ulp\n", name.c_str(), maxUlp);
+  run.setCounter("bitwise_equal", (maxUlp == 0.0) ? 1.0 : 0.0);
+  run.setCounter("max_ulp", maxUlp);
 }
 
 template <typename Grid>
@@ -159,7 +209,7 @@ struct VectorQuadSetup {
       : genInstr(maxLvl, nDim) {
     perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
     sg.emplace(genInstr);
-    tgs = perf::vec_proto::selectTGs(*sg, allTGs);
+    tgs = selectTGs(*sg, allTGs);
     for (const TensorGridCTData* tgData : tgs) nGP += static_cast<double>(tgData->tensorGrid.nGP());
   }
 
@@ -178,7 +228,7 @@ struct VectorQuadSetup {
 /**
  * WP-29a: SG quadrature of a vector-valued source function with the production kernels, ns per
  * grid point and output: micro/quad/<kernel>_vec/<cfg>/m<m> (one VectorSourceFunc with the m
- * outputs vec_proto::expSumK) vs. micro/quad/<kernel>_scalar_x_m/<cfg>/m<m> (m scalar runs, one
+ * outputs expSumK) vs. micro/quad/<kernel>_scalar_x_m/<cfg>/m<m> (m scalar runs, one
  * SourceFunc per output); <kernel> = process_tg (largest tensor grid) or process_all_tgs (all,
  * serially, with the combination). Counter max_ulp: vector vs. scalar results per tensor grid.
  */
@@ -193,7 +243,7 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
     cg::misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
     std::vector<SourceFunc> funcs;
     for (size_t k = 0; k < m; k++) {
-      funcs.emplace_back([k](const DataVector& x) { return perf::vec_proto::expSumK(x, k); });
+      funcs.emplace_back([k](const DataVector& x) { return expSumK(x, k); });
     }
 
     run.setItems(s.nGP * static_cast<double>(m));
@@ -215,7 +265,7 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
     cg::misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim(), m);
     const cg::VectorSourceFunc f(
         [](const DataVector& x, std::span<double> out) {
-          for (size_t k = 0; k < out.size(); k++) out[k] = perf::vec_proto::expSumK(x, k);
+          for (size_t k = 0; k < out.size(); k++) out[k] = expSumK(x, k);
         },
         m);
     std::vector<double> tgResult(m), sum(m);
@@ -227,12 +277,12 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
       vecPerTG.insert(vecPerTG.end(), tgResult.begin(), tgResult.end());
       cg::misc::QuadratureScratch scalarScratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
       for (size_t k = 0; k < m; k++) {
-        const SourceFunc fk([k](const DataVector& x) { return perf::vec_proto::expSumK(x, k); });
+        const SourceFunc fk([k](const DataVector& x) { return expSumK(x, k); });
         scalarPerTG.push_back(cg::tools::quadrature::processTensorGrid(
             context, fk, tgData->tensorGrid, scalarScratch));
       }
     }
-    perf::vec_proto::compareResults(run, name, vecPerTG, scalarPerTG);
+    compareResults(run, name, vecPerTG, scalarPerTG);
 
     run.setItems(s.nGP * static_cast<double>(m));
     run.measure([&]() {
@@ -516,7 +566,7 @@ struct VectorDeltaQuadSetup {
 /**
  * WP-29b: DSG quadrature of a vector-valued source function with the production kernels, ns per
  * grid point and output: micro/dsg/<kernel>_vec/<cfg>/m<m> (one VectorSourceFunc with the m
- * outputs vec_proto::expSumK) vs. micro/dsg/<kernel>_scalar_x_m/<cfg>/m<m> (m scalar runs, one
+ * outputs expSumK) vs. micro/dsg/<kernel>_scalar_x_m/<cfg>/m<m> (m scalar runs, one
  * SourceFunc per output); <kernel> = process_delta_tg (largest delta tensor grid, @p stride 0) or
  * process_delta_tgs (every @p stride -th one, cfg suffix /s<stride>: incl. the sub-tries, which
  * the vector run builds once for all outputs). Counter max_ulp: vector vs. scalar results per
@@ -537,7 +587,7 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
     cg::misc::DeltaQuadratureScratch scratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim());
     std::vector<SourceFunc> funcs;
     for (size_t k = 0; k < m; k++) {
-      funcs.emplace_back([k](const DataVector& x) { return perf::vec_proto::expSumK(x, k); });
+      funcs.emplace_back([k](const DataVector& x) { return expSumK(x, k); });
     }
 
     run.setItems(s.nGP * static_cast<double>(m));
@@ -558,7 +608,7 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
     cg::misc::DeltaQuadratureScratch scratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim(), m);
     const cg::VectorSourceFunc f(
         [](const DataVector& x, std::span<double> out) {
-          for (size_t k = 0; k < out.size(); k++) out[k] = perf::vec_proto::expSumK(x, k);
+          for (size_t k = 0; k < out.size(); k++) out[k] = expSumK(x, k);
         },
         m);
     std::vector<double> tgResult(m), sum(m);
@@ -570,12 +620,12 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
       cg::tools::dsg_quadrature::processDeltaTensorGrid(context, f, *tgData, scratch, tgResult);
       vecPerTG.insert(vecPerTG.end(), tgResult.begin(), tgResult.end());
       for (size_t k = 0; k < m; k++) {
-        const SourceFunc fk([k](const DataVector& x) { return perf::vec_proto::expSumK(x, k); });
+        const SourceFunc fk([k](const DataVector& x) { return expSumK(x, k); });
         scalarPerTG.push_back(
             cg::tools::dsg_quadrature::processDeltaTensorGrid(context, fk, *tgData, scalarScratch));
       }
     }
-    perf::vec_proto::compareResults(run, name, vecPerTG, scalarPerTG);
+    compareResults(run, name, vecPerTG, scalarPerTG);
 
     run.setItems(s.nGP * static_cast<double>(m));
     run.measure([&]() {
@@ -654,11 +704,11 @@ void addLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl) {
   });
 }
 
-/// The m scalar functions vec_proto::cosProdK(., k) and the VectorSourceFunc of all of them.
+/// The m scalar functions cosProdK(., k) and the VectorSourceFunc of all of them.
 std::vector<SourceFunc> cosProdScalarFuncs(const size_t m) {
   std::vector<SourceFunc> funcs;
   for (size_t k = 0; k < m; k++) {
-    funcs.emplace_back([k](const DataVector& x) { return perf::vec_proto::cosProdK(x, k); });
+    funcs.emplace_back([k](const DataVector& x) { return cosProdK(x, k); });
   }
   return funcs;
 }
@@ -666,7 +716,7 @@ std::vector<SourceFunc> cosProdScalarFuncs(const size_t m) {
 cg::VectorSourceFunc cosProdVectorFunc(const size_t m) {
   return cg::VectorSourceFunc(
       [](const DataVector& x, std::span<double> out) {
-        for (size_t k = 0; k < out.size(); k++) out[k] = perf::vec_proto::cosProdK(x, k);
+        for (size_t k = 0; k < out.size(); k++) out[k] = cosProdK(x, k);
       },
       m);
 }
@@ -694,7 +744,7 @@ struct VectorInterpSetup {
  * WP-29c: global interpolation of a vector-valued source function with the production kernels
  * on the largest tensor grid (the micro/interp/global_tg configurations), ns per grid point and
  * output: micro/interp/global_tg_vec/<cfg>/m<m> (one VectorSourceFunc with the m outputs
- * vec_proto::cosProdK) vs. micro/interp/global_tg_scalar_x_m/<cfg>/m<m> (m scalar runs). Counter
+ * cosProdK) vs. micro/interp/global_tg_scalar_x_m/<cfg>/m<m> (m scalar runs). Counter
  * max_ulp: vector vs. scalar results.
  */
 void addVectorInterpTG(Suite& suite, const std::string& nodes, const size_t nDim,
@@ -726,7 +776,7 @@ void addVectorInterpTG(Suite& suite, const std::string& nodes, const size_t nDim
       scalars.push_back(
           cg::tools::global_interpolation::processTensorGrid(fk, s.normPoint, *s.tgData, genInstr));
     }
-    perf::vec_proto::compareResults(run, name, result, scalars);
+    compareResults(run, name, result, scalars);
 
     run.setItems(static_cast<double>(s.tgData->tensorGrid.nGP() * m));
     run.measure([&]() {
@@ -776,7 +826,7 @@ void addVectorLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl, co
       scalars.push_back(cg::tools::lin_interpolation::processTensorGrid(fk, s.normPoint, *s.tgData,
                                                                         genInstr, scalarScratch));
     }
-    perf::vec_proto::compareResults(run, name, result, scalars);
+    compareResults(run, name, result, scalars);
 
     run.setItems(nCorners * static_cast<double>(m));
     run.measure([&]() {
@@ -926,9 +976,6 @@ int main(int argc, char** argv) {
   addParetoMaxima(suite, 20, 7, 300);
   addCTCoeffs(suite, 10, 12, 1000);
 
-  // WP-24: vector-valued source functions (prototypes, micro/vec/...)
-  perf::vec_proto::addVectorProtoCases(suite);
-
   // WP-29a: vector-valued SG quadrature, production kernels (the WP-24 configurations)
   for (const size_t m : {1, 2, 4, 8, 32}) {
     addVectorQuad(suite, "equi", 0, 2, 16, false, m);
@@ -956,7 +1003,8 @@ int main(int argc, char** argv) {
     addVectorLinearTG(suite, 10, 5, m);
   }
 
-  // WP-25: source-function cache (prototypes, micro/cache/...)
+  // WP-25: source-function cache, references (micro/cache/{hash,lookup,insert}/..., the
+  // flat-file disk tier; the WP-24 / WP-25 prototypes were removed in WP-40)
   perf::cache_proto::addCacheProtoCases(suite);
 
 #ifdef SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE

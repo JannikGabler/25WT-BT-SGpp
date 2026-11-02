@@ -1,0 +1,93 @@
+closure of sgpp_combigrid.hpp: 685 headers, 72 of them SG++ headers
+FAIL 1: library headers in the public closure:
+  /usr/include/boost/unordered/concurrent_flat_set_fwd.hpp
+  /usr/include/boost/unordered/detail/allocator_constructed.hpp
+  /usr/include/boost/unordered/detail/archive_constructed.hpp
+  /usr/include/boost/unordered/detail/bad_archive_exception.hpp
+  /usr/include/boost/unordered/detail/foa/core.hpp
+  /usr/include/boost/unordered/detail/foa/flat_set_types.hpp
+  /usr/include/boost/unordered/detail/foa/ignore_wshadow.hpp
+  /usr/include/boost/unordered/detail/foa/restore_wshadow.hpp
+  /usr/include/boost/unordered/detail/foa/table.hpp
+  /usr/include/boost/unordered/detail/foa/types_constructibility.hpp
+  /usr/include/boost/unordered/detail/mulx.hpp
+  /usr/include/boost/unordered/detail/narrow_cast.hpp
+  /usr/include/boost/unordered/detail/opt_storage.hpp
+  /usr/include/boost/unordered/detail/serialization_version.hpp
+  /usr/include/boost/unordered/detail/serialize_container.hpp
+  /usr/include/boost/unordered/detail/serialize_tracked_address.hpp
+  /usr/include/boost/unordered/detail/static_assert.hpp
+  /usr/include/boost/unordered/detail/type_traits.hpp
+  /usr/include/boost/unordered/detail/unordered_printers.hpp
+  /usr/include/boost/unordered/unordered_flat_set_fwd.hpp
+  /usr/include/boost/unordered/unordered_flat_set.hpp
+  /usr/include/lmdb.h
+  /usr/include/xxhash.h
+FAIL 2: public headers that test configuration macros:
+  combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_shard.hpp
+  combigrid/src/sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_file_interface.hpp
+  combigrid/src/sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_read_slot.hpp
+  combigrid/src/sgpp/combigrid/tools/defines/dependencies_defines.hpp
+FAIL 3: closure differs with -DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE:
+  26,29d25
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_probe.hpp
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_arena.hpp
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_equal.hpp
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_hash.hpp
+  81,318d76
+  < /usr/include/boost/assert.hpp
+  < /usr/include/boost/assert/source_location.hpp
+  < /usr/include/boost/config/compiler/gcc.hpp
+  < /usr/include/boost/config/detail/cxx_composite.hpp
+  < /usr/include/boost/config/detail/posix_features.hpp
+  < /usr/include/boost/config/detail/select_compiler_config.hpp
+  < /usr/include/boost/config/detail/select_platform_config.hpp
+  < /usr/include/boost/config/detail/select_stdlib_config.hpp
+  < /usr/include/boost/config/detail/suffix.hpp
+  < /usr/include/boost/config/helper_macros.hpp
+  < /usr/include/boost/config.hpp
+  < /usr/include/boost/config/platform/linux.hpp
+  < /usr/include/boost/config/stdlib/libstdcpp3.hpp
+  < /usr/include/boost/config/user.hpp
+FAIL 3: closure differs with -DSGPP_COMBIGRID_DISABLE_LMDB_STORE:
+  33d32
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_read_slot.hpp
+  526d524
+  < /usr/include/fcntl.h
+  533d530
+  < /usr/include/linux/falloc.h
+  535d531
+  < /usr/include/linux/openat2.h
+  540d535
+  < /usr/include/lmdb.h
+  572,573d566
+  < /usr/include/x86_64-linux-gnu/bits/fcntl.h
+  < /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h
+  592d584
+  < /usr/include/x86_64-linux-gnu/bits/openat2.h
+  603d594
+  < /usr/include/x86_64-linux-gnu/bits/stat.h
+  611d601
+  < /usr/include/x86_64-linux-gnu/bits/struct_stat.h
+  635d624
+FAIL 3: closure differs with -DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE -DSGPP_COMBIGRID_DISABLE_LMDB_STORE:
+  26,29d25
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_probe.hpp
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_arena.hpp
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_equal.hpp
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/boost_point_value_table/boost_point_value_table_record_hash.hpp
+  33d28
+  < combigrid/src/sgpp/combigrid/miscellaneous/caching/lmdb_point_value_store/lmdb_point_value_store_read_slot.hpp
+  35d29
+  < combigrid/src/sgpp/combigrid/miscellaneous/concurrency/spin_lock.hpp
+  81,318d74
+  < /usr/include/boost/assert.hpp
+  < /usr/include/boost/assert/source_location.hpp
+  < /usr/include/boost/config/compiler/gcc.hpp
+  < /usr/include/boost/config/detail/cxx_composite.hpp
+  < /usr/include/boost/config/detail/posix_features.hpp
+  < /usr/include/boost/config/detail/select_compiler_config.hpp
+  < /usr/include/boost/config/detail/select_platform_config.hpp
+  < /usr/include/boost/config/detail/select_stdlib_config.hpp
+  < /usr/include/boost/config/detail/suffix.hpp
+  < /usr/include/boost/config/helper_macros.hpp

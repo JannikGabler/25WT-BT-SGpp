@@ -17,39 +17,37 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace cache_file_exception {
-// TODO: Cache design
-
-/// @brief Holds the message; a base class, so that it is constructed before the exception.
-struct MessageHolder {
-  std::string message;
-};
-
-}  // namespace cache_file_exception
-
 /**
  * @brief A @c base::file_exception that owns its message (@c base::file_exception keeps only
  * the pointer it receives, so a composed message would dangle). Caught as
  * @c base::file_exception.
+ *
+ * The base class is constructed before the member that holds the message, so every constructor
+ * points the base's message at the member afterwards.
  */
-class CacheFileException : private cache_file_exception::MessageHolder,
-                           public base::file_exception {
+class CacheFileException : public base::file_exception {
  public:
   /**
    * @brief Creates the exception.
    * @param message Message (copied).
    */
-  explicit CacheFileException(std::string message)
-      : MessageHolder{std::move(message)}, base::file_exception(this->message.c_str()) {}
+  explicit CacheFileException(std::string message) : message_(std::move(message)) {
+    msg = message_.c_str();
+  }
 
   CacheFileException(const CacheFileException& other)
-      : MessageHolder(other), base::file_exception(this->message.c_str()) {}
+      : base::file_exception(other), message_(other.message_) {
+    msg = message_.c_str();
+  }
 
   CacheFileException& operator=(const CacheFileException& other) {
-    message = other.message;
-    msg = message.c_str();
+    message_ = other.message_;
+    msg = message_.c_str();
     return *this;
   }
+
+ private:
+  std::string message_;  ///< The message (@c msg points to it).
 };
 
 }  // namespace combigrid
