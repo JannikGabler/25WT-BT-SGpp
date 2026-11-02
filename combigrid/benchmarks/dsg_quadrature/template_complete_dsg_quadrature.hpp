@@ -23,8 +23,9 @@ namespace combigrid {
 namespace benchmarks {
 namespace dsg_quadrature_benchmark {
 
-template <size_t nDim>
 inline double sinFunc(const sgpp::base::DataVector& x) {
+  const size_t nDim = x.getSize();
+
   double result = 1;
 
   for (size_t i = 0; i < nDim; i++) {
@@ -34,51 +35,57 @@ inline double sinFunc(const sgpp::base::DataVector& x) {
   return result;
 }
 
-template <LvlType maxLvl, size_t nDim>
-double perform(sgpp::combigrid::tools::Benchmarker<double>::BenchmarkerContext& ctx) {
+inline double perform(const size_t nDim, const size_t maxLvl,
+                      sgpp::combigrid::tools::Benchmarker<double>::BenchmarkerContext& ctx) {
   // Source func
-  const SourceFunc sourceFunc(sinFunc<nDim>);
+  const SourceFunc sourceFunc(sinFunc);
 
-  ctx.mark_checkpoint("Creation Source func");
+  ctx.markCheckpoint("Creation Source func");
 
   // SG gen instr
   CompleteSGGenInstr genInstr(maxLvl, nDim);
   genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
 
-  ctx.mark_checkpoint("Creation SG Gen. Instruction");
+  ctx.markCheckpoint("Creation SG Gen. Instruction");
 
   // SG gen
   const DeltasSparseGrid sg(genInstr);
 
-  ctx.mark_checkpoint("DSG Generation");
+  ctx.markCheckpoint("DSG Generation");
 
   // Quadrature
   const double result = quadrature(sourceFunc, sg);
 
-  ctx.mark_checkpoint("DSG Quadrature");
+  ctx.markCheckpoint("DSG Quadrature");
 
   return result;
 }
 
-double compExactSolution(const size_t nDim) { return std::pow(1 - std::cos(1), nDim); }
+inline double compExactSolution(const size_t nDim) { return std::pow(1 - std::cos(1), nDim); }
 
-template <LvlType maxLvl, size_t nDim>
-void run(const size_t nWarmupRuns, const size_t nRuns) {
+inline void startBenchmark(const size_t nDim, const size_t maxLvl, const size_t minWarmupRounds,
+                           const size_t minRounds, const double minWarmupTime,
+                           const double minRunTime) {
   tools::Benchmarker<double> benchmarker;
-  benchmarker.set_warmups(nWarmupRuns);
-  benchmarker.set_runs(nRuns);
-  benchmarker.enable_progress(true);
+  benchmarker.setWarmupRounds(minWarmupRounds);
+  benchmarker.setRounds(minRounds);
+  benchmarker.setMinWarmupTime(minWarmupTime);
+  benchmarker.setMinRunTime(minRunTime);
+  benchmarker.enableProgress(true);
 
-  benchmarker.add_checkpoint("Creation Source func");
-  benchmarker.add_checkpoint("Creation SG Gen. Instruction");
-  benchmarker.add_checkpoint("DSG Generation");
-  benchmarker.add_checkpoint("DSG Quadrature");
+  benchmarker.addCheckpoint("Creation Source func");
+  benchmarker.addCheckpoint("Creation SG Gen. Instruction");
+  benchmarker.addCheckpoint("DSG Generation");
+  benchmarker.addCheckpoint("DSG Quadrature");
 
   benchmarker.setAnalyticalResult(compExactSolution(nDim));
 
-  benchmarker.run(perform<maxLvl, nDim>);
+  benchmarker.run(
+      [nDim, maxLvl](sgpp::combigrid::tools::Benchmarker<double>::BenchmarkerContext& ctx) {
+        return perform(nDim, maxLvl, ctx);
+      });
 
-  benchmarker.print_results();
+  benchmarker.printResults();
 }
 
 }  // namespace dsg_quadrature_benchmark

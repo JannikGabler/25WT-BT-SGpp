@@ -52,9 +52,9 @@ from pathlib import Path
 # ---------------------------------------------------------------------------------------------
 
 MIN_WARMUP_ROUNDS = 1
-MIN_ROUNDS = 3
-MIN_WARMUP_TIME = 15.0  # seconds
-MIN_ROUND_TIME = 45.0  # seconds
+MIN_ROUNDS = 2
+MIN_WARMUP_TIME = 5.0  # seconds
+MIN_ROUND_TIME = 15.0  # seconds
 
 START_LEVEL = 3
 MAX_LEVEL = None  # None: increase until a limit is hit
@@ -65,7 +65,7 @@ RUN_PERF_STAT = True
 LIMIT_MEMORY_OF_RUNTIME_RUN = True
 # The perf execution may take longer than the probe; its time limit is this factor times the max.
 # duration (a failed perf execution is recorded but does not end the dimension)
-PERF_TIMEOUT_FACTOR = 2.0
+PERF_TIMEOUT_FACTOR = 1.1
 # Exported to the benchmark when set (e.g. 8 to restrict OpenMP to 8 threads)
 OMP_NUM_THREADS = None
 
