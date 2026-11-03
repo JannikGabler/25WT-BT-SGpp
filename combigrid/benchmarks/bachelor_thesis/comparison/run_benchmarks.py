@@ -453,7 +453,7 @@ class LevelBenchmark:
         self.console.log_only(f"\n----- d={dimensions} level={level} {phase}: "
                               f"{' '.join(map(str, command))}")
         result = run_command(command, output_path, timeout, self.env)
-        self.console.log_only(result.output)
+        self.console.log_only(self.filter_progress_lines(result.output))
         self.console.log_only(f"----- exit status {result.returncode}"
                               f"{' (timeout)' if result.timed_out else ''}, "
                               f"{format_duration(result.wall_seconds)}")
@@ -462,6 +462,23 @@ class LevelBenchmark:
     def _binary_command(self, dimensions, level, warmup_rounds, rounds, warmup_time, round_time):
         return [str(self.args.binary), str(warmup_rounds), str(rounds),
                 format_number(warmup_time), format_number(round_time), str(dimensions), str(level)]
+
+    def filter_progress_lines(self, text):
+        """Removes Warmup/Run progress lines from the logged output."""
+        progress_pattern = re.compile(
+            r"^\s*(?:Warmup|Run)\s+\d+/\d+,\s*"
+            r"\d+(?:\.\d+)?/\d+(?:\.\d+)?\s*s\s+"
+            r"\(\d+(?:\.\d+)?%\)\s*$"
+        )
+
+        # Some binaries use carriage returns (\r) instead of newlines
+        # to update their progress display.
+        lines = text.replace("\r\n", "\n").replace("\r", "\n").splitlines(keepends=True)
+
+        return "".join(
+            line for line in lines
+            if not progress_pattern.fullmatch(line.rstrip("\n"))
+        )
 
     def _probe(self, dimensions, level, prefix):
         time_path = prefix.with_name(prefix.name + "_probe_time.txt")

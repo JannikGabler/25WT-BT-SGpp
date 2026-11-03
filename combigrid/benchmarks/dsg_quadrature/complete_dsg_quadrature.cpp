@@ -8,7 +8,7 @@ using namespace sgpp::combigrid::benchmarks;
 
 int main(int argc, char* argv[]) {
   if (argc != 7) {
-    std::cerr << "Invalid number of arguments! Received " << (argc - 1) << " but requires 4."
+    std::cerr << "Invalid number of arguments! Received " << (argc - 1) << " but requires 6."
               << std::endl;
     return 1;
   }

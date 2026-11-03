@@ -74,8 +74,8 @@ inline void startBenchmark(const size_t nDim, const size_t maxLvl, const size_t 
 
   benchmarker.addCheckpoint("Creation Source func");
   benchmarker.addCheckpoint("Creation SG Gen. Instruction");
-  benchmarker.addCheckpoint("DSG Generation");
-  benchmarker.addCheckpoint("DSG Quadrature");
+  benchmarker.addCheckpoint("SG Generation");
+  benchmarker.addCheckpoint("SG Quadrature");
 
   benchmarker.setAnalyticalResult(compExactSolution(nDim));
 
