@@ -54,8 +54,8 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 | – | WP-26 | Caching in memory (`CachedSourceFunc` / `CachedVectorSourceFunc`, virtual hook, Python) | accepted (11-01) | e2e 1.001x, memory 1.002; hook micro b1 d20 0.981 (→ WP-17); 1 µs fn warm 6.6–14.8x; Python warm 1309–2505x | [WP-26](summaries/WP-26-caching-in-memory.md) |
 | – | WP-28 | Caching: disk tier (LMDB; `CachePolicy` MemoryOnly / TemporaryStorage / PersistentStorage) | accepted (11-02, ef1e4aaf4; + owner's refactoring, re-check fixes) | e2e 1.000x (re-check 1.002x), memory 1.004, refcheck OK; persistent warm, 1 µs fn: cc d5 9.0x / 1.6x (1 / 16 t), d20 16 t 0.44x (serial load) | [WP-28](summaries/WP-28-caching-disk-tier.md), [re-check](summaries/WP-28-recheck.md) |
 | – | WP-40 | Caching: library-free public headers (fwd decls) + leftovers + micro compaction | accepted (11-02, 08df92b69) | e2e 0.998x (114 noise), memory 1.005, refcheck OK; umbrella closure 685 → 385 headers, 3 / 3 header checks in 4 configs; micro 827 → 305 cases (build 27.0 → 17.7 s) | [WP-40](summaries/WP-40-caching-headers-micro-compaction.md) |
-| – | WP-27 | Caching: adaptive policy (`CachePolicy::Adaptive`: None / MemoryOnly / TemporaryStorage, hit-rate-weighted rules, in-call windows, probes) | accepted (11-03, commit pending) | e2e 0.999x, memory 1.003, refcheck OK; cost-0 fn 0.57–0.86x of plain (vs. "always" 0.07–0.30x); 1 µs fn 0.91–1.03x of "always" | [WP-27](summaries/WP-27-caching-adaptive-policy.md) |
-| 1 | WP-04 | DSG quadrature: row loop (b0) (+ `TrieNode` 24 → 16 B) | ready (caching done) | | |
+| – | WP-27 | Caching: adaptive policy (`CachePolicy::Adaptive`: None / MemoryOnly / TemporaryStorage, hit-rate-weighted rules, in-call windows, probes) | accepted (11-03, 5a1229aab) | e2e 0.999x, memory 1.003, refcheck OK; cost-0 fn 0.57–0.86x of plain (vs. "always" 0.07–0.30x); 1 µs fn 0.91–1.03x of "always" | [WP-27](summaries/WP-27-caching-adaptive-policy.md) |
+| 1 | WP-04 | DSG quadrature: row loop (b0) (+ `TrieNode` 24 → 16 B) | in progress (prompt 11-03) | | |
 | 2 | WP-17 | Batched source-function evaluation (proposal; + WP-26 hook cost) | ready (after WP-04) | | |
 | 3 | WP-36 | Interpolation operators: exploration (measurement) | ready (before WP-06/07/08/09) | | |
 | 4 | WP-09 | Multi-point interpolation API (proposal) | ready (after WP-36) | | |
@@ -81,12 +81,9 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
 ## Next action
 
-WP-27 accepted (owner 11-03). The owner commits "Accept WP-27: …" (code, new files under
-`caching/` and `miscellaneous/caching/adaptive/`, tests `tests/miscellaneous/caching/` and
-`adaptive_cached_source_function_test.cpp`, docs, summary, `results/WP-27/`, STATUS, PLAN;
-untracked `compile*.sh`: commit or ignore); the tree must be clean before the session.
-**Next: WP-04** (DSG b0 row loop; caching block done, owner's order). Prompt held back on the
-owner's request (11-03): write it when the owner says so. Next master start: add the WP-27 hash.
+**WP-04 in progress** (DSG b0 row loop + `TrieNode` 24 → 16 B; prompt issued 11-03). Before the
+session: tree clean (untracked `compile*.sh`: commit or ignore). Next master start: process the
+WP-04 summary; after its acceptance WP-17 (rank 2); RP-4 after 2 accepted optimizations.
 
 ## Open decisions for the owner
 
@@ -156,6 +153,9 @@ RP-4 after 2 accepted optimizations (WP-04, WP-17, …) or another rule-7 trigge
 
 ## Log
 
+- 2026-11-03 (restart) WP-27 hash 5a1229aab. Owner's thesis-benchmark commits 4855d079b, 7ee66925d,
+  d76fd5272 (`benchmarks/{quadrature,dsg_quadrature}` d03–d10, `benchmarker.hpp`, run script;
+  outside the judged suite). No new summary, no RP-4 trigger. **WP-04 prompt issued.**
 - 2026-11-03 WP-40 hash 08df92b69. WP-27 summary processed; **WP-27 accepted** by the owner
   (e2e 0.999x, memory 1.003, refcheck OK; 1 SLOWER `quad/dsg/equi-exp/b0/d3/L16` 0.972 =
   known noisy, plain `SourceFunc` untouched). Follow-ups → WP-41 (thread-weighted disk rule),

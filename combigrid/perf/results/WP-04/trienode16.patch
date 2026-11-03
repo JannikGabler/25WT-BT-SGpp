@@ -1,0 +1,307 @@
+--- a/combigrid/src/sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp
++++ b/combigrid/src/sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp
+@@ -10,6 +10,7 @@
+ #pragma once
+ 
+ #include <cstddef>
++#include <cstdint>
+ #include <limits>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+ #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
+@@ -43,21 +44,29 @@
+   static constexpr std::size_t N_ACCS = 1;
+ 
+   /**
++   * @brief Index type of the projected sub-trie (@ref TrieNode): 32 bits keep a node at 16 bytes.
++   * Bounded by the number of 1D weights (@c tools::dsg_quadrature::comp1DWeights) and of tensor
++   * grids with a non-zero coefficient (@c CTCoeffTrie, which bounds the number of nodes of every
++   * projected depth), which both throw @c std::overflow_error beyond @c 2^32 - 1.
++   */
++  using TrieIdx = std::uint32_t;
++
++  /**
+    * @brief Node of the projected sub-trie.
+    *
+    * For a node of projected depth @c t with level @f$\ell_k@f$, where @f$k@f$ =
+-   * @c projDims[t], @c weights[i] is the weight of the @c i-th delta node of level @f$m_k@f$ in
+-   * the 1D quadrature rule of level @f$\ell_k@f$ (in dimension @f$k@f$). The children of a node
+-   * are a contiguous range of the next projected depth, like in the @c CTCoeffTrie.
++   * @c projDims[t], @c weights1D[weightsOffset + i] is the weight of the @c i-th delta node of
++   * level @f$m_k@f$ in the 1D quadrature rule of level @f$\ell_k@f$ (in dimension @f$k@f$), where
++   * @c weights1D are the flat 1D weights of the call (@c DeltaQuadratureContext::weights1D). The
++   * children of a node are a contiguous range of the next projected depth, like in the
++   * @c CTCoeffTrie.
+    *
+-   * @note 24 bytes. With a 32-bit offset into the flat 1D weights instead of the pointer and a
+-   * 32-bit @c childEnd (16 bytes), the peak memory of the deltas sparse grid quadrature at boundary
+-   * level offset 0 (d = 5-10) was 3.0-3.6 MiB (7-8 %) lower, but its run time 1.5-2.2 % higher
+-   * (one more instruction per access of a child's weight, more register pressure in the row loop).
++   * 16 bytes (with a weight pointer and a 64-bit @c childEnd: 24 bytes).
+    */
+   struct TrieNode {
+-    const double* weights;  ///< 1D weights of the delta nodes of the node's dimension.
+-    std::size_t childEnd;   ///< End of the children in the next projected depth (@c 0 for leaves).
++    /// Start of the 1D weights of the delta nodes of the node's dimension in the flat 1D weights.
++    TrieIdx weightsOffset;
++    TrieIdx childEnd;  ///< End of the children in the next projected depth (@c 0 for leaves).
+     /**
+      * @brief Leaves: the projected coefficient (see @c tools::dsg_quadrature::compSubTrie).
+      * Inner nodes of projected depth @c t >= 1: the sum of @c weights[gpMI[t+1]] * @c coeffSum
+@@ -68,6 +77,8 @@
+     double coeffSum;
+   };
+ 
++  static_assert(sizeof(TrieNode) == 16);
++
+   /**
+    * @brief Slot of the last projected depth while the projected sub-trie is built (see
+    * @ref projChildBlocks): the projected coefficient accumulated so far, as the unevaluated sum
+--- a/combigrid/src/sgpp/combigrid/tools/operators/quadrature/projected_sub_trie_builder.cpp
++++ b/combigrid/src/sgpp/combigrid/tools/operators/quadrature/projected_sub_trie_builder.cpp
+@@ -28,6 +28,7 @@
+ namespace {
+ 
+ using ProjLeafSlot = DeltaQuadratureScratch::ProjLeafSlot;
++using TrieIdx = DeltaQuadratureScratch::TrieIdx;
+ using Weights1DOfDim = FlatNestedVec<double, 3>::const_entry_type;
+ constexpr size_t NO_BLOCK = DeltaQuadratureScratch::NO_BLOCK;
+ 
+@@ -128,8 +129,8 @@
+   const LvlType deltaLvl = deltaTGMI[dim];
+   const auto firstChild = std::ranges::lower_bound(children, deltaLvl, {}, &CTCoeffTrie::Node::lvl);
+ 
+-  const bool isProjDim = (path.nextProjDepth < scratch.projDims.size() &&
+-                          scratch.projDims[path.nextProjDepth] == dim);
++  const bool isProjDim =
++      (path.nextProjDepth < scratch.projDims.size() && scratch.projDims[path.nextProjDepth] == dim);
+   const size_t block = isProjDim ? childBlock(path) : 0;
+   const Weights1DOfDim weights1DOfDim = context.weights1D[dim];
+   const size_t weightIdx = deltaNodesStart(weights1DOfDim, deltaLvl);  // The single delta node
+@@ -207,26 +208,30 @@
+   const size_t width = blockWidth(projDepth, projExcess);
+   const bool isLeafDepth = (projDepth + 1 == scratch.projDims.size());
+   std::vector<DeltaQuadratureScratch::TrieNode>& nodes = scratch.trieNodes[projDepth];
++  const double* const flatWeights1D = context.weights1D.flat().data();
+   bool appended = false;
+ 
+   for (LvlType excess = 0; excess < width; excess++) {
+-    const double* const weights = weights1DOfDim[deltaLvl + excess].data() + weightsStart;
++    // < 2^32: comp1DWeights checks the number of 1D weights
++    const auto weightsOffset = static_cast<TrieIdx>(weights1DOfDim[deltaLvl + excess].data() +
++                                                    weightsStart - flatWeights1D);
+ 
+     if (isLeafDepth) {
+       const ProjLeafSlot& slot = scratch.projLeafSlots[block + excess];
+       const double coeff = slot.hi + slot.lo;
+ 
+       if (coeff != 0.0) {
+-        nodes.push_back({weights, 0, coeff});
++        nodes.push_back({weightsOffset, 0, coeff});
+         appended = true;
+       }
+     } else if (const size_t childBlock = scratch.projChildBlocks[projDepth][block + excess];
+                childBlock != NO_BLOCK) {
+-      nodes.push_back({weights, 0, 0.0});
++      nodes.push_back({weightsOffset, 0, 0.0});
+ 
+       if (appendProjectedChildren(projDepth + 1, childBlock,
+                                   static_cast<LvlType>(projExcess + excess))) {
+-        nodes.back().childEnd = scratch.trieNodes[projDepth + 1].size();
++        // < 2^32: at most one node per tensor grid with a non-zero coefficient (CTCoeffTrie)
++        nodes.back().childEnd = static_cast<TrieIdx>(scratch.trieNodes[projDepth + 1].size());
+         appended = true;
+       } else {  // No non-zero projected coefficient below the slot
+         nodes.pop_back();
+--- a/combigrid/src/sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp
++++ b/combigrid/src/sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp
+@@ -90,6 +90,9 @@
+  * delta level: first the weights of the delta nodes of level 0, then the ones of level 1, ...,
+  * each block in the order of the nodes of the delta tensor grids. Hence the weights of the delta
+  * nodes of level @c m start at index @c weights1D[dim][m-1].size() (at 0 for @c m = 0).
++ *
++ * @throws std::overflow_error if there are more than @c 2^32 - 1 weights in total (the projected
++ * sub-tries address them with 32-bit offsets, see @c misc::DeltaQuadratureScratch::TrieNode).
+  */
+ misc::FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid);
+ 
+@@ -164,6 +167,7 @@
+  * computed per row, see @ref compBlockWeights.)
+  *
+  * @param scratch   Scratch with the projected sub-trie and the node indices @c gpMI.
++ * @param weights1D The flat 1D weights of the call (see @c misc::DeltaQuadratureScratch::TrieNode).
+  * @param maxDepth  Deepest projected depth whose node index changed.
+  *
+  * @note Defined in the header, so that both calls in @ref forEachGPWithGlobalWeight are inlined.
+@@ -173,7 +177,8 @@
+  * 0 about 1 % slower at identical instructions). The loops over the depths and the children
+  * (mostly 1-3 iterations) are not unrolled, see @ref compBlockWeights.
+  */
+-inline void updateCoeffSums(misc::DeltaQuadratureScratch& scratch, const size_t maxDepth) {
++inline void updateCoeffSums(misc::DeltaQuadratureScratch& scratch, const double* const weights1D,
++                            const size_t maxDepth) {
+ #pragma GCC unroll 1
+   for (size_t depth = maxDepth; depth >= 2; depth--) {
+     const GPCntType nodeIdx = scratch.gpMI[depth];
+@@ -185,7 +190,7 @@
+ 
+ #pragma GCC unroll 1
+       for (; childIdx < parent.childEnd; childIdx++) {
+-        sum += children[childIdx].weights[nodeIdx] * children[childIdx].coeffSum;
++        sum += weights1D[children[childIdx].weightsOffset + nodeIdx] * children[childIdx].coeffSum;
+       }
+ 
+       parent.coeffSum = sum;
+@@ -206,6 +211,7 @@
+  * weights (no zero-fill).
+  *
+  * @param scratch   Scratch with the projected sub-trie (partial sums of depth >= 1 up to date).
++ * @param weights1D The flat 1D weights of the call (see @c misc::DeltaQuadratureScratch::TrieNode).
+  * @param nGP0      Number of grid points of a row.
+  * @param firstIdx1 Node index of the projected depth 1 of the first row.
+  * @param nRows     Number of rows; @p nRows * @p nGP0 must not exceed the size of the row weights.
+@@ -217,8 +223,9 @@
+  * unrolling and peeling of loops of unknown, mostly 1-4 iterations added more instructions than
+  * it saved). The results are the same bitwise as with one row at a time.
+  */
+-inline void compBlockWeights(misc::DeltaQuadratureScratch& scratch, const GPCntType nGP0,
+-                             const GPCntType firstIdx1, const GPCntType nRows) {
++inline void compBlockWeights(misc::DeltaQuadratureScratch& scratch, const double* const weights1D,
++                             const GPCntType nGP0, const GPCntType firstIdx1,
++                             const GPCntType nRows) {
+   using TrieNode = misc::DeltaQuadratureScratch::TrieNode;
+   double* const blockWeights = scratch.rowWeights.data();
+   const std::vector<TrieNode>& nodes = scratch.trieNodes[0];
+@@ -235,7 +242,7 @@
+ 
+   for (size_t nodeIdx = 0; nodeIdx < nodes.size(); nodeIdx++) {
+     const TrieNode& node = nodes[nodeIdx];
+-    const double* const weights = node.weights;
++    const double* const weights = weights1D + node.weightsOffset;
+ 
+     for (GPCntType row = 0; row < nRows; row++) {
+       double coeffSum = node.coeffSum;
+@@ -245,7 +252,8 @@
+ 
+ #pragma GCC unroll 1
+         for (size_t childIdx = childBegin; childIdx < node.childEnd; childIdx++) {
+-          coeffSum += children[childIdx].weights[firstIdx1 + row] * children[childIdx].coeffSum;
++          coeffSum += weights1D[children[childIdx].weightsOffset + firstIdx1 + row] *
++                      children[childIdx].coeffSum;
+         }
+       }
+ 
+@@ -296,6 +304,7 @@
+   const size_t* const projDims = scratch.projDims.data();
+   const GPCntType* const gpCntOfProjDepth = scratch.gpCntOfProjDepth.data();
+   const double* const* const nodesOfProjDepth = scratch.nodesOfProjDepth.data();
++  const double* const weights1D = context.weights1D.flat().data();
+   const double* const blockWeights = scratch.rowWeights.data();
+   GPCntType* const gpMI = scratch.gpMI.data();
+   double* const gp = scratch.gp.data();
+@@ -312,12 +321,12 @@
+   const GPCntType maxRowsPerBlock = std::min<GPCntType>(
+       nRowsTotal, static_cast<GPCntType>(scratch.rowWeights.size() / nGPPerRow));
+ 
+-  updateCoeffSums(scratch, nProjDepths - 1);
++  updateCoeffSums(scratch, weights1D, nProjDepths - 1);
+ 
+   while (true) {
+     for (GPCntType firstRow = 0; firstRow < nRowsTotal; firstRow += maxRowsPerBlock) {
+       const GPCntType nRows = std::min(maxRowsPerBlock, nRowsTotal - firstRow);
+-      compBlockWeights(scratch, nGPPerRow, firstRow, nRows);
++      compBlockWeights(scratch, weights1D, nGPPerRow, firstRow, nRows);
+       const double* rowWeights = blockWeights;
+ 
+       for (GPCntType row = firstRow; row < firstRow + nRows; row++) {
+@@ -356,7 +365,7 @@
+       return;
+     }
+ 
+-    updateCoeffSums(scratch, depth);
++    updateCoeffSums(scratch, weights1D, depth);
+   }
+ }
+ 
+--- a/combigrid/src/sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.cpp
++++ b/combigrid/src/sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.cpp
+@@ -20,6 +20,7 @@
+ #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
+ #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+ #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
++#include <sgpp/combigrid/tools/math/checked_narrow.hpp>
+ #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
+ #include <sgpp/combigrid/tools/operators/quadrature/projected_sub_trie_builder.hpp>
+ #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
+@@ -128,6 +129,11 @@
+     }
+   }
+ 
++  // The projected sub-tries address the weights with 32-bit offsets
++  // (DeltaQuadratureScratch::TrieNode)
++  tools::checkedNarrow<misc::DeltaQuadratureScratch::TrieIdx>(
++      weights.flat().size(), "comp1DWeights: more than 2^32 - 1 1D quadrature weights");
++
+   return weights;
+ }
+ 
+--- a/combigrid/tests/operators/quadrature/delta_quadrature_test.cpp
++++ b/combigrid/tests/operators/quadrature/delta_quadrature_test.cpp
+@@ -405,8 +405,8 @@
+  * projected sub-trie that compSubTrie computed into @c data.scratch for the delta tensor grid of
+  * level @p m, in depth-first order. Checks on the way that every inner node has a child (pruned),
+  * that every node of projected depth t with level l_k (k = projDims[t]) points to the weights of
+- * the delta nodes of level m_k in the rule of level l_k, and that the child ranges of each
+- * projected depth partition the next one.
++ * the delta nodes of level m_k in the rule of level l_k (offset into the flat 1D weights), and that
++ * the child ranges of each projected depth partition the next one.
+  */
+ std::vector<MIWithCoeff> subTrieLeaves(const DeltaQuadratureData& data, const LvlMI& m) {
+   const std::vector<size_t>& projDims = data.scratch.projDims;
+@@ -426,7 +426,10 @@
+           // Level of the node: the one whose weights the node points to
+           std::optional<LvlType> lvl;
+           for (LvlType l = m[dim]; l < weightsOfDim.size(); l++) {
+-            if (nodes[idx].weights == weightsOfDim[l].data() + deltaStart) lvl = l;
++            if (data.weights1D.flat().data() + nodes[idx].weightsOffset ==
++                weightsOfDim[l].data() + deltaStart) {
++              lvl = l;
++            }
+           }
+           BOOST_REQUIRE(lvl.has_value());
+ 
+--- a/combigrid/tests/tools/math/checked_narrow_test.cpp
++++ b/combigrid/tests/tools/math/checked_narrow_test.cpp
+@@ -6,7 +6,7 @@
+ /**
+  * @file checked_narrow_test.cpp
+  * @brief Boost.Test cases for @c tools::checkedNarrow, the bound of the 32-bit indices of the
+- * construction of the @c misc::CTCoeffTrie.
++ * delta quadrature tries (@c misc::DeltaQuadratureScratch::TrieNode, @c misc::CTCoeffTrie).
+  */
+ 
+ #define BOOST_TEST_DYN_LINK
+@@ -16,10 +16,13 @@
+ #include <cstddef>
+ #include <cstdint>
+ #include <limits>
++#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
+ #include <sgpp/combigrid/tools/math/checked_narrow.hpp>
+ #include <stdexcept>
+ #include <string>
++#include <type_traits>
+ 
++using sgpp::combigrid::misc::DeltaQuadratureScratch;
+ using sgpp::combigrid::tools::checkedNarrow;
+ 
+ BOOST_AUTO_TEST_SUITE(checked_narrow)
+@@ -49,4 +52,10 @@
+   }
+ }
+ 
++BOOST_AUTO_TEST_CASE(Trie_Nodes_Use_32_Bit_Indices) {
++  // The index type whose bound comp1DWeights and CTCoeffTrie check, and the node size it gives
++  static_assert(std::is_same_v<DeltaQuadratureScratch::TrieIdx, std::uint32_t>);
++  BOOST_CHECK_EQUAL(sizeof(DeltaQuadratureScratch::TrieNode), size_t{16});
++}
++
+ BOOST_AUTO_TEST_SUITE_END()

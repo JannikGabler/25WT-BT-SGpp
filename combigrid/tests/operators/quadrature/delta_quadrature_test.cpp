@@ -620,8 +620,12 @@ class BruteForceGlobalWeights {
     }
   }
 
-  double operator()(const DataVector& point) const {
+  double operator()(const DataVector& point) const { return withMagnitude(point).first; }
+
+  /// The global weight of @p point and the sum of |c_l * w_l(point)| (the scale of its round-off).
+  std::pair<double, double> withMagnitude(const DataVector& point) const {
     double result = 0.0;
+    double magnitude = 0.0;
 
     for (const TG& tg : tgs) {
       double weight = tg.coeff;
@@ -633,9 +637,10 @@ class BruteForceGlobalWeights {
       }
 
       result += weight;
+      magnitude += std::abs(weight);
     }
 
-    return result;
+    return {result, magnitude};
   }
 
  private:
@@ -1010,6 +1015,68 @@ BOOST_AUTO_TEST_SUITE_END()
 /*****************
 Internal operations
 *****************/
+
+namespace {
+
+/**
+ * Checks the global weights that forEachGPWithGlobalWeight computes for every grid point of every
+ * delta tensor grid of the sparse grid of @p genInstr against the brute-force sum over the regular
+ * tensor grids, and that they sum up to the brute-force sum of all global weights, 1 (the sum
+ * of the coefficients).
+ */
+void checkGlobalWeightsOfDeltaTGs(const SGGenInstr& genInstr) {
+  const size_t nDim = genInstr.nDim();
+  const HyperCubeArea& domain = genInstr.getDomain();
+
+  const SparseGrid sg(genInstr);
+  const BruteForceGlobalWeights bruteForceGlobalWeight(sg);
+  const DeltasSparseGrid deltasSG(genInstr);
+  const SourceFunc sourceFunc = genConstantFunc(1.0);
+  DeltaQuadratureData data(deltasSG, sourceFunc);
+
+  double sumOfGlobalWeights = 0.0;
+  double sumOfExpected = 0.0;
+  double sumOfMagnitudes = 0.0;
+  size_t nChecked = 0;
+  size_t nGP = 0;
+
+  for (const TensorGridCTData& deltaTG : deltasSG) {
+    nGP += deltaTG.tensorGrid.nGP();
+    tools::dsg_quadrature::forEachGPWithGlobalWeight(
+        data.context, deltaTG, data.scratch, [&](const DataVector& gp, const double globalWeight) {
+          // Back onto the unit domain, where the tensor grids of sg are
+          DataVector unitGP(nDim);
+          for (size_t dim = 0; dim < nDim; dim++) {
+            unitGP[dim] = (gp[dim] - domain[dim].first) / (domain[dim].second - domain[dim].first);
+          }
+
+          const std::pair<double, double> bruteForce = bruteForceGlobalWeight.withMagnitude(unitGP);
+          const double expected = bruteForce.first;
+          const double magnitude = bruteForce.second;
+
+          if (std::abs(globalWeight - expected) > EPS) {
+            BOOST_ERROR("Delta tensor grid " << toString(deltaTG.mi) << ", grid point "
+                                             << unitGP.toString() << ": global weight "
+                                             << globalWeight << ", expected " << expected);
+          }
+
+          sumOfGlobalWeights += globalWeight;
+          sumOfExpected += expected;
+          sumOfMagnitudes += magnitude;
+          nChecked++;
+        });
+  }
+
+  BOOST_CHECK_EQUAL(nChecked, nGP);
+  // Sum of the coefficients, 1, up to the accuracy of the 1D rules (equidistant rules of 17 nodes:
+  // 8e-12): as the brute-force sum, up to 16 round-off units per unit of the sum of
+  // |c_l * w_l(point)| over all grid points and tensor grids
+  BOOST_CHECK_SMALL(sumOfExpected - 1.0, 1e-10);
+  BOOST_CHECK_SMALL(sumOfGlobalWeights - sumOfExpected,
+                    std::max(EPS, 16.0 * 0x1p-52 * sumOfMagnitudes));
+}
+
+}  // namespace
 
 BOOST_AUTO_TEST_SUITE(quadratureDelta_internals)
 
@@ -1389,44 +1456,44 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points_High_Dimensions) {
             genInstr->setNodeGenFunc(nodeGenFunc);
             genInstr->setBoundaryLevelOffset(boundaryLvlOffset);
             genInstr->setDomain(randomDomain(nDim));
-            const HyperCubeArea& domain = genInstr->getDomain();
 
-            const SparseGrid sg(*genInstr);
-            const BruteForceGlobalWeights bruteForceGlobalWeight(sg);
-            const DeltasSparseGrid deltasSG(*genInstr);
-            const SourceFunc sourceFunc = genConstantFunc(1.0);
-            DeltaQuadratureData data(deltasSG, sourceFunc);
+            checkGlobalWeightsOfDeltaTGs(*genInstr);
+          }
+        }
+      }
+    }
+  }
+}
 
-            double sumOfGlobalWeights = 0.0;
-            size_t nChecked = 0;
-            size_t nGP = 0;
+BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points_Boundary_Offset_0) {
+  // As Global_Weights_Of_Delta_Grid_Points_High_Dimensions with boundary level offset 0: every
+  // dimension of every delta tensor grid has at least two nodes (all dimensions are projected,
+  // rows of 2, 3, 4, ... grid points), and the delta tensor grids of low levels have deep
+  // sub-tries with many leaves (complete) or leaves of different depths below a prefix
+  // (anisotropic)
+  randGen.setSeed();
+  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
+    for (const size_t nDim : {5, 6}) {
+      const LvlMIVec anisotropic = anisotropicLevels(nDim, 4, false);
 
-            for (const TensorGridCTData& deltaTG : deltasSG) {
-              nGP += deltaTG.tensorGrid.nGP();
-              tools::dsg_quadrature::forEachGPWithGlobalWeight(
-                  data.context, deltaTG, data.scratch,
-                  [&](const DataVector& gp, const double globalWeight) {
-                    // Back onto the unit domain, where the tensor grids of sg are
-                    DataVector unitGP(nDim);
-                    for (size_t dim = 0; dim < nDim; dim++) {
-                      unitGP[dim] =
-                          (gp[dim] - domain[dim].first) / (domain[dim].second - domain[dim].first);
-                    }
+      for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+        CompleteSGGenInstr complete2(2, nDim);
+        CompleteSGGenInstr complete3(3, nDim);
+        MIVecSGGenInstr miVec(anisotropic);
 
-                    if (std::abs(globalWeight - bruteForceGlobalWeight(unitGP)) > EPS) {
-                      BOOST_ERROR("Delta tensor grid " << toString(deltaTG.mi) << ", grid point "
-                                                       << unitGP.toString() << ": global weight "
-                                                       << globalWeight << ", expected "
-                                                       << bruteForceGlobalWeight(unitGP));
-                    }
+        for (SGGenInstr* const genInstr :
+             {static_cast<SGGenInstr*>(&complete2), static_cast<SGGenInstr*>(&complete3),
+              static_cast<SGGenInstr*>(&miVec)}) {
+          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+                             << " nodes, nDim " << nDim << ", "
+                             << (genInstr == &miVec       ? "anisotropic"
+                                 : genInstr == &complete2 ? "complete, max. level 2"
+                                                          : "complete, max. level 3")) {
+            genInstr->setNodeGenFunc(nodeGenFunc);
+            genInstr->setBoundaryLevelOffset(0);
+            genInstr->setDomain(randomDomain(nDim));
 
-                    sumOfGlobalWeights += globalWeight;
-                    nChecked++;
-                  });
-            }
-
-            BOOST_CHECK_EQUAL(nChecked, nGP);
-            BOOST_CHECK_SMALL(sumOfGlobalWeights - 1.0, EPS);
+            checkGlobalWeightsOfDeltaTGs(*genInstr);
           }
         }
       }

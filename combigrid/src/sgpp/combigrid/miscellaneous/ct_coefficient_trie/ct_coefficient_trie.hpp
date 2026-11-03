@@ -74,6 +74,9 @@ class CTCoeffTrie {
    * @param tgData Tensor grids with pairwise distinct level multi-indices of @p nDim
    *               components. Neither their order nor their tensor grids matter.
    * @param nDim   Number of dimensions (the depth of the trie).
+   * @throws std::overflow_error if more than @c 2^32 - 1 tensor grids have a non-zero coefficient
+   *         (the construction and the projected sub-tries of the delta quadrature use 32-bit
+   *         indices).
    */
   CTCoeffTrie(std::span<const TensorGridCTData> tgData, size_t nDim);
 
@@ -122,8 +125,8 @@ class CTCoeffTrie {
   /// @name Attributes
   /// @{
 
-  size_t nDim_;                   ///< Number of dimensions (depth of the trie).
-  FlatNestedVec<Node, 2> nodes;   ///< @c nodes[depth][idx]: nodes of each depth.
+  size_t nDim_;                     ///< Number of dimensions (depth of the trie).
+  FlatNestedVec<Node, 2> nodes;     ///< @c nodes[depth][idx]: nodes of each depth.
   std::vector<double> leafCoeffs_;  ///< Coefficients of the leaves (see @ref leafCoeffs).
 
   /// @}

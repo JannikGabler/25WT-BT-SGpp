@@ -49,14 +49,21 @@ struct DeltaQuadratureScratch {
    * @c projDims[t], @c weights[i] is the weight of the @c i-th delta node of level @f$m_k@f$ in
    * the 1D quadrature rule of level @f$\ell_k@f$ (in dimension @f$k@f$). The children of a node
    * are a contiguous range of the next projected depth, like in the @c CTCoeffTrie.
+   *
+   * @note 24 bytes. With a 32-bit offset into the flat 1D weights instead of the pointer and a
+   * 32-bit @c childEnd (16 bytes), the peak memory of the deltas sparse grid quadrature at boundary
+   * level offset 0 (d = 5-10) was 3.0-3.6 MiB (7-8 %) lower, but its run time 1.5-2.2 % higher
+   * (one more instruction per access of a child's weight, more register pressure in the row loop).
    */
   struct TrieNode {
     const double* weights;  ///< 1D weights of the delta nodes of the node's dimension.
     std::size_t childEnd;   ///< End of the children in the next projected depth (@c 0 for leaves).
     /**
      * @brief Leaves: the projected coefficient (see @c tools::dsg_quadrature::compSubTrie).
-     * Inner nodes of projected depth @c t: the sum of @c weights[gpMI[t+1]] * @c coeffSum over the
-     * children, i.e. the global weight with the projected depths @c 0, ..., t factored out.
+     * Inner nodes of projected depth @c t >= 1: the sum of @c weights[gpMI[t+1]] * @c coeffSum
+     * over the children, i.e. the global weight with the projected depths @c 0, ..., t factored
+     * out. (Inner nodes of depth 0: unused, these sums are computed per row of grid points, see
+     * @c tools::dsg_quadrature::compBlockWeights.)
      */
     double coeffSum;
   };
@@ -121,11 +128,11 @@ struct DeltaQuadratureScratch {
   GPMI gpCntOfProjDepth;
   /// @brief Current grid point (in domain coordinates).
   base::DataVector gp;
-  /// @brief @c gpMI[t]: node index of the current grid point in dimension @c projDims[t] (entry 0
-  /// is unused).
+  /// @brief @c gpMI[t]: node index of the current grid point in dimension @c projDims[t] (entries 0
+  /// and 1 are unused: the row loop iterates over them in blocks).
   GPMI gpMI;
-  /// @brief Global weights of the grid points of the current row (all node indices of
-  /// dimension @c projDims[0], the other ones fixed by @ref gpMI).
+  /// @brief Global weights of the grid points of the current block of rows (see
+  /// @c tools::dsg_quadrature::compBlockWeights); its size bounds the size of the blocks.
   base::DataVector rowWeights;
   /// @brief Buffer of the @c misc::VectorValues of a vector-valued source function (empty for a
   /// scalar one; accumulator slot @ref TG_SUM_ACC).

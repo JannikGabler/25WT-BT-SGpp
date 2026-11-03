@@ -467,6 +467,26 @@ BOOST_AUTO_TEST_CASE(Outputs_Equal_Scalar_Quadrature_High_Dimensions) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(Outputs_Equal_Scalar_Quadrature_Boundary_Offset_0) {
+  // Boundary level offset 0 in higher dimensions: every dimension is projected (rows of 2, 3, 4,
+  // ... grid points, deep sub-tries with many leaves)
+  for (const std::string nodes : {"equidistant", "Clenshaw-Curtis"}) {
+    for (const size_t nDim : {5u, 6u}) {
+      BOOST_TEST_CONTEXT(nodes << " nodes, nDim " << nDim) {
+        const LvlMIVec mis = sparseAnisotropicMIs(nDim);
+        CompleteSGGenInstr complete(3, nDim);
+        MIVecSGGenInstr miVec(mis);
+
+        for (SGGenInstr* const genInstr :
+             {static_cast<SGGenInstr*>(&complete), static_cast<SGGenInstr*>(&miVec)}) {
+          configure(*genInstr, nodes, &doublingLvl2GPCntFunction, 0, false);
+          checkVectorDeltaQuadrature(*genInstr, 3);
+        }
+      }
+    }
+  }
+}
+
 BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
   // A delta tensor grid without grid points contributes 0 to every output and does not evaluate
   // the source function

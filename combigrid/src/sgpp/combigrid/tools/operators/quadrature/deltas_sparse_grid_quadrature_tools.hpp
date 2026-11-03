@@ -28,7 +28,8 @@
  * w_{k,\ell_k}(i_k)@f$ with the projected coefficients
  * @f$C(\vec{\ell}_P) = \sum c_{\vec{\ell}} \prod_{k \notin P} w_{k,\ell_k}(0)@f$. The trie
  * over @f$\vec{\ell}_P@f$ (the projected sub-trie) has only @f$|P|@f$ depths and far fewer nodes,
- * and the grid points are iterated over the dimensions in @f$P@f$ only (rows along the first one).
+ * and the grid points are iterated over the dimensions in @f$P@f$ only (rows along the first one,
+ * whose global weights are computed in blocks of rows along the second one).
  *
  * <b>1D weights in delta order.</b> For nested nodes, the regular nodes of level @f$\ell@f$ are the
  * delta nodes of the levels @f$0, \ldots, \ell@f$. Listing the 1D weights of level @f$\ell@f$ in
@@ -37,6 +38,7 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
@@ -157,39 +159,119 @@ void prepareDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
                             misc::DeltaQuadratureScratch& scratch);
 
 /**
+ * @brief Returns the sum of @c weights[nodeIdx] * @c coeffSum over the sub-trie nodes
+ * [@p begin, @p end) of @p children (the children of one node), starting from 0.
+ *
+ * @note Not unrolled: mostly 1-3 children (see @ref compBlockWeights).
+ */
+inline double sumOverChildren(const misc::DeltaQuadratureScratch::TrieNode* const children,
+                              const size_t begin, const size_t end, const GPCntType nodeIdx) {
+  double sum = 0.0;
+
+#pragma GCC unroll 1
+  for (size_t childIdx = begin; childIdx < end; childIdx++) {
+    sum += children[childIdx].weights[nodeIdx] * children[childIdx].coeffSum;
+  }
+
+  return sum;
+}
+
+/**
  * @brief Recomputes the partial sums @c coeffSum of the sub-trie nodes of the (projected) depths
- * @c 0, ..., maxDepth-1, i.e. the ones that depend on the node indices of the projected depths
- * @c 1, ..., maxDepth.
+ * @c 1, ..., maxDepth-1, i.e. the ones that depend on the node indices of the projected depths
+ * @c 2, ..., maxDepth. (The sums of depth 0, which depend on the node index of depth 1, are
+ * computed per row, see @ref compBlockWeights.)
+ *
+ * @param scratch   Scratch with the projected sub-trie and the node indices @c gpMI.
+ * @param maxDepth  Deepest projected depth whose node index changed.
  *
  * @note Defined in the header, so that both calls in @ref forEachGPWithGlobalWeight are inlined.
  * Defined in the .cpp, LTO stopped inlining the call before the row loop once there were two
  * instantiations (scalar and vector-valued); the shorter code moved the row loop within its
  * op-cache windows (+9 % op-cache misses, deltas sparse grid quadrature at boundary level offset
- * 0 about 1 % slower at identical instructions).
+ * 0 about 1 % slower at identical instructions). The loop over the depths (mostly 1-2
+ * iterations) is not unrolled, see @ref compBlockWeights.
  */
 inline void updateCoeffSums(misc::DeltaQuadratureScratch& scratch, const size_t maxDepth) {
-  for (size_t depth = maxDepth; depth >= 1; depth--) {
+#pragma GCC unroll 1
+  for (size_t depth = maxDepth; depth >= 2; depth--) {
     const GPCntType nodeIdx = scratch.gpMI[depth];
     const misc::DeltaQuadratureScratch::TrieNode* const children = scratch.trieNodes[depth].data();
-    size_t childIdx = 0;
+    size_t childBegin = 0;
 
     for (misc::DeltaQuadratureScratch::TrieNode& parent : scratch.trieNodes[depth - 1]) {
-      double sum = 0.0;
-
-      for (; childIdx < parent.childEnd; childIdx++) {
-        sum += children[childIdx].weights[nodeIdx] * children[childIdx].coeffSum;
-      }
-
-      parent.coeffSum = sum;
+      parent.coeffSum = sumOverChildren(children, childBegin, parent.childEnd, nodeIdx);
+      childBegin = parent.childEnd;
     }
   }
 }
 
 /**
- * @brief Computes the global weights of the current row of grid points (all @p nGP0 node indices
- * of dimension @c scratch.projDims[0]) into @c scratch.rowWeights.
+ * @brief Computes the global weights of a block of @p nRows rows of grid points into
+ * @c scratch.rowWeights: row @c r consists of all @p nGP0 node indices of the projected depth 0,
+ * with the node index @p firstIdx1 + @c r in the projected depth 1 (if there is one, else
+ * @p nRows is 1) and the current ones (@c scratch.gpMI) in the deeper depths; its weights start
+ * at @c r * @p nGP0.
+ *
+ * The weight of a grid point is the sum over the sub-trie nodes of depth 0 of their weight times
+ * their partial sum @c coeffSum, which is computed here per row from their children (the
+ * projected coefficient if there is a single projected depth). The first node initializes the
+ * weights (no zero-fill).
+ *
+ * @param scratch   Scratch with the projected sub-trie (partial sums of depth >= 1 up to date).
+ * @param nGP0      Number of grid points of a row.
+ * @param firstIdx1 Node index of the projected depth 1 of the first row.
+ * @param nRows     Number of rows; @p nRows * @p nGP0 must not exceed the size of the row weights.
+ *
+ * @note Rows are short at boundary level offset 0 (2-4 grid points in most dimensions of most
+ * delta tensor grids), so per-row work dominates the row loop. Per row, a zero-fill of the row
+ * weights (a @c memset call), two passes over the nodes of depth 0 (partial sums, then row
+ * weights) and the advance of the deeper node indices between the calls of the source function
+ * cost about 2/3 of the row loop's instructions. With the weights of a block of rows computed in
+ * one loop without calls in between, and loops that are not unrolled (GCC unrolled and peeled
+ * these loops of mostly 1-4 iterations, which added more instructions than it saved), the row
+ * loop with a constant integrand took 98 instead of 118 instructions per grid point (equidistant
+ * nodes, boundary level offset 0, d = 10, level 7, every 256th delta tensor grid). The results
+ * are the same bitwise as with one row at a time.
  */
-void compRowWeights(misc::DeltaQuadratureScratch& scratch, GPCntType nGP0);
+inline void compBlockWeights(misc::DeltaQuadratureScratch& scratch, const GPCntType nGP0,
+                             const GPCntType firstIdx1, const GPCntType nRows) {
+  using TrieNode = misc::DeltaQuadratureScratch::TrieNode;
+  double* const blockWeights = scratch.rowWeights.data();
+  const std::vector<TrieNode>& nodes = scratch.trieNodes[0];
+
+  if (nodes.empty()) {  // No tensor grid >= the delta tensor grid: global weights 0
+    std::fill_n(blockWeights, static_cast<size_t>(nGP0) * nRows, 0.0);
+    return;
+  }
+
+  // Children of depth 1 (none if there is a single projected depth)
+  const bool hasChildren = scratch.projDims.size() > 1;
+  const TrieNode* const children = hasChildren ? scratch.trieNodes[1].data() : nullptr;
+  size_t childBegin = 0;
+
+  for (size_t nodeIdx = 0; nodeIdx < nodes.size(); nodeIdx++) {
+    const TrieNode& node = nodes[nodeIdx];
+    const double* const weights = node.weights;
+
+    for (GPCntType row = 0; row < nRows; row++) {
+      const double coeffSum =
+          hasChildren ? sumOverChildren(children, childBegin, node.childEnd, firstIdx1 + row)
+                      : node.coeffSum;
+      double* const rowWeights = blockWeights + static_cast<size_t>(row) * nGP0;
+
+      if (nodeIdx == 0) {
+#pragma GCC unroll 1
+        for (GPCntType idx0 = 0; idx0 < nGP0; idx0++) rowWeights[idx0] = coeffSum * weights[idx0];
+      } else {
+#pragma GCC unroll 1
+        for (GPCntType idx0 = 0; idx0 < nGP0; idx0++) rowWeights[idx0] += coeffSum * weights[idx0];
+      }
+    }
+
+    childBegin = node.childEnd;
+  }
+}
 
 /**
  * @brief Calls @p func(gp, globalWeight) for every grid point of the delta tensor grid
@@ -197,9 +279,12 @@ void compRowWeights(misc::DeltaQuadratureScratch& scratch, GPCntType nGP0);
  * is only valid during the call) and @c globalWeight its global quadrature weight (on the unit
  * domain).
  *
- * The grid points are visited in the order of the tensor grid (dimension 0 fastest).
+ * The grid points are visited in the order of the tensor grid (dimension 0 fastest), in blocks of
+ * rows (see @ref compBlockWeights): as many consecutive node indices of the projected depth 1 as
+ * the row weights of @c scratch hold (in most delta tensor grids all of them). @p func is taken by
+ * value: a local closure, whose fields need not be reloaded after every call of it.
  *
- * @note Aligned to 64 bytes, the fetch window of the op cache, in order to reduce op-cache misses
+ * @note Aligned to 64 bytes, the fetch window of the op cache, in order to reduce op-cache misses.
  * Unaligned, moving unrelated code within the module changed the deltas sparse grid quadrature by
  * up to 4 % at identical instructions (+18 % op-cache misses). Not inlined, since inlined into its
  * caller, the loop loses the alignment.
@@ -207,7 +292,7 @@ void compRowWeights(misc::DeltaQuadratureScratch& scratch, GPCntType nGP0);
 template <typename Func>
 [[gnu::noinline, gnu::aligned(64)]] void forEachGPWithGlobalWeight(
     const misc::DeltaQuadratureContext& context, const TensorGridCTData& deltaTGData,
-    misc::DeltaQuadratureScratch& scratch, Func&& func) {
+    misc::DeltaQuadratureScratch& scratch, Func func) {
   if (deltaTGData.tensorGrid.nGP() == 0) {
     return;
   }
@@ -220,28 +305,50 @@ template <typename Func>
   const size_t* const projDims = scratch.projDims.data();
   const GPCntType* const gpCntOfProjDepth = scratch.gpCntOfProjDepth.data();
   const double* const* const nodesOfProjDepth = scratch.nodesOfProjDepth.data();
-  const double* const rowWeights = scratch.rowWeights.data();
+  const double* const blockWeights = scratch.rowWeights.data();
   GPCntType* const gpMI = scratch.gpMI.data();
   double* const gp = scratch.gp.data();
   const base::DataVector& gpVec = scratch.gp;
+
+  // Rows along the projected depth 0, blocks of rows along the projected depth 1 (if any)
   const size_t rowDim = projDims[0];
   const GPCntType nGPPerRow = gpCntOfProjDepth[0];
   const double* const rowNodes = nodesOfProjDepth[0];
+  const bool hasDepth1 = nProjDepths > 1;
+  const size_t blockDim = hasDepth1 ? projDims[1] : rowDim;
+  const GPCntType nRowsTotal = hasDepth1 ? gpCntOfProjDepth[1] : 1;
+  const double* const blockNodes = hasDepth1 ? nodesOfProjDepth[1] : nullptr;
+  const GPCntType maxRowsPerBlock = std::min<GPCntType>(
+      nRowsTotal, static_cast<GPCntType>(scratch.rowWeights.size() / nGPPerRow));
 
   updateCoeffSums(scratch, nProjDepths - 1);
 
   while (true) {
-    compRowWeights(scratch, nGPPerRow);
+    for (GPCntType firstRow = 0; firstRow < nRowsTotal; firstRow += maxRowsPerBlock) {
+      const GPCntType nRows = std::min(maxRowsPerBlock, nRowsTotal - firstRow);
+      compBlockWeights(scratch, nGPPerRow, firstRow, nRows);
+      const double* rowWeights = blockWeights;
 
-    for (GPCntType idx = 0; idx < nGPPerRow; idx++) {
-      gp[rowDim] = rowNodes[idx];
-      func(gpVec, rowWeights[idx]);
+      for (GPCntType row = firstRow; row < firstRow + nRows; row++) {
+        if (hasDepth1) {
+          gp[blockDim] = blockNodes[row];
+        }
+
+#pragma GCC unroll 1
+        for (GPCntType idx = 0; idx < nGPPerRow; idx++) {
+          gp[rowDim] = rowNodes[idx];
+          func(gpVec, rowWeights[idx]);
+        }
+
+        rowWeights += nGPPerRow;
+      }
     }
 
-    // Advances to the next row: increments the node index of the first projected depth >= 1 that
-    // does not wrap around
-    size_t depth = 1;
+    // Advances to the next sweep over the projected depths 0 and 1: increments the node index of
+    // the first projected depth >= 2 that does not wrap around
+    size_t depth = 2;
 
+#pragma GCC unroll 1
     for (; depth < nProjDepths; depth++) {
       double& coord = gp[projDims[depth]];
 
@@ -254,7 +361,7 @@ template <typename Func>
       coord = nodesOfProjDepth[depth][0];
     }
 
-    if (depth == nProjDepths) {  // Wrapped around in every projected depth: all rows are done
+    if (depth >= nProjDepths) {  // Wrapped around in every projected depth: all points are done
       return;
     }
 

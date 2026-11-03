@@ -495,16 +495,20 @@ void addSubTries(Suite& suite, const std::string& nodes, const LvlType boundary,
 /// tools::dsg_quadrature::processDeltaTensorGrid (sub-trie, global weights, integrand
 /// perf::expSum) for every @p stride -th delta tensor grid: the whole per-delta-tensor-grid work
 /// of the operator at 1 thread, as opposed to process_delta_tg on the largest grid only.
+/// @p constant: micro/dsg/row_loop/...: the same with a constant integrand, i.e. the row loop
+/// (global weights, grid points, sub-tries) plus the call of the source function only.
 void addProcessDeltaTGs(Suite& suite, const std::string& nodes, const LvlType boundary,
-                        const size_t nDim, const LvlType maxLvl, const size_t stride) {
+                        const size_t nDim, const LvlType maxLvl, const size_t stride,
+                        const bool constant = false) {
   suite.addMicro(
-      "micro/dsg/process_delta_tgs/" + cfg(nodes, boundary, nDim, maxLvl) + "/s" +
-          std::to_string(stride),
+      std::string(constant ? "micro/dsg/row_loop/" : "micro/dsg/process_delta_tgs/") +
+          cfg(nodes, boundary, nDim, maxLvl) + "/s" + std::to_string(stride),
       [=](MicroRun& run) {
         CompleteSGGenInstr genInstr(maxLvl, nDim);
         perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
         const DeltasSparseGrid dsg(genInstr);
-        const SourceFunc sourceFunc(perf::expSum);
+        const SourceFunc sourceFunc =
+            constant ? SourceFunc([](const DataVector&) { return 1.0; }) : SourceFunc(perf::expSum);
         const cg::misc::FlatNestedVec<double, 3> weights1D =
             cg::tools::dsg_quadrature::comp1DWeights(dsg);
         const cg::misc::CTCoeffTrie coeffTrie(dsg.getTensorGrids(), nDim);
@@ -948,6 +952,12 @@ int main(int argc, char** argv) {
   addProcessDeltaTGs(suite, "equi", 1, 20, 6, 256);  // WP-02: sub-tries + per-row updates
   addProcessDeltaTGs(suite, "equi", 1, 15, 7, 128);
   addProcessDeltaTGs(suite, "equi", 0, 10, 6, 64);
+  // WP-04: the b0 row loop (rows of 2-4 grid points) at the e2e configurations, and b1
+  addProcessDeltaTGs(suite, "equi", 0, 10, 7, 256);
+  addProcessDeltaTGs(suite, "equi", 0, 10, 7, 256, true);
+  addProcessDeltaTGs(suite, "equi", 0, 7, 10, 64, true);
+  addProcessDeltaTGs(suite, "cc", 0, 7, 10, 64, true);
+  addProcessDeltaTGs(suite, "equi", 1, 20, 6, 256, true);
 
   // Interpolation
   addInterpTG(suite, "cc", 5, 6);
