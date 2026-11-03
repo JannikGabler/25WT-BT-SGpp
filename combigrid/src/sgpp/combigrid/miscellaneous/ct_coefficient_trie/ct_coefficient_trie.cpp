@@ -5,12 +5,10 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <numeric>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
-#include <sgpp/combigrid/tools/math/checked_narrow.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>
@@ -23,9 +21,6 @@ namespace misc {
 
 namespace {
 
-/// Index of a multi-index in the construction (halves the memory of the order arrays)
-using MIIdx = std::uint32_t;
-
 /**
  * Copies the levels and coefficients of the tensor grids with a non-zero coefficient, in input
  * order. The levels are stored column by column (@c lvls[dim * n + i] is the level of the i-th one
@@ -36,10 +31,8 @@ using MIIdx = std::uint32_t;
 void copyNonZeroCoeffTGs(const std::span<const TensorGridCTData> tgData, const size_t nDim,
                          std::vector<LvlType>& lvls, std::vector<double>& coeffs,
                          std::vector<LvlType>& maxLvls) {
-  const size_t n = tools::checkedNarrow<MIIdx>(
-      static_cast<size_t>(std::ranges::count_if(
-          tgData, [](const TensorGridCTData& tg) { return tg.coefficient != 0; })),
-      "CTCoeffTrie: more than 2^32 - 1 tensor grids with a non-zero coefficient");
+  const size_t n = static_cast<size_t>(std::ranges::count_if(
+      tgData, [](const TensorGridCTData& tg) { return tg.coefficient != 0; }));
 
   lvls.resize(nDim * n);
   coeffs.reserve(n);
@@ -71,20 +64,20 @@ void copyNonZeroCoeffTGs(const std::span<const TensorGridCTData> tgData, const s
  */
 void appendNodesOfDepth(const size_t depth, const std::span<const LvlType> lvlsOfDepth,
                         const LvlType maxLvl, FlatNestedVec<CTCoeffTrie::Node, 2>& nodes,
-                        std::vector<MIIdx>& order, std::vector<MIIdx>& rangeStarts) {
-  std::vector<MIIdx> nextOrder(order.size());
-  std::vector<MIIdx> nextRangeStarts;
-  std::vector<MIIdx> counts(maxLvl + 1);  // Number, then write position, per level
+                        std::vector<size_t>& order, std::vector<size_t>& rangeStarts) {
+  std::vector<size_t> nextOrder(order.size());
+  std::vector<size_t> nextRangeStarts;
+  std::vector<size_t> counts(maxLvl + 1);  // Number, then write position, per level
   const size_t nNodesBefore = nodes.size();
 
   for (size_t parent = 0; parent + 1 < rangeStarts.size(); parent++) {
-    const MIIdx begin = rangeStarts[parent];
-    const MIIdx end = rangeStarts[parent + 1];
+    const size_t begin = rangeStarts[parent];
+    const size_t end = rangeStarts[parent + 1];
 
-    std::ranges::fill(counts, MIIdx{0});
-    for (MIIdx i = begin; i < end; i++) counts[lvlsOfDepth[order[i]]]++;
+    std::ranges::fill(counts, size_t{0});
+    for (size_t i = begin; i < end; i++) counts[lvlsOfDepth[order[i]]]++;
 
-    for (MIIdx lvl = 0, writeIdx = begin; lvl <= maxLvl; lvl++) {
+    for (size_t lvl = 0, writeIdx = begin; lvl <= maxLvl; lvl++) {
       if (counts[lvl] > 0) {
         nodes.push_back(CTCoeffTrie::Node{static_cast<LvlType>(lvl), 0, 0});
         nextRangeStarts.push_back(writeIdx);
@@ -92,14 +85,14 @@ void appendNodesOfDepth(const size_t depth, const std::span<const LvlType> lvlsO
       }
     }
 
-    for (MIIdx i = begin; i < end; i++) nextOrder[counts[lvlsOfDepth[order[i]]]++] = order[i];
+    for (size_t i = begin; i < end; i++) nextOrder[counts[lvlsOfDepth[order[i]]]++] = order[i];
 
     if (depth > 0) {
       nodes[depth - 1][parent].childEnd = nodes.size() - nNodesBefore;
     }
   }
 
-  nextRangeStarts.push_back(static_cast<MIIdx>(order.size()));
+  nextRangeStarts.push_back(order.size());
   order = std::move(nextOrder);
   rangeStarts = std::move(nextRangeStarts);
 }
@@ -133,17 +126,17 @@ CTCoeffTrie::CTCoeffTrie(const std::span<const TensorGridCTData> tgData, const s
   // Builds the trie depth by depth like an MSD radix sort, which also sorts the multi-indices
   // lexicographically (dimension 0 most significant): O(n * nDim) instead of O(n log n) comparisons
   // of multi-indices.
-  std::vector<MIIdx> order(n);
-  std::iota(order.begin(), order.end(), MIIdx{0});
-  std::vector<MIIdx> rangeStarts{0};  // The root contains all multi-indices
-  if (n > 0) rangeStarts.push_back(static_cast<MIIdx>(n));
+  std::vector<size_t> order(n);
+  std::iota(order.begin(), order.end(), size_t{0});
+  std::vector<size_t> rangeStarts{0};  // The root contains all multi-indices
+  if (n > 0) rangeStarts.push_back(n);
 
   nodes.reserveSubVecs(1, nDim);
 
   for (size_t depth = 0; depth < nDim; depth++) {
     nodes.appendSubVec(1);  // nodes[depth]
-    appendNodesOfDepth(depth, std::span<const LvlType>(lvls).subspan(depth * n, n), maxLvls[depth],
-                       nodes, order, rangeStarts);
+    appendNodesOfDepth(depth, std::span<const LvlType>(lvls).subspan(depth * n, n),
+                       maxLvls[depth], nodes, order, rangeStarts);
   }
 
   assert((nDim == 0 || nodes[nDim - 1].size() == n) &&

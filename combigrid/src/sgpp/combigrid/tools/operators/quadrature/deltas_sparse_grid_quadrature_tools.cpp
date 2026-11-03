@@ -256,6 +256,20 @@ void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
   }
 }
 
+void compRowWeights(misc::DeltaQuadratureScratch& scratch, const GPCntType nGP0) {
+  double* const rowWeights = scratch.rowWeights.data();
+  std::fill_n(rowWeights, nGP0, 0.0);
+
+  for (const misc::DeltaQuadratureScratch::TrieNode& node : scratch.trieNodes[0]) {
+    const double coeffSum = node.coeffSum;
+    const double* const weights = node.weights;
+
+    for (GPCntType idx0 = 0; idx0 < nGP0; idx0++) {
+      rowWeights[idx0] += coeffSum * weights[idx0];
+    }
+  }
+}
+
 }  // namespace dsg_quadrature
 }  // namespace tools
 

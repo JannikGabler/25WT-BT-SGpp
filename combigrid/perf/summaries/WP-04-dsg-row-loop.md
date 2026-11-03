@@ -1,10 +1,36 @@
 # WP-04 — DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B)
 
-Status: PROPOSED · Date: 2026-11-03 · Base commit: d76fd5272
-Recommendation: accept. All 9 quad/dsg cases are faster (1.023–1.060x, b1 1.040/1.052). The suite sum drops 17.758 → 16.969 s (−0.79 s, 1.047x). Peak memory is neutral, results are bitwise identical and there is no API change. The 16-B `TrieNode` is left as an owner decision (patch ready): −3.0…−3.6 MiB per b0 case for 1.5–2.2 % b0 runtime.
+Status: PROPOSED → **rejected by the owner (2026-11-03)**: code reverted, findings kept · Date: 2026-11-03 · Base commit: d76fd5272 (measured variant committed as checkpoint b15c3fccd)
+Recommendation (session): accept. All 9 quad/dsg cases were faster (1.023–1.060x); the suite sum dropped 17.758 → 16.969 s (−0.79 s, 1.047x). Memory was neutral, results bitwise identical.
+Owner decision: the gain does not justify the more complex row loop (block loop, compiler pragmas). The `SourceFunc` calls (WP-17) come first.
 Machine: `perf.py calibrate` ratios e2e 1.001 burst / 1.000 sustained, micro 1.000 / 1.001 (re-run before the A/Bs: OK, ≤ 0.2 % off)
 
-## Change
+## Owner decision (2026-11-03): what stays in the tree
+- **Kept:**
+  - The tests: `Global_Weights_Of_Delta_Grid_Points_Boundary_Offset_0`, `vector_delta_quadrature/Outputs_Equal_Scalar_Quadrature_Boundary_Offset_0`, the shared `checkGlobalWeightsOfDeltaTGs` helper with the round-off-aware sum check (`BruteForceGlobalWeights::withMagnitude`).
+  - The micro cases `micro/dsg/process_delta_tgs/equi/b0/d10/L7/s256` and `micro/dsg/row_loop/...`: constant integrand, i.e. row loop + dispatch only. WP-17 should use them as its L1 reference.
+  - One doc fix (missing period in the `forEachGPWithGlobalWeight` note).
+- **Reverted:** the block loop, the single-pass row weights, the `unroll 1` pragmas, the functor by value, the `sumOverChildren` helper, the scratch doc changes, the 32-bit `CTCoeffTrie` construction and `tools/math/checked_narrow.hpp` with its test.
+  - Not done: moving the original `compRowWeights` into the header. LTO already inlines it (no symbol in the before profile), so it would only guard against a later LTO change.
+- **Re-apply:** `git apply combigrid/perf/results/WP-04/block-loop.patch` restores the measured variant (source diff d76fd5272..b15c3fccd, incl. `checked_narrow`). `trienode16.patch` applies on top of it.
+- Verified after the revert: debug and normal `test --repeat 3` ✓, refcheck OK (1 and 16 threads).
+
+## Contribution of the parts (exp case = `micro/dsg/process_delta_tgs/equi/b0/d10/L7/s256`, row loop = `micro/dsg/row_loop/...` same cfg; instructions exact, cycles single runs ±1–2 %; cumulative)
+
+| step | row loop instr/pt | exp instr/pt | exp cycles/pt |
+|---|---|---|---|
+| before | 117.6 | 226.6 | 59.1 |
+| a) single-pass row weights (no `memset`) + functor by value | 117.6 | 228.7 | 61.4 |
+| b) + `compRowWeights` header-inline | 110.2 | 221.3 | 57.1 |
+| c) b + `unroll 1` (+ `novector`), per row | 106.8 | 217.9 | 56.9 |
+| d) b + blocks of rows, no pragmas | 111.3 | 222.5 | 56.8 |
+| e) b + blocks + `unroll 1` (measured variant) | 97.9 | 209.1 | 53.4 |
+
+- a) alone needs b): it made `compRowWeights` too big for LTO to inline.
+- Blocks and `unroll 1` only pay together: −12 instructions. Alone they give −3.4 and +1.
+- A cheaper future option is a)+b) only: about 1/3 of the instruction gain and no pragmas. It was not measured e2e.
+
+## Change (measured variant, reverted)
 - **Blocks of rows** (`deltas_sparse_grid_quadrature_tools.hpp`):
   - `forEachGPWithGlobalWeight` iterates over blocks of rows: all nodes of projected depth 1, or as many as `scratch.rowWeights` holds.
   - The new header-inline `compBlockWeights` computes a whole block's global weights in one loop, with no source-function calls in between. It replaces the per-row `compRowWeights` (`memset` + 2 passes over the depth-0 nodes), and the per-row advance / `updateCoeffSums(…, 1)`.
