@@ -1,0 +1,36 @@
+# WP-17-before: per-point call in sumOverRows<ScalarValues> (SG row loop, unrolled x4; one point shown)
+   6c63e:	vmovsd (%r11),%xmm0
+   6c643:	cmpq   $0x0,0x18(%r12)
+   6c649:	mov    -0x80(%rbp),%r9
+   6c64d:	vmovsd %xmm0,(%r9)
+   6c652:	je     19d92 <sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::quadrature::sumOverRows<sgpp::combigrid::misc::ScalarValues>(sgpp::combigrid::misc::ScalarValues, sgpp::combigrid::misc::QuadratureScratch&) [clone .cold]>
+   6c658:	mov    -0x88(%rbp),%rdi
+   6c65f:	vmovsd %xmm10,-0x50(%rbp)
+   6c664:	mov    -0x38(%rbp),%rsi
+   6c668:	call   *0x20(%r12)
+   6c66d:	mov    -0xa0(%rbp),%r14
+   6c674:	mov    -0x98(%rbp),%rdi
+   6c67b:	vmovsd -0x50(%rbp),%xmm10
+   6c680:	vfmadd231sd (%r14),%xmm0,%xmm10
+   6c685:	lea    0x8(%rdi),%r13
+   6c689:	lea    0x8(%r14),%r14
+
+# WP-17-before: per-point call in forEachGPWithGlobalWeight<ScalarValues> (DSG row loop)
+   6902f:	cmp    $0x2,%rdx
+   69033:	je     6908c <void sgpp::combigrid::tools::dsg_quadrature::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_quadrature::(anonymous namespace)::sumWithGlobalWeights<sgpp::combigrid::misc::ScalarValues>(sgpp::combigrid::misc::DeltaQuadratureContext const&, sgpp::combigrid::misc::ScalarValues, sgpp::combigrid::TensorGridCTData const&, sgpp::combigrid::misc::DeltaQuadratureScratch&)::{lambda(sgpp::base::DataVector const&, double)#1}>(sgpp::combigrid::misc::DeltaQuadratureContext const&, sgpp::combigrid::TensorGridCTData const&, sgpp::combigrid::misc::DeltaQuadratureScratch&, sgpp::combigrid::tools::dsg_quadrature::(anonymous namespace)::sumWithGlobalWeights<sgpp::combigrid::misc::ScalarValues>(sgpp::combigrid::misc::DeltaQuadratureContext const&, sgpp::combigrid::misc::ScalarValues, sgpp::combigrid::TensorGridCTData const&, sgpp::combigrid::misc::DeltaQuadratureScratch&)::{lambda(sgpp::base::DataVector const&, double)#1}&&) [clone .lto_priv.0]+0x80c>
+   69035:	mov    0x8(%r12),%r11
+   6903a:	vmovsd (%rcx),%xmm1
+   6903e:	mov    0x70(%rsp),%r8
+   69043:	mov    0x50(%rsp),%r9
+   69048:	cmpq   $0x0,0x18(%r11)
+   6904d:	vmovsd %xmm1,(%r8)
+   69052:	mov    (%r9),%r15
+   69055:	je     19d00 <void sgpp::combigrid::tools::dsg_quadrature::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_quadrature::(anonymous namespace)::sumWithGlobalWeights<sgpp::combigrid::misc::ScalarValues>(sgpp::combigrid::misc::DeltaQuadratureContext const&, sgpp::combigrid::misc::ScalarValues, sgpp::combigrid::TensorGridCTData const&, sgpp::combigrid::misc::DeltaQuadratureScratch&)::{lambda(sgpp::base::DataVector const&, double)#1}>(sgpp::combigrid::misc::DeltaQuadratureContext const&, sgpp::combigrid::TensorGridCTData const&, sgpp::combigrid::misc::DeltaQuadratureScratch&, sgpp::combigrid::tools::dsg_quadrature::(anonymous namespace)::sumWithGlobalWeights<sgpp::combigrid::misc::ScalarValues>(sgpp::combigrid::misc::DeltaQuadratureContext const&, sgpp::combigrid::misc::ScalarValues, sgpp::combigrid::TensorGridCTData const&, sgpp::combigrid::misc::DeltaQuadratureScratch&)::{lambda(sgpp::base::DataVector const&, double)#1}&&) [clone .lto_priv.0] [clone .cold]>
+   6905b:	mov    0x68(%rsp),%rsi
+   69060:	lea    0x8(%r11),%rdi
+   69064:	call   *0x20(%r11)
+   69068:	vmovq  %r15,%xmm11
+   6906d:	mov    (%r12),%rax
+   69071:	mov    0x48(%rsp),%r10
+   69076:	mov    0x50(%rsp),%r8
+   6907b:	vfmadd213sd (%rax),%xmm0,%xmm11

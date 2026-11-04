@@ -1,0 +1,9 @@
+# Python timing (combigrid/perf/results/WP-17/python_checks.py --timing-only), normal (OPT=1) libraries; quadrature CC b0 d5 L5, cheap callable
+before t=1: timing per-point callable: 698885 evaluations, 0.77 us per evaluation;
+after  t=1: timing per-point callable: 698885 evaluations, 0.68 us per evaluation;timing batch callable (rows): 0.695 us per point;timing batch callable (numpy): 0.182 us per point;
+before t=1: timing per-point callable: 698885 evaluations, 0.78 us per evaluation;
+after  t=1: timing per-point callable: 698885 evaluations, 0.63 us per evaluation;timing batch callable (rows): 0.694 us per point;timing batch callable (numpy): 0.185 us per point;
+before t=16: timing per-point callable: 698885 evaluations, 25.02 us per evaluation;
+after  t=16: timing per-point callable: 698885 evaluations, 0.88 us per evaluation;timing batch callable (rows): 0.976 us per point;timing batch callable (numpy): 0.564 us per point;
+before t=16: timing per-point callable: 698885 evaluations, 25.15 us per evaluation;
+after  t=16: timing per-point callable: 698885 evaluations, 0.88 us per evaluation;timing batch callable (rows): 1.004 us per point;timing batch callable (numpy): 0.583 us per point;

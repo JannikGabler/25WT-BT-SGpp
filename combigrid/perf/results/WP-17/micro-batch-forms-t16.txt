@@ -1,0 +1,13 @@
+| micro/batch/sg/equi/b0/d10/L4/fnptr | 971.68ms | 2.28 ns |
+| micro/batch/sg/equi/b0/d10/L4/lambda | 967.09ms | 2.27 ns |
+| micro/batch/sg/equi/b0/d10/L4/batch | 1.266s | 2.97 ns |
+| micro/batch/sg/equi/b1/d20/L5/fnptr | 209.97ms | 2.72 ns |
+| micro/batch/sg/equi/b1/d20/L5/lambda | 204.60ms | 2.65 ns |
+| micro/batch/sg/equi/b1/d20/L5/batch | 278.60ms | 3.61 ns |
+| micro/batch/dsg/equi/b0/d7/L10/fnptr | 1.228s | 2.93 ns |
+| micro/batch/dsg/equi/b0/d7/L10/lambda | 1.224s | 2.92 ns |
+| micro/batch/dsg/equi/b0/d7/L10/batch | 1.522s | 3.63 ns |
+| micro/batch/dsg/equi/b1/d20/L6/fnptr | 1.167s | 4.16 ns |
+| micro/batch/dsg/equi/b1/d20/L6/lambda | 1.111s | 3.96 ns |
+| micro/batch/dsg/equi/b1/d20/L6/batch | 1.374s | 4.90 ns |
+foreign CPU load during the run: 0.2%

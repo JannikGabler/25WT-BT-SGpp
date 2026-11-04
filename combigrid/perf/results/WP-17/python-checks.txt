@@ -1,0 +1,28 @@
+cached_func_full_sg_quadrature_interpolation.py: ok
+extended_const_func_full_sg_interpolation.py: ok
+extended_const_func_full_sg_quadrature.py: ok
+simple_const_func_full_sg_interpolation.py: ok
+simple_const_func_full_sg_quadrature.py: ok
+sin_func_full_sg_interpolation.py: ok
+sin_func_full_sg_quadrature.py: ok
+sin_func_multiindex_vector_sg_interpolation.py: ok
+sin_func_multiindex_vector_sg_quadrature.py: ok
+vector_func_full_sg_quadrature_interpolation.py: ok
+--- python_checks.py OMP_NUM_THREADS=1 --bitwise
+timing per-point callable: 698885 evaluations, 0.90 us per evaluation
+timing batch callable (rows): 0.755 us per point
+timing batch callable (numpy): 0.244 us per point
+FAILURES: 0
+--- python_checks.py OMP_NUM_THREADS=16
+timing per-point callable: 698885 evaluations, 1.18 us per evaluation
+timing batch callable (rows): 1.129 us per point
+timing batch callable (numpy): 0.616 us per point
+FAILURES: 0
+WP-26 t=1: exit 0 0 FAIL lines
+WP-26 t=16: exit 0 0 FAIL lines
+WP-27 t=1: exit 0 0 FAIL lines
+WP-27 t=16: exit 0 0 FAIL lines
+WP-28 t=1: exit 0 0 FAIL lines
+WP-28 t=16: exit 0 0 FAIL lines
+WP-29d t=1: exit 0 0 FAIL lines
+WP-29d t=16: exit 0 0 FAIL lines

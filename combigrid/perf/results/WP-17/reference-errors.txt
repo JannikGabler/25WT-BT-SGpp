@@ -1,0 +1,25 @@
+# WP-17: perf_reference outputs at 1 thread vs. WP-17-before (error against the exact solution)
+## WP-17-after (kept)
+60 differing cases; error ratio after/before: geomean 1.122, max 7.44, min 0.20
+cases with error > 1.1x before (growth in round-off units of the combination):
+  quad/sg/cc/b0/d5/L5/sin-unit                  2.12e-16 -> 1.16e-15  (+0.14 units)
+  quad/sg/cc/b1/d3/L7/sin-unit                  1.25e-16 -> 9.30e-16  (+0.11 units)
+  quad/sg/cc/b0/d5/L5/exp-shifted               4.41e-13 -> 2.43e-12  (+0.09 units)
+  quad/sg/cc/b0/d3/L7/sin-unit                  1.67e-16 -> 7.22e-16  (+0.06 units)
+  quad/sg/equi/b0/d1/L9/exp-shifted             1.55e-15 -> 2.00e-15  (+0.03 units)
+  quad/sg/equi/b1/d1/L9/exp-shifted             1.55e-15 -> 2.00e-15  (+0.03 units)
+  quad/dsg/cc/b0/d3/L7/exp-shifted              3.55e-15 -> 1.78e-14  (+0.03 units)
+  quad/sg/cc/b0/d2/L8/exp-shifted               7.11e-15 -> 9.33e-15  (+0.02 units)
+  quad/sg/cc/b0/d2/L8/sin-unit                  5.55e-17 -> 1.67e-16  (+0.02 units)
+  quad/dsg/cc/b0/d5/L5/exp-shifted              1.99e-13 -> 2.56e-13  (+0.00 units)
+differing: {'quad': 60} of 104
+## variant with explicit std::fma in addScaled (dropped)
+38 differing cases; error ratio after/before: geomean 0.000, max 5.38, min 0.00
+cases with error > 1.1x before (growth in round-off units of the combination):
+  quad/sg/cc/b0/d5/L5/sin-unit                  2.12e-16 -> 1.14e-15  (+0.13 units)
+  quad/sg/cc/b0/d3/L7/sin-unit                  1.67e-16 -> 7.08e-16  (+0.06 units)
+  quad/sg/cc/b1/d3/L7/sin-unit                  1.25e-16 -> 4.72e-16  (+0.05 units)
+  quad/sg/cc/b1/d3/L7/exp-shifted               3.55e-14 -> 5.15e-14  (+0.03 units)
+  quad/sg/cc/b0/d5/L5/exp-shifted               4.41e-13 -> 8.38e-13  (+0.02 units)
+  quad/sg/cc/b0/d2/L8/sin-unit                  5.55e-17 -> 1.67e-16  (+0.02 units)
+differing: {'quad': 34, 'interplin': 4} of 104
