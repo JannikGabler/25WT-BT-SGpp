@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>

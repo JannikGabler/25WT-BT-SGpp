@@ -1,0 +1,11 @@
+# started on Wed Nov  4 14:27:44 2026
+
+18,,context-switches,216404242,100.00,83.2,cs/sec  cs_per_second
+0,,cpu-migrations,216404242,100.00,0.0,migrations/sec  migrations_per_second
+550,,page-faults,216404242,100.00,2541.5,faults/sec  page_faults_per_second
+216.40,msec,task-clock,216404242,100.00,9.8,CPUs  CPUs_utilized
+746898,,branch-misses,111674601,51.00,0.8,%  branch_miss_rate
+120121582,,branches,99529231,46.00,555.1,M/sec  branch_frequency
+416745792,,cpu-cycles,132533418,62.00,1.9,GHz  cycles_frequency
+578988660,,instructions,104729641,48.00,1.4,instructions  insn_per_cycle
+13668965,,stalled-cycles-frontend,116875011,54.00,0.03,frontend_cycles_idle

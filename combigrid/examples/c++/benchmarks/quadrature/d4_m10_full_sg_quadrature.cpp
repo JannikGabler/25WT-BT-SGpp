@@ -38,41 +38,41 @@ double perform(tools::Benchmarker<double>::BenchmarkerContext& ctx) {
   // Source func
   const SourceFunc sourceFunc(sinFunc);
 
-  ctx.mark_checkpoint("Source func");
+  ctx.markCheckpoint("Source func");
 
   // SG gen instr
   CompleteSGGenInstr genInstr(maxLvl, nDim);
   genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
 
-  ctx.mark_checkpoint("SG Gen. Instruction");
+  ctx.markCheckpoint("SG Gen. Instruction");
 
   // SG gen
   const SparseGrid sg(genInstr);
 
-  ctx.mark_checkpoint("SG Generation");
+  ctx.markCheckpoint("SG Generation");
 
   // Quadrature
   const double result = quadrature(sourceFunc, sg);
 
-  ctx.mark_checkpoint("Quadrature");
+  ctx.markCheckpoint("Quadrature");
 
   return result;
 }
 
 int main() {
   tools::Benchmarker<double> benchmarker;
-  benchmarker.set_warmups(warmupRuns);
-  benchmarker.set_runs(runs);
-  benchmarker.enable_progress(true);
+  benchmarker.setWarmupRounds(warmupRuns);
+  benchmarker.setRounds(runs);
+  benchmarker.enableProgress(true);
 
-  benchmarker.add_checkpoint("Source func");
-  benchmarker.add_checkpoint("SG Gen. Instruction");
-  benchmarker.add_checkpoint("SG Generation");
-  benchmarker.add_checkpoint("Quadrature");
+  benchmarker.addCheckpoint("Source func");
+  benchmarker.addCheckpoint("SG Gen. Instruction");
+  benchmarker.addCheckpoint("SG Generation");
+  benchmarker.addCheckpoint("Quadrature");
 
   benchmarker.run(perform);
 
-  benchmarker.print_results();
+  benchmarker.printResults();
 
   return 0;
 }

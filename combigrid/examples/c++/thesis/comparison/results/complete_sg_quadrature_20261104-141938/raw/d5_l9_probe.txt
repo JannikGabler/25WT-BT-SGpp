@@ -1,0 +1,19 @@
+Run    1/1, 0.23/0.00 s (100.0%)   
+=== Benchmark Results ===
+Runs: 1 (min 1, min 0.000000 s)  Warmups: 0 (min 0, min 0.000000 s)
+
+Total per-run (s):
+  min = 0.226273 s    mean = 0.226273 s    stddev = 0.000000 s    count = 1
+
+Result of the 1. run: 9.337798e-02
+Checkpoints (time since previous checkpoint) [s]:
+Name                                       min            mean            stddev     count
+------------------------------------------------------------------------------------------------
+Creation Source func                  0.000029        0.000029          0.000000         1
+Creation SG Gen. Instruction          0.000015        0.000015          0.000000         1
+SG Generation                         0.002196        0.002196          0.000000         1
+Quadrature                            0.223676        0.223676          0.000000         1
+
+Errors
+  Absolute error:    mean = 7.284927e-02    stddev = 0.000000e+00
+  Relative error:    mean = 3.548653e+00    stddev = 0.000000e+00

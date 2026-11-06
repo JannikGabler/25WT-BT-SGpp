@@ -8,13 +8,13 @@
 #include <vector>
 
 // Detect Eigen or Armadillo at compile time
-#if __has_include(<unsupported/Eigen/FFT>)
-#define HAVE_EIGEN_FFT 1
-#include <unsupported/Eigen/FFT>
-#elif __has_include(<armadillo>)
-#define HAVE_ARMADILLO 1
-#include <armadillo>
-#endif
+// #if __has_include(<unsupported/Eigen/FFT>)
+// #define HAVE_EIGEN_FFT 1
+// #include <unsupported/Eigen/FFT>
+// #elif __has_include(<armadillo>)
+// #define HAVE_ARMADILLO 1
+// #include <armadillo>
+// #endif
 
 namespace sgpp {
 namespace combigrid {
