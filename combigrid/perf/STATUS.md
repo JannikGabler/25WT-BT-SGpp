@@ -82,15 +82,9 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
 ## Next action
 
-**WP-36 in progress** (interpolation exploration, measurement only; prompt issued 11-04). Before
-the session the owner (1) optionally saves the WP-17 code for WP-34 / a later two-path variant:
-`git add -N combigrid/src/sgpp/combigrid/miscellaneous/source_function_evaluation
-combigrid/tests/functions/source_functions/batched_source_function_test.cpp && git diff >
-combigrid/perf/results/WP-17/batched-evaluation.patch`; (2) reverts with `python3
-combigrid/perf/scripts/perf.py reject --apply` (plain: `perf_micro.cpp` also has batch-form cases
-that need the new API; the opaque row-loop micro cases are in the patch → WP-44); (3) commits
-"Reject WP-17" (summary, `results/WP-17/`, STATUS/PLAN; `compile*.sh`: commit or ignore); tree
-clean. Next master start: process the WP-36 summary.
+**WP-36 in progress** (interpolation exploration, measurement only; prompt issued 11-04). WP-17
+reverted and committed (326cef0f0); tree clean (only untracked `compile*.sh`). 11-07: no new
+summary yet. Next master start: process the WP-36 summary.
 
 ## Open decisions for the owner
 
@@ -184,6 +178,7 @@ trigger (WP-36 is measurement only and refreshes the interpolation shares).
   0.960x, −1.6 s; Python 28x not worth the kernel regression). Code uncommitted in the tree →
   owner saves the patch, `reject --apply`, commits. PLAN: dispatch-based estimates void; WP-34
   keeps the serial option only; WP-44 unblocked (owner places it). No RP-4. **WP-36 prompt issued.**
+- 2026-11-07 Sync: WP-17 rejection committed (326cef0f0); no new summary (WP-36 still running).
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone) → WP-35. Report recurrences.
 
