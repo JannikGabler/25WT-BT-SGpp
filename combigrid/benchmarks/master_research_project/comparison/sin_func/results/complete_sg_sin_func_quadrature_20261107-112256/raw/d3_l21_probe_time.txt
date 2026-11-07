@@ -1,0 +1,23 @@
+	Command being timed: "/home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/benchmarks/master_research_project/comparison/sin_func/complete_sg_sin_func_quadrature 0 1 0 0 3 21"
+	User time (seconds): 602.93
+	System time (seconds): 7.96
+	Percent of CPU this job got: 1543%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:39.57
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 2436008
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 1884807
+	Voluntary context switches: 1435
+	Involuntary context switches: 4644
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

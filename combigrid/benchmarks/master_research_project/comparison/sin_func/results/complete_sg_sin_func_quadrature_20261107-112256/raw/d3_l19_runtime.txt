@@ -1,0 +1,20 @@
+Warmup 1/1, 8.15/15.00 s (54.3%)   Warmup 2/1, 16.18/15.00 s (100.0%)   
+Run    1/2, 7.99/45.00 s (17.8%)   Run    2/2, 15.99/45.00 s (35.5%)   Run    3/2, 24.00/45.00 s (53.3%)   Run    4/2, 32.00/45.00 s (71.1%)   Run    5/2, 40.02/45.00 s (88.9%)   Run    6/2, 48.00/45.00 s (100.0%)   
+=== Benchmark Results ===
+Runs: 6 (min 2, min 45.000000 s)  Warmups: 2 (min 1, min 15.000000 s)
+
+Total per-run (s):
+  min = 7.976872 s    mean = 7.999459 s    stddev = 0.014142 s    count = 6
+
+Result of the 1. run: 2.580123e-01
+Checkpoints (time since previous checkpoint) [s]:
+Name                                       min            mean            stddev     count
+------------------------------------------------------------------------------------------------
+Creation Source func                  0.000002        0.000003          0.000000         6
+Creation SG Gen. Instruction          0.000003        0.000004          0.000000         6
+SG Generation                         0.063195        0.071615          0.006076         6
+Quadrature                            7.887170        7.904124          0.011971         6
+
+Errors
+  Absolute error:    mean = 4.173154e-10    stddev = 3.310046e-15
+  Relative error:    mean = 1.617425e-09    stddev = 1.282902e-14

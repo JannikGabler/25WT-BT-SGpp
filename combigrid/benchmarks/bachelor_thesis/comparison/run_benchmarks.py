@@ -69,7 +69,7 @@ PERF_TIMEOUT_FACTOR = 1.1
 # Exported to the benchmark when set (e.g. 8 to restrict OpenMP to 8 threads)
 OMP_NUM_THREADS = None
 
-PROGRESS_REFRESH_SECONDS = 10.0
+PROGRESS_REFRESH_SECONDS = 1.0
 
 TIME_BINARY = "/usr/bin/time"
 
