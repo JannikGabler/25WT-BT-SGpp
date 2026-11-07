@@ -69,7 +69,7 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 | 10 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
 | 11 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
 | 12 | WP-31 | MI-set cleanups | ready (low) | | |
-| 13 | WP-35 | Flaky time-seeded tests + seed audit (test-only) | ready (low; may move up) | | |
+| 13 | WP-35 | Fragile tests (time-seeded tolerance; FMA-dependent cache precondition) + audit (test-only) | ready (low; may move up) | | |
 | 14 | WP-38 | Code hygiene: banner checker + combigrid leftovers | ready (low) | | |
 | 15 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
 | 16 | WP-30 | Vector-valued: small-m optimizations | planned | | |
@@ -84,7 +84,8 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
 **WP-36 in progress** (interpolation exploration, measurement only; prompt issued 11-04). WP-17
 reverted and committed (326cef0f0); tree clean (only untracked `compile*.sh`). 11-07: no new
-summary yet. Next master start: process the WP-36 summary.
+summary yet. If the owner's PGO build ran, `lib/` holds PGO libraries: `perf.py build normal`
+before the next work session. Next master start: process the WP-36 summary.
 
 ## Open decisions for the owner
 
@@ -179,6 +180,10 @@ trigger (WP-36 is measurement only and refreshes the interpolation shares).
   owner saves the patch, `reject --apply`, commits. PLAN: dispatch-based estimates void; WP-34
   keeps the serial option only; WP-44 unblocked (owner places it). No RP-4. **WP-36 prompt issued.**
 - 2026-11-07 Sync: WP-17 rejection committed (326cef0f0); no new summary (WP-36 still running).
+  Owner's PGO build (`master_research_project/.../compile.sh`, owner-side, not a WP): cache test
+  `shared_cache_and_concurrent_operator_calls` fails when its TU is PGO-compiled (FMA contraction
+  in `shiftedDomain` → no spill; library correct) → added to WP-35 (owner). `lib/` may hold PGO
+  libraries → `perf.py build normal` before the next work session.
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone) → WP-35. Report recurrences.
 

@@ -53,8 +53,8 @@ from pathlib import Path
 
 MIN_WARMUP_ROUNDS = 1
 MIN_ROUNDS = 2
-MIN_WARMUP_TIME = 5.0  # seconds
-MIN_ROUND_TIME = 15.0  # seconds
+MIN_WARMUP_TIME = 15.0  # seconds
+MIN_ROUND_TIME = 45.0  # seconds
 
 START_LEVEL = 3
 MAX_LEVEL = None  # None: increase until a limit is hit
@@ -69,7 +69,7 @@ PERF_TIMEOUT_FACTOR = 1.1
 # Exported to the benchmark when set (e.g. 8 to restrict OpenMP to 8 threads)
 OMP_NUM_THREADS = None
 
-PROGRESS_REFRESH_SECONDS = 1.0
+PROGRESS_REFRESH_SECONDS = 10.0
 
 TIME_BINARY = "/usr/bin/time"
 

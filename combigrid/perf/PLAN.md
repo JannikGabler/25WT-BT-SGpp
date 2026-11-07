@@ -121,7 +121,7 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | 10 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
 | 11 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
 | 12 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
-| 13 | WP-35 | Flaky time-seeded tests: `equidistant_nodes/sin_func_random_cube_3D` + seed audit (test-only; from WP-29a) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
+| 13 | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D`, FMA-dependent `shared_cache_and_concurrent_operator_calls` + audit (test-only; from WP-29a, owner's PGO build) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
 | 14 | WP-38 | Code hygiene: copyright-banner check never checks C++ + combigrid leftovers (from WP-29d) | ready (low; checker fix may hit other modules → BLOCKED with options) | e2e nil; banner / TODO / warning cleanups |
 | 15 | WP-37 | pysgpp `DataVector`: `__iter__` / bounds-checked `__getitem__` (base bindings; from WP-29d) | needs decision (functional change in base's Python API; owner places it) | e2e nil; `list(dv)` / `sum(dv)` / `for x in dv` segfault today |
 | 16 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
@@ -2021,18 +2021,34 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   → option (a) keeps that gain without a kernel change; a two-path variant (WP-17 option c,
   `results/WP-17/batched-evaluation.patch`) would add NumPy batches (0.18 µs/point).
 
-## WP-35 — Flaky time-seeded tests: near-zero relative tolerance + seed audit (from WP-29a)
-- **Source**: WP-29a summary (follow-ups; test runs).
+## WP-35 — Fragile tests: near-zero relative tolerance, FMA-dependent cache precondition + audit (from WP-29a)
+- **Source**: WP-29a summary (follow-ups; test runs); owner's PGO build 2026-11-07 (finding 2).
 - **Finding**: 2 of 16 normal `perf.py test` runs in WP-29a failed one time-seeded test each: one
   uncaptured; the other the pre-existing `equidistant_nodes/sin_func_random_cube_3D` (seed
   1793379453: expected −1.7e-4 with a 1e-12 *relative* tolerance, b ≈ −a makes the exact value near
   0; `WP-29a-before` fails that seed 200/200). WP-02 saw one lost debug failure (log "Debug/normal
   test failures").
+- **Finding 2** (owner's PGO build, 2026-11-07; analysed in the master session):
+  `source_function_cache_storage/shared_cache_and_concurrent_operator_calls`
+  (`cached_source_function_test.cpp:1045`) fails 100 % when its TU is compiled with
+  `-fprofile-use` (`diskHits > 0` [0 <= 0]; library correct, results and reload OK). Cause: the
+  test's `shiftedDomain` (`-0.5 + 0.1 * k`) is FMA-contracted under PGO (GCC's C++ default
+  `-ffp-contract=fast`) → lower bound of dim 3 −0.19999999999999998 instead of
+  −0.19999999999999996 → other point bits / hashes / shard distribution → all 6785 points fit in
+  memory (452192 B counted; normal: 6778 in memory, 491488 B, 7 spilled, 56 disk hits). The same TU
+  with PGO + `-ffp-contract=off` passes 30/30. The precondition "memory overflows" holds only by
+  chance of the per-shard distribution (64 shards × 8 KiB, one 128-record arena chunk per shard).
 - **Scope** (tests only): give that test an absolute floor (e.g. tolerance relative to the
   integrand's magnitude / the cube volume) and pin the failing seed as a fixed case; audit all
   time- or random-seeded tests in `combigrid/tests/` for the same pattern (relative tolerance on a
   possibly near-zero expected value) and for printing their seed on failure; run the full suite
   repeatedly (e.g. 200× the seeded suites, normal + debug) to catch the uncaptured failure.
+  Finding 2: make the spill independent of the point bits (memory limit clearly below the points'
+  footprint, or count-based) and `BOOST_REQUIRE` the precondition (points beyond memory exist)
+  before checking `diskHits`; audit the other cache-storage / adaptive tests whose preconditions
+  depend on the memory limit or on exact point bits. Verify with the test TUs built normally, with
+  `-ffp-contract=off` and with explicit contraction (e.g. `-ffp-contract=fast` + PGO from a
+  training run, or a variant computing the domain with `std::fma`).
 - **Expected gain**: e2e nil; reliable `perf.py test` in every work session.
 - **Risk**: low; tolerances must stay tight enough to catch real errors (justify each new floor
   from the rule's error bound or measured round-off). **Micro / E2E**: none (no source change).
