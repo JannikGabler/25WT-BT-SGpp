@@ -110,8 +110,9 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | WP-04 | DSG quadrature: row loop (b0) (+ TrieNode 24 → 16 B, from WP-02) | rejected (owner 2026-11-03: complexity vs. gain; checkpoint b15c3fccd, patches in `results/WP-04/`) | measured: quad/dsg 17.758 → 16.969 s (1.047x), memory 1.004, 0 MEM±, refcheck OK (bitwise); TrieNode 16 B b0 0.982x, −3 MiB |
 | – | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | rejected (owner 2026-11-04: NO-GAIN, option a) | measured: judged e2e 38.316 → 39.931 s (0.960x, 29/38 SLOWER, 0 FASTER), memory 1.003 (1 MEM−), refcheck OK (60/72 quadrature outputs non-bitwise); Python per-point 16 t 25.1 → 0.88 µs (28x), NumPy batch 0.18 µs/point, warm cache 1.12–1.29x |
 | – | WP-36 | Interpolation operators: exploration after WP-29c (owner's request) | accepted (2026-11-11; benchmarks kept) | measured levers (16 t): interp dedup per call 3.45 s, corner loop 1.01 s, global kernel 0.64 s, generic weights 0.42 s, interplin dedup ≈ 2.3–3.0 s (est.); multi-point 0 judged |
-| 1 | WP-08 | Linear interpolation: corner loop (+ WP-46 cross-TG corner dedup as a measured option; owner decides with the results) | in progress (prompt 2026-11-11) | 1.01 s (d ≥ 7 0.91 s) measured (WP-36 sol kernel); dedup option ≈ 2.3–3.0 s (est.) |
-| 2 | WP-45 | `DeltasSparseGrid` global interpolation operator (owner 2026-11-11; new overload) + drafted judged-suite cases `interp/dsg/...` (patch; owner applies) | ready (after WP-08) | judged 0 (new feature); DSG callers ≈ 1.7–3.9x vs. the `SparseGrid` operator (WP-36 dedup prototype) |
+| – | WP-08 | Linear interpolation: corner loop (+ WP-46 cross-TG corner dedup prototyped and measured) | accepted (2026-11-11; dedup → WP-47, owner option (c)) | measured: interplin 4.525 → 3.506 s (−1.02 s; d10 1.334x, d8 1.267x, d5 1.251x, d2 noise), memory geomean 1.009, 0 MEM±, refcheck OK, per-TG bitwise |
+| 1 | WP-47 | `DeltasSparseGrid` linear interpolation operator: each distinct corner once per call (from WP-08 / WP-46; owner option (c), before WP-45) + drafted judged-suite cases `interplin/dsg/...` (patch) | in progress (prompt 2026-11-11) | judged 0 (new feature); DSG callers vs. `SparseGrid` operator (WP-08 prototype, 16 t): d10 1.84 → 0.55 s (3.33x), d8 1.21 → 0.49 s (2.46x), d5 0.36 → 0.25 s (1.47x), d2 0.30x (gate) |
+| 2 | WP-45 | `DeltasSparseGrid` global interpolation operator (owner 2026-11-11; new overload) + drafted judged-suite cases `interp/dsg/...` (patch; owner applies) | ready (after WP-47; reuses its DSG interpolation infrastructure) | judged 0 (new feature); DSG callers ≈ 1.7–3.9x vs. the `SparseGrid` operator (WP-36 dedup prototype) |
 | 3 | WP-06 | Global interpolation: operator overhead | ready (after WP-45; `SparseGrid` operator stays per-TG CT) | 0.64 s (d ≥ 7 0.42 s) measured (WP-36 sol kernel) |
 | 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 5 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
@@ -122,15 +123,16 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | 10 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
 | 11 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
 | 12 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
-| 13 | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D`, FMA-dependent `shared_cache_and_concurrent_operator_calls` + audit (test-only; from WP-29a, owner's PGO build) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
-| 14 | WP-38 | Code hygiene: copyright-banner check never checks C++ + combigrid leftovers (from WP-29d) | ready (low; checker fix may hit other modules → BLOCKED with options) | e2e nil; banner / TODO / warning cleanups |
-| 15 | WP-37 | pysgpp `DataVector`: `__iter__` / bounds-checked `__getitem__` (base bindings; from WP-29d) | needs decision (functional change in base's Python API; owner places it) | e2e nil; `list(dv)` / `sum(dv)` / `for x in dv` segfault today |
-| 16 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
-| 17 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision; batch option (b) gone with WP-17) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x; WP-17: 25.1 vs. 0.78 µs ≈ 32x); not in the judged suite |
-| 18 | WP-39 | Caching disk tier: append-only log for the persistent hook + parallel load (from WP-28) | planned (owner places it; after WP-27) | storage-policy callers only: LMDB writes 0.7–4.8 µs/point serialized vs. log 25–67 ns/record; load 0.15–0.27 µs/record serial vs. 26–70 ns at 16 t |
-| 19 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late; owner 2026-11-03) | Adaptive callers only: limit-0 exploration at 16 t 244 → ≈ 80 ns per evaluation |
-| 20 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late; owner 2026-11-03; a hint is API → decision in-session) | Adaptive callers only: h = 0 call then reuse (DSG → SG at 1 µs) 182 vs. 92 ns warm |
-| 21 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights`, no blocks / pragmas (from WP-04) | planned (owner places it; WP-17 rejected 2026-11-04 → row loop unchanged) | ≈ 1/3 of WP-04's instruction gain (≈ −5 of 227 instr/point, ≈ 0.2–0.3 s; not measured e2e) |
+| 13 | WP-48 | Operator drivers: `std::fma`-pinned CT combination (`result += c·v`; results independent of LTO inlining) + small-call work gate (interplin d2, region-bound) (from WP-08) | ready (low) | e2e ≈ 0.02 s (interplin d2 libgomp 71 %); deterministic results across builds |
+| 14 | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D`, FMA-dependent `shared_cache_and_concurrent_operator_calls` + audit (test-only; from WP-29a, owner's PGO build) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
+| 15 | WP-38 | Code hygiene: copyright-banner check never checks C++ + combigrid leftovers (from WP-29d) | ready (low; checker fix may hit other modules → BLOCKED with options) | e2e nil; banner / TODO / warning cleanups |
+| 16 | WP-37 | pysgpp `DataVector`: `__iter__` / bounds-checked `__getitem__` (base bindings; from WP-29d) | needs decision (functional change in base's Python API; owner places it) | e2e nil; `list(dv)` / `sum(dv)` / `for x in dv` segfault today |
+| 17 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
+| 18 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision; batch option (b) gone with WP-17) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x; WP-17: 25.1 vs. 0.78 µs ≈ 32x); not in the judged suite |
+| 19 | WP-39 | Caching disk tier: append-only log for the persistent hook + parallel load (from WP-28) | planned (owner places it; after WP-27) | storage-policy callers only: LMDB writes 0.7–4.8 µs/point serialized vs. log 25–67 ns/record; load 0.15–0.27 µs/record serial vs. 26–70 ns at 16 t |
+| 20 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late; owner 2026-11-03) | Adaptive callers only: limit-0 exploration at 16 t 244 → ≈ 80 ns per evaluation |
+| 21 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late; owner 2026-11-03; a hint is API → decision in-session) | Adaptive callers only: h = 0 call then reuse (DSG → SG at 1 µs) 182 vs. 92 ns warm |
+| 22 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights`, no blocks / pragmas (from WP-04) | planned (owner places it; WP-17 rejected 2026-11-04 → row loop unchanged) | ≈ 1/3 of WP-04's instruction gain (≈ −5 of 227 instr/point, ≈ 0.2–0.3 s; not measured e2e) |
 | last | WP-43 | Final clean-up: phase references out of code documentation + phase leftovers | ready (always the last WP of the phase; owner 2026-11-03) | e2e nil (comments / dead code only); code docs readable without the phase's files |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
@@ -597,7 +599,17 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **Owner 2026-11-11**: design choices are made in the WP; WP-46 (cross-TG corner dedup) is
   merged in as a prototyped and measured option — the owner decides on it with this WP's results
   (for global interpolation the owner kept the `SparseGrid` operator per-TG and put the dedup
-  into a DSG variant, WP-45). Status: in progress (prompt 2026-11-11).
+  into a DSG variant, WP-45). Prompt 2026-11-11.
+- **Result** (accepted 2026-11-11): `prepareCorners` / `weights1D` / `moveToCorner`, weight table
+  by doubling over the first min(d, `WEIGHT_TABLE_MAX_DIM` = 10) dimensions, index order; per-TG
+  sums / weights / points bitwise. interplin 4.525 → 3.506 s (d10 1.334x, d8 1.267x, d5 1.251x),
+  memory 1.009, refcheck OK; kernel at the integrand floor (sol d10 191.9 vs. 178.1 µs). Dedup
+  prototype (`perf_interp_explore.cpp`: `LinDedupIndex`, `runLinearDedup`) → **WP-47** (owner:
+  option (c), DSG variant; the `SparseGrid` operator stays per-TG). Follow-ups → WP-47, WP-48,
+  WP-38 (public `linear_interpolation.hpp` includes the internal scratch header + `constants.hpp`
+  unused; `grids/tensor_grid.cpp:34` unused `sum` under NDEBUG), WP-30 (tg_vec d2 m4 / m8
+  0.987–0.994x; vector d10 m1 1.04x of scalar), WP-32 (interplin d8 bimodal at 16 t in an
+  identical binary: rounds 1.19–1.23 vs. 1.30–1.37 s, `results/WP-08/e2e-aa-d8.md`).
 
 ## WP-09 — Multi-point interpolation API (from D-1; proposal, owner decides after the results)
 - **Source**: D-1. Owner, 2026-10-24: "Approve it as a work package. A new API can be considered
@@ -1915,6 +1927,8 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **From WP-29c**: interp m = 1 0.82–0.98x, interplin 0.89–1.01x of `SourceFunc` (worst cc d2:
   8193 three-node interpolations per TG); the out-of-line multi-output `hasTrivialResult`
   (0xc87 B) costs 5–7 % at n = 3; `std::function` call per point.
+- **From WP-08**: interplin `tg_vec` d2 m4 / m8 0.987–0.994x after the corner-loop kernel (4
+  corners per TG); vector d10 m1 1.04x of the scalar path.
 
 ## RP-3 — Re-profiling after WP-03
 - **Source**: rule 7: WP-03 changed the mivec group by 5.08x (6.32 → 1.24 s) and its hot-spot
@@ -2009,6 +2023,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **Functional change**: none. The V2 variant is a measurement variant and is reverted; changing
   base's allocator is WP-33 (owner).
 - **Dependencies**: WP-23 (finding). Rank confirmed by RP-3.
+- **From WP-08**: interplin d8 L5 p256 at 16 t is bimodal in an identical binary (A/A rounds
+  1.19–1.23 vs. 1.30–1.37 s, `results/WP-08/e2e-aa-d8.md`) — check memory layout / false sharing
+  of per-thread scratch here.
 
 ## WP-33 — Base's global `operator new` replacement: drop / restrict / keep (from WP-23; needs decision)
 - **Source**: WP-23 summary (V2); owner 2026-10-29: decide after WP-32's summary.
@@ -2172,7 +2189,8 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   fed2cdb4e and in WP-45-before): they count from WP-45-after on (later A/Bs, RP-4), not in the
   cumulative "vs. baseline" numbers.
 - **Functional change**: new public operator overload (agreed by the owner 2026-11-11).
-- **Status**: ready (after WP-08; owner 2026-11-11).
+- **Status**: ready (after WP-47, owner 2026-11-11: linear first; reuse WP-47's DSG interpolation
+  infrastructure / judged-case patch format where it fits — read the WP-47 summary).
 
 ## WP-46 — Linear interpolation: each distinct corner once per call (from WP-36; merged into WP-08)
 - **Source**: WP-36 summary, follow-up (2). **Owner 2026-11-11**: "I will decide on this with the
@@ -2188,7 +2206,64 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   index / gather ≈ 5–15 ns per corner. Hashed cache (WP-26) is 0.60x at d10 → index-based only.
 - **Plan**: prototype in `perf_interp_explore.cpp` first; production only after the owner sees it.
 - **Decisions (owner)**: as WP-45 (evaluation count, per-call memory ≈ 3 MB at d10).
-- **E2E filter**: `^interplin/`. **Status**: merged into WP-08 (as a measured option).
+- **E2E filter**: `^interplin/`. **Status**: merged into WP-08 (as a measured option); dropped
+  2026-11-11 → WP-47 (owner chose option (c): DSG variant, `SparseGrid` operator stays per-TG).
+
+## WP-47 — `DeltasSparseGrid` linear interpolation operator (from WP-08 / WP-46; owner 2026-11-11)
+- **Source**: WP-08 summary, cross-TG corner dedup, **owner option (c)** (2026-11-11): a
+  `DeltasSparseGrid` variant of `interpolateLinear`; the `SparseGrid` operator stays with the
+  per-TG kernel (as WP-45 for global interpolation). Owner 2026-11-11: **before WP-45**.
+- **Idea** (WP-08 prototype `LinDedupIndex` / `runLinearDedup` in `perf_interp_explore.cpp`): per
+  call, a corner coordinate in dimension j is identified by the level λ_j at which it first appears
+  in x's bracket chain (+ 1 bit for the 2 coordinates of level 0); store with a block of
+  2^#zeros(λ) slots per λ of the closure; index updated incrementally like the corners (no hash).
+  Passes in one parallel region: mark the corners of all TGs → evaluate the marked slots → gather
+  per TG with WP-08's weights and order (per-TG sums bitwise the kernel's). The DSG guarantees
+  nested nodes (throws otherwise) and holds exactly the closure λ list → λ → slot index built once
+  with the grid (trie / rank over the closure; the simplex rank fits complete grids only); CT
+  coefficients from the closure.
+- **Evidence** (WP-08, 16 t, 7 reps, vs. the new per-TG API; all within ≤ 2.0e-13): evaluations
+  per call d10 3,075,072 → 370,688 (÷ 8.30), d8 ÷ 6.97, d5 ÷ 6.73, d2 ÷ 1.94; store d10 3.2 MiB,
+  d8 415 KiB. Marking: d10 1.843 → 0.554 s (3.33x), d8 1.206 → 0.490 s (2.46x), d5 0.360 → 0.245 s
+  (1.47x), d2 0.103 → 0.337 s (0.30x: 3 barriers per 6.8 µs call). d10 integrand floor ≈ 0.14 s;
+  the rest is index walk + gather ≈ 33 ns per corner and pass → room for work.
+- **Expected gain**: judged suite 0 (protected cases use the `SparseGrid` operator); DSG callers ≈
+  the prototype's 1.5–3.3x at d ≥ 5 (more if index / gather get cheaper). Measured vs. the
+  `SparseGrid` operator in the unprotected driver `perf_interp_explore` (+ micro cases).
+- **Constraints**: the "all" variant (evaluating unused slots, d10 0.406 s) must not go into
+  production — evaluations at non-corner points are observable. Small calls (d2) need a work gate
+  or a serial path. Scalar + `VectorSourceFunc` overloads (all operators support both). The new
+  operator's evaluation count / order differs from the `SparseGrid` operator (documented).
+- **Open design points (session)**: index structure and where it lives (built with the DSG vs. on
+  first use), node families the DSG accepts, parallelization (per TG vs. per slot), Python
+  exposure (the DSG quadrature is C++-only), memory per call (distinct × (m·8 + 1) B), shared
+  infrastructure that WP-45 can reuse (document it in the summary).
+- **Tests**: new: DSG `interpolateLinear` == `SparseGrid` `interpolateLinear` within round-off
+  (equi / cc, b0 / b1 / b2, offsets, anisotropic MI sets, d = 1 and d ≥ 11 beyond the weight table,
+  m > 1, x on nodes / domain boundary, shifted domains); each distinct corner evaluated once
+  (counting function); no evaluation outside the corners; existing linear interpolation tests.
+- **Dimension-adaptive refinement**: values depend on x → no reuse across steps; per-λ
+  contributions stay available in the gather pass; a trie index can grow incrementally.
+- **Judged-suite cases** (as WP-45, WP-15 precedent): draft e2e cases `interplin/dsg/...` (same
+  problems / query points / sizes as the 4 `interplin/sg/...` cases) + reference cases +
+  tolerances as a patch in `results/WP-47/` against the protected `perf_e2e.cpp`,
+  `perf_reference.cpp`, `reference/` (and `perf_problems.hpp` only if unavoidable); never edit
+  protected files: apply it in a scratch copy / worktree, build and run there (timings, peak
+  memory, refcheck vs. the drafted references), report the added e2e time. On acceptance the owner
+  applies it and runs `perf.py protect --authorized-by-owner`. No baseline for the new cases.
+- **Functional change**: new public operator overload (agreed by the owner 2026-11-11, option (c)).
+- **Status**: in progress (prompt 2026-11-11; rank 1, owner 2026-11-11).
+
+## WP-48 — Operator drivers: `std::fma`-pinned CT combination + small-call gate (from WP-08)
+- **Source**: WP-08 follow-ups. (1) The CT combination `result += c·v` in the operator drivers is
+  contracted into an FMA or not depending on LTO inlining (WP-08: interplin d5 operator results
+  moved by ≤ 7.1e-15 with an unchanged driver) → write it as `std::fma` (as `tools::mapToDomain`)
+  so results do not depend on inlining. (2) interplin d2 L16 p16384 is region-bound (libgomp 71 %,
+  WP-36): a work gate / thread cap for small calls saves ≈ 20 ms.
+- **Risk**: (1) changes bits once (refcheck OK/WARN; the equi d2 Lebesgue case WARNs on FMA
+  changes in `BarycentricFormula`, not in the drivers); all operators (quadrature SG / DSG, interp,
+  interplin, scalar + vector). (2) threshold tuning; generalize only if other small cases gain.
+- **E2E filter**: all (1), `^interplin/` (2). **Status**: ready (low).
 
 ## WP-37 — pysgpp `DataVector`: iteration / bounds-checked indexing (from WP-29d; needs decision)
 - **Source**: WP-29d summary (follow-ups).
@@ -2218,7 +2293,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   only if dead); cpplint backlog of 1289 pre-existing messages in combigrid (mostly
   `build/include_order` of `<sgpp/...>`, missing banners in the node getters) — fix the banners;
   for the include-order class report the count and options (fix / filter in the cpplint config) to
-  the owner.
+  the owner. **From WP-08**: public `operators/linear_interpolation/linear_interpolation.hpp`
+  includes the internal `linear_interpolation_scratch.hpp` (and thereby `constants.hpp`) without
+  using it → drop the include (check the Python build).
 - **Scope**: fix the checker's logic; run it over the repo; fix combigrid files. If the fixed
   checker fails files of other modules (the build would fail for everyone), do not change those
   modules: BLOCKED with options (fix all / restrict to combigrid / leave the checker). Leftovers:

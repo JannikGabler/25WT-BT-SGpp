@@ -3,21 +3,24 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
+#include <bit>
 #include <cassert>
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/math/power.hpp>
+#include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <span>
+#include <tuple>
 #include <utility>
-#include <vector>
 
 using sgpp::combigrid::misc::LinInterpScratch;
 
@@ -44,61 +47,99 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
   values.store(sumOverCorners(values, point, tgData, genInstr, scratch), out.data());
 }
 
+std::pair<double, double> weights1D(const double x, const double lower, const double upper) {
+  const double length = upper - lower;
+  if (length == 0.0) {
+    return {0.5, 0.5};
+  }
+  return {(upper - x) / length, (x - lower) / length};
+}
+
+void prepareCorners(const base::DataVector& point, const TensorGrid& tg,
+                    const HyperCubeArea& domain, LinInterpScratch& scratch) {
+  const size_t nDim = tg.nDim();
+  tg.getNeighborsForLinInterpolation(point, scratch.neighborsPerDim);
+  double* const bracket = scratch.bracket();
+  double* const factors = scratch.factors();
+
+  for (size_t k = 0; k < nDim; k++) {
+    const auto [lower, upper] = scratch.neighborsPerDim[k];
+    const double width = domain[k].second - domain[k].first;
+    bracket[2 * k] = tools::mapToDomain(lower, domain[k].first, width);
+    bracket[2 * k + 1] = tools::mapToDomain(upper, domain[k].first, width);
+    std::tie(factors[2 * k], factors[2 * k + 1]) = weights1D(point[k], lower, upper);
+    scratch.curGridPoint[k] = bracket[2 * k];
+  }
+
+  // Weight table by doubling: entry j + 2^k = entry j times the upper weight of dimension k,
+  // entry j times the lower one. Every entry is the product of its 1D weights in the order of the
+  // dimensions, starting from 1.0 (bitwise the weights of the definition).
+  double* const table = scratch.weightTable();
+  table[0] = 1.0;
+  for (size_t k = 0; k < scratch.tableDim(); k++) {
+    const size_t half = size_t{1} << k;
+    for (size_t j = 0; j < half; j++) {
+      table[j + half] = table[j] * factors[2 * k + 1];
+      table[j] *= factors[2 * k];
+    }
+  }
+}
+
+void moveToCorner(const size_t corner, const double* const bracket, double* const gp) {
+  const auto t = static_cast<size_t>(std::countr_zero(corner));
+  gp[t] = bracket[2 * t + 1];
+  for (size_t k = 0; k < t; k++) {
+    gp[k] = bracket[2 * k];
+  }
+}
+
 /*
  * Corner loop, written once for both value types (misc::ScalarValues, misc::VectorValues): the
- * weight of a corner is computed once and serves all outputs. Inlined into the exported
- * functions, so that the scalar one keeps the structure it had before the vector overload.
+ * weight of a corner is computed once and serves all outputs. The corners run in blocks of
+ * 2^tableDim (the table covers the low bits of the corner index); the 1D weights of the higher
+ * dimensions are fixed per block and multiplied per corner, after the table entry, which keeps
+ * the order of the definition. The scratch pointers are copied into locals: the source function
+ * is an opaque call.
  */
 template <typename ValueType>
 typename ValueType::Acc sumOverCorners(const ValueType values, const base::DataVector& point,
                                        const TensorGridCTData& tgData, const SGGenInstr& genInstr,
                                        LinInterpScratch& scratch) {
   const size_t nDim = tgData.tensorGrid.nDim();
-  const size_t nNeighbors = tools::pow(static_cast<size_t>(2), nDim);
-  const HyperCubeArea& domain = genInstr.getDomain();
   typename ValueType::Acc result = values.zeroAcc(LinInterpScratch::RESULT_ACC);
-
   if (nDim == 0) {
     return result;
   }
 
-  tgData.tensorGrid.getNeighborsForLinInterpolation(point, scratch.neighborsPerDim);
+  prepareCorners(point, tgData.tensorGrid, genInstr.getDomain(), scratch);
+  const size_t tableDim = scratch.tableDim();
+  const size_t nHigh = nDim - tableDim;
+  const size_t blockSize = size_t{1} << tableDim;
+  const size_t nCorners = size_t{1} << nDim;
+  const double* const table = scratch.weightTable();
+  const double* const bracket = scratch.bracket();
+  const double* const factors = scratch.factors();
+  double* const high = scratch.highFactors();
+  const base::DataVector& gp = scratch.curGridPoint;
+  double* const gpData = scratch.curGridPoint.data();
 
-  for (size_t i = 0; i < nNeighbors; i++) {
-    const double weight =
-        computeNeighborGPWithWeight(i, point, nDim, scratch.neighborsPerDim, scratch.curGridPoint);
-    const auto value = values.evaluateNormalizedInPlace(scratch.curGridPoint, domain);
-    values.addScaled(result, weight, value);
+  for (size_t block = 0; block < nCorners; block += blockSize) {
+    for (size_t k = 0; k < nHigh; k++) {
+      high[k] = factors[2 * (tableDim + k) + ((block >> (tableDim + k)) & 1)];
+    }
+    for (size_t j = 0; j < blockSize; j++) {
+      double weight = table[j];
+      for (size_t k = 0; k < nHigh; k++) {
+        weight *= high[k];
+      }
+      values.addScaled(result, weight, values.evaluate(gp));
+      if (block + j + 1 < nCorners) {
+        moveToCorner(block + j + 1, bracket, gpData);
+      }
+    }
   }
 
   return result;
-}
-
-double computeNeighborGPWithWeight(size_t idx, const base::DataVector& point, const size_t nDim,
-                                   const std::vector<std::pair<double, double>>& neighborsPerDim,
-                                   base::DataVector& gpOut) {
-  double weight = 1.0;
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    const double length = neighborsPerDim[dim].second - neighborsPerDim[dim].first;
-
-    if (length == 0.0) {
-      weight *= 0.5;
-      gpOut[dim] = neighborsPerDim[dim].first;
-    } else {
-      if (idx & 1) {  // Odd
-        gpOut[dim] = neighborsPerDim[dim].second;
-        weight *= (point[dim] - neighborsPerDim[dim].first) / length;
-      } else {  // Even
-        gpOut[dim] = neighborsPerDim[dim].first;
-        weight *= (neighborsPerDim[dim].second - point[dim]) / length;
-      }
-    }
-
-    idx /= 2;
-  }
-
-  return weight;
 }
 
 }  // namespace lin_interpolation

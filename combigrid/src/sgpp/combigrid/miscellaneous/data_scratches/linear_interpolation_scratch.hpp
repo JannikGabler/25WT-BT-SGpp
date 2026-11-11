@@ -9,12 +9,11 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
-#include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/tools/math/power.hpp>
 #include <utility>
 #include <vector>
 
@@ -28,6 +27,11 @@ namespace misc {
  *
  * Holding these buffers per thread (instead of per call) avoids repeatedly
  * allocating @c base::DataVector instances inside the inner loop.
+ *
+ * The corner data of a tensor grid share one buffer (@ref cornerData, one allocation): the
+ * corner weight table (@ref weightTable), the bracketing coordinates on the domain
+ * (@ref bracket), the 1D weights (@ref factors) and the factors of the dimensions beyond the
+ * table for the current block of corners (@ref highFactors).
  *
  * For a vector-valued source function (m outputs), the scratch also holds the buffer of the
  * @c misc::VectorValues of the corner loop: the m values at the current corner and the m sums.
@@ -47,16 +51,42 @@ struct LinInterpScratch {
   explicit LinInterpScratch(const size_t nDim, const size_t nOutputs = 0)
       : curGridPoint(nDim),
         neighborsPerDim(nDim),
-        valueBuffer(VectorValues::bufferSize(nOutputs, N_ACCS)) {}
+        valueBuffer(VectorValues::bufferSize(nOutputs, N_ACCS)),
+        tableDim_(std::min(nDim, constants::lin_interpolation::WEIGHT_TABLE_MAX_DIM)),
+        cornerData((size_t{1} << tableDim_) + 5 * nDim - tableDim_) {}
 
- public:
-  /// @brief Reusable buffer for the current corner grid-point coordinates.
+  /// @brief Number of dimensions covered by the corner weight table: min(d,
+  /// @c constants::lin_interpolation::WEIGHT_TABLE_MAX_DIM).
+  size_t tableDim() const { return tableDim_; }
+
+  /// @brief Corner weight table: entry j (j < 2^@ref tableDim) is the product of the 1D weights
+  /// of dimensions 0 ... tableDim - 1 of the corner whose bit k selects the upper neighbor in
+  /// dimension k.
+  double* weightTable() { return cornerData.data(); }
+
+  /// @brief Bracketing coordinates on the domain: lower / upper neighbor of dimension k at
+  /// 2k / 2k + 1.
+  double* bracket() { return weightTable() + (size_t{1} << tableDim_); }
+
+  /// @brief 1D weights of the lower / upper neighbor of dimension k at 2k / 2k + 1.
+  double* factors() { return bracket() + 2 * neighborsPerDim.size(); }
+
+  /// @brief 1D weights of dimensions @ref tableDim ... d - 1 of the current block of corners.
+  double* highFactors() { return factors() + 2 * neighborsPerDim.size(); }
+
+  /// @brief Reusable buffer for the current corner grid-point coordinates (on the domain).
   base::DataVector curGridPoint;
   /// @brief Per-dimension @c (lower, upper) neighbor pairs surrounding the query point.
   std::vector<std::pair<double, double>> neighborsPerDim;
   /// @brief Buffer of the @c misc::VectorValues of a vector-valued source function (empty for a
   /// scalar one; accumulator slot @ref RESULT_ACC).
   std::vector<double> valueBuffer;
+
+ private:
+  /// @brief Number of dimensions covered by the corner weight table.
+  size_t tableDim_;
+  /// @brief Corner data (see the class description).
+  std::vector<double> cornerData;
 };
 
 }  // namespace misc

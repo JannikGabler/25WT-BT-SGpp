@@ -1074,6 +1074,8 @@ int main(int argc, char** argv) {
   addLinearTG(suite, 8, 5);
   addLinearTG(suite, 10, 5);  // WP-29c: high / low d
   addLinearTG(suite, 2, 16);
+  addLinearTG(suite, 5, 8);
+  addLinearTG(suite, 16, 2);  // 2^16 corners per tensor grid
   // Speed of light of the per-TG interpolation kernels and of the generic barycentric formula
   // with cached weights (perf_interp_sol.hpp)
   for (const bool integrandOnly : {false, true}) {
@@ -1084,6 +1086,8 @@ int main(int argc, char** argv) {
     addSolLinearTG(suite, 10, 5, integrandOnly);
     addSolLinearTG(suite, 8, 5, integrandOnly);
     addSolLinearTG(suite, 2, 16, integrandOnly);
+    addSolLinearTG(suite, 5, 8, integrandOnly);
+    addSolLinearTG(suite, 16, 2, integrandOnly);
   }
   addSolBarycentricCached(suite, 9);
   addSolBarycentricCached(suite, 65);

@@ -36,6 +36,12 @@
  *   - dedup (global, nested node families): every distinct sparse-grid point evaluated once per
  *     call (values stored per delta tensor grid, see DeltaIndex), then per TG the values gathered
  *     and the 1D collapses; "multi + dedup": the distinct points once for all query points.
+ *   - lin dedup (multilinear, nested node families): every distinct corner evaluated once per
+ *     call (see LinDedupIndex): the corners of all TGs are marked in a per-call store, the
+ *     marked ones evaluated, then per TG the values gathered with the weights and the corner order
+ *     of the production kernel (one parallel region, three passes); "lin dedup all": without the
+ *     marking pass, every slot of the store evaluated (slots no corner uses: coordinates of the
+ *     domain's lower corner).
  *   The results are compared with api (largest absolute difference; they differ only by the
  *   summation order over the TGs, and kernel's corner order in multilinear interpolation).
  *
@@ -48,6 +54,8 @@
 #include <omp.h>
 
 #include <algorithm>
+#include <array>
+#include <atomic>
 #include <bit>
 #include <chrono>
 #include <cmath>
@@ -555,6 +563,255 @@ size_t distinctCornersPerTG(const Problem& pr) {
 }
 
 /*******************************************************************************
+Multilinear interpolation: every distinct corner once per call (nested node families)
+*******************************************************************************/
+
+/**
+ * Query-independent index of the corners of all TGs of one call. With nested nodes, the bracket
+ * of x_j at level l + 1 shares one endpoint with the bracket at level l, the other one is new
+ * (b1: the sentinels 0 / 1 at level 0 are the boundary nodes of the finer levels). A corner
+ * coordinate is identified by the level lambda_j at which it appears first, plus a bit s_j for
+ * the two coordinates of level 0. The store holds, for every lambda with |lambda| <= L (rank in
+ * lexicographic order, dimension d - 1 most significant), a block of 2^#zeros(lambda) slots
+ * (the s bits of the zero dimensions, the lowest dimension least significant).
+ */
+struct LinDedupIndex {
+  size_t nDim = 0, maxLvl = 0, nSlots = 0;
+  std::vector<std::vector<std::vector<double>>> levelNodes;  ///< [j][l]: normalized nodes.
+  std::vector<size_t> term;  ///< [(j * (L+1) + rem) * (L+1) + lambda]: rank contribution.
+  std::vector<std::vector<uint8_t>> lambdas;  ///< In rank order.
+  std::vector<size_t> offset;                 ///< Per rank (+ nSlots at the end).
+
+  size_t rankTerm(const size_t j, const size_t rem, const size_t lambda) const {
+    return term[(j * (maxLvl + 1) + rem) * (maxLvl + 1) + lambda];
+  }
+};
+
+/// Number of vectors of j levels with sum <= s (C(s + j, j)).
+size_t countSimplex(const size_t j, const size_t s) {
+  size_t c = 1;
+  for (size_t i = 1; i <= j; i++) c = c * (s + i) / i;
+  return c;
+}
+
+void enumerateLambdas(LinDedupIndex& ix, std::vector<uint8_t>& lambda, const size_t j,
+                      const size_t budget) {
+  for (size_t l = 0; l <= budget; l++) {
+    lambda[j] = static_cast<uint8_t>(l);
+    if (j == 0) {
+      ix.offset.push_back(ix.nSlots);
+      ix.lambdas.push_back(lambda);
+      ix.nSlots += size_t{1} << std::count(lambda.begin(), lambda.end(), 0);
+    } else {
+      enumerateLambdas(ix, lambda, j - 1, budget - l);
+    }
+  }
+}
+
+LinDedupIndex buildLinDedupIndex(const Problem& pr) {
+  LinDedupIndex ix;
+  ix.nDim = pr.cfg.nDim;
+  ix.maxLvl = pr.cfg.maxLvl;
+  const size_t radix = ix.maxLvl + 1;
+  ix.levelNodes.assign(ix.nDim, std::vector<std::vector<double>>(radix));
+  for (size_t t = 0; t < pr.tgs.size(); t++) {
+    for (size_t j = 0; j < ix.nDim; j++) ix.levelNodes[j][pr.tgs[t]->mi[j]] = pr.unit[t][j];
+  }
+  ix.term.assign(ix.nDim * radix * radix, 0);
+  for (size_t j = 0; j < ix.nDim; j++) {
+    for (size_t rem = 0; rem < radix; rem++) {
+      for (size_t lambda = 1; lambda <= rem; lambda++) {
+        ix.term[(j * radix + rem) * radix + lambda] =
+            ix.rankTerm(j, rem, lambda - 1) + countSimplex(j, rem - (lambda - 1));
+      }
+    }
+  }
+  std::vector<uint8_t> lambda(ix.nDim);
+  enumerateLambdas(ix, lambda, ix.nDim - 1, ix.maxLvl);
+  ix.offset.push_back(ix.nSlots);
+  return ix;
+}
+
+/// Per-call data: per (dimension, level, bit) the delta level and level-0 bit of the corner
+/// coordinate and its 1D weight; per (dimension, delta level, bit) the coordinate on the domain.
+struct LinDedupCall {
+  std::vector<std::array<std::pair<uint8_t, uint8_t>, 2>> ids;  ///< [j * (L+1) + l][bit]
+  std::vector<std::array<double, 2>> factors;                   ///< [j * (L+1) + l][bit]
+  std::vector<std::array<double, 2>> coords;                    ///< [j * (L+1) + lambda][s]
+};
+
+/// Bracket of x in sorted nodes, as TensorGrid::getNeighborsForLinInterpolation.
+std::pair<double, double> bracketOf(const std::vector<double>& nodes, const double x) {
+  const auto it = std::lower_bound(nodes.begin(), nodes.end(), x);
+  if (it == nodes.end()) return {nodes.back(), 1.0};
+  if (std::abs(*it - x) <= 1E-12) return {*it, *it};
+  if (it == nodes.begin()) return {0.0, *it};
+  return {*(it - 1), *it};
+}
+
+/// The coordinates of dimension j by level of first appearance (aborts if the nodes are not
+/// nested as assumed).
+void indexCallDimension(const LinDedupIndex& ix, const HyperCubeArea& domain, const double x,
+                        const size_t j, LinDedupCall& call) {
+  const size_t radix = ix.maxLvl + 1;
+  std::vector<std::pair<uint64_t, std::pair<uint8_t, uint8_t>>> seen;
+  const double width = domain[j].second - domain[j].first;
+  for (size_t l = 0; l < radix; l++) {
+    if (ix.levelNodes[j][l].empty()) continue;
+    const std::pair<double, double> bracket = bracketOf(ix.levelNodes[j][l], x);
+    const double lo = bracket.first, hi = bracket.second;
+    const double length = hi - lo;
+    call.factors[j * radix + l] = length == 0.0
+                                      ? std::array<double, 2>{0.5, 0.5}
+                                      : std::array<double, 2>{(hi - x) / length, (x - lo) / length};
+    size_t nNew = 0;
+    for (size_t b = 0; b < 2; b++) {
+      const double c = b == 0 ? lo : hi;
+      auto it = std::find_if(seen.begin(), seen.end(),
+                             [&](const auto& e) { return e.first == std::bit_cast<uint64_t>(c); });
+      if (it == seen.end()) {
+        const std::pair<uint8_t, uint8_t> id{static_cast<uint8_t>(l),
+                                             static_cast<uint8_t>(l == 0 ? nNew : 0)};
+        if ((l == 0 && nNew >= 2) || (l > 0 && nNew >= 1)) {
+          std::fprintf(stderr, "lin dedup: nodes not nested as assumed\n");
+          std::abort();
+        }
+        nNew++;
+        seen.push_back({std::bit_cast<uint64_t>(c), id});
+        call.coords[j * radix + id.first][id.second] =
+            cg::tools::mapToDomain(c, domain[j].first, width);
+        it = seen.end() - 1;
+      }
+      call.ids[j * radix + l][b] = it->second;
+    }
+  }
+}
+
+/// Incremental slot of the corners of one TG (corner index order; dimension d - 1 first).
+struct SlotWalker {
+  const LinDedupIndex* ix;
+  std::vector<size_t> sumAbove, rankAcc, subAcc;  ///< State after dimensions d - 1 ... j.
+  explicit SlotWalker(const LinDedupIndex& index)
+      : ix(&index),
+        sumAbove(index.nDim + 1, 0),
+        rankAcc(index.nDim + 1, 0),
+        subAcc(index.nDim + 1, 0) {}
+  void update(const size_t j, const std::pair<uint8_t, uint8_t> id) {
+    rankAcc[j] = rankAcc[j + 1] + ix->rankTerm(j, ix->maxLvl - sumAbove[j + 1], id.first);
+    sumAbove[j] = sumAbove[j + 1] + id.first;
+    subAcc[j] = id.first == 0 ? 2 * subAcc[j + 1] + id.second : subAcc[j + 1];
+  }
+  size_t slot() const { return ix->offset[rankAcc[0]] + subAcc[0]; }
+};
+
+/// Calls visit(corner, slot) for the 2^d corners of TG t in index order.
+template <typename Visit>
+void forEachCornerSlot(const LinDedupIndex& ix, const LinDedupCall& call,
+                       const TensorGridCTData& tg, SlotWalker& w, Visit&& visit) {
+  const size_t nDim = ix.nDim, radix = ix.maxLvl + 1;
+  for (size_t j = nDim; j-- > 0;) w.update(j, call.ids[j * radix + tg.mi[j]][0]);
+  visit(size_t{0}, w.slot());
+  for (size_t c = 1; c < (size_t{1} << nDim); c++) {
+    const auto t = static_cast<size_t>(std::countr_zero(c));
+    for (size_t j = t + 1; j-- > 0;) w.update(j, call.ids[j * radix + tg.mi[j]][(c >> j) & 1]);
+    visit(c, w.slot());
+  }
+}
+
+/// Corner weights of TG t by doubling (as the production kernel).
+void linDedupWeights(const LinDedupIndex& ix, const LinDedupCall& call, const TensorGridCTData& tg,
+                     std::vector<double>& table) {
+  const size_t radix = ix.maxLvl + 1;
+  table[0] = 1.0;
+  for (size_t k = 0; k < ix.nDim; k++) {
+    const std::array<double, 2>& f = call.factors[k * radix + tg.mi[k]];
+    const size_t half = size_t{1} << k;
+    for (size_t j = 0; j < half; j++) {
+      table[j + half] = table[j] * f[1];
+      table[j] *= f[0];
+    }
+  }
+}
+
+/// Evaluates the marked slots of rank r.
+size_t evaluateMarked(const Problem& pr, const LinDedupIndex& ix, const LinDedupCall& call,
+                      const size_t r, const std::vector<uint8_t>& marks,
+                      std::vector<double>& values, DataVector& gp) {
+  const size_t radix = ix.maxLvl + 1;
+  const std::vector<uint8_t>& lambda = ix.lambdas[r];
+  size_t count = 0;
+  for (size_t slot = ix.offset[r]; slot < ix.offset[r + 1]; slot++) {
+    if (marks[slot] == 0) continue;  // read after the barrier that ends the marking pass
+    size_t bits = slot - ix.offset[r];
+    for (size_t j = 0; j < ix.nDim; j++) {
+      size_t s = 0;
+      if (lambda[j] == 0) {
+        s = bits & 1;
+        bits >>= 1;
+      }
+      gp[j] = call.coords[j * radix + lambda[j]][s];
+    }
+    values[slot] = pr.func.evaluate(gp);
+    count++;
+  }
+  return count;
+}
+
+/// lin dedup: per call, the corners of all TGs marked (markCorners; else every slot counts as
+/// marked), the marked slots evaluated, then per TG the values gathered (index order,
+/// production weights). evals: distinct evaluations of all calls.
+double runLinearDedup(const Problem& pr, const LinDedupIndex& ix, const bool markCorners,
+                      std::vector<double>& out, size_t& evals) {
+  const size_t radix = ix.maxLvl + 1, nDim = ix.nDim;
+  evals = 0;
+  const auto start = std::chrono::steady_clock::now();
+  for (size_t q = 0; q < pr.points.size(); q++) {
+    LinDedupCall call{std::vector<std::array<std::pair<uint8_t, uint8_t>, 2>>(nDim * radix),
+                      std::vector<std::array<double, 2>>(nDim * radix),
+                      std::vector<std::array<double, 2>>(nDim * radix)};
+    for (size_t j = 0; j < nDim; j++) {
+      for (size_t l = 0; l < radix; l++)
+        call.coords[j * radix + l] = {pr.domain[j].first, pr.domain[j].first};
+    }
+    for (size_t j = 0; j < nDim; j++)
+      indexCallDimension(ix, pr.domain, pr.normPoints[q][j], j, call);
+    std::vector<uint8_t> marks(ix.nSlots, markCorners ? 0 : 1);
+    std::vector<double> values(ix.nSlots);
+    double sum = 0.0;
+    size_t count = 0;
+#pragma omp parallel reduction(+ : sum, count)
+    {
+      SlotWalker w(ix);
+#pragma omp for schedule(static)
+      for (size_t t = 0; t < (markCorners ? pr.tgs.size() : 0); t++) {
+        forEachCornerSlot(ix, call, *pr.tgs[t], w, [&](size_t, const size_t slot) {
+          std::atomic_ref<uint8_t> m(marks[slot]);
+          if (m.load(std::memory_order_relaxed) == 0) m.store(1, std::memory_order_relaxed);
+        });
+      }
+      DataVector gp(nDim);
+#pragma omp for schedule(dynamic, 16)
+      for (size_t r = 0; r < ix.lambdas.size(); r++) {
+        count += evaluateMarked(pr, ix, call, r, marks, values, gp);
+      }
+      std::vector<double> table(size_t{1} << nDim);
+#pragma omp for schedule(static) nowait
+      for (size_t t = 0; t < pr.tgs.size(); t++) {
+        linDedupWeights(ix, call, *pr.tgs[t], table);
+        double tgSum = 0.0;
+        forEachCornerSlot(ix, call, *pr.tgs[t], w, [&](const size_t c, const size_t slot) {
+          tgSum += table[c] * values[slot];
+        });
+        sum += pr.tgs[t]->coefficient * tgSum;
+      }
+    }
+    out[q] = sum;
+    evals += count;
+  }
+  return seconds(start);
+}
+
+/*******************************************************************************
 Driver
 *******************************************************************************/
 
@@ -605,13 +862,16 @@ std::vector<std::string> dedupRows;
 /// Median times of the variants (one entry per repetition).
 struct Times {
   std::vector<double> api, kernel, kernelW, solApi, multi, multiW, solMulti, cached, dedup,
-      multiDedup;
+      multiDedup, linDedup, linDedupAll;
 };
 
+/// Rows of the multilinear deduplication table (printed last).
+std::vector<std::string> linDedupRows;
+
 /// One interleaved round of all variants; lin: multilinear (kernel and sol_api only).
-void timeRound(const Problem& pr, const DeltaIndex* ix, Times& t,
+void timeRound(const Problem& pr, const DeltaIndex* ix, const LinDedupIndex* lix, Times& t,
                std::vector<std::vector<double>>& res, std::vector<double>& values, double& hit,
-               double& sink) {
+               double& sink, size_t& linEvals) {
   const bool lin = pr.cfg.linear, generic = !lin && pr.cfg.nodes != "cc";
   const size_t p = pr.points.size();
   const auto start = std::chrono::steady_clock::now();
@@ -626,6 +886,9 @@ void timeRound(const Problem& pr, const DeltaIndex* ix, Times& t,
   t.cached.push_back(runApiCached(pr, res[6], hit));
   t.dedup.push_back(ix ? runGlobalDedup(pr, *ix, false, values, res[7]) : 0.0);
   t.multiDedup.push_back(ix ? runGlobalDedup(pr, *ix, true, values, res[8]) : 0.0);
+  t.linDedup.push_back(lix ? runLinearDedup(pr, *lix, true, res[9], linEvals) : 0.0);
+  size_t allEvals = 0;
+  t.linDedupAll.push_back(lix ? runLinearDedup(pr, *lix, false, res[10], allEvals) : 0.0);
 }
 
 std::string fmtTime(const std::vector<double>& t, const double api, const bool show) {
@@ -645,30 +908,47 @@ std::string fmtDiff(const std::vector<double>& a, const std::vector<double>& b, 
 void timeCase(const Problem& pr, const int reps) {
   const size_t p = pr.points.size();
   const bool lin = pr.cfg.linear, generic = !lin && pr.cfg.nodes != "cc";
-  std::vector<std::vector<double>> res(9, std::vector<double>(p));
+  std::vector<std::vector<double>> res(11, std::vector<double>(p));
   const bool nested = !lin && pr.cfg.nodes != "cheb1";
   const std::optional<DeltaIndex> ix =
       nested ? std::optional<DeltaIndex>(buildDeltaIndex(pr)) : std::nullopt;
+  const std::optional<LinDedupIndex> lix =
+      lin ? std::optional<LinDedupIndex>(buildLinDedupIndex(pr)) : std::nullopt;
   std::vector<double> values(ix ? ix->nValues : 0);
   Times warm, t;
   double hit = 0.0, sink = 0.0;
-  timeRound(pr, ix ? &*ix : nullptr, warm, res, values, hit, sink);
-  for (int r = 0; r < reps; r++) timeRound(pr, ix ? &*ix : nullptr, t, res, values, hit, sink);
+  size_t linEvals = 0;
+  const DeltaIndex* const ixp = ix ? &*ix : nullptr;
+  const LinDedupIndex* const lixp = lix ? &*lix : nullptr;
+  timeRound(pr, ixp, lixp, warm, res, values, hit, sink, linEvals);
+  for (int r = 0; r < reps; r++) timeRound(pr, ixp, lixp, t, res, values, hit, sink, linEvals);
   const double api = median(t.api);
-  std::printf("| %s | %zu | %.4f | %s | %s | %.4f (%.2f) | %s | %s | %s | %s [%.3f] | %s / %s / %s "
-              "/ %s |\n",
-              pr.cfg.name().c_str(), p, api, fmtTime(t.kernel, api, true).c_str(),
-              fmtTime(t.kernelW, api, generic).c_str(), median(t.solApi), median(t.solApi) / api,
-              fmtTime(t.multi, api, !lin).c_str(), fmtTime(t.multiW, api, generic).c_str(),
-              lin ? "-" : std::to_string(median(t.solMulti)).substr(0, 6).c_str(),
-              fmtTime(t.cached, api, pr.cached != nullptr).c_str(), hit,
-              fmtDiff(res[0], res[1], true).c_str(), fmtDiff(res[0], res[2], generic).c_str(),
-              fmtDiff(res[0], res[3], !lin).c_str(), fmtDiff(res[0], res[6], true).c_str());
+  std::printf(
+      "| %s | %zu | %.4f | %s | %s | %.4f (%.2f) | %s | %s | %s | %s [%.3f] | %s / %s / %s "
+      "/ %s |\n",
+      pr.cfg.name().c_str(), p, api, fmtTime(t.kernel, api, true).c_str(),
+      fmtTime(t.kernelW, api, generic).c_str(), median(t.solApi), median(t.solApi) / api,
+      fmtTime(t.multi, api, !lin).c_str(), fmtTime(t.multiW, api, generic).c_str(),
+      lin ? "-" : std::to_string(median(t.solMulti)).substr(0, 6).c_str(),
+      fmtTime(t.cached, api, pr.cached != nullptr).c_str(), hit,
+      fmtDiff(res[0], res[1], true).c_str(), fmtDiff(res[0], res[2], generic).c_str(),
+      fmtDiff(res[0], res[3], !lin).c_str(), fmtDiff(res[0], res[6], true).c_str());
   if (ix) {
     dedupRows.push_back(pr.cfg.name() + " | " + std::to_string(ix->nValues) + " | " +
                         fmtTime(t.dedup, api, true) + " | " + fmtTime(t.multiDedup, api, true) +
                         " | " + fmtDiff(res[0], res[7], true) + " / " +
                         fmtDiff(res[0], res[8], true));
+  }
+  if (lix) {
+    const double perCall = static_cast<double>(pr.tgs.size() << pr.cfg.nDim);
+    const double distinct = static_cast<double>(linEvals) / static_cast<double>(p);
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "%zu | %.1f KiB | %.0f | %.0f | %.2f | ", lix->nSlots,
+                  static_cast<double>(lix->nSlots * (sizeof(double) + 1)) / 1024.0, perCall,
+                  distinct, perCall / distinct);
+    linDedupRows.push_back(pr.cfg.name() + " | " + buf + fmtTime(t.linDedup, api, true) + " | " +
+                           fmtTime(t.linDedupAll, api, true) + " | " +
+                           fmtDiff(res[0], res[9], true) + " / " + fmtDiff(res[0], res[10], true));
   }
   std::fflush(stdout);
   if (sink == 42.0) std::printf("#\n");
@@ -720,5 +1000,10 @@ int main(int argc, char** argv) {
       "\n| case (nested nodes) | distinct points per call | dedup [s] (api/x) | multi + dedup [s] "
       "(api/x) | max diff dedup / multi + dedup |\n|---|---|---|---|---|\n");
   for (const std::string& row : dedupRows) std::printf("| %s |\n", row.c_str());
+  std::printf(
+      "\n| case (multilinear) | slots | store per call (values + marks) | evals per call (api) | "
+      "distinct evals per call | api / distinct | lin dedup [s] (api/x) | lin dedup all [s] "
+      "(api/x) | max diff lin dedup / all |\n|---|---|---|---|---|---|---|---|---|\n");
+  for (const std::string& row : linDedupRows) std::printf("| %s |\n", row.c_str());
   return 0;
 }

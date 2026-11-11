@@ -12,18 +12,27 @@
  * loop (@ref sumOverCorners) is written once for both value types (@c misc::ScalarValues,
  * @c misc::VectorValues); it is defined and instantiated in the @c .cpp only, the exported entry
  * points are the two @ref processTensorGrid overloads.
+ *
+ * Corner @c c (bit k of @c c selects the upper neighbor in dimension k) has the weight
+ * @f$\prod_{k=0}^{d-1} w_k@f$, multiplied in this order, with the 1D weights
+ * @f$w_k = (b_k - x_k) / (b_k - a_k)@f$ (lower neighbor @f$a_k@f$) resp.
+ * @f$(x_k - a_k) / (b_k - a_k)@f$ (upper neighbor @f$b_k@f$), or 0.5 for both if the cell has
+ * zero extent in dimension k (the query point is a node). The corners are visited and summed in
+ * the order of @c c.
  */
 #pragma once
 
+#include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>
-#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -67,7 +76,13 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
 
 /**
  * @brief Kernel of both @ref processTensorGrid overloads: the corner loop. The weight of a
- * corner (@ref computeNeighborGPWithWeight) is computed once and serves all m outputs.
+ * corner is computed once and serves all m outputs.
+ *
+ * Per tensor grid, the bracketing coordinates are mapped onto the domain once and the products
+ * of the 1D weights of the first @c misc::LinInterpScratch::tableDim dimensions are tabulated
+ * (by doubling: the same products in the same order as the definition, so the weights are
+ * bitwise those of the definition); the corners are visited in index order, each one changing
+ * the coordinates of the dimensions whose bit changes (two on average).
  *
  * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues (m outputs; accumulator slot
  *                   @c misc::LinInterpScratch::RESULT_ACC of the view's buffer).
@@ -75,7 +90,7 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
  * @param point    Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param tgData   Tensor grid + level multi-index + combination coefficient.
  * @param genInstr Generation instruction (used for the domain).
- * @param scratch  Per-thread scratch space (neighbors per dimension, current corner).
+ * @param scratch  Per-thread scratch space (neighbors, corner data, current corner).
  * @return Accumulator of the interpolated values (a @c double for scalar values, a pointer to
  *         the m values in the view's buffer for vector values); zero for a 0-dimensional tensor
  *         grid.
@@ -86,25 +101,47 @@ typename ValueType::Acc sumOverCorners(ValueType values, const base::DataVector&
                                        misc::LinInterpScratch& scratch);
 
 /**
- * @brief Computes one corner of the surrounding cell and its associated
- * multilinear weight.
+ * @brief 1D weights of the lower and the upper neighbor of a coordinate: the relative distances
+ * to the other neighbor.
  *
- * The bits of @p idx select the lower (@c 0) or upper (@c 1) per-dimension
- * neighbor; iterating @p idx over @f$[0, 2^d)@f$ visits every corner. If
- * the cell has zero extent in some dimension (the query point coincides
- * with a node) the corresponding factor is replaced by @c 0.5 so that
- * both halves of @p idx contribute equally.
- *
- * @param idx              Corner index in @f$[0, 2^d)@f$.
- * @param point            Query point in normalized coordinates.
- * @param nDim             Spatial dimension.
- * @param neighborsPerDim  Per-dimension @c (lower, upper) neighbor pairs.
- * @param gpOut            Output: coordinates of the selected corner.
- * @return Multilinear weight for this corner.
+ * @param x     Coordinate in @f$[\mathrm{lower}, \mathrm{upper}]@f$ (normalized).
+ * @param lower Lower neighbor @f$a@f$.
+ * @param upper Upper neighbor @f$b@f$.
+ * @return @f$((b - x) / (b - a), (x - a) / (b - a))@f$, or @c (0.5, 0.5) if @f$a = b@f$ (the
+ *         coordinate is a node).
  */
-double computeNeighborGPWithWeight(size_t idx, const base::DataVector& point, size_t nDim,
-                                   const std::vector<std::pair<double, double>>& neighborsPerDim,
-                                   base::DataVector& gpOut);
+std::pair<double, double> weights1D(double x, double lower, double upper);
+
+/**
+ * @brief Prepares the corner loop (@ref sumOverCorners) on one tensor grid.
+ *
+ * Brackets @p point in @p tg (@c TensorGrid::getNeighborsForLinInterpolation), maps the
+ * bracketing coordinates onto @p domain (@c tools::mapToDomain, as
+ * @c tools::denormalizeDataVector), computes the 1D weights (@ref weights1D), builds the corner
+ * weight table of the first @c misc::LinInterpScratch::tableDim dimensions and sets the current
+ * grid point to corner 0 (all lower neighbors).
+ *
+ * @param point   Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param tg      Tensor grid of dimension d > 0.
+ * @param domain  Domain of the sparse grid.
+ * @param scratch Per-thread scratch space of dimension d (output: neighbors, corner data,
+ *                current grid point).
+ */
+void prepareCorners(const base::DataVector& point, const TensorGrid& tg,
+                    const HyperCubeArea& domain, misc::LinInterpScratch& scratch);
+
+/**
+ * @brief Moves the current grid point from corner @p corner - 1 to corner @p corner.
+ *
+ * With t the lowest set bit of @p corner, the coordinates of dimensions 0 ... t - 1 change to
+ * the lower neighbors and the coordinate of dimension t to the upper one (the other bits are
+ * those of @p corner - 1).
+ *
+ * @param corner  Corner index in @f$[1, 2^d)@f$.
+ * @param bracket Bracketing coordinates on the domain (@c misc::LinInterpScratch::bracket).
+ * @param gp      Coordinates of the current grid point (d values), updated in place.
+ */
+void moveToCorner(size_t corner, const double* bracket, double* gp);
 
 }  // namespace lin_interpolation
 }  // namespace tools

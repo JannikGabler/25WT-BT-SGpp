@@ -1,7 +1,7 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-36 (2026-11-11; accepted, commit pending; WP-45/46/08/09 decisions open) ·
-Next free WP number: 47 ·
+Last processed: WP-08 (2026-11-11; accepted, commit pending; dedup → WP-47) ·
+Next free WP number: 49 ·
 Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC 15.2,
@@ -20,7 +20,9 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
   shift ±3–4 % with unrelated changes (op-cache misses; check before attributing); LTO may
   recompile unchanged code; generation ±20 ms page-fault noise. DSG row loop `[[gnu::aligned(64)]]`.
   Clocksource HPET (WP-27: kernel marked the TSC unstable at boot): `steady_clock::now()` 1.9 µs,
-  `rdtscp` 37 ns; harness unaffected; owner may check BIOS / firmware.
+  `rdtscp` 37 ns; harness unaffected; owner may check BIOS / firmware. interplin d8 at 16 t is
+  bimodal in an identical binary (WP-08 A/A: 1.19–1.23 / 1.30–1.37 s per round) → A/A before
+  trusting single d8 rounds (→ WP-32).
 - **Toolchain**: also Clang 21.1.8 + libomp + lld, JDK 21; `perf/scripts/toolchain.py` variants
   (`gcc-sa` WP-14, `gcc-nsa` WP-20).
 - **Owner's rules**: acceptance by the owner only; minimal gains may be proposed (labelled, weighed
@@ -58,9 +60,10 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 | – | WP-27 | Caching: adaptive policy (`CachePolicy::Adaptive`: None / MemoryOnly / TemporaryStorage, hit-rate-weighted rules, in-call windows, probes) | accepted (11-03, 5a1229aab) | e2e 0.999x, memory 1.003, refcheck OK; cost-0 fn 0.57–0.86x of plain (vs. "always" 0.07–0.30x); 1 µs fn 0.91–1.03x of "always" | [WP-27](summaries/WP-27-caching-adaptive-policy.md) |
 | – | WP-04 | DSG quadrature: row loop (b0) (block loop + `unroll 1`; `TrieNode` 24 → 16 B) | rejected (11-03; complexity vs. gain) | measured quad/dsg 1.047x (−0.79 s), memory 1.004; kept: tests, micro `dsg/row_loop`, `process_delta_tgs/.../s256`; patches in `results/WP-04/` | [WP-04](summaries/WP-04-dsg-row-loop.md) |
 | – | WP-17 | Batched source-function evaluation (evaluator objects, `PointBlock` ≤ 256 points, batch API, Python `fromBatch`) | rejected (11-04; NO-GAIN) | judged e2e 0.960x (−1.6 s, 29/38 SLOWER), memory 1.003, refcheck OK; Python 16 t 28x, warm cache 1.12–1.29x | [WP-17](summaries/WP-17-batched-evaluation.md) |
-| – | WP-36 | Interpolation operators: exploration (measurement; benchmarks `perf_interp_explore`, `perf_interp_sol.hpp`, 16 micro cases kept) | accepted (11-11; commit pending) | levers (16 t, saved of interp 5.70 / interplin 4.51 s): interp dedup per call 3.45 s (measured), interplin dedup ≈ 2.3–3.0 s (est.), corner loop 1.01 s, global kernel 0.64 s, generic weights 0.42 s; multi-point 0 judged | [WP-36](summaries/WP-36-interpolation-exploration.md) |
-| 1 | WP-08 | Linear interpolation: corner loop (1.01 s) + WP-46 cross-TG corner dedup as a measured option (owner decides with the results) | in progress (prompt 11-11) | | |
-| 2 | WP-45 | `DeltasSparseGrid` global interpolation operator (new overload; owner 11-11; judged 0) + drafted e2e / reference cases `interp/dsg/...` as a patch (owner applies + rehashes) | ready (after WP-08) | | |
+| – | WP-36 | Interpolation operators: exploration (measurement; benchmarks `perf_interp_explore`, `perf_interp_sol.hpp`, 16 micro cases kept) | accepted (11-11, c3cc48360) | levers (16 t, saved of interp 5.70 / interplin 4.51 s): interp dedup per call 3.45 s (measured), interplin dedup ≈ 2.3–3.0 s (est.), corner loop 1.01 s, global kernel 0.64 s, generic weights 0.42 s; multi-point 0 judged | [WP-36](summaries/WP-36-interpolation-exploration.md) |
+| – | WP-08 | Linear interpolation: corner loop (weight table by doubling, index order, per-TG bitwise) + cross-TG dedup prototype | accepted (11-11; commit pending) | interplin 4.525 → 3.506 s (−1.02 s; d10 1.334x, d8 1.267x, d5 1.251x), memory 1.009, refcheck OK; dedup prototype −2.12 s more → WP-47 (owner: option (c)) | [WP-08](summaries/WP-08-corner-loop.md) |
+| 1 | WP-47 | `DeltasSparseGrid` linear interpolation (each distinct corner once per call; owner option (c), before WP-45) + drafted `interplin/dsg/...` cases (patch) | in progress (prompt 11-11) | | |
+| 2 | WP-45 | `DeltasSparseGrid` global interpolation operator (new overload; owner 11-11; judged 0) + drafted e2e / reference cases `interp/dsg/...` as a patch (owner applies + rehashes) | ready (after WP-47) | | |
 | 3 | WP-06 | Global interpolation kernel; `SparseGrid` operator stays per-TG CT (0.64 s) | ready (after WP-45) | | |
 | 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready | | |
 | 5 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
@@ -71,29 +74,30 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 | 10 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
 | 11 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
 | 12 | WP-31 | MI-set cleanups | ready (low) | | |
-| 13 | WP-35 | Fragile tests (time-seeded tolerance; FMA-dependent cache precondition) + audit (test-only) | ready (low; may move up) | | |
-| 14 | WP-38 | Code hygiene: banner checker + combigrid leftovers | ready (low) | | |
-| 15 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
-| 16 | WP-30 | Vector-valued: small-m optimizations | planned | | |
-| 17 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
-| 18 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it) | | |
-| 19 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late, owner 11-03) | | |
-| 20 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late, owner 11-03) | | |
-| 21 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights` (from WP-04) | planned (owner places it; WP-17 rejected → unblocked) | | |
+| 13 | WP-48 | Operator drivers: `std::fma`-pinned CT combination + small-call gate (interplin d2 ≈ 20 ms) | ready (low) | | |
+| 14 | WP-35 | Fragile tests (time-seeded tolerance; FMA-dependent cache precondition) + audit (test-only) | ready (low; may move up) | | |
+| 15 | WP-38 | Code hygiene: banner checker + combigrid leftovers | ready (low) | | |
+| 16 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
+| 17 | WP-30 | Vector-valued: small-m optimizations | planned | | |
+| 18 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
+| 19 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it) | | |
+| 20 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late, owner 11-03) | | |
+| 21 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late, owner 11-03) | | |
+| 22 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights` (from WP-04) | planned (owner places it; WP-17 rejected → unblocked) | | |
 | last | WP-43 | Final clean-up: phase references out of code docs + phase leftovers | ready (always last, owner 11-03) | | |
 
 ## Next action
 
-**WP-36 accepted** (11-11); the owner commits it (code + summary + `results/WP-36/` +
-STATUS/PLAN). **WP-08 in progress** (prompt 11-11; per-TG corner loop + WP-46 dedup as a
-prototyped option; the owner decides on cross-TG dedup in the `SparseGrid` linear operator with
-its results). Then WP-45 (DSG interpolation). If the owner's PGO build ran, `lib/` holds PGO
-libraries: `perf.py build normal` first. Next master start: process the WP-08 summary.
+**WP-08 accepted** (11-11); the owner commits it (code + test + benchmarks + summary +
+`results/WP-08/` + STATUS/PLAN). **WP-47 in progress** (prompt 11-11; DSG `interpolateLinear`,
+owner: before WP-45). Then WP-45 (DSG global interpolation, reuses WP-47's infrastructure), then
+WP-06. If the owner's PGO build ran, `lib/` holds PGO libraries: `perf.py build normal` first.
+Next master start: process the WP-47 summary (+ its judged-case patch → owner applies + rehashes).
 
 ## Open decisions for the owner
 
-- WP-08 (with its summary): cross-TG corner dedup (WP-46) inside the `SparseGrid` linear
-  operator or not (global: owner kept the per-TG CT, dedup → DSG variant WP-45).
+- WP-47 / WP-45 (on acceptance): apply the drafted judged-suite patches (`interplin/dsg/...`,
+  `interp/dsg/...`) and run `perf.py protect --authorized-by-owner`.
 - WP-09 / WP-18 (after their summaries): adopt the proposed interface or not. WP-18 (before
   its prompt): protected `perf_e2e.cpp:81` / `perf_reference.cpp:136-144` read `tgData.mi`,
   `.coefficient`, `.tensorGrid.*` → proxy keeps the names, or the owner adapts them.
@@ -115,12 +119,10 @@ libraries: `perf.py build normal` first. Next master start: process the WP-08 su
 ## Do not retry
 
 (`WP-NN <idea>: <numbers>, <why>`; details in the summaries)
-- **Methodology**: bootstrap within rounds (18/114 false positives) → paired per-round t-interval;
-  std → MAD; micro right after e2e 10–25 % slow → settle, calibrate, micro, e2e; refcheck ratio
-  tolerance → `e_new ≤ ratio·e_ref + 4 units`; memory flag by ratio only (5/9 A/A false) → 3 % + no
-  overlap. Profiles: `perf script` callchains / `--sort symoff` unusable → `perf script -F
-  ip,sym,symoff,dso -G` + `addr2line -a -i` (`results/RP-3/profile_split.py`); libgomp / OpenBLAS
-  shares of ms-long processes = pool spin-up. TySan: > 12 GB, false positives → `-Wstrict-aliasing`.
+- **Methodology** (statistics / run order: README.md): profiles: `perf script` callchains /
+  `--sort symoff` unusable → `perf script -F ip,sym,symoff,dso -G` + `addr2line -a -i`
+  (`results/RP-3/profile_split.py`); libgomp / OpenBLAS shares of ms-long processes = pool
+  spin-up. TySan: > 12 GB, false positives → `-Wstrict-aliasing`.
 - WP-01 rows always along dimension 0 (b1 47.2 vs. 27.9 ns/point); helpers reading scratch per row
   2–9 % slower → copy into locals.
 - WP-02 plain-double projected coefficients (round-off 9x) → double-double; global-width 24 B slots
@@ -145,12 +147,8 @@ libraries: `perf.py build normal` first. Next master start: process the WP-08 su
   only); explicit `std::fma` in `addScaled` (still 34 cases non-bitwise, 4 interplin changed).
 - WP-36 hashed cache (`CachedSourceFunc`) for the reuse in interp / interplin: 0.41–0.94x
   (interplin d10 0.60x) despite hit rates 0.59–0.998 (lookup > integrand) → index-based reuse only.
-- WP-10 unlinking Armadillo with Eigen FFT: `total` 0.97–1.02, cold first call +63…+130 ms.
-- WP-11 `-fno-plt -Bsymbolic-functions` (1.015x vs. 1.024x); Clang ThinLTO (quad/sg 0.964x, refcheck
-  WARN), full LTO 1.018x → GCC. Clang needs `CC=clang CXX=clang++ LINK=clang++`.
-- WP-20 `FlatNestedVec` offsets as `uint32_t`: no gain.
-- WP-23 header-inline `DataVector` ctors / static LTO (0.999x); dropping base's `operator new`
-  before aligning per-thread data (0.982x, interplin d8 +20–45 % false sharing).
+- WP-23 dropping base's `operator new` before aligning per-thread data (0.982x, interplin d8
+  +20–45 % false sharing).
 - WP-24 one path scalar = m = 1 (SG 1.28–1.48x / DSG 1.14–1.27x slower); compile-time m (≤ 5 %);
   row buffers / per-row batches (1.14–1.75x slower at m = 1); interp m-innermost (27 ulp) → innerk.
 - WP-25 run-time policy branch in `evaluate` (0.987x); per-evaluation bypass flag (0.69–0.97x);
@@ -174,24 +172,22 @@ libraries: `perf.py build normal` first. Next master start: process the WP-08 su
 
 ## Re-profiling
 
-Last: RP-3 (2026-10-30; rp-3 = 0c6ecfc4b). Accepted optimizations since: 0. Features (WP-29a–d,
+Last: RP-3 (2026-10-30; rp-3 = 0c6ecfc4b). Accepted optimizations since: **1** (WP-08; interplin
+1.29x < 1.3x, its hot spot is gone but WP-36 / WP-08 already measured the new interplin profile:
+integrand floor). Features (WP-29a–d,
 WP-26, WP-28, WP-40, WP-27 accepted 11-03; scalar 0.995–1.002x) count only if a group changes
 ≥ 1.3x or a hot-spot ranking shifts (none did).
-WP-04 (11-03), WP-17 (11-04) rejected. RP-4 after 2 accepted optimizations or another rule-7
-trigger (WP-36 is measurement only and refreshes the interpolation shares).
+WP-04 (11-03), WP-17 (11-04) rejected. RP-4 after the next accepted optimization (WP-47 / WP-45
+are features: judged 0, they count only if they change judged cases) or another rule-7 trigger.
 
 ## Log
 
-- 2026-11-11 WP-36 summary processed: **accepted** by the owner (benchmarks kept; commit
-  pending). New WP-45 (interp dedup per call, 3.45 s measured), WP-46 (interplin dedup, ≈ 2.3–3.0 s
-  est.); WP-06 → merged into WP-45; WP-07 0.42 s, WP-08 1.01 s re-scoped; WP-09 0 judged. Owner asked
-  for explanations before deciding WP-45 / 46 / 09. No RP-4 (0 accepted optimizations since RP-3).
-  Owner's decisions: (1) `SparseGrid` interpolation stays per-TG CT; dedup → new DSG
-  interpolation overload (WP-45 re-scoped, after WP-08; WP-06 own WP again); (2) linear: designs
-  in the WP; WP-46 decided with WP-08's results (merged as an option); (3) WP-09 kept as a
-  proposal (gains vs. complexity). **WP-08 prompt issued.** Owner: WP-45 also drafts judged-suite
-  cases `interp/dsg/...` (e2e + reference + tolerances) as a patch; the owner applies it and
-  rehashes on acceptance (DSG quadrature is judged since the setup).
+- 2026-11-11 WP-08 summary processed: **accepted** by the owner (commit pending; WP-36 committed
+  c3cc48360). interplin −1.02 s (d10 1.334x), memory 1.009, refcheck OK. Cross-TG dedup: owner
+  option (c) → new **WP-47** (DSG `interpolateLinear`; owner: **before WP-45**); WP-46 dropped
+  (→ WP-47). New WP-48 (FMA-pinned CT combination in the drivers + interplin d2 gate). Notes →
+  WP-30, WP-32 (d8 bimodal), WP-38 (public header include). No RP-4 (1 accepted optimization
+  since RP-3). **WP-47 prompt issued.**
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone) → WP-35. Report recurrences.
 
@@ -219,4 +215,6 @@ trigger (WP-36 is measurement only and refreshes the interpolation shares).
   (owner-side): PGO-compiled cache test fails (FMA in `shiftedDomain`) → WP-35. 11-08 owner's
   mid-term quad benchmark (b1d062e75 / 9b3088335): master's steeper slope at low d = naive CC
   weights vs. FFT backend 91dbd3b1b (pre-phase, not a WP); d3 L19 134x, d10 1.43x (phase); branch d3
-  memory 1.5–1.7x master (WP-05); owner checks the master run's error reference.
+  memory 1.5–1.7x master (WP-05); owner checks the master run's error reference. 11-11 WP-36 accepted (c3cc48360;
+  new WP-45 / WP-46; owner: `SparseGrid` interpolation stays per-TG CT, dedup → DSG overload WP-45
+  with drafted judged cases; WP-46 decided with WP-08; WP-09 stays a proposal); WP-08 issued.

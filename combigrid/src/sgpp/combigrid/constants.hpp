@@ -143,6 +143,19 @@ constexpr size_t MIN_MIS_FOR_CONCURRENCY = 1000;
 }  // namespace ct_coefficients
 
 /**
+ * @brief Constants of the linear interpolation operator (@c interpolateLinear).
+ */
+namespace lin_interpolation {
+
+/// The corner loop on a tensor grid of dimension d takes the products of the 1D weights of the
+/// first min(d, WEIGHT_TABLE_MAX_DIM) dimensions from a table of 2^min(d, WEIGHT_TABLE_MAX_DIM)
+/// entries per thread (8 KiB for 10, built once per tensor grid); the factors of the remaining
+/// dimensions are multiplied per corner. Bounds the scratch memory at high d.
+constexpr size_t WEIGHT_TABLE_MAX_DIM = 10;
+
+}  // namespace lin_interpolation
+
+/**
  * @brief Constants controlling sparse-grid node lookup population.
  */
 namespace sg_gen_node_lookup {
