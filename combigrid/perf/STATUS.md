@@ -184,6 +184,16 @@ trigger (WP-36 is measurement only and refreshes the interpolation shares).
   `shared_cache_and_concurrent_operator_calls` fails when its TU is PGO-compiled (FMA contraction
   in `shiftedDomain` → no spill; library correct) → added to WP-35 (owner). `lib/` may hold PGO
   libraries → `perf.py build normal` before the next work session.
+- 2026-11-08 Owner's question (mid-term e2e quad benchmark b1d062e75 / 9b3088335, complete SG
+  b1, CC nodes, master 3ffe4d382 vs. branch): master's steeper log-time-vs-L slope at low d =
+  master's naive CC 1D weights (RP-1 note; O(n²) per rule, per tensor grid and dimension) vs. the
+  FFT backend enabled by 91dbd3b1b (10-21, pre-phase, **not a WP**). Confirmed by the owner's
+  data: master d3 t(L+1)/t(L) 4.07 / 3.99 / 3.89 / 3.96 / 3.98 (L14→19), CPUs 11.3 → 4.4;
+  branch 2.18–2.22 (= point growth), 15.5 CPUs; d3 L19 134x; d5 2.26x at L18 (master's ratio
+  rises to 2.96); d10 constant 1.43x (L7–L10) = per-point work (phase). Memory: branch d3
+  1.5–1.7x master (L16–L19; L23 OOM at 8 GB; WP-05 scratch / FFT temporaries), d10 1.02x. Master
+  run's error columns use a reference ≈ 0.722^d × the branch's (results agree) → owner checks.
+  Master has no DSG (pre-phase too). No new summary.
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone) → WP-35. Report recurrences.
 
