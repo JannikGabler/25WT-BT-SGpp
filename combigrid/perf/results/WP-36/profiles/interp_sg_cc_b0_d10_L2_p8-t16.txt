@@ -1,0 +1,14 @@
+profile of `^interp/sg/cc/b0/d10/L2/p8$` (e2e, 16 threads, self time)
+    59.78%  perf_e2e  libm.so.6                [.] __cos_fma
+    16.57%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>
+    11.14%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     2.52%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate
+     1.82%  perf_e2e  perf_e2e                 [.] cos@plt
+     1.75%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     1.22%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     1.00%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     0.89%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::barycentricFormula
+     0.78%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     0.62%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261111-130156-_interp_sg_cc_b0_d10_L2_p8_-t16.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

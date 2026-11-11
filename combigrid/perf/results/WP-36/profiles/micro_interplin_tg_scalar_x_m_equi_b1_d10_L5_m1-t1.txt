@@ -1,0 +1,10 @@
+profile of `micro/interplin/tg_scalar_x_m/equi/b1/d10/L5/m1$` (micro, 1 threads, self time)
+    59.01%  perf_micro  libm.so.6             [.] __cos_fma
+    17.39%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::tools::lin_interpolation::computeNeighborGPWithWeight
+    12.25%  perf_micro  perf_micro            [.] std::_Function_handler<double 
+     5.04%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::tools::lin_interpolation::processTensorGrid
+     1.90%  perf_micro  ld-linux-x86-64.so.2  [.] do_lookup_x
+     1.14%  perf_micro  perf_micro            [.] cos@plt
+     0.65%  perf_micro  [unknown]             [k] 0xffffffffb5533ba0
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261111-132853-micro_interplin_tg_scalar_x_m_equi_b1_d10_L5_m1_-t1.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

@@ -1,0 +1,8 @@
+profile of `^interplin/sg/equi/b1/d8/L5/p256$` (e2e, 1 threads, self time)
+    58.87%  perf_e2e  libm.so.6             [.] __cos_fma
+    19.10%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::tools::lin_interpolation::computeNeighborGPWithWeight
+    10.84%  perf_e2e  perf_e2e              [.] sgpp::combigrid::perf::cosProd
+     6.55%  perf_e2e  libsgppcombigrid.so   [.] sgpp::combigrid::interpolateLinear
+     1.92%  perf_e2e  perf_e2e              [.] cos@plt
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261111-130525-_interplin_sg_equi_b1_d8_L5_p256_-t1.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

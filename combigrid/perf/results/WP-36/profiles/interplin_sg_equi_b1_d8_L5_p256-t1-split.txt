@@ -1,0 +1,30 @@
+samples: 29381
+
+## per dso
+ 58.84 %  libm.so.6
+ 25.79 %  libsgppcombigrid.so
+ 13.00 %  perf_e2e
+  2.36 %  [unknown]
+  0.01 %  ld-linux-x86-64.so.2
+  0.01 %  libc.so.6
+
+## per symbol
+ 58.84 %  __cos_fma  [libm.so.6]
+ 19.07 %  sgpp::combigrid::tools::lin_interpolation::computeNeighborGPWithWeight  [libsgppcombigrid.so]
+ 10.85 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  6.55 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  2.36 %  [unknown]  [[unknown]]
+  1.92 %  cos@plt  [perf_e2e]
+  0.23 %  std::_Function_handler<double   [perf_e2e]
+  0.17 %  sgpp::combigrid::TensorGrid::getNeighborsForLinInterpolation  [libsgppcombigrid.so]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  _int_free_maybe_trim  [libc.so.6]
+  0.00 %  _int_malloc  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  5.20 %  sgpp::combigrid::interpolateLinear  <=  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+  0.64 %  sgpp::combigrid::interpolateLinear  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.45 %  sgpp::combigrid::interpolateLinear  <=  sgpp::combigrid::tools::mapToDomain
+  0.22 %  sgpp::combigrid::interpolateLinear  <=  sgpp::combigrid::misc::ScalarValues::addScaled

@@ -1,0 +1,32 @@
+samples: 278
+
+## per dso
+ 34.89 %  libsgppcombigrid.so
+ 34.17 %  libm.so.6
+ 18.35 %  perf_micro
+ 10.07 %  [unknown]
+  2.16 %  ld-linux-x86-64.so.2
+  0.36 %  libc.so.6
+
+## per symbol
+ 34.17 %  __cos_fma  [libm.so.6]
+ 16.55 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate  [libsgppcombigrid.so]
+ 15.83 %  std::_Function_handler<void   [perf_micro]
+ 12.95 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::VectorValues>  [libsgppcombigrid.so]
+ 10.07 %  [unknown]  [[unknown]]
+  4.68 %  sgpp::combigrid::InterpolationMethod::hasTrivialResult  [libsgppcombigrid.so]
+  1.80 %  cos@plt  [perf_micro]
+  1.08 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.72 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.72 %  raits<char>, std::allocator<char> > > > >, std::__cxx11::regex_traits<char>, true>::_M_dfs  [perf_micro]
+  0.72 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.36 %  _dl_next_ld_env_entry  [ld-linux-x86-64.so.2]
+  0.36 %  __memset_avx2_unaligned_erms  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  8.27 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::VectorValues>  <=  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::VectorValues>
+  3.96 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::VectorValues>  <=  sgpp::combigrid::TensorGrid::getGridPoint
+  0.72 %  sgpp::combigrid::InterpolationMethod::hasTrivialResult  <=  sgpp::combigrid::tools::nearlyEqual
+  0.72 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  <=  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary
+  0.36 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::VectorValues>  <=  sgpp::combigrid::TensorGrid::nDim
+  0.36 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::VectorValues>  <=  sgpp::combigrid::tools::mapToDomain

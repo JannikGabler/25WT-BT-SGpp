@@ -1,0 +1,35 @@
+### interp/sg/cc/b0/d10/L2/p8
+313781910154,instructions
+182835186832,cycles
+46593901790,op_cache_hit_miss.all_op_cache_accesses
+174704067,op_cache_hit_miss.op_cache_miss
+34230147,ic_tag_hit_miss.instruction_cache_miss
+5143940768,stalled-cycles-frontend
+### interp/sg/cc/b0/d7/L4/p16
+225621973429,instructions
+123083404022,cycles
+31834623274,op_cache_hit_miss.all_op_cache_accesses
+118488838,op_cache_hit_miss.op_cache_miss
+24483208,ic_tag_hit_miss.instruction_cache_miss
+2708552204,stalled-cycles-frontend
+### interp/sg/cc/b0/d5/L6/p64
+280046301637,instructions
+141414942319,cycles
+36793846022,op_cache_hit_miss.all_op_cache_accesses
+145193951,op_cache_hit_miss.op_cache_miss
+32724115,ic_tag_hit_miss.instruction_cache_miss
+1304257881,stalled-cycles-frontend
+### interplin/sg/equi/b1/d10/L5/p32
+396001974010,instructions
+238855545713,cycles
+68406395104,op_cache_hit_miss.all_op_cache_accesses
+1054678263,op_cache_hit_miss.op_cache_miss
+39984186,ic_tag_hit_miss.instruction_cache_miss
+15687370667,stalled-cycles-frontend
+### interplin/sg/equi/b1/d8/L5/p256
+274913129549,instructions
+169839590831,cycles
+42459518258,op_cache_hit_miss.all_op_cache_accesses
+198720098,op_cache_hit_miss.op_cache_miss
+29604349,ic_tag_hit_miss.instruction_cache_miss
+4584247131,stalled-cycles-frontend

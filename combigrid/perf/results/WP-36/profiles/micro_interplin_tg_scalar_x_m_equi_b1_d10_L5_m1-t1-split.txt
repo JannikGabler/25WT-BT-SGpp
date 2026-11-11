@@ -1,0 +1,29 @@
+samples: 277
+
+## per dso
+ 57.04 %  libm.so.6
+ 22.38 %  libsgppcombigrid.so
+ 14.08 %  perf_micro
+  5.05 %  [unknown]
+  1.08 %  ld-linux-x86-64.so.2
+  0.36 %  libgomp.so.1.0.0
+
+## per symbol
+ 57.04 %  __cos_fma  [libm.so.6]
+ 16.97 %  sgpp::combigrid::tools::lin_interpolation::computeNeighborGPWithWeight  [libsgppcombigrid.so]
+ 11.91 %  std::_Function_handler<double   [perf_micro]
+  5.05 %  [unknown]  [[unknown]]
+  5.05 %  sgpp::combigrid::tools::lin_interpolation::processTensorGrid  [libsgppcombigrid.so]
+  1.08 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  1.08 %  cos@plt  [perf_micro]
+  0.36 %  [unknown]  [libgomp.so.1.0.0]
+  0.36 %  sgpp::combigrid::perf::Suite::addMicro  [perf_micro]
+  0.36 %  sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+  0.36 %  sgpp::combigrid::SparseGrid::~SparseGrid  [perf_micro]
+  0.36 %  xx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > > >::operator=  [perf_micro]
+
+## per symbol / innermost helper (combigrid + base only)
+  3.61 %  sgpp::combigrid::tools::lin_interpolation::processTensorGrid  <=  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+  1.08 %  sgpp::combigrid::tools::lin_interpolation::processTensorGrid  <=  sgpp::combigrid::tools::mapToDomain
+  0.36 %  sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim  <=  sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim
+  0.36 %  sgpp::combigrid::tools::lin_interpolation::processTensorGrid  <=  sgpp::combigrid::SourceFunc::evaluate

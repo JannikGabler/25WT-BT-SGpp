@@ -1,0 +1,27 @@
+samples: 278
+
+## per dso
+ 54.68 %  libm.so.6
+ 25.54 %  libsgppcombigrid.so
+ 12.23 %  perf_micro
+  4.68 %  [unknown]
+  2.16 %  ld-linux-x86-64.so.2
+  0.36 %  libsgppbase.so
+  0.36 %  libopenblasp-r0.3.32.so
+
+## per symbol
+ 54.68 %  __cos_fma  [libm.so.6]
+ 20.14 %  sgpp::combigrid::tools::lin_interpolation::computeNeighborGPWithWeight  [libsgppcombigrid.so]
+ 11.51 %  std::_Function_handler<void   [perf_micro]
+  5.40 %  sgpp::combigrid::tools::lin_interpolation::processTensorGrid  [libsgppcombigrid.so]
+  4.68 %  [unknown]  [[unknown]]
+  1.44 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.72 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.72 %  cos@plt  [perf_micro]
+  0.36 %  operator new  [libsgppbase.so]
+  0.36 %  .plt  [libopenblasp-r0.3.32.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  3.24 %  sgpp::combigrid::tools::lin_interpolation::processTensorGrid  <=  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::VectorValues>
+  1.44 %  sgpp::combigrid::tools::lin_interpolation::processTensorGrid  <=  sgpp::combigrid::tools::mapToDomain
+  0.72 %  sgpp::combigrid::tools::lin_interpolation::processTensorGrid  <=  sgpp::combigrid::misc::VectorValues::addScaled

@@ -1,0 +1,43 @@
+samples: 91742
+
+## per dso
+ 59.75 %  libm.so.6
+ 20.00 %  libsgppcombigrid.so
+ 13.74 %  perf_e2e
+  3.85 %  libgomp.so.1.0.0
+  1.31 %  [unknown]
+  1.19 %  libopenblasp-r0.3.32.so
+  0.14 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 59.75 %  __cos_fma  [libm.so.6]
+ 16.58 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+ 11.14 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  3.85 %  [unknown]  [libgomp.so.1.0.0]
+  2.52 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate  [libsgppcombigrid.so]
+  1.82 %  cos@plt  [perf_e2e]
+  1.31 %  [unknown]  [[unknown]]
+  1.19 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.89 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::barycentricFormula  [libsgppcombigrid.so]
+  0.78 %  std::_Function_handler<double   [perf_e2e]
+  0.10 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.03 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.02 %  memmove@plt  [libsgppcombigrid.so]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  _int_malloc  [libc.so.6]
+  0.00 %  _dl_hwcaps_split_masked  [ld-linux-x86-64.so.2]
+  0.00 %  check_match  [ld-linux-x86-64.so.2]
+  0.00 %  __printf_buffer  [libc.so.6]
+  0.00 %  operator delete  [libsgppcombigrid.so]
+  0.00 %  operator new  [libsgppbase.so]
+  0.00 %  std::vector<double, std::allocator<double> >::vector  [libsgppcombigrid.so]
+  0.00 %  cfree@GLIBC_2.2.5  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  8.56 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>
+  5.68 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::TensorGrid::getGridPoint
+  1.33 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.88 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::mapToDomain
+  0.58 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate  <=  sgpp::combigrid::tools::nearlyEqual

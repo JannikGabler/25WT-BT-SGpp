@@ -1,0 +1,13 @@
+profile of `micro/interplin/tg_vec/equi/b1/d10/L5/m1$` (micro, 1 threads, self time)
+    55.95%  perf_micro  libm.so.6                [.] __cos_fma
+    20.45%  perf_micro  libsgppcombigrid.so      [.] sgpp::combigrid::tools::lin_interpolation::computeNeighborGPWithWeight
+    12.12%  perf_micro  perf_micro               [.] std::_Function_handler<void 
+     5.58%  perf_micro  libsgppcombigrid.so      [.] sgpp::combigrid::tools::lin_interpolation::processTensorGrid
+     1.57%  perf_micro  ld-linux-x86-64.so.2     [.] do_lookup_x
+     0.77%  perf_micro  libsgppbase.so           [.] operator new
+     0.74%  perf_micro  perf_micro               [.] cos@plt
+     0.66%  perf_micro  ld-linux-x86-64.so.2     [.] _dl_lookup_symbol_x
+     0.66%  perf_micro  [unknown]                [k] 0xffffffffb42bb7c9
+     0.65%  perf_micro  [unknown]                [k] 0xffffffffb45f59e8
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261111-132851-micro_interplin_tg_vec_equi_b1_d10_L5_m1_-t1.data (inspect with `perf report -i ...` / `perf annotate -i ...`)

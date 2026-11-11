@@ -1,0 +1,20 @@
+| case (1 threads) | total | generation | operator | rel. error | peak RSS |
+|---|---|---|---|---|---|
+| interp/sg/cc/b0/d2/L12/p64 | 1.068s | 1.26ms | 1.067s | 2.31e-15 | 10.9 MiB |
+| interp/sg/cc/b0/d3/L9/p64 | 2.235s | 642.26us | 2.234s | 8.48e-15 | 10.3 MiB |
+| interp/sg/cc/b0/d5/L6/p64 | 14.821s | 706.37us | 14.820s | 7.11e-08 | 10.7 MiB |
+| interp/sg/cc/b0/d7/L4/p16 | 13.720s | 521.92us | 13.720s | 1.25e-04 | 10.6 MiB |
+| interp/sg/cc/b0/d10/L2/p8 | 20.385s | 195.83us | 20.385s | 3.50e-02 | 10.7 MiB |
+| interp/sg/cheb1/b0/d3/L6/p64 | 688.70ms | 173.49us | 688.48ms | 1.94e-13 | 10.4 MiB |
+| interp/sg/cheb1/b0/d5/L4/p64 | 2.617s | 198.91us | 2.617s | 2.28e-04 | 10.3 MiB |
+| interp/sg/equi/b0/d3/L5/p64 | 207.08ms | 89.82us | 206.95ms | 2.43e-02 | 10.4 MiB |
+| interplin/sg/equi/b1/d2/L16/p16384 | 215.43ms | 5.78ms | 204.70ms | 1.92e-10 | 17.3 MiB |
+| interplin/sg/equi/b1/d5/L8/p1024 | 4.318s | 1.51ms | 4.316s | 1.71e-04 | 11.4 MiB |
+| interplin/sg/equi/b1/d8/L5/p256 | 14.650s | 1.41ms | 14.648s | 3.19e-02 | 11.2 MiB |
+| interplin/sg/equi/b1/d10/L5/p32 | 25.821s | 3.23ms | 25.817s | 4.61e-02 | 11.9 MiB |
+
+peak RSS: max resident set size of the case's process (one process per case, measured outside it by GNU time); process floor (`perf_e2e --list`, libraries only): 9.8 MiB
+
+foreign CPU load during the run: 0.8%
+
+raw results: combigrid/perf/results/WP-36/e2e-t1.json

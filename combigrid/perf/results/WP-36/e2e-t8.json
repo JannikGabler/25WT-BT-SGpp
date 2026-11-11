@@ -1,0 +1,235 @@
+{
+ "suite": "e2e",
+ "snapshot": "WP-36",
+ "threads": 8,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-43-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "9.86",
+   "11.55",
+   "8.75"
+  ]
+ },
+ "records": [
+  {
+   "suite": "e2e",
+   "case": "interp/sg/cc/b0/d2/L12/p64",
+   "kind": "pipeline",
+   "threads": 8,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.171932716
+    ],
+    "setup": [
+     1.2501e-05
+    ],
+    "generation": [
+     0.000283973
+    ],
+    "operator": [
+     0.171552013
+    ]
+   },
+   "result": 26.13644837073568,
+   "exact": 26.136448370735636,
+   "counters": {
+    "nTG": 25,
+    "sumGP": 360465
+   },
+   "peak_rss_kib": 12872
+  },
+  {
+   "suite": "e2e",
+   "case": "interp/sg/cc/b0/d3/L9/p64",
+   "kind": "pipeline",
+   "threads": 8,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.300938562
+    ],
+    "setup": [
+     1.1872e-05
+    ],
+    "generation": [
+     8.5974e-05
+    ],
+    "operator": [
+     0.30075516
+    ]
+   },
+   "result": 7.858637071331068,
+   "exact": 7.858637071331066,
+   "counters": {
+    "nTG": 136,
+    "sumGP": 557030
+   },
+   "peak_rss_kib": 11344
+  },
+  {
+   "suite": "e2e",
+   "case": "interp/sg/cheb1/b0/d3/L6/p64",
+   "kind": "pipeline",
+   "threads": 8,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.153632725
+    ],
+    "setup": [
+     1.1105e-05
+    ],
+    "generation": [
+     2.5283e-05
+    ],
+    "operator": [
+     0.153561627
+    ]
+   },
+   "result": 7.858637071332585,
+   "exact": 7.858637071331066,
+   "counters": {
+    "nTG": 64,
+    "sumGP": 38868
+   },
+   "peak_rss_kib": 11300
+  },
+  {
+   "suite": "e2e",
+   "case": "interp/sg/cheb1/b0/d5/L4/p64",
+   "kind": "pipeline",
+   "threads": 8,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.372431755
+    ],
+    "setup": [
+     1.5156e-05
+    ],
+    "generation": [
+     3.6736e-05
+    ],
+    "operator": [
+     0.372329439
+    ]
+   },
+   "result": 0.530105213518329,
+   "exact": 0.5299843148090343,
+   "counters": {
+    "nTG": 126,
+    "sumGP": 206358
+   },
+   "peak_rss_kib": 11352
+  },
+  {
+   "suite": "e2e",
+   "case": "interp/sg/equi/b0/d3/L5/p64",
+   "kind": "pipeline",
+   "threads": 8,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.067445425
+    ],
+    "setup": [
+     1.4387e-05
+    ],
+    "generation": [
+     2.4444e-05
+    ],
+    "operator": [
+     0.067378377
+    ]
+   },
+   "result": 7.667561362344081,
+   "exact": 7.858637071331066,
+   "counters": {
+    "nTG": 46,
+    "sumGP": 15188
+   },
+   "peak_rss_kib": 11260
+  },
+  {
+   "suite": "e2e",
+   "case": "interplin/sg/equi/b1/d2/L16/p16384",
+   "kind": "pipeline",
+   "threads": 8,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.091136365
+    ],
+    "setup": [
+     0.003038218
+    ],
+    "generation": [
+     0.002402108
+    ],
+    "operator": [
+     0.084490375
+    ]
+   },
+   "result": 6567.919029410534,
+   "exact": 6567.91903067093,
+   "counters": {
+    "nTG": 33,
+    "sumGP": 6553617
+   },
+   "peak_rss_kib": 19020
+  },
+  {
+   "suite": "e2e",
+   "case": "interplin/sg/equi/b1/d5/L8/p1024",
+   "kind": "pipeline",
+   "threads": 8,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.569985745
+    ],
+    "setup": [
+     0.000150018
+    ],
+    "generation": [
+     0.000815392
+    ],
+    "operator": [
+     0.568632577
+    ]
+   },
+   "result": 6.477028982082928,
+   "exact": 6.478136335512948,
+   "counters": {
+    "nTG": 1231,
+    "sumGP": 3715715
+   },
+   "peak_rss_kib": 12420
+  }
+ ],
+ "process_floor_kib": 10492
+}

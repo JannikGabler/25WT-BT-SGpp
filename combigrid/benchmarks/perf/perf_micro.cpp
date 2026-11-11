@@ -50,6 +50,7 @@
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
+#include <sgpp/combigrid/tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
@@ -61,6 +62,7 @@
 #include "perf_cache.hpp"
 #include "perf_cache_proto.hpp"
 #include "perf_harness.hpp"
+#include "perf_interp_sol.hpp"
 #include "perf_problems.hpp"
 
 using sgpp::combigrid::CompleteSGGenInstr;
@@ -80,6 +82,7 @@ using sgpp::combigrid::perf::Suite;
 
 namespace cg = sgpp::combigrid;
 namespace perf = sgpp::combigrid::perf;
+namespace sol = sgpp::combigrid::perf::interp_sol;
 
 namespace {
 
@@ -708,6 +711,105 @@ void addLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl) {
   });
 }
 
+/**
+ * Speed of light for addInterpTG (perf_interp_sol.hpp): the same source-function calls and 1D
+ * rules on the same tensor grid and point, with the nodes mapped onto the domain once, grid
+ * points assembled incrementally and scratch reused; integrandOnly: the source-function calls
+ * alone (sum of the values).
+ */
+void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim,
+                    const LvlType maxLvl, const bool integrandOnly) {
+  const std::string kind = integrandOnly ? "interp_tg_integrand/" : "interp_tg/";
+  suite.addMicro("micro/sol/" + kind + cfg(nodes, 0, nDim, maxLvl), [=](MicroRun& run) {
+    const HyperCubeArea domain = perf::shiftedDomain(nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, nodes, 0, domain);
+    const SparseGrid sg(genInstr);
+    const SourceFunc sourceFunc(perf::cosProd);
+    const DataVector point = perf::randomPoints(domain, 1, 99)[0];
+    const DataVector normPoint = cg::tools::normalizeDataVector(point, domain);
+    const TensorGrid& tg = largestTensorGrid(sg).tensorGrid;
+    sol::NodesPerDim unit, mapped;
+    sol::tgNodes(tg, domain, unit, mapped);
+    std::vector<const cg::InterpolationMethod*> methods;
+    for (size_t k = 0; k < nDim; k++) {
+      methods.push_back(sg.getGenInstr().getNodeGenFuncForDim(k)->getInterpolationMethod(
+          static_cast<GPCntType>(unit[k].size())));
+    }
+    sol::GlobalScratch scratch(nDim);
+
+    run.setItems(static_cast<double>(tg.nGP()));
+    if (integrandOnly) {
+      run.measure([&]() {
+        double sum = 0.0;
+        sol::forEachValue(sourceFunc, mapped, scratch, [&](size_t, const double v) { sum += v; });
+        doNotOptimize(sum);
+      });
+    } else {
+      run.measure([&]() {
+        doNotOptimize(sol::globalKernelTG(sourceFunc, unit, mapped, sol::ProductionRule(methods),
+                                          tg.nGP(), normPoint, scratch));
+      });
+    }
+  });
+}
+
+/**
+ * Speed of light for addBarycentric1D (generic formula): the weights computed once in the setup,
+ * O(n) per call (the formula of BarycentricFormula without the weights and without the
+ * trivial-result scan).
+ */
+void addSolBarycentricCached(Suite& suite, const GPCntType nNodes) {
+  suite.addMicro(
+      "micro/sol/barycentric_1d/generic_cached_weights/n" + std::to_string(nNodes),
+      [=](MicroRun& run) {
+        cg::NodeGenFunc* const nodeGenFunc = perf::nodeGenFuncByName("cheb1");
+        const DataVector nodesVec = nodeGenFunc->genNodes(nNodes, false);
+        const std::vector<double> x(nodesVec.begin(), nodesVec.end());
+        const std::vector<double> w = cg::tools::barycentricFormulaWeights(x);
+        std::vector<double> values(nNodes);
+        for (GPCntType i = 0; i < nNodes; i++) values[i] = std::cos(3.0 * x[i]);
+
+        run.setItems(static_cast<double>(nNodes));
+        run.measure([&]() {
+          double numerator = 0.0, denominator = 0.0;
+          for (GPCntType i = 0; i < nNodes; i++) {
+            const double factor = w[i] / (0.3141 - x[i]);
+            numerator += factor * values[i];
+            denominator += factor;
+          }
+          doNotOptimize(numerator / denominator);
+        });
+      });
+}
+
+/**
+ * Speed of light for addLinearTG (perf_interp_sol.hpp): the same 2^d source-function calls,
+ * corners in Gray-code order, weights from a table built by doubling; integrandOnly: the
+ * source-function calls alone (bracketing and mapping of the neighbors included).
+ */
+void addSolLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl,
+                    const bool integrandOnly) {
+  const std::string kind = integrandOnly ? "interplin_tg_integrand/" : "interplin_tg/";
+  suite.addMicro("micro/sol/" + kind + cfg("equi", 1, nDim, maxLvl), [=](MicroRun& run) {
+    const HyperCubeArea domain = perf::shiftedDomain(nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, "equi", 1, domain);
+    const SparseGrid sg(genInstr);
+    const SourceFunc sourceFunc(perf::cosProd);
+    const DataVector point = perf::randomPoints(domain, 1, 98)[0];
+    const DataVector normPoint = cg::tools::normalizeDataVector(point, domain);
+    const TensorGrid& tg = largestTensorGrid(sg).tensorGrid;
+    sol::LinScratch scratch(nDim);
+
+    run.setItems(std::pow(2.0, static_cast<double>(nDim)));
+    run.measure([&]() {
+      doNotOptimize(
+          sol::linearKernelTG(sourceFunc, tg, normPoint, domain, !integrandOnly, scratch));
+    });
+  });
+}
+
 /// The m scalar functions cosProdK(., k) and the VectorSourceFunc of all of them.
 std::vector<SourceFunc> cosProdScalarFuncs(const size_t m) {
   std::vector<SourceFunc> funcs;
@@ -972,6 +1074,19 @@ int main(int argc, char** argv) {
   addLinearTG(suite, 8, 5);
   addLinearTG(suite, 10, 5);  // WP-29c: high / low d
   addLinearTG(suite, 2, 16);
+  // Speed of light of the per-TG interpolation kernels and of the generic barycentric formula
+  // with cached weights (perf_interp_sol.hpp)
+  for (const bool integrandOnly : {false, true}) {
+    addSolInterpTG(suite, "cc", 10, 2, integrandOnly);
+    addSolInterpTG(suite, "cc", 5, 6, integrandOnly);
+    addSolInterpTG(suite, "cheb1", 5, 4, integrandOnly);
+    addSolInterpTG(suite, "cc", 2, 12, integrandOnly);
+    addSolLinearTG(suite, 10, 5, integrandOnly);
+    addSolLinearTG(suite, 8, 5, integrandOnly);
+    addSolLinearTG(suite, 2, 16, integrandOnly);
+  }
+  addSolBarycentricCached(suite, 9);
+  addSolBarycentricCached(suite, 65);
 
   // Generation
   addCompleteMIs(suite, 20, 6);

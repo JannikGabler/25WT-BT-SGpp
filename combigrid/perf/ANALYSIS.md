@@ -887,3 +887,62 @@ follow-ups"). In short:
 - WP-10 gets new decision data: the cold first call (+63…+130 ms per process).
 - WP-32 / WP-33 keep their ranks.
 - No new runtime hot spot.
+
+## Exploration WP-36: interpolation operators
+
+Work session WP-36, 2026-11-11 (measurement only). Code: HEAD 82e48913a (= snapshot `WP-36`,
+after WP-29c/d and the owner's refactor into `tools/operators/{global,linear}_interpolation/`).
+Judged configuration, boost off, `calibrate` OK (e2e 1.008 / 1.001, micro 1.001 / 1.001),
+refcheck OK. Reports in `results/WP-36/` (`exploration.md` = full derived report; raw runs,
+17 profiles + splits, driver output, micro runs, front-end counters, allocation counts, scripts).
+New unprotected benchmarks (kept): `perf_interp_explore.cpp` (driver: counts, speed-of-light
+floors and prototypes on the 12 e2e problems), `perf_interp_sol.hpp` (shared speed-of-light
+loops), micro cases `micro/sol/{interp_tg,interp_tg_integrand,interplin_tg,
+interplin_tg_integrand}/...` and `micro/sol/barycentric_1d/generic_cached_weights/n{9,65}`
+(A/A on the 15 existing interp/interplin/sourcefunc/sol cases: all noise, sum 1.001x).
+
+### Where the time goes (16 threads)
+
+interp 5.70 s (d ≥ 7 3.25 s; cc 5.10 s), interplin 4.51 s (d ≥ 7 3.96 s) — unchanged since
+rp-3. Large cases scale 9.7–10.9x from 1 to 16 threads (near the 8-core + SMT bound); the short
+ones are region-bound (1 → 16 t: interplin d2 1.95x at 6.8 µs per call with 71 % libgomp, equi d3
+3.4x, cheb1 d3 3.8x, cc d2 6.1x; capping threads would save ≈ 0.05 s in total).
+
+| case (16 t) | integrand | operator kernel | barycentric / generic weights | libgomp |
+|---|---|---|---|---|
+| interp cc d10 / d7 / d5 | 73.5 / 71.6 / 67.8 % | 16.6 / 17.1 / 19.8 % (`getGridPoint` 5.7 / 7.8 / 8.5) | 3.4 / 4.5 / 5.7 % | 3.9 / 3.8 / 4.2 % |
+| interp cheb1 d5 / d3, equi d3 | 23.9 / 4.9 / 4.0 % | 6.6 / 1.7 / 1.3 % | weights + `log`/`exp` 28.1 / 24.5 / 14.6 %, allocations 6.8 / 1.3 / 1.2 % | 27.1 / 55.8 / 54.8 % |
+| interplin d10 / d8 / d5 | 66.3 / 66.4 / 57.9 % | 27.3 / 24.5 / 25.8 % (`computeNeighborGPWithWeight` 20.6 / 16.8 / 15.1) | – | 3.9 / 6.5 / 9.9 % |
+| interplin d2 | 3.4 % | 9.9 % | – | 71.0 % |
+
+Node regeneration ≤ 1.4 % (cc d2 only), `hasTrivialResult` 0.6–1.3 %, per-point call ≤ 1.7 %
+(4.0 % cc d2). Allocations per call: 2d + 3 per TG (cc 203–6387), generic formula + 3 per 1D call
+(cheb1 d5 205,833); interplin 35. Front-end: interplin d10 op-cache misses 15.4 per 1000 accesses
+(RP-2: 3.1; placement), 6.6 % stall cycles; others 0.9–2.8 %.
+
+### Speed of light and prototypes (`perf_interp_explore`, 16 t, results = api within round-off)
+
+| lever (no API change unless noted) | measured | saving (12 cases) | d ≥ 7 |
+|---|---|---|---|
+| global kernel: premapped nodes, odometer, scratch reused (WP-06) | cc 1.12–1.24x; within 1.07–1.14x of the integrand-only floor | 0.64 s | 0.42 s |
+| generic weights cached per TG (WP-07) | cheb1 d3 10.3x, cheb1 d5 2.62x, equi d3 6.73x | 0.42 s | – |
+| corner loop: Gray code, doubling weight table, premapped neighbors (WP-08) | interplin d5–d10 1.26–1.32x; = integrand-only floor | 1.01 s | 0.91 s |
+| global: every distinct point once per call (DSG-indexed values, gather per TG; nested families) | cc 1.69–3.90x (d10 1.97 → 0.73 s, d7 1.26 → 0.32 s, d5 1.44 → 0.39 s) | 3.45 s | 2.19 s |
+| interplin: every distinct corner once per call | estimate only: evaluations ÷ 8.30 / 6.97 / 6.73 (d10 / d8 / d5) | ≈ 2.3–3.0 s | ≈ 2.1–2.8 s |
+| multi-point API (TG once, then p collapses; new API) | cc 6.3–10.6x, + dedup 7.6–12.9x; generic 1.4–1.9x (19.5–58.8x with cached weights) | 0 on the judged suite (single-point API) | – |
+| WP-26 hashed cache (`CachedSourceFunc`) | 0.41–0.94x despite hit rates 0.59–0.998 (lookup > `cosProd`) | – | – |
+
+- Interplin reuse is across tensor grids within one call (÷ 1.94–8.30), not across query points:
+  distinct corners per TG over all p points ÷ 1.07 (d10) … 2.97 (d5). Distinct corners per call =
+  Σ_{|λ|≤L} 2^{#zeros(λ)} (370,688 at d10 L5): a deltas structure per query point.
+- Vector m = 1 (0.82–0.98x / 0.89–1.01x) comes from vector-only code (multi-output formula +
+  out-of-line `hasTrivialResult`, span handler, m-loops); all levers above apply to both
+  value-type instantiations.
+
+### Findings → work packages (WP-36)
+
+Details and ranking: `summaries/WP-36-interpolation-exploration.md`. WP-06 / WP-07 / WP-08 are
+confirmed (WP-07 and WP-08 at twice their estimates); the largest lever without an API change is
+evaluating each distinct point once per call (proposed new WPs "WP-45" global, "WP-46" linear;
+both need owner decisions on memory and structure); WP-09's multi-point API gains only for new-API callers and
+should build on WP-45's value store; WP-17 has no interpolation part.

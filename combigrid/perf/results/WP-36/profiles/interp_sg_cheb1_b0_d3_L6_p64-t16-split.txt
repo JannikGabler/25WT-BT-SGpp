@@ -1,0 +1,48 @@
+samples: 10389
+
+## per dso
+ 55.80 %  libgomp.so.1.0.0
+ 21.56 %  libm.so.6
+  9.58 %  libopenblasp-r0.3.32.so
+  8.60 %  libsgppcombigrid.so
+  1.97 %  [unknown]
+  1.15 %  libc.so.6
+  1.04 %  perf_e2e
+  0.28 %  libsgppbase.so
+  0.03 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 55.80 %  [unknown]  [libgomp.so.1.0.0]
+ 13.98 %  __ieee754_log_fma  [libm.so.6]
+  9.58 %  [unknown]  [libopenblasp-r0.3.32.so]
+  5.27 %  sgpp::combigrid::tools::barycentricFormulaWeights  [libsgppcombigrid.so]
+  3.82 %  __cos_fma  [libm.so.6]
+  1.97 %  [unknown]  [[unknown]]
+  1.89 %  log@@GLIBC_2.29  [libm.so.6]
+  1.72 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  0.95 %  __log_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.87 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  0.84 %  log@plt  [libsgppcombigrid.so]
+  0.59 %  _mid_memalign  [libc.so.6]
+  0.48 %  __ieee754_exp_fma  [libm.so.6]
+  0.39 %  exp@@GLIBC_2.29  [libm.so.6]
+  0.36 %  sgpp::combigrid::InterpolationMethod::hasTrivialResult  [libsgppcombigrid.so]
+  0.27 %  sgpp::combigrid::global_interpolation::BarycentricFormula::interpolate  [libsgppcombigrid.so]
+  0.23 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.22 %  __posix_memalign  [libc.so.6]
+  0.14 %  operator new  [libsgppbase.so]
+  0.13 %  cos@plt  [perf_e2e]
+  0.09 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.06 %  operator delete  [libsgppbase.so]
+  0.06 %  exp@plt  [libsgppcombigrid.so]
+  0.06 %  free@plt  [libsgppbase.so]
+  0.05 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.04 %  std::_Function_handler<double   [perf_e2e]
+  0.03 %  sgpp::combigrid::node_gen_funcs::FirstTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.03 %  operator delete  [libsgppcombigrid.so]
+  0.02 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.02 %  memset@plt  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  0.93 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>
+  0.59 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::TensorGrid::getGridPoint

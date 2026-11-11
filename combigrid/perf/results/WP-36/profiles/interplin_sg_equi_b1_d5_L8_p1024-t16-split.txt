@@ -1,0 +1,45 @@
+samples: 23620
+
+## per dso
+ 45.11 %  libm.so.6
+ 25.86 %  libsgppcombigrid.so
+ 12.75 %  perf_e2e
+  9.90 %  libgomp.so.1.0.0
+  4.43 %  libopenblasp-r0.3.32.so
+  1.86 %  [unknown]
+  0.06 %  libc.so.6
+  0.03 %  ld-linux-x86-64.so.2
+  0.01 %  libsgppbase.so
+
+## per symbol
+ 45.11 %  __cos_fma  [libm.so.6]
+ 15.11 %  sgpp::combigrid::tools::lin_interpolation::computeNeighborGPWithWeight  [libsgppcombigrid.so]
+ 10.77 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  9.90 %  [unknown]  [libgomp.so.1.0.0]
+  8.87 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  4.43 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.86 %  [unknown]  [[unknown]]
+  1.86 %  sgpp::combigrid::TensorGrid::getNeighborsForLinInterpolation  [libsgppcombigrid.so]
+  1.62 %  cos@plt  [perf_e2e]
+  0.36 %  std::_Function_handler<double   [perf_e2e]
+  0.02 %  __posix_memalign  [libc.so.6]
+  0.02 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.01 %  _mid_memalign  [libc.so.6]
+  0.01 %  _int_malloc  [libc.so.6]
+  0.01 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.00 %  strcmp  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.00 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.00 %  operator new  [libsgppbase.so]
+  0.00 %  unlink_chunk.isra.0  [libc.so.6]
+  0.00 %  _int_free_merge_chunk  [libc.so.6]
+  0.00 %  operator delete  [libsgppcombigrid.so]
+  0.00 %  _int_free_chunk  [libc.so.6]
+  0.00 %  _int_memalign  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  6.66 %  sgpp::combigrid::interpolateLinear  <=  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+  1.01 %  sgpp::combigrid::interpolateLinear  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.50 %  sgpp::combigrid::interpolateLinear  <=  sgpp::combigrid::tools::mapToDomain
+  0.46 %  sgpp::combigrid::interpolateLinear  <=  sgpp::combigrid::misc::ScalarValues::addScaled

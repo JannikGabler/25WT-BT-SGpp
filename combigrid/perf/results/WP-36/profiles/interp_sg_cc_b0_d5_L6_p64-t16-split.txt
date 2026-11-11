@@ -1,0 +1,52 @@
+samples: 71308
+
+## per dso
+ 53.47 %  libm.so.6
+ 25.50 %  libsgppcombigrid.so
+ 14.29 %  perf_e2e
+  4.25 %  libgomp.so.1.0.0
+  1.41 %  libopenblasp-r0.3.32.so
+  0.82 %  [unknown]
+  0.23 %  libc.so.6
+  0.02 %  libsgppbase.so
+  0.00 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 53.47 %  __cos_fma  [libm.so.6]
+ 19.77 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+ 12.22 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  4.25 %  [unknown]  [libgomp.so.1.0.0]
+  4.07 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate  [libsgppcombigrid.so]
+  1.69 %  cos@plt  [perf_e2e]
+  1.59 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::barycentricFormula  [libsgppcombigrid.so]
+  1.41 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.82 %  [unknown]  [[unknown]]
+  0.38 %  std::_Function_handler<double   [perf_e2e]
+  0.12 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.04 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.03 %  memmove@plt  [libsgppcombigrid.so]
+  0.02 %  _mid_memalign  [libc.so.6]
+  0.02 %  __posix_memalign  [libc.so.6]
+  0.02 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.01 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.01 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.01 %  _int_malloc  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::global_interpolation::getInterpolationCntPerDim  [libsgppcombigrid.so]
+  0.01 %  operator new  [libsgppbase.so]
+  0.01 %  _int_free_maybe_trim  [libc.so.6]
+  0.01 %  std::vector<double, std::allocator<double> >::vector  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::interpolate  [libsgppcombigrid.so]
+  0.00 %  _int_free_merge_chunk  [libc.so.6]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  operator delete  [libsgppcombigrid.so]
+  0.00 %  _int_free_chunk  [libc.so.6]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  8.89 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>
+  8.47 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::TensorGrid::getGridPoint
+  1.49 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.25 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate  <=  sgpp::combigrid::tools::nearlyEqual
+  0.71 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::mapToDomain
+  0.21 %  ools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::TensorGrid::nDim

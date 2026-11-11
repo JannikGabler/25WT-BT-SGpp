@@ -1,0 +1,15 @@
+| case (2 threads) | total | generation | operator | rel. error | peak RSS |
+|---|---|---|---|---|---|
+| interp/sg/cc/b0/d2/L12/p64 | 539.76ms | 467.86us | 539.26ms | 2.04e-15 | 11.3 MiB |
+| interp/sg/cc/b0/d3/L9/p64 | 1.133s | 242.84us | 1.133s | 3.96e-15 | 10.7 MiB |
+| interp/sg/cheb1/b0/d3/L6/p64 | 373.19ms | 58.18us | 373.09ms | 1.93e-13 | 10.5 MiB |
+| interp/sg/cheb1/b0/d5/L4/p64 | 1.327s | 75.29us | 1.327s | 2.28e-04 | 10.5 MiB |
+| interp/sg/equi/b0/d3/L5/p64 | 115.26ms | 25.28us | 115.20ms | 2.43e-02 | 10.4 MiB |
+| interplin/sg/equi/b1/d2/L16/p16384 | 148.14ms | 2.63ms | 142.42ms | 1.92e-10 | 18.3 MiB |
+| interplin/sg/equi/b1/d5/L8/p1024 | 2.193s | 536.52us | 2.192s | 1.71e-04 | 11.5 MiB |
+
+peak RSS: max resident set size of the case's process (one process per case, measured outside it by GNU time); process floor (`perf_e2e --list`, libraries only): 9.9 MiB
+
+foreign CPU load during the run: 0.3%
+
+raw results: combigrid/perf/results/WP-36/e2e-t2.json

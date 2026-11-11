@@ -1,0 +1,49 @@
+| case | time/call | time/item |
+|---|---|---|
+| micro/sourcefunc/eval_normalized_in_place/d10 | 61.10us | 59.67 ns |
+| micro/interp/global_tg/cc/b0/d5/L6 | 1.12ms | 107.26 ns |
+| micro/interp/global_tg/cheb1/b0/d5/L4 | 504.67us | 188.80 ns |
+| micro/interp/global_tg/cc/b0/d10/L2 | 46.70ms | 263.64 ns |
+| micro/interp/global_tg/cc/b0/d2/L12 | 1.28ms | 52.07 ns |
+| micro/interp/global_tg/equi/b0/d3/L5 | 117.78us | 201.33 ns |
+| micro/interp/barycentric_1d/generic/n9 | 811.2ns | 90.13 ns |
+| micro/interp/barycentric_1d/generic/n65 | 37.21us | 572.53 ns |
+| micro/interp/barycentric_1d/opt_cc/n9 | 31.8ns | 3.54 ns |
+| micro/interp/barycentric_1d/opt_cc/n65 | 196.8ns | 3.03 ns |
+| micro/interplin/tg/equi/b1/d8/L5 | 41.96us | 163.90 ns |
+| micro/interplin/tg/equi/b1/d10/L5 | 237.79us | 232.22 ns |
+| micro/interplin/tg/equi/b1/d2/L16 | 208.0ns | 52.00 ns |
+| micro/sol/interp_tg/cc/b0/d10/L2 | 40.52ms | 228.76 ns |
+| micro/sol/interp_tg/cc/b0/d5/L6 | 993.73us | 95.10 ns |
+| micro/sol/interp_tg/cheb1/b0/d5/L4 | 480.80us | 179.87 ns |
+| micro/sol/interp_tg/cc/b0/d2/L12 | 1.05ms | 42.52 ns |
+| micro/sol/interplin_tg/equi/b1/d10/L5 | 193.40us | 188.87 ns |
+| micro/sol/interplin_tg/equi/b1/d8/L5 | 36.03us | 140.75 ns |
+| micro/sol/interplin_tg/equi/b1/d2/L16 | 207.4ns | 51.84 ns |
+| micro/sol/interp_tg_integrand/cc/b0/d10/L2 | 38.31ms | 216.24 ns |
+| micro/sol/interp_tg_integrand/cc/b0/d5/L6 | 886.01us | 84.79 ns |
+| micro/sol/interp_tg_integrand/cheb1/b0/d5/L4 | 227.07us | 84.95 ns |
+| micro/sol/interp_tg_integrand/cc/b0/d2/L12 | 853.07us | 34.71 ns |
+| micro/sol/interplin_tg_integrand/equi/b1/d10/L5 | 191.47us | 186.98 ns |
+| micro/sol/interplin_tg_integrand/equi/b1/d8/L5 | 35.83us | 139.95 ns |
+| micro/sol/interplin_tg_integrand/equi/b1/d2/L16 | 196.0ns | 49.00 ns |
+| micro/sol/barycentric_1d/generic_cached_weights/n9 | 11.1ns | 1.24 ns |
+| micro/sol/barycentric_1d/generic_cached_weights/n65 | 83.9ns | 1.29 ns |
+| micro/interp/global_tg_scalar_x_m/cc/b0/d2/L12/m1 | 1.31ms | 53.14 ns |
+| micro/interp/global_tg_vec/cc/b0/d2/L12/m1 | 1.59ms | 64.86 ns |
+| micro/interp/global_tg_scalar_x_m/cc/b0/d5/L6/m1 | 1.13ms | 108.05 ns |
+| micro/interp/global_tg_vec/cc/b0/d5/L6/m1 | 1.27ms | 121.53 ns |
+| micro/interp/global_tg_scalar_x_m/cheb1/b0/d5/L4/m1 | 505.73us | 189.20 ns |
+| micro/interp/global_tg_vec/cheb1/b0/d5/L4/m1 | 516.70us | 193.30 ns |
+| micro/interp/global_tg_scalar_x_m/cc/b0/d10/L2/m1 | 47.78ms | 269.73 ns |
+| micro/interp/global_tg_vec/cc/b0/d10/L2/m1 | 50.08ms | 282.71 ns |
+| micro/interplin/tg_scalar_x_m/equi/b1/d2/L16/m1 | 213.7ns | 53.42 ns |
+| micro/interplin/tg_vec/equi/b1/d2/L16/m1 | 237.3ns | 59.32 ns |
+| micro/interplin/tg_scalar_x_m/equi/b1/d8/L5/m1 | 42.38us | 165.56 ns |
+| micro/interplin/tg_vec/equi/b1/d8/L5/m1 | 43.22us | 168.82 ns |
+| micro/interplin/tg_scalar_x_m/equi/b1/d10/L5/m1 | 250.92us | 245.04 ns |
+| micro/interplin/tg_vec/equi/b1/d10/L5/m1 | 262.15us | 256.00 ns |
+
+foreign CPU load during the run: 0.2%
+
+raw results: combigrid/perf/results/WP-36/micro-run.json

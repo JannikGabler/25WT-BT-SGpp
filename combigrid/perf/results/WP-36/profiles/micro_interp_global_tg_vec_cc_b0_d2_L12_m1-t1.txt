@@ -1,0 +1,17 @@
+profile of `micro/interp/global_tg_vec/cc/b0/d2/L12/m1$` (micro, 1 threads, self time)
+    36.09%  perf_micro  libm.so.6             [.] __cos_fma
+    16.58%  perf_micro  perf_micro            [.] std::_Function_handler<void 
+    14.30%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate
+    13.52%  perf_micro  libsgppcombigrid.so   [.] void sgpp::combigrid::tools::global_interpolation::processTensorGridInternal<sgpp::combigrid::misc::VectorValues>
+     4.89%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::InterpolationMethod::hasTrivialResult
+     3.00%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::interpolate
+     1.88%  perf_micro  perf_micro            [.] cos@plt
+     1.14%  perf_micro  ld-linux-x86-64.so.2  [.] _dl_lookup_symbol_x
+     1.11%  perf_micro  perf_micro            [.] std::__detail::_Executor<__gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::__cxx11::sub_match<__gnu_cxx::__normal_iterator<char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >, std::__cxx11::regex_traits<char>, true>::_M_dfs
+     0.75%  perf_micro  [unknown]             [k] 0xffffffffb3e011b2
+     0.74%  perf_micro  libsgppcombigrid.so   [.] sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary
+     0.67%  perf_micro  ld-linux-x86-64.so.2  [.] do_lookup_x
+     0.56%  perf_micro  [unknown]             [k] 0xffffffffb4687403
+     0.50%  perf_micro  [unknown]             [k] 0xffffffffb462cfc1
+
+perf data: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/profiles/20261111-132847-micro_interp_global_tg_vec_cc_b0_d2_L12_m1_-t1.data (inspect with `perf report -i ...` / `perf annotate -i ...`)
