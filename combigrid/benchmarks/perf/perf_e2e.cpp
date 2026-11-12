@@ -34,6 +34,7 @@
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
+#include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -153,6 +154,42 @@ void addInterpolation(Suite& suite, const bool linear, const std::string& nodes,
       });
 }
 
+/// Multilinear interpolation on a deltas sparse grid (every distinct corner evaluated once per
+/// call): the problems, points and sizes of the interplin/sg cases (addInterpolation).
+void addLinearInterpolationDSG(Suite& suite, const std::string& nodes, const LvlType boundary,
+                               const size_t nDim, const LvlType maxLvl, const size_t nPoints) {
+  suite.addPipeline(
+      caseName("interplin", "dsg", nodes, boundary, nDim,
+               "L" + std::to_string(maxLvl) + "/p" + std::to_string(nPoints)),
+      [=](PipelineRun& run) {
+        const HyperCubeArea domain = perf::shiftedDomain(nDim);
+        std::optional<SourceFunc> sourceFunc;
+        std::optional<CompleteSGGenInstr> genInstr;
+        std::optional<DeltasSparseGrid> grid;
+        std::vector<DataVector> points;
+        double sum = 0.0;
+
+        run.phase("setup", [&]() {
+          sourceFunc.emplace(perf::cosProd);
+          genInstr.emplace(maxLvl, nDim);
+          perf::configure(*genInstr, nodes, boundary, domain);
+          points = perf::randomPoints(domain, nPoints, 1000 + nDim);
+        });
+        run.phase("generation", [&]() { grid.emplace(*genInstr); });
+        run.phase("operator", [&]() {
+          for (const DataVector& point : points) {
+            sum += interpolateLinear(*sourceFunc, point, *grid);
+          }
+        });
+
+        double exact = 0.0;
+        for (const DataVector& point : points) exact += perf::cosProd(point);
+        run.setResult(sum, exact);
+        run.setCounter("nTG", static_cast<double>(grid->nTG()));
+        run.setCounter("sumGP", static_cast<double>(sumOfGridPoints(*grid)));
+      });
+}
+
 /// MIVecSGGenInstr from an anisotropic, not downwards-closed MI set (closure, coefficients,
 /// tensor grids), followed by a quadrature of perf::expSum.
 void addMIVec(Suite& suite, const std::string& nodes, const LvlType boundary, const size_t nDim,
@@ -228,6 +265,10 @@ int main(int argc, char** argv) {
   addInterpolation(suite, true, "equi", 1, 5, 8, 1024);
   addInterpolation(suite, true, "equi", 1, 8, 5, 256);
   addInterpolation(suite, true, "equi", 1, 10, 5, 32);
+  addLinearInterpolationDSG(suite, "equi", 1, 2, 16, 16384);
+  addLinearInterpolationDSG(suite, "equi", 1, 5, 8, 1024);
+  addLinearInterpolationDSG(suite, "equi", 1, 8, 5, 256);
+  addLinearInterpolationDSG(suite, "equi", 1, 10, 5, 32);
 
   // Sparse grids from (adaptive-like) multi-index sets
   addMIVec(suite, "cc", 1, 5, 16, 1000);

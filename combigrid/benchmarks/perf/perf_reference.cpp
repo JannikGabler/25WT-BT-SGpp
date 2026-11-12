@@ -38,6 +38,7 @@
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
+#include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -47,6 +48,7 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -252,13 +254,14 @@ CaseFunc mivecCase(const std::string& name, const std::string& nodes, const LvlT
   };
 }
 
+template <typename Grid = SparseGrid>
 CaseFunc interpCase(const std::string& name, const bool linear, const std::string& nodes,
                     const LvlType boundary, const size_t nDim, const LvlType maxLvl) {
   return [=]() {
     const HyperCubeArea domain = perf::shiftedDomain(nDim);
     CompleteSGGenInstr genInstr(maxLvl, nDim);
     perf::configure(genInstr, nodes, boundary, domain);
-    const SparseGrid grid(genInstr);
+    const Grid grid(genInstr);
     const CountingFunc counting{perf::cosProd};
     const SourceFunc sourceFunc = counting.sourceFunc();
 
@@ -266,8 +269,12 @@ CaseFunc interpCase(const std::string& name, const bool linear, const std::strin
     record.name = name;
     record.op = linear ? "interplin" : "interp";
     for (const DataVector& point : perf::randomPoints(domain, 8, 4000 + nDim)) {
-      record.values.push_back(linear ? interpolateLinear(sourceFunc, point, grid)
-                                     : interpolate(sourceFunc, point, grid));
+      if constexpr (std::is_same_v<Grid, SparseGrid>) {
+        record.values.push_back(linear ? interpolateLinear(sourceFunc, point, grid)
+                                       : interpolate(sourceFunc, point, grid));
+      } else {  // deltas sparse grid: multilinear interpolation only
+        record.values.push_back(interpolateLinear(sourceFunc, point, grid));
+      }
       record.exact.push_back(perf::cosProd(point));
     }
     record.magnitude = 1.0;  // max |cosProd|
@@ -329,6 +336,9 @@ std::vector<std::pair<std::string, CaseFunc>> allCases() {
         const std::string name =
             "interplin/sg/" + cfg(nodes, boundary, nDim, maxLvl) + "/cos-shifted";
         add(name, interpCase(name, true, nodes, boundary, nDim, maxLvl));
+        const std::string dsgName =
+            "interplin/dsg/" + cfg(nodes, boundary, nDim, maxLvl) + "/cos-shifted";
+        add(dsgName, interpCase<DeltasSparseGrid>(dsgName, true, nodes, boundary, nDim, maxLvl));
       }
     }
   }
