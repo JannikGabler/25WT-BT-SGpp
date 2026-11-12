@@ -163,35 +163,45 @@ namespace std {
 %include "combigrid/src/sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp"
 
 namespace std {
-  // SparseGrid::getTensorGrids; returned as a tuple of owned copies.
+  // SparseGrid::getTensorGrids, DeltasSparseGrid::getTensorGrids; returned as a tuple of owned
+  // copies.
   %template(TensorGridCTDataVector) vector<sgpp::combigrid::TensorGridCTData>;
 }
 
-// Both getTensorGrid overloads return a reference into the sparse grid.
-%pythonappend sgpp::combigrid::SparseGrid::getTensorGrid %{
+// SparseGridBase (the abstract base class of SparseGrid and DeltasSparseGrid) is not wrapped, as
+// it is irrelevant for Python users. SWIG therefore does not see the methods both grids inherit
+// from it: its public methods that are meaningful in Python are declared again on both classes by
+// the macro below and forward to the inherited C++ methods. Not declared again are the iterators
+// (iteration is provided by __len__ / __getitem__, which raises IndexError so that
+// 'for tgData in grid' terminates) and the protected methods for manual assembly (a grid without
+// generation instruction or with unset size caches crashes the operators).
+//  - getTensorGrid(mi): the C++ overload returns a const_iterator, which cannot be used from
+//    Python; this one returns the matching TensorGridCTData, or None if the grid contains no
+//    tensor grid with this level multi-index.
+//  - getTensorGrids: the C++ method returns a std::span, for which SWIG has no typemap; a
+//    std::vector is returned as a tuple of owned copies (TensorGridCTDataVector).
+//  - operator== compares grids of the same class only.
+// Keep-alive references: both getTensorGrid overloads and getGenInstr return a reference into the
+// grid (_owner). The grid holds a clone of the generation instruction; the clone of an
+// MIVecSGGenInstr references the caller's LvlMIVec, so the instruction's Python proxy (which keeps
+// that vector alive) is kept alive by the grid (_genInstr). Note: SWIG drops the const of the
+// reference getGenInstr returns, so setters called on the returned object modify the instruction
+// the grid's operators use.
+// (No '#' comments inside the %pythoncode of the macro: '#' is the stringification operator of
+// SWIG macros.)
+%define COMBIGRID_SPARSE_GRID_BASE_METHODS(Class)
+%pythonappend sgpp::combigrid::Class::Class %{
+  self._genInstr = genInstruction
+%}
+%pythonappend sgpp::combigrid::Class::getTensorGrid %{
   if val is not None:
     val._owner = self
 %}
-// The sparse grid holds a clone of the generation instruction. The clone of an MIVecSGGenInstr
-// references the caller's LvlMIVec, so the instruction's Python proxy (which keeps that vector
-// alive) is kept alive as well.
-%pythonappend sgpp::combigrid::SparseGrid::SparseGrid %{
-  self._genInstr = genInstruction
-%}
-// Returns a reference to the sparse grid's internal instruction; keep the sparse grid alive.
-// Note: SWIG drops the const of the returned reference, so setters called on the returned object
-// modify the instruction the sparse grid's operators use.
-%pythonappend sgpp::combigrid::SparseGrid::getGenInstr %{
+%pythonappend sgpp::combigrid::Class::getGenInstr %{
   val._owner = self
 %}
-// SparseGridBase (the abstract base class of SparseGrid and DeltasSparseGrid) is not wrapped, as
-// it is irrelevant for Python users. SWIG therefore does not see the methods SparseGrid inherits
-// from it: its public methods that are meaningful in Python are declared here again and forward to
-// the inherited C++ methods. Not declared again are the iterators (iteration is provided by
-// __len__ / __getitem__ below) and the protected methods for manual assembly (a SparseGrid without
-// generation instruction or with unset size caches crashes the operators).
-%warnfilter(SWIGWARN_TYPE_UNDEFINED_CLASS) sgpp::combigrid::SparseGrid;
-%extend sgpp::combigrid::SparseGrid {
+%warnfilter(SWIGWARN_TYPE_UNDEFINED_CLASS) sgpp::combigrid::Class;
+%extend sgpp::combigrid::Class {
   size_t nDim() const { return $self->nDim(); }
 
   size_t nTG() const { return $self->nTG(); }
@@ -200,16 +210,11 @@ namespace std {
     return $self->getTensorGrid(idx);
   }
 
-  // The C++ overload returns a const_iterator, which cannot be used from Python. This one returns
-  // the matching TensorGridCTData, or None if the sparse grid contains no tensor grid with this
-  // level multi-index.
   const sgpp::combigrid::TensorGridCTData* getTensorGrid(const sgpp::combigrid::LvlMI& mi) const {
     auto it = $self->getTensorGrid(mi);
     return (it == $self->end()) ? nullptr : &(*it);
   }
 
-  // The C++ method returns a std::span, for which SWIG has no typemap. A std::vector is returned
-  // as a tuple of owned copies (TensorGridCTDataVector).
   std::vector<sgpp::combigrid::TensorGridCTData> getTensorGrids() const {
     const auto tgs = $self->getTensorGrids();
     return std::vector<sgpp::combigrid::TensorGridCTData>(tgs.begin(), tgs.end());
@@ -219,11 +224,9 @@ namespace std {
 
   size_t getMaxTGSumOverGPCntsPerDim() const { return $self->getMaxTGSumOverGPCntsPerDim(); }
 
-  bool operator==(const sgpp::combigrid::SparseGrid& other) const { return *$self == other; }
+  bool operator==(const sgpp::combigrid::Class& other) const { return *$self == other; }
 
   %pythoncode %{
-    # Same kind of conveniences as base's DataVector. __getitem__ raises IndexError so that
-    # 'for tgData in sparseGrid' terminates.
     def __len__(self):
         return self.nTG()
 
@@ -233,7 +236,17 @@ namespace std {
         return self.getTensorGrid(idx)
   %}
 }
+%enddef
+
+COMBIGRID_SPARSE_GRID_BASE_METHODS(SparseGrid)
 %include "combigrid/src/sgpp/combigrid/grids/sparse_grid.hpp"
+
+// DeltasSparseGrid: the same methods as SparseGrid. The constructor raises RuntimeError for
+// non-nested nodes (std::invalid_argument). getOperatorData returns the grid's cache of operator
+// data (misc::OperatorDataCache, not wrapped), which only the operators use.
+%ignore sgpp::combigrid::DeltasSparseGrid::getOperatorData;
+COMBIGRID_SPARSE_GRID_BASE_METHODS(DeltasSparseGrid)
+%include "combigrid/src/sgpp/combigrid/grids/deltas_sparse_grid.hpp"
 
 // ---------------------------------------------------------------------------
 // Operators
@@ -242,14 +255,23 @@ namespace std {
 // The operator headers declare only the public functions; their per-tensor-grid internals live in
 // tools/operators/ (not %include'd), so no internal helper needs an %ignore here.
 
+// Every operator has overloads for SparseGrid and DeltasSparseGrid; SWIG merges them into one
+// Python function per name and selects the overload by the types of the arguments: the first one
+// (SourceFunc -> float, VectorSourceFunc -> DataVector) and the grid (unrelated proxy classes, as
+// SparseGridBase is not wrapped).
 // Vector-valued source functions: the overloads writing the m results to a std::span (no typemap)
-// are hidden; Python gets the overloads returning a DataVector. SWIG selects the overload by the
-// type of the first argument (SourceFunc -> float, VectorSourceFunc -> DataVector).
+// are hidden; Python gets the overloads returning a DataVector.
 %ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&, std::span<double>);
 %ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
                                      const SparseGrid&, std::span<double>);
 %ignore sgpp::combigrid::interpolateLinear(const VectorSourceFunc&, const base::DataVector&,
                                            const SparseGrid&, std::span<double>);
+%ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const DeltasSparseGrid&,
+                                    std::span<double>);
+%ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
+                                     const DeltasSparseGrid&, std::span<double>);
+%ignore sgpp::combigrid::interpolateLinear(const VectorSourceFunc&, const base::DataVector&,
+                                           const DeltasSparseGrid&, std::span<double>);
 
 // Re-raise exceptions of Python source functions after the operator returns (see SourceFunc.i);
 // applies to the scalar and the vector overloads.
@@ -258,8 +280,11 @@ COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::interpolateLinear)
 COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::quadrature)
 
 %include "combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp"
+%include "combigrid/src/sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp"
 %include "combigrid/src/sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp"
+%include "combigrid/src/sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp"
 %include "combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.hpp"
+%include "combigrid/src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp"
 
 // ---------------------------------------------------------------------------
 // Tools

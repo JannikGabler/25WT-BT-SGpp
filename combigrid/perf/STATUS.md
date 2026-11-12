@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-45 (2026-11-12; accepted, commit pending; judged cases → owner) ·
+Last processed: WP-50 (2026-11-12; accepted, commit pending) ·
 Next free WP number: 52 ·
 Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
@@ -63,45 +63,43 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 | – | WP-36 | Interpolation operators: exploration (measurement; benchmarks `perf_interp_explore`, `perf_interp_sol.hpp`, 16 micro cases kept) | accepted (11-11, c3cc48360) | levers (16 t, saved of interp 5.70 / interplin 4.51 s): interp dedup per call 3.45 s (measured), interplin dedup ≈ 2.3–3.0 s (est.), corner loop 1.01 s, global kernel 0.64 s, generic weights 0.42 s; multi-point 0 judged | [WP-36](summaries/WP-36-interpolation-exploration.md) |
 | – | WP-08 | Linear interpolation: corner loop (weight table by doubling, index order, per-TG bitwise) + cross-TG dedup prototype | accepted (11-11, 6df60cb50) | interplin 4.525 → 3.506 s (−1.02 s; d10 1.334x, d8 1.267x, d5 1.251x), memory 1.009, refcheck OK; dedup prototype −2.12 s more → WP-47 (owner: option (c)) | [WP-08](summaries/WP-08-corner-loop.md) |
 | – | WP-47 | `DeltasSparseGrid` linear interpolation (each distinct corner once per call; `ClosureTrie`, per-grid `OperatorDataCache`, 3 passes + serial gate) + judged cases `interplin/dsg/...` (patch) | accepted (11-12, 7d04b5dbc; judged cases 6138b8b9e) | DSG vs. SG operator 16 t: d10 4.56x, d8 3.28x, d5 1.98x, d2 0.60x; judged 1.005x, memory 1.001, refcheck OK (drafted 120/120); new cases +1.2 s / pass | [WP-47](summaries/WP-47-dsg-linear-interpolation.md) |
-| – | WP-45 | `DeltasSparseGrid` global interpolation (global weights through the DSG quadrature's row loop; new public virtual `InterpolationMethod::basisValues`) + judged cases `interp/dsg/...` (patch) | accepted (11-12; commit pending) | DSG vs. SG operator 16 t: cc d10 5.05x, d7 8.48x, d5 8.38x, d3 5.71x, d2 3.40x, equi d3 7.77x; judged 1.001x, memory 0.999, refcheck OK (drafted 132/132, bitwise 1 t = 16 t); cheb1 d5 0.980x (placement → WP-07); new cases +0.82 s / pass | [WP-45](summaries/WP-45-dsg-global-interpolation.md) |
-| 1 | WP-50 | Python bindings for `DeltasSparseGrid` + its quadrature / `interpolateLinear` / `interpolate` (scalar + vector; owner 11-12, option (a); e2e nil) | in progress (prompt 11-12) | | |
-| 2 | WP-06 | Global interpolation kernel; `SparseGrid` operator stays per-TG CT (0.64 s) | ready | | |
-| 3 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (≈ 0.15–0.25 s on `interplin/dsg/`; loses per-TG sums) | ready | | |
-| 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready | | |
-| 5 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
-| 6 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
-| 7 | WP-07 | Generic barycentric formula: cache the weights (0.42 s; + DSG equi rows, cheb1 d5 placement) | ready | | |
-| 8 | WP-09 | Multi-point interpolation API (proposal: gains vs. complexity) | ready | | |
-| 9 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
-| 10 | WP-51 | DSG row loop at low d: split large delta TGs across threads + largest-first for `quad/dsg` (from WP-45; ≈ 0.02–0.03 s est.) | ready (low; measure first) | | |
-| 11 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
-| 12 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
-| 13 | WP-31 | MI-set cleanups | ready (low) | | |
-| 14 | WP-48 | Operator drivers: `std::fma`-pinned CT combination + small-call gate (interplin d2 ≈ 20 ms) | ready (low) | | |
-| 15 | WP-35 | Fragile tests (time-seeded tolerance; FMA-dependent cache precondition) + audit (test-only) | ready (low; may move up) | | |
-| 16 | WP-38 | Code hygiene: banner checker + combigrid leftovers | ready (low) | | |
-| 17 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
-| 18 | WP-30 | Vector-valued: small-m optimizations | planned | | |
-| 19 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
-| 20 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it) | | |
-| 21 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late, owner 11-03) | | |
-| 22 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late, owner 11-03) | | |
-| 23 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights` (from WP-04) | planned (owner places it; WP-17 rejected → unblocked) | | |
+| – | WP-45 | `DeltasSparseGrid` global interpolation (global weights through the DSG quadrature's row loop; new public virtual `InterpolationMethod::basisValues`) + judged cases `interp/dsg/...` (patch) | accepted (11-12, 8665bba7b; judged cases 007cf530f) | DSG vs. SG operator 16 t: cc d10 5.05x, d7 8.48x, d5 8.38x, d3 5.71x, d2 3.40x, equi d3 7.77x; judged 1.001x, memory 0.999, refcheck OK (drafted 132/132, bitwise 1 t = 16 t); cheb1 d5 0.980x (placement → WP-07); new cases +0.82 s / pass | [WP-45](summaries/WP-45-dsg-global-interpolation.md) |
+| – | WP-50 | Python bindings for `DeltasSparseGrid` + its quadrature / `interpolateLinear` / `interpolate` (scalar, vector, cached) | accepted (11-12; commit pending) | Python DSG vs. SG 1 t 4.2–7.0x, 16 t 2.2–5.8x; C++ `.text` byte-identical, e2e A/A 1.002x / 0.998x, memory 1.001, refcheck OK | [WP-50](summaries/WP-50-dsg-python-bindings.md) |
+| 1 | WP-06 | Global interpolation kernel; `SparseGrid` operator stays per-TG CT (0.64 s) | in progress (prompt 11-12) | | |
+| 2 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (≈ 0.15–0.25 s on `interplin/dsg/`; loses per-TG sums) | ready | | |
+| 3 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready | | |
+| 4 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
+| 5 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
+| 6 | WP-07 | Generic barycentric formula: cache the weights (0.42 s; + DSG equi rows, cheb1 d5 placement) | ready | | |
+| 7 | WP-09 | Multi-point interpolation API (proposal: gains vs. complexity) | ready | | |
+| 8 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
+| 9 | WP-51 | DSG row loop at low d: split large delta TGs across threads + largest-first for `quad/dsg` (from WP-45; ≈ 0.02–0.03 s est.) | ready (low; measure first) | | |
+| 10 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
+| 11 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
+| 12 | WP-31 | MI-set cleanups | ready (low) | | |
+| 13 | WP-48 | Operator drivers: `std::fma`-pinned CT combination + small-call gate (interplin d2 ≈ 20 ms) | ready (low) | | |
+| 14 | WP-35 | Fragile tests (time-seeded tolerance; FMA-dependent cache precondition) + audit (test-only) | ready (low; may move up) | | |
+| 15 | WP-38 | Code hygiene: banner checker + combigrid leftovers (+ `explicit` SG / DSG ctors, owner 11-12) | ready (low) | | |
+| 16 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
+| 17 | WP-30 | Vector-valued: small-m optimizations | planned | | |
+| 18 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
+| 19 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it) | | |
+| 20 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late, owner 11-03) | | |
+| 21 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late, owner 11-03) | | |
+| 22 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights` (from WP-04) | planned (owner places it; WP-17 rejected → unblocked) | | |
 | last | WP-43 | Final clean-up: phase references out of code docs + phase leftovers | ready (always last, owner 11-03) | | |
 
 ## Next action
 
-**WP-45 accepted** (11-12); the owner commits it (code incl. the deleted
-`delta_quadrature_context.hpp` + new `generic_dsg_operator_context.hpp` (`git add -A`), tests,
-benchmarks, docs, summary, `results/WP-45/`, STATUS/PLAN), then applies
-`results/WP-45/judged-cases.patch` and runs `perf.py protect --authorized-by-owner` (+6 e2e
-`interp/dsg/...`, references 120 → 132) — **before** the WP-50 session. **WP-50 in progress**
-(prompt 11-12). Then WP-06, WP-49. If the owner's PGO build ran, `lib/` holds PGO libraries:
-`perf.py build normal` first. Next master start: process the WP-50 summary.
+**WP-50 accepted** (11-12); the owner commits it (combigrid.i, umbrella header, DSG headers /
+.cpp comments, 2 examples, docs incl. CLAUDE.md, summary, `results/WP-50/`, STATUS/PLAN) — tree
+clean before WP-06. `lib/` holds the OPT=0 libraries of WP-50's `SG_PYTHON=1` build → the WP-06
+session runs `perf.py build normal` first (in the prompt). **WP-06 in progress** (prompt 11-12).
+Then WP-49, WP-21. RP-4 after the next accepted optimization (WP-06 counts). Next master start:
+process the WP-06 summary.
 
 ## Open decisions for the owner
 
-- WP-45 judged cases: decided 11-12 (apply) — owner applies the patch + `protect` before WP-50.
 - WP-09 / WP-18 (after their summaries): adopt the proposed interface or not. WP-18 (before
   its prompt): protected `perf_e2e.cpp:81` / `perf_reference.cpp:136-144` read `tgData.mi`,
   `.coefficient`, `.tensorGrid.*` → proxy keeps the names, or the owner adapts them.
@@ -111,7 +109,7 @@ benchmarks, docs, summary, `results/WP-45/`, STATUS/PLAN), then applies
   `trienode16.patch` = −3 MiB per b0 case for b0 0.982x; only on top of the rejected block loop.
 - WP-37: base's Python `DataVector` iteration (segfault today) — base API change, placement.
 - WP-34: placement + mechanism (serial operator for Python callables: WP-17 measured 1 t 0.78 vs.
-  16 t 25.1 µs ≈ 32x / document; WP-17's batch path rejected 11-04). WP-39: placement.
+  16 t 25.1 µs ≈ 32x, WP-50 DSG 0.6–0.9 vs. 23 µs / document, e.g. `OMP_NUM_THREADS=1` hint; WP-17's batch path rejected 11-04). WP-39: placement.
 - Adaptive as the default `CachePolicy` (WP-27 follow-up; not planned, owner 11-03): cheap
   functions 0.57–0.91x of plain instead of 0.07–0.30x; expensive pay ≈ 3–7 ns per hit.
 - Optional moves: WP-05 before WP-18 (0.5–0.8 s at d ≤ 3 vs. ≈ 0.05 s); WP-35 up (test
@@ -193,18 +191,17 @@ WP-26, WP-28, WP-40, WP-27 accepted 11-03; scalar 0.995–1.002x) count only if 
 ≥ 1.3x or a hot-spot ranking shifts (none did).
 WP-04 (11-03), WP-17 (11-04) rejected. WP-47 (11-12) is a feature (judged `^interplin/` 1.005x)
 → not counted; its `interplin/dsg/...` cases count from WP-47-after on (no baseline). WP-45 (11-12)
-is a feature too (judged 1.001x; `interp/dsg/...` count from WP-45-after on); WP-50 (bindings) does
-not count. RP-4 after the next accepted optimization (WP-06 / WP-49 / WP-07 count) or another
+is a feature too (judged 1.001x; `interp/dsg/...` count from WP-45-after on); WP-50 (bindings, accepted 11-12)
+does not count. RP-4 after the next accepted optimization (WP-06 / WP-49 / WP-07 count) or another
 rule-7 trigger.
 
 ## Log
 
-- 2026-11-12 WP-45 summary processed: **accepted** by the owner (commit pending; WP-47 committed
-  7d04b5dbc, its judged cases 6138b8b9e). DSG `interpolate` 3.4–8.5x vs. the SG operator (16 t),
-  judged 1.001x, memory 0.999, refcheck OK; owner: apply the judged-case patch (+ rehash) before
-  WP-50. Follow-ups: new **WP-51** (DSG row loop at low d, rank 10); notes to WP-06 (`basisValues`),
-  WP-07 (DSG equi rows; cheb1 d5 0.980x placement), WP-09, WP-49, WP-50. No RP-4 (feature).
-  **WP-50 prompt issued.**
+- 2026-11-12 WP-50 summary processed: **accepted** by the owner (commit pending; WP-45 committed
+  8665bba7b, its judged cases 007cf530f). Python DSG operators 1 t 4.2–7.0x / 16 t 2.2–5.8x vs.
+  SG; C++ unchanged (`.text` identical, A/A), refcheck OK. Follow-ups: WP-34 (DSG GIL numbers,
+  `OMP_NUM_THREADS=1` hint), WP-38 (owner: `explicit` SG / DSG converting ctors = agreed C++ API
+  change; cpplint false positive; perf README RSS pitfall). No RP-4. **WP-06 prompt issued.**
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone), WP-47 1, WP-45 0; new in WP-47:
   `equidistant_nodes/linear_func_unit_cube_1D` once (5/5 reruns pass) → WP-35. Report recurrences.
@@ -238,4 +235,5 @@ rule-7 trigger.
   with drafted judged cases; WP-46 decided with WP-08; WP-09 stays a proposal); WP-08 issued. WP-08 accepted
   (6df60cb50; dedup → WP-47 option (c), before WP-45; WP-46 dropped; new WP-48); WP-47 issued.
   11-12 WP-47 accepted (7d04b5dbc; judged cases 6138b8b9e; follow-up WP-49; owner: DSG bindings →
-  WP-50 after WP-45, option (a)); WP-45 issued.
+  WP-50 after WP-45, option (a)); WP-45 issued. WP-45 accepted (8665bba7b; judged cases
+  007cf530f; follow-up WP-51); WP-50 issued.

@@ -1,0 +1,27 @@
+== WP-50 bindings (scratch wrapper -O2) against the 'perf.py build normal' libraries (WP-50-after)
+-- python_checks.py, OMP_NUM_THREADS=1
+grids: 32; comparisons: 2308, bitwise equal 1607, max 1.52 units of eps*scale (limit 64)
+RESULT: OK (0 failures)
+-- python_checks.py, OMP_NUM_THREADS=16
+grids: 32; comparisons: 2308, bitwise equal 1230, max 1.52 units of eps*scale (limit 64)
+RESULT: OK (0 failures)
+-- regression: WP-29d python_checks.py --compare (scalar SparseGrid results dumped with the unchanged bindings on the same libraries; 1 t bitwise)
+vector vs scalar: 896 components, 820 bitwise equal, max 0.23 units of eps*sum|c|*max|f|*max(1,vol) (limit 64)
+RESULT: OK (0 failures)
+-- regression: WP-26 python_checks.py, 1 t: ALL OK
+-- regression: WP-26 python_checks.py, 16 t: ALL OK
+-- regression: WP-27 python_checks.py, 1 t: all checks passed
+-- regression: WP-27 python_checks.py, 16 t: all checks passed
+-- regression: WP-28 python_checks.py, 1 t: all checks passed
+-- regression: WP-28 python_checks.py, 16 t: all checks passed
+-- example cached_func_full_sg_quadrature_interpolation.py (4 t): exit 0
+-- example extended_const_func_full_sg_interpolation.py (4 t): exit 0
+-- example extended_const_func_full_sg_quadrature.py (4 t): exit 0
+-- example simple_const_func_full_sg_interpolation.py (4 t): exit 0
+-- example simple_const_func_full_sg_quadrature.py (4 t): exit 0
+-- example sin_func_deltas_sg_quadrature_interpolation.py (4 t): exit 0
+-- example sin_func_full_sg_interpolation.py (4 t): exit 0
+-- example sin_func_full_sg_quadrature.py (4 t): exit 0
+-- example sin_func_multiindex_vector_sg_interpolation.py (4 t): exit 0
+-- example sin_func_multiindex_vector_sg_quadrature.py (4 t): exit 0
+-- example vector_func_full_sg_quadrature_interpolation.py (4 t): exit 0

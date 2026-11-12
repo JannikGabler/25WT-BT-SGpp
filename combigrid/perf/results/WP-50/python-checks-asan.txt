@@ -1,0 +1,11 @@
+== ASan: WP-50 bindings (scratch wrapper -O1 -fsanitize=address) against the 'perf.py build asan' libraries; LD_PRELOAD=libasan.so libstdc++.so, ASAN_OPTIONS=detect_leaks=0, MemoryMax=8G
+-- OMP_NUM_THREADS=1
+threads: 1
+grids: 32; comparisons: 2308, bitwise equal 1731, max 1.14 units of eps*scale (limit 64)
+RESULT: OK (0 failures)
+-- OMP_NUM_THREADS=16
+threads: 16
+grids: 32; comparisons: 2308, bitwise equal 1385, max 1.52 units of eps*scale (limit 64)
+RESULT: OK (0 failures)
+-- example sin_func_deltas_sg_quadrature_interpolation.py (4 threads): exit 0, ASan reports: 0
+-- keep-alive control (keepalive_control.py, 1 thread): DSG from a temporary MIVecSGGenInstr/LvlMIVec, quadrature + getGenInstr after gc: 'keep' (bindings as built) exit 0, no report; 'remove' (del dsg._genInstr by hand) exit 1, AddressSanitizer: heap-use-after-free

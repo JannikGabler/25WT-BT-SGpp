@@ -537,6 +537,7 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   formulas, vectorized in the optimized one). The session may check whether the per-TG kernel
   gains from it (basis values per dimension once per TG, then contraction) vs. the nested
   collapse; results change within round-off only (refcheck; the equi d2 WARN case).
+- **Status**: in progress (prompt 2026-11-12; rank 1).
 
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
@@ -2086,6 +2087,10 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   0.960x). WP-17 measured a Python per-point callable at 25.1 µs (16 t) vs. 0.78 µs (1 t) ≈ 32x
   → option (a) keeps that gain without a kernel change; a two-path variant (WP-17 option c,
   `results/WP-17/batched-evaluation.patch`) would add NumPy batches (0.18 µs/point).
+- **From WP-50** (accepted 2026-11-12): same for the DSG operators — a Python call ≈ 23 µs at 16 t
+  vs. 0.6–0.9 µs at 1 t (1 t 30–40x faster for both grid types; `results/WP-50/python-dsg-timing.md`).
+  Cheap option (c'): a hint "use `OMP_NUM_THREADS=1` with Python callables" in the Python examples
+  / `python-bindings.md`.
 
 ## WP-35 — Fragile tests: near-zero relative tolerance, FMA-dependent cache precondition + audit (from WP-29a)
 - **Source**: WP-29a summary (follow-ups; test runs); owner's PGO build 2026-11-07 (finding 2).
@@ -2386,7 +2391,10 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   `InterpolationMethod::basisValues` is not wrapped (`InterpolationMethod` isn't). cheb1 → the DSG
   constructor throws (Python must raise). The judged suite holds `interp/dsg/...` (owner applies
   the WP-45 patch before this WP).
-- **Status**: in progress (prompt 2026-11-12; rank 1).
+- **Status**: accepted (2026-11-12). Python 1 t 4.2–7.0x, 16 t 2.2–5.8x vs. the SG operators
+  (speedup ≈ ratio of Python calls); C++ `.text` byte-identical, e2e A/A 1.002x / 0.998x, memory
+  1.001, refcheck 132 OK. Follow-ups → WP-34 (OpenMP hint), WP-38 (`explicit` ctors, cpplint, perf
+  README pitfall).
 
 ## WP-51 — DSG row loop at low d: split large delta TGs across threads (from WP-45)
 - **Source**: WP-45 summary, profile shift / follow-ups 1 and 3.
@@ -2443,6 +2451,15 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   the owner. **From WP-08**: public `operators/linear_interpolation/linear_interpolation.hpp`
   includes the internal `linear_interpolation_scratch.hpp` (and thereby `constants.hpp`) without
   using it → drop the include (check the Python build).
+  **From WP-50** (owner 2026-11-12: agreed C++ API change): make the converting constructors
+  `SparseGrid(const SGGenInstr&)` and `DeltasSparseGrid(const SGGenInstr&)` `explicit` (fix
+  implicit-conversion call sites in combigrid sources, tests, examples, benchmarks — protected
+  benchmarks only if they compile unchanged, else BLOCKED; check the Python build: SWIG
+  constructors are unaffected); cpplint false positive on the structured binding in
+  `grids/deltas_sparse_grid.cpp:28` (suppress with `// NOLINT(...)` or config); `perf/README.md`
+  pitfall: reading a snapshot's files (`cmp`, `objcopy`) before `ab e2e` raises that side's peak
+  RSS by ≈ 0.8 MiB (fault-around of page-cached pages) → evict with `posix_fadvise(DONTNEED)` or
+  compare `.text` afterwards (README only if not protected).
 - **Scope**: fix the checker's logic; run it over the repo; fix combigrid files. If the fixed
   checker fails files of other modules (the build would fail for everyone), do not change those
   modules: BLOCKED with options (fix all / restrict to combigrid / leave the checker). Leftovers:

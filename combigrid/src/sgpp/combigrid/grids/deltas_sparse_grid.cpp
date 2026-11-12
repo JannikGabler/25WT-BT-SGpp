@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
@@ -32,23 +37,6 @@ DeltasSparseGrid::DeltasSparseGrid(const SGGenInstr& genInstr)
 /// @{
 
 const SGGenInstr& DeltasSparseGrid::getGenInstr() const noexcept { return *genInstr; }
-
-/// @}
-
-/// @name Setters
-/// @{
-
-// void SparseGrid::setGenInstr(const SGGenInstr& genInstr) {
-//   assert(genInstr.nDim() == nDim_);
-
-//   this->genInstr = genInstr.clone();
-// }
-
-// void SparseGrid::setGenInstr(std::shared_ptr<const SGGenInstr>&& genInstr) {
-//   assert(genInstr->nDim() == nDim_);
-
-//   this->genInstr = std::move(genInstr);
-// }
 
 /// @}
 

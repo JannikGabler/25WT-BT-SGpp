@@ -4,7 +4,9 @@
 // sgpp.sparsegrids.org
 
 /**
- * TODO: Document
+ * @file deltas_sparse_grid_quadrature.hpp
+ * @brief Quadrature operator on a deltas sparse grid: the combination technique quadrature of
+ * @c quadrature on a @c SparseGrid, evaluating every grid point once.
  */
 #pragma once
 
@@ -18,9 +20,19 @@ namespace sgpp {
 namespace combigrid {
 
 /**
- * TODO: Document
- * More specialized version of quadrature.
- * Requires nested nodes
+ * @brief Approximates the integral of @p sourceFunc over the domain of the grid's generation
+ * instruction on a deltas sparse grid.
+ *
+ * Computes the same combination @f$\sum_{\vec{\ell}} c_{\vec{\ell}}\, Q_{\vec{\ell}} f@f$ as
+ * @c quadrature on the @c SparseGrid of the same generation instruction (equal up to round-off),
+ * but evaluates @p sourceFunc exactly once at every grid point of the sparse grid and weights it
+ * with its global weight (the sum over all tensor grids containing the point of the coefficient
+ * times the product of the 1D quadrature weights). Requires nested nodes (guaranteed by the
+ * construction of the @c DeltasSparseGrid).
+ *
+ * @param sourceFunc       Black-box source function to integrate.
+ * @param deltasSparseGrid Deltas sparse grid with attached generation instruction.
+ * @return Approximated integral.
  */
 double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid);
 

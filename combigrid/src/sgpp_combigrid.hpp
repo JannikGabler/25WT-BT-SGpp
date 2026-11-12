@@ -59,11 +59,15 @@
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 
-// Operators
+// Operators (SparseGrid and DeltasSparseGrid overloads)
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
+#include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+#include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 
 // Tools
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>

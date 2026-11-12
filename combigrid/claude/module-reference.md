@@ -28,8 +28,8 @@ grids/
   sparse_grid_base       common base: nDim, vector<TensorGridCTData> (not SWIG-wrapped)
   sparse_grid            CT sparse grid (+ optional shared SGGenInstr)
   deltas_sparse_grid     delta representation for the DSG quadrature, global and linear interpolation
-                         (every grid point in exactly one delta tensor grid; not in the umbrella
-                         header / Python); holds an OperatorDataCache (lazily built operator data)
+                         (every grid point in exactly one delta tensor grid; public, Python-bound
+                         since WP-50); holds an OperatorDataCache (lazily built operator data)
   extensive_sparse_grid  commented out
 miscellaneous/         (namespace misc)
   tensor_grid/           TensorGridCTData {mi, coefficient, tensorGrid}
@@ -131,7 +131,7 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   by a slot of a per-call store (one block per closure MI, `DSGLinInterpIndex`, built on the first
   call and kept in the grid); three passes in one parallel region (mark the corners of all
   tensor grids, evaluate the marked slots, gather per tensor grid with the `SparseGrid` kernel's
-  weights and order), serial below `DSG_PARALLEL_MIN_CORNER_VISITS`. C++ only.
+  weights and order), serial below `DSG_PARALLEL_MIN_CORNER_VISITS`.
   `interpolate(const SourceFunc&, const DataVector&, const DeltasSparseGrid&)` (+ vector overloads;
   [deltas_sparse_grid_global_interpolation.hpp](../src/sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp))
   evaluates every grid point once per call (WP-45): the CT interpolant regrouped by grid point,
@@ -144,7 +144,11 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   the delta-TG sums are added in grid order (bitwise independent of the thread count — matters for
   high-Lebesgue rules, e.g. equidistant d2 L5); serial below `DSG_PARALLEL_MIN_GRID_POINTS`.
   Nested nodes only (the DSG constructor throws otherwise; cheb1 is not nested). Per-TG sums are
-  not formed (refinement indicators would need the `SparseGrid` operator). C++ only.
+  not formed (refinement indicators would need the `SparseGrid` operator).
+  The grid keeps the tensor grids of the whole downwards closure, including those with
+  coefficient 0 (unlike `SparseGrid`). The class and all its operators (scalar and
+  `DataVector`-returning vector overloads, cached functions) are public and bound in Python
+  (WP-50); `getOperatorData()` (internal) and the `std::span` overloads are not bound.
 - `TensorGrid` ([grids/tensor_grid.hpp](../src/sgpp/combigrid/grids/tensor_grid.hpp)): per-dim counts
   + flat per-dim node lists, first-dimension-fastest linear indexing.
 - `TensorGridCTData`
@@ -312,9 +316,9 @@ operation machinery.
 - **Dimension-adaptive refinement** is not implemented; the caller builds the loop on
   `MIVecSGGenInstr` (highest-priority future work; planned by the owner).
 - **Vector-valued source functions in Python** (WP-29d): `VectorSourceFunc` and the
-  `DataVector`-returning overloads of all three operators are bound; the DSG operators (quadrature
-  and linear interpolation, also the scalar ones) and the `std::span` overloads are C++ only. Python callables run serially under the
-  GIL; a vector callable needs one call per grid point for all m outputs.
+  `DataVector`-returning overloads of all three operators are bound, for `SparseGrid` and
+  `DeltasSparseGrid` (WP-50); the `std::span` overloads are C++ only. Python callables run
+  serially under the GIL; a vector callable needs one call per grid point for all m outputs.
 - **Source-function caching** (WP-26, WP-28, WP-27): policy "always" (`CachedSourceFunc`; "none"
   = plain `SourceFunc`) in memory or with a temporary / persistent LMDB file, or adaptive
   (`CachePolicy::Adaptive`: None / MemoryOnly / TemporaryStorage from measured costs; not the
@@ -325,9 +329,9 @@ operation machinery.
   shared points are re-evaluated across tensor grids and operator calls. Python misses still run
   serially under the GIL.
 - **Reduced representation**: `SparseGrid` operators process full tensor grids, so shared points are
-  evaluated repeatedly (Tasmanian / SGMK win at d ≳ 7 for this reason); the DSG quadrature
-  evaluates every point once, the DSG linear interpolation every distinct corner once per call
-  (no global interpolation on the DSG yet).
+  evaluated repeatedly (Tasmanian / SGMK win at d ≳ 7 for this reason); the DSG quadrature and
+  global interpolation evaluate every point once per call, the DSG linear interpolation every
+  distinct corner once per call (nested nodes only).
 - One global `boundaryLevelOffset` for all dimensions; no Leja nodes.
 - `USE_DAKOTA` is declared combigrid-only in SConstruct but unused in `combigrid/src/` (dormant).
 

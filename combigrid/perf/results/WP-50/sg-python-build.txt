@@ -1,0 +1,26 @@
+Full SG_PYTHON=1 SCons build (python-bindings.md command, .venv/bin first on PATH; with the system python3 the configure step finds no NumPy and the wrapper fails on numpy/arrayobject.h), 2026-11-12, exit 0 after 72s:
+  scons -j8 OPT=0 SG_ALL=0 SG_BASE=1 SG_COMBIGRID=1 SG_PYTHON=1 COMPILE_BOOST_TESTS=0 RUN_PYTHON_TESTS=0
+
+SWIG warnings (all modules): 2
+combigrid/src/sgpp/combigrid/multiindices/multiindex.hpp:231: Warning 389: operator[] ignored (consider using %extend)
+combigrid/src/sgpp/combigrid/multiindices/multiindex.hpp:233: Warning 389: operator[] ignored (consider using %extend)
+Compiler warnings in the wrapper mentioning combigrid / DeltasSparseGrid / SourceFunc: 0
+
+Checks with this pysgpp (lib/pysgpp, OPT=0 libraries):
+-- python_checks.py, OMP_NUM_THREADS=1
+grids: 32; comparisons: 2308, bitwise equal 1748, max 0.76 units of eps*scale (limit 64)
+RESULT: OK (0 failures)
+-- python_checks.py, OMP_NUM_THREADS=16
+grids: 32; comparisons: 2308, bitwise equal 1366, max 1.14 units of eps*scale (limit 64)
+RESULT: OK (0 failures)
+-- example cached_func_full_sg_quadrature_interpolation.py (4 t): exit 0
+-- example extended_const_func_full_sg_interpolation.py (4 t): exit 0
+-- example extended_const_func_full_sg_quadrature.py (4 t): exit 0
+-- example simple_const_func_full_sg_interpolation.py (4 t): exit 0
+-- example simple_const_func_full_sg_quadrature.py (4 t): exit 0
+-- example sin_func_deltas_sg_quadrature_interpolation.py (4 t): exit 0
+-- example sin_func_full_sg_interpolation.py (4 t): exit 0
+-- example sin_func_full_sg_quadrature.py (4 t): exit 0
+-- example sin_func_multiindex_vector_sg_interpolation.py (4 t): exit 0
+-- example sin_func_multiindex_vector_sg_quadrature.py (4 t): exit 0
+-- example vector_func_full_sg_quadrature_interpolation.py (4 t): exit 0

@@ -36,14 +36,14 @@ modules are irrelevant.
 
 Pipeline: a generation instruction (`CompleteSGGenInstr(maxLvl, nDim)` or `MIVecSGGenInstr(miVec)`
 for custom / adaptive MI sets) → `SparseGrid` (list of `TensorGridCTData {mi, coefficient,
-tensorGrid}`) → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid` +
-its `quadrature` overload (C++ only) evaluates every grid point once; its `interpolateLinear`
-overloads (C++ only, WP-47) every distinct corner once per call (index built on the first call);
-its `interpolate` overloads (C++ only, WP-45) every grid point once per call, weighted with global
-weights from the 1D basis values (`InterpolationMethod::basisValues`) through the DSG quadrature's
-row loop (thread-count independent). User functions are wrapped in
-`SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators (`interpolate`, `interpolateLinear`,
-both quadratures; Python: all but the C++-only DSG quadrature)); nodes / weights live on [0,1]^d,
+tensorGrid}`) → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid`
+(nested nodes only; Python-bound with its operators since WP-50) + its `quadrature` overload
+evaluates every grid point once; its `interpolateLinear` overloads (WP-47) every distinct corner
+once per call (index built on the first call); its `interpolate` overloads (WP-45) every grid point
+once per call, weighted with global weights from the 1D basis values
+(`InterpolationMethod::basisValues`) through the DSG quadrature's row loop (thread-count
+independent). User functions are wrapped in `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all
+operators on both grid types, also in Python); nodes / weights live on [0,1]^d,
 the user domain enters only via `setDomain()` (all operators map with `tools::mapToDomain` =
 `std::fma`, so they evaluate bitwise identical points). Optional caching (WP-26): `CachedSourceFunc`
 / `CachedVectorSourceFunc` (a `SourceFunc` / `VectorSourceFunc` whose callable looks every point up
@@ -159,7 +159,8 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   `getClenshawCurtisNodeGenFunc()` and `getSecondTypeChebyshevNodeGenFunc()` are the **same**
   singleton.
 - `setBoundaryLevelOffset(k)`: boundary nodes in dimension j only if ℓ[j] ≥ k (0 = always).
-- Zero-coefficient tensor grids are never stored (`CompleteSGGenInstr` and `MIVecSGGenInstr`).
+- Zero-coefficient tensor grids are never stored in a `SparseGrid` (`CompleteSGGenInstr` and
+  `MIVecSGGenInstr`); a `DeltasSparseGrid` keeps every MI of the downwards closure.
 - `SparseGrid::operator==` is O(nTG²) — avoid in loops.
 - `.lint` / `.os` / `.gcda` files without a matching source are stale artifacts — do not resurrect
   sources from them.
