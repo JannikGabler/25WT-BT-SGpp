@@ -11,6 +11,7 @@
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
+#include <span>
 #include <vector>
 
 namespace sgpp {
@@ -83,6 +84,39 @@ void OptBarycentricFormula::interpolate(const double pos, const std::vector<doub
 
   for (size_t k = 0; k < nOutputs; k++) {
     out[k] /= denominator;
+  }
+}
+
+void OptBarycentricFormula::basisValues(const double pos, const std::vector<double>& nodes,
+                                        const std::span<double> out) const {
+  assert(out.size() == nodes.size());
+
+  if (hasTrivialBasisValues(pos, nodes, out)) {
+    return;
+  }
+
+  // The factors of barycentricFormula (w_i = (-1)^i, halved at both ends; halving the quotient
+  // rounds as halving the weight), each multiplied by the inverse of their sum. The divisions are
+  // independent of each other (vectorized), the sum is accumulated in node order as in
+  // barycentricFormula.
+  const size_t nNodes = nodes.size();
+  double* const factors = out.data();
+  const double* const x = nodes.data();
+
+  for (size_t i = 0; i < nNodes; i++) {
+    factors[i] = ((i % 2 == 0) ? 1.0 : -1.0) / (pos - x[i]);
+  }
+  factors[0] *= 0.5;
+  factors[nNodes - 1] *= 0.5;
+
+  double denominator = 0.0;
+  for (size_t i = 0; i < nNodes; i++) {
+    denominator += factors[i];
+  }
+
+  const double inverse = 1.0 / denominator;
+  for (size_t i = 0; i < nNodes; i++) {
+    factors[i] *= inverse;
   }
 }
 

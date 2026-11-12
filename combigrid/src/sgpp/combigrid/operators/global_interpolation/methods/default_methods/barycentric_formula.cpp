@@ -11,6 +11,7 @@
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
+#include <span>
 #include <vector>
 
 namespace sgpp {
@@ -61,6 +62,28 @@ void BarycentricFormula::interpolate(const double pos, const std::vector<double>
       numerator += factors[i] * values[i * nOutputs + k];
     }
     out[k] = numerator / denominator;
+  }
+}
+
+void BarycentricFormula::basisValues(const double pos, const std::vector<double>& nodes,
+                                     const std::span<double> out) const {
+  assert(out.size() == nodes.size());
+
+  if (hasTrivialBasisValues(pos, nodes, out)) {
+    return;
+  }
+
+  const size_t nNodes = nodes.size();
+  const std::vector<double> weights = tools::barycentricFormulaWeights(nodes);
+  double denominator = 0.0;
+
+  for (size_t i = 0; i < nNodes; i++) {
+    out[i] = weights[i] / (pos - nodes[i]);
+    denominator += out[i];
+  }
+
+  for (size_t i = 0; i < nNodes; i++) {
+    out[i] /= denominator;
   }
 }
 

@@ -11,7 +11,7 @@
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
@@ -27,9 +27,9 @@
 #include <span>
 #include <vector>
 
-using sgpp::combigrid::misc::DeltaQuadratureContext;
 using sgpp::combigrid::misc::DeltaQuadratureScratch;
 using sgpp::combigrid::misc::FlatNestedVec;
+using sgpp::combigrid::misc::GenericDSGOperatorContext;
 
 namespace sgpp {
 namespace combigrid {
@@ -142,7 +142,7 @@ namespace {
  * did before the value types).
  */
 template <typename ValueType>
-typename ValueType::Acc sumWithGlobalWeights(const DeltaQuadratureContext& context,
+typename ValueType::Acc sumWithGlobalWeights(const GenericDSGOperatorContext& context,
                                              const ValueType values,
                                              const TensorGridCTData& deltaTGData,
                                              DeltaQuadratureScratch& scratch) {
@@ -159,13 +159,13 @@ typename ValueType::Acc sumWithGlobalWeights(const DeltaQuadratureContext& conte
 
 }  // namespace
 
-double processDeltaTensorGrid(const DeltaQuadratureContext& context, const SourceFunc& sourceFunc,
-                              const TensorGridCTData& deltaTGData,
+double processDeltaTensorGrid(const GenericDSGOperatorContext& context,
+                              const SourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
                               DeltaQuadratureScratch& scratch) {
   return sumWithGlobalWeights(context, misc::ScalarValues(sourceFunc), deltaTGData, scratch);
 }
 
-void processDeltaTensorGrid(const DeltaQuadratureContext& context,
+void processDeltaTensorGrid(const GenericDSGOperatorContext& context,
                             const VectorSourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
                             DeltaQuadratureScratch& scratch, const std::span<double> out) {
   assert(out.size() == sourceFunc.nOutputs());
@@ -180,7 +180,7 @@ void processDeltaTensorGrid(const DeltaQuadratureContext& context,
  * Per thread first, then added to @p result, as the reduction of the scalar operator does output
  * by output.
  */
-void combineDeltaTensorGrids(const DeltaQuadratureContext& context,
+void combineDeltaTensorGrids(const GenericDSGOperatorContext& context,
                              const VectorSourceFunc& sourceFunc, const std::span<double> result) {
   const DeltasSparseGrid& deltasSparseGrid = context.deltasSparseGrid;
   const size_t nOutputs = result.size();
@@ -211,14 +211,14 @@ void combineDeltaTensorGrids(const DeltaQuadratureContext& context,
   }
 }
 
-void compSubTrie(const DeltaQuadratureContext& context, const LvlMI& deltaTGMI,
+void compSubTrie(const GenericDSGOperatorContext& context, const LvlMI& deltaTGMI,
                  DeltaQuadratureScratch& scratch) {
   assert(deltaTGMI.size() == context.coeffTrie.nDim());
 
   tools::ProjectedSubTrieBuilder(context, deltaTGMI, scratch).build();
 }
 
-void prepareDeltaTensorGrid(const DeltaQuadratureContext& context,
+void prepareDeltaTensorGrid(const GenericDSGOperatorContext& context,
                             const TensorGridCTData& deltaTGData, DeltaQuadratureScratch& scratch) {
   const TensorGrid& deltaTG = deltaTGData.tensorGrid;
   const size_t nDim = deltaTG.nDim();

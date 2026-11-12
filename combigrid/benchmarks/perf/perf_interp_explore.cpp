@@ -44,7 +44,10 @@
  *     domain's lower corner);
  *   - dsg api (multilinear): the p single-point calls of the production operator interpolateLinear
  *     on the DeltasSparseGrid of the same instruction (every distinct corner once per call; its
- *     index is built in the warm-up round).
+ *     index is built in the warm-up round);
+ *   - dsg api (global, nested node families): the p single-point calls of the production operator
+ *     interpolate on the DeltasSparseGrid of the same instruction (every grid point once per call,
+ *     weighted with its global weight; its index is built in the warm-up round).
  *   The results are compared with api (largest absolute difference; they differ only by the
  *   summation order over the TGs, and kernel's corner order in multilinear interpolation).
  *
@@ -75,6 +78,7 @@
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -135,7 +139,7 @@ struct Problem {
   HyperCubeArea domain;
   CompleteSGGenInstr genInstr;
   std::unique_ptr<SparseGrid> grid;
-  std::unique_ptr<cg::DeltasSparseGrid> dsg;  ///< Multilinear configurations only.
+  std::unique_ptr<cg::DeltasSparseGrid> dsg;  ///< Nested node families only.
   SourceFunc func{perf::cosProd};
   std::vector<DataVector> points;
   std::vector<DataVector> normPoints;
@@ -148,7 +152,7 @@ struct Problem {
       : cfg(c), domain(perf::shiftedDomain(c.nDim)), genInstr(c.maxLvl, c.nDim) {
     perf::configure(genInstr, c.nodes, c.boundary, domain);
     grid = std::make_unique<SparseGrid>(genInstr);
-    if (c.linear) dsg = std::make_unique<cg::DeltasSparseGrid>(genInstr);
+    if (c.nodes != "cheb1") dsg = std::make_unique<cg::DeltasSparseGrid>(genInstr);
     points = perf::randomPoints(domain, c.nPoints, 1000 + c.nDim);
     points.resize(std::min(nPoints, points.size()));
     for (const DataVector& x : points) {
@@ -526,6 +530,16 @@ double runLinearDsgApi(const Problem& pr, std::vector<double>& out) {
   return seconds(start);
 }
 
+/// dsg api (global): the p single-point calls of interpolate on the DeltasSparseGrid (production
+/// operator: every grid point once per call, weighted with its global weight).
+double runGlobalDsgApi(const Problem& pr, std::vector<double>& out) {
+  const auto start = std::chrono::steady_clock::now();
+  for (size_t q = 0; q < pr.points.size(); q++) {
+    out[q] = cg::interpolate(pr.func, pr.points[q], *pr.dsg);
+  }
+  return seconds(start);
+}
+
 /// kernel (weights) or sol_api (integrand only) of the p single-point calls.
 double runLinear(const Problem& pr, const bool weights, std::vector<double>& out) {
   const auto start = std::chrono::steady_clock::now();
@@ -879,7 +893,7 @@ std::vector<std::string> dedupRows;
 /// Median times of the variants (one entry per repetition).
 struct Times {
   std::vector<double> api, kernel, kernelW, solApi, multi, multiW, solMulti, cached, dedup,
-      multiDedup, linDedup, linDedupAll, dsgApi;
+      multiDedup, linDedup, linDedupAll, dsgApi, dsgGlobal;
 };
 
 /// Rows of the multilinear deduplication table (printed last).
@@ -906,7 +920,8 @@ void timeRound(const Problem& pr, const DeltaIndex* ix, const LinDedupIndex* lix
   t.linDedup.push_back(lix ? runLinearDedup(pr, *lix, true, res[9], linEvals) : 0.0);
   size_t allEvals = 0;
   t.linDedupAll.push_back(lix ? runLinearDedup(pr, *lix, false, res[10], allEvals) : 0.0);
-  t.dsgApi.push_back(pr.dsg ? runLinearDsgApi(pr, res[11]) : 0.0);
+  t.dsgApi.push_back(lin && pr.dsg ? runLinearDsgApi(pr, res[11]) : 0.0);
+  t.dsgGlobal.push_back(!lin && pr.dsg ? runGlobalDsgApi(pr, res[12]) : 0.0);
 }
 
 std::string fmtTime(const std::vector<double>& t, const double api, const bool show) {
@@ -926,7 +941,7 @@ std::string fmtDiff(const std::vector<double>& a, const std::vector<double>& b, 
 void timeCase(const Problem& pr, const int reps) {
   const size_t p = pr.points.size();
   const bool lin = pr.cfg.linear, generic = !lin && pr.cfg.nodes != "cc";
-  std::vector<std::vector<double>> res(12, std::vector<double>(p));
+  std::vector<std::vector<double>> res(13, std::vector<double>(p));
   const bool nested = !lin && pr.cfg.nodes != "cheb1";
   const std::optional<DeltaIndex> ix =
       nested ? std::optional<DeltaIndex>(buildDeltaIndex(pr)) : std::nullopt;
@@ -955,7 +970,8 @@ void timeCase(const Problem& pr, const int reps) {
     dedupRows.push_back(pr.cfg.name() + " | " + std::to_string(ix->nValues) + " | " +
                         fmtTime(t.dedup, api, true) + " | " + fmtTime(t.multiDedup, api, true) +
                         " | " + fmtDiff(res[0], res[7], true) + " / " +
-                        fmtDiff(res[0], res[8], true));
+                        fmtDiff(res[0], res[8], true) + " | " + fmtTime(t.dsgGlobal, api, true) +
+                        " | " + fmtDiff(res[0], res[12], true));
   }
   if (lix) {
     const double perCall = static_cast<double>(pr.tgs.size() << pr.cfg.nDim);
@@ -1018,7 +1034,8 @@ int main(int argc, char** argv) {
   for (const auto& pr : problems) timeCase(*pr, reps);
   std::printf(
       "\n| case (nested nodes) | distinct points per call | dedup [s] (api/x) | multi + dedup [s] "
-      "(api/x) | max diff dedup / multi + dedup |\n|---|---|---|---|---|\n");
+      "(api/x) | max diff dedup / multi + dedup | dsg api [s] (api/x) | max diff dsg api "
+      "|\n|---|---|---|---|---|---|---|\n");
   for (const std::string& row : dedupRows) std::printf("| %s |\n", row.c_str());
   std::printf(
       "\n| case (multilinear) | slots | store per call (values + marks) | evals per call (api) | "

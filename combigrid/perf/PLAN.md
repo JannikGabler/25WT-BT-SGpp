@@ -112,28 +112,30 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | WP-36 | Interpolation operators: exploration after WP-29c (owner's request) | accepted (2026-11-11; benchmarks kept) | measured levers (16 t): interp dedup per call 3.45 s, corner loop 1.01 s, global kernel 0.64 s, generic weights 0.42 s, interplin dedup ≈ 2.3–3.0 s (est.); multi-point 0 judged |
 | – | WP-08 | Linear interpolation: corner loop (+ WP-46 cross-TG corner dedup prototyped and measured) | accepted (2026-11-11; dedup → WP-47, owner option (c)) | measured: interplin 4.525 → 3.506 s (−1.02 s; d10 1.334x, d8 1.267x, d5 1.251x, d2 noise), memory geomean 1.009, 0 MEM±, refcheck OK, per-TG bitwise |
 | – | WP-47 | `DeltasSparseGrid` linear interpolation operator: each distinct corner once per call (from WP-08 / WP-46; owner option (c)) + judged-suite cases `interplin/dsg/...` | accepted (2026-11-12; owner applies the judged-case patch + rehash) | measured: judged 1.005x (`^interplin/`, 8 rounds), memory 1.001, refcheck OK (104/104; drafted 120/120); DSG vs. `SparseGrid` operator (16 t): d10 4.56x, d8 3.28x, d5 1.98x, d2 0.60x; evaluations ÷ 8.30 / 6.97 / 6.73 / 1.94; new cases +1.2 s per suite pass |
-| 1 | WP-45 | `DeltasSparseGrid` global interpolation operator (owner 2026-11-11; new overload) + drafted judged-suite cases `interp/dsg/...` (patch; owner applies) | in progress (prompt 2026-11-12; reuses WP-47's infrastructure) | judged 0 (new feature); DSG callers ≈ 1.7–3.9x vs. the `SparseGrid` operator (WP-36 dedup prototype) |
-| 2 | WP-06 | Global interpolation: operator overhead | ready (after WP-45; `SparseGrid` operator stays per-TG CT) | 0.64 s (d ≥ 7 0.42 s) measured (WP-36 sol kernel) |
-| 3 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | ready (after WP-45; numerics / refinement trade-off → summary) | judged `interplin/dsg/` (≈ 1.2 s, from WP-47-after on): ≈ 0.15–0.25 s (d10 1 t: gather 26 % + mark 22 %); estimate |
+| – | WP-45 | `DeltasSparseGrid` global interpolation operator (global weights through the DSG quadrature's row loop; new public virtual `InterpolationMethod::basisValues`) + judged-suite cases `interp/dsg/...` | accepted (2026-11-12; owner applies the judged-case patch + rehash) | measured: judged e2e 1.001x (`^(interp\|interplin\|quad/dsg)/`), memory 0.999, 0 MEM±, refcheck OK (120/120; drafted 132/132, bitwise 1 t = 16 t); DSG vs. `SparseGrid` operator (16 t): cc d10 5.05x, d7 8.48x, d5 8.38x, d3 5.71x, d2 3.40x, equi d3 7.77x; placement `interp/sg/cheb1/b0/d5` 0.980x (→ WP-07); new cases +0.82 s per suite pass |
+| 1 | WP-50 | Python bindings for `DeltasSparseGrid` + its operators (quadrature, `interpolateLinear`, WP-45 `interpolate`; scalar + vector) (owner 2026-11-12) | in progress (prompt 2026-11-12) | e2e nil (C++ libraries unchanged); Python DSG callers get the C++ DSG ratios (fewer evaluations also reduce GIL contention, WP-34) |
+| 2 | WP-06 | Global interpolation: operator overhead | ready (`SparseGrid` operator stays per-TG CT) | 0.64 s (d ≥ 7 0.42 s) measured (WP-36 sol kernel) |
+| 3 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | ready (numerics / refinement trade-off → summary) | judged `interplin/dsg/` (≈ 1.2 s, from WP-47-after on): ≈ 0.15–0.25 s (d10 1 t: gather 26 % + mark 22 %); estimate |
 | 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 5 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
 | 6 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | ready | 0.5–0.8 s (d ≤ 3); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1072 → ≈ 280–730 MiB; + `DeltaQuadratureScratch` on demand |
 | 7 | WP-07 | Generic barycentric formula: cache the weights | ready | 0.42 s (d < 7) measured (WP-36) |
-| 8 | WP-09 | Multi-point interpolation API (proposal; owner 2026-11-11: acceptance depends on gains and complexity) | ready (proposal; after WP-45) | judged 0; new-API callers cc 6.3–10.6x (+ dedup 7.6–12.9x), generic 19.5–58.8x with WP-07 |
+| 8 | WP-09 | Multi-point interpolation API (proposal; owner 2026-11-11: acceptance depends on gains and complexity) | ready (proposal) | judged 0; new-API callers cc 6.3–10.6x (+ dedup 7.6–12.9x), generic 19.5–58.8x with WP-07 |
 | 9 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | 0.1–0.3 s (d2) |
-| 10 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
-| 11 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
-| 12 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
-| 13 | WP-48 | Operator drivers: `std::fma`-pinned CT combination (`result += c·v`; results independent of LTO inlining) + small-call work gate (interplin d2, region-bound) (from WP-08) | ready (low) | e2e ≈ 0.02 s (interplin d2 libgomp 71 %); deterministic results across builds |
-| 14 | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D`, FMA-dependent `shared_cache_and_concurrent_operator_calls` + audit (test-only; from WP-29a, owner's PGO build) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
-| 15 | WP-38 | Code hygiene: copyright-banner check never checks C++ + combigrid leftovers (from WP-29d) | ready (low; checker fix may hit other modules → BLOCKED with options) | e2e nil; banner / TODO / warning cleanups |
-| 16 | WP-37 | pysgpp `DataVector`: `__iter__` / bounds-checked `__getitem__` (base bindings; from WP-29d) | needs decision (functional change in base's Python API; owner places it) | e2e nil; `list(dv)` / `sum(dv)` / `for x in dv` segfault today |
-| 17 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
-| 18 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision; batch option (b) gone with WP-17) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x; WP-17: 25.1 vs. 0.78 µs ≈ 32x); not in the judged suite |
-| 19 | WP-39 | Caching disk tier: append-only log for the persistent hook + parallel load (from WP-28) | planned (owner places it; after WP-27) | storage-policy callers only: LMDB writes 0.7–4.8 µs/point serialized vs. log 25–67 ns/record; load 0.15–0.27 µs/record serial vs. 26–70 ns at 16 t |
-| 20 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late; owner 2026-11-03) | Adaptive callers only: limit-0 exploration at 16 t 244 → ≈ 80 ns per evaluation |
-| 21 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late; owner 2026-11-03; a hint is API → decision in-session) | Adaptive callers only: h = 0 call then reuse (DSG → SG at 1 µs) 182 vs. 92 ns warm |
-| 22 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights`, no blocks / pragmas (from WP-04) | planned (owner places it; WP-17 rejected 2026-11-04 → row loop unchanged) | ≈ 1/3 of WP-04's instruction gain (≈ −5 of 227 instr/point, ≈ 0.2–0.3 s; not measured e2e) |
+| 10 | WP-51 | DSG row loop at low d: split the rows of large delta TGs across threads + largest-first delta-TG order for the DSG quadrature (from WP-45) | ready (low; measure first) | `interp/dsg` cc d2 L12: largest delta TG ≈ 0.5 of 0.82 ms per call (≈ 0.02–0.03 s per suite pass, est.); `quad/dsg` low d unknown (session measures) |
+| 11 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
+| 12 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
+| 13 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
+| 14 | WP-48 | Operator drivers: `std::fma`-pinned CT combination (`result += c·v`; results independent of LTO inlining) + small-call work gate (interplin d2, region-bound) (from WP-08) | ready (low) | e2e ≈ 0.02 s (interplin d2 libgomp 71 %); deterministic results across builds |
+| 15 | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D`, FMA-dependent `shared_cache_and_concurrent_operator_calls` + audit (test-only; from WP-29a, owner's PGO build) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
+| 16 | WP-38 | Code hygiene: copyright-banner check never checks C++ + combigrid leftovers (from WP-29d) | ready (low; checker fix may hit other modules → BLOCKED with options) | e2e nil; banner / TODO / warning cleanups |
+| 17 | WP-37 | pysgpp `DataVector`: `__iter__` / bounds-checked `__getitem__` (base bindings; from WP-29d) | needs decision (functional change in base's Python API; owner places it) | e2e nil; `list(dv)` / `sum(dv)` / `for x in dv` segfault today |
+| 18 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
+| 19 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision; batch option (b) gone with WP-17) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x; WP-17: 25.1 vs. 0.78 µs ≈ 32x); not in the judged suite |
+| 20 | WP-39 | Caching disk tier: append-only log for the persistent hook + parallel load (from WP-28) | planned (owner places it; after WP-27) | storage-policy callers only: LMDB writes 0.7–4.8 µs/point serialized vs. log 25–67 ns/record; load 0.15–0.27 µs/record serial vs. 26–70 ns at 16 t |
+| 21 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late; owner 2026-11-03) | Adaptive callers only: limit-0 exploration at 16 t 244 → ≈ 80 ns per evaluation |
+| 22 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late; owner 2026-11-03; a hint is API → decision in-session) | Adaptive callers only: h = 0 call then reuse (DSG → SG at 1 µs) 182 vs. 92 ns warm |
+| 23 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights`, no blocks / pragmas (from WP-04) | planned (owner places it; WP-17 rejected 2026-11-04 → row loop unchanged) | ≈ 1/3 of WP-04's instruction gain (≈ −5 of 227 instr/point, ≈ 0.2–0.3 s; not measured e2e) |
 | last | WP-43 | Final clean-up: phase references out of code documentation + phase leftovers | ready (always the last WP of the phase; owner 2026-11-03) | e2e nil (comments / dead code only); code docs readable without the phase's files |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
@@ -530,6 +532,11 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   1.07–1.14x of the integrand floor. Owner 2026-11-11: the `SparseGrid` operator stays a
   per-TG CT (dedup only in the new DSG variant WP-45) → WP-06 stays as its own WP (kernel only),
   ready after WP-45.
+- **From WP-45** (accepted 2026-11-12): new public virtual `InterpolationMethod::basisValues(pos,
+  nodes, span out)` (weights of the values in the 1D interpolant; one pass in both barycentric
+  formulas, vectorized in the optimized one). The session may check whether the per-TG kernel
+  gains from it (basis values per dimension once per TG, then contraction) vs. the nested
+  collapse; results change within round-off only (refcheck; the equi d2 WARN case).
 
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
@@ -564,6 +571,13 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   node family and n) = **0.42 s** (cheb1 d3 10.3x, cheb1 d5 2.62x, equi d3 6.73x; all d < 7);
   removes 205k allocations per call (cheb1 d5) and most of these cases' libgomp share. Micro
   generic n9 / n65 90.1 / 572.5 → 1.24 / 1.29 ns per node with cached weights. Ready, cheap.
+- **From WP-45** (accepted 2026-11-12): (1) the DSG `interpolate` calls the new
+  `BarycentricFormula::basisValues` override per row; on equi its critical path is the largest
+  row's O(n²) log weights (≈ 85 of 108 µs per call, `interp/dsg/equi/...`) → cache them for that
+  path too (per-grid index `misc::DSGGlobalInterpIndex` holds the nodes per (dim, level)). (2) WP-45
+  shifted the generic formula's code placement: `interp/sg/cheb1/b0/d5/L4/p64` 0.980x (8 rounds;
+  identical function sizes, op-cache misses 38M → 101M) — this WP replaces that path; report it.
+  E2E filter now `^interp/(sg|dsg)/(cheb1|equi)/`.
 
 ## WP-08 — Linear interpolation: corner loop
 - **Location**: `operators/linear_interpolation/linear_interpolation.cpp`, `TensorGrid::getNeighborsForLinInterpolation`.
@@ -676,6 +690,10 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   Order: after WP-45. Owner 2026-11-11: "worth considering but whether this gets accepted
   depends on the achieved gains and how much complexity it adds" → ready (proposal), placed
   after WP-45 / WP-06 / WP-05 / WP-07; a design on the DSG (WP-45) is an option.
+- **From WP-45** (accepted 2026-11-12): the DSG `interpolate` computes global weights W_p(x) per
+  query point through the quadrature row loop; a multi-point DSG variant needs one evaluation pass
+  for all points and W_p(x_q) per point (no value store needed if the points are processed in
+  blocks against one value pass; memory: distinct × m × 8 B otherwise).
 
 ## WP-10 — Do not link Armadillo when Eigen provides the FFT (from D-3)
 - **Source**: D-3. Owner, 2026-10-24: keep the WP; if it only reduces start-up times it is
@@ -2175,8 +2193,8 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   callers ≈ the prototype's 1.7–3.9x on cc problems. Measured against the `SparseGrid` operator on
   the 12 interp problems in the unprotected driver `perf_interp_explore` (+ micro cases).
 - **Open design points (session)**: node families (nested cc / equi; non-nested cheb1 as the DSG
-  supports it or not), `VectorSourceFunc` overload (all operators support it), Python exposure (the
-  DSG quadrature is C++-only), numerics vs. the `SparseGrid` operator (round-off; the equi d2
+  supports it or not), `VectorSourceFunc` overload (all operators support it), Python exposure:
+  C++-only in this WP (owner 2026-11-12: all DSG bindings together in WP-50), numerics vs. the `SparseGrid` operator (round-off; the equi d2
   Lebesgue case), memory, parallelization over points / query points.
 - **Tests**: new: DSG interpolation == `SparseGrid` interpolation within round-off (cc / equi,
   b0 / b1, offsets, anisotropic MI sets, d = 1, m > 1, x on nodes); existing interpolation tests.
@@ -2203,7 +2221,18 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   (`results/WP-47/judged-cases.{md,patch}`). Global interpolation needs one value per DSG grid
   point (delta-TG order) instead of corner slots. WP-47's DSG operator is C++-only, not in the
   umbrella header (like the DSG quadrature).
-- **Status**: in progress (prompt 2026-11-12; rank 1).
+- **Result** (accepted 2026-11-12; summary `summaries/WP-45-dsg-global-interpolation.md`):
+  design (B) global weights W_p(x) = Σ_{ℓ ≥ m(p)} c_ℓ Π_k L_{k,ℓ_k,p_k}(x_k), i.e. the DSG
+  quadrature's row loop (`CTCoeffTrie`, projected sub-tries, `processDeltaTensorGrid`) with 1D
+  basis values instead of quadrature weights; one pass, no value store. New public virtual
+  `InterpolationMethod::basisValues(pos, nodes, span)` (default O(n²) probing; one-pass overrides
+  in both barycentric formulas; not SWIG-wrapped). Per-grid `misc::DSGGlobalInterpIndex` in the
+  `OperatorDataCache`; per call one region (basis values per row, barrier, delta TGs largest first,
+  `dynamic`), delta-TG sums added in grid order (bitwise thread-count independent); serial below
+  `constants::global_interpolation::DSG_PARALLEL_MIN_GRID_POINTS` = 128. Nested nodes only (cheb1:
+  the DSG constructor throws). C++-only (WP-50). Judged e2e 1.001x, refcheck OK; DSG vs. SG 3.4–8.5x
+  (16 t); judged-case patch `results/WP-45/judged-cases.patch` (+6 e2e, refs 120 → 132, +0.82 s).
+- **Status**: accepted (2026-11-12).
 
 ## WP-46 — Linear interpolation: each distinct corner once per call (from WP-36; merged into WP-08)
 - **Source**: WP-36 summary, follow-up (2). **Owner 2026-11-11**: "I will decide on this with the
@@ -2312,7 +2341,76 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **Micro**: `micro/interplin/dsg/*`, `micro/interplin/dsg_vec/*`. **E2E filter**: `^interplin/`.
 - **Functional change**: none intended (operator results within round-off).
 - **Dependencies**: WP-47 accepted; after WP-45 (may share the slot-weight trie idea).
+- **From WP-45** (accepted 2026-11-12): global interpolation now runs as the DSG quadrature's row
+  loop with 1D basis values (one pass, delta-TG sums in grid order → thread-count independent).
+  That pattern evaluates every DSG point; interplin may evaluate only corners (observable) → only
+  the weight factorization (trie over the box, ordered combination, `DSG_PARALLEL_MIN_GRID_POINTS`
+  style gate) carries over. Unordered reductions made WP-45's results thread-count dependent.
 - **Status**: ready (rank 3).
+
+## WP-50 — Python bindings for `DeltasSparseGrid` and its operators (owner 2026-11-12)
+- **Source**: master session 2026-11-12 (owner's question whether the DSG operators are exported):
+  `DeltasSparseGrid`, its quadrature and its `interpolateLinear` (WP-47) are C++-only — only
+  because their headers are not in the umbrella header (`claude/python-bindings.md` "Deliberately
+  not exposed"); no earlier decision against it. Owner 2026-11-12: option (a) — one binding WP
+  after WP-45 (WP-29d precedent), not inside WP-45.
+- **Scope**: expose in pysgpp the `DeltasSparseGrid` class (construction from the generation
+  instructions as `SparseGrid`, its public query methods), the DSG overloads of `quadrature`,
+  `interpolateLinear` and (WP-45) `interpolate`, scalar + `VectorSourceFunc` (+ the cached source
+  functions, as for `SparseGrid`): umbrella header entries, `combigrid.i` (`%ignore` internals such
+  as `getOperatorData()` / `OperatorDataCache` and helpers in bound headers; `%extend` forwarders
+  for methods in `SparseGridBase` and for types without typemap — `std::span`, `std::unique_ptr`,
+  iterators; DataVector-returning vector overloads), docs (`claude/python-bindings.md` table +
+  decisions, CLAUDE.md §2 "C++ only" notes, `claude/module-reference.md`), a Python example under
+  `combigrid/examples/python/` (DSG vs. `SparseGrid`: same results, evaluation counts).
+- **Constraints**: public headers stay free of Boost / xxHash / LMDB and of configuration-dependent
+  layout (`combigrid/perf/results/WP-40/check_public_headers.sh`, 4 configurations); the umbrella
+  header stays exactly the public API (internal headers pulled in transitively must not get bound
+  — check SWIG's output for unintended wrappers, especially overloads merged into `interpolate`);
+  never clang-format `.i` files. Python callables under the operators' OpenMP loops have the known
+  GIL contention (WP-34): document, do not solve here.
+- **Expected gain**: e2e nil (C++ libraries unchanged; check `.text` / A/A as WP-29d). Python DSG
+  callers: the C++ DSG ratios (WP-47 interplin d10 4.56x, DSG quadrature) — larger with Python
+  callables, since each saved evaluation also saves GIL time; measure 1 t and 16 t on the WP-29d
+  Python benchmark pattern.
+- **Tests**: all 10+ Python examples; new Python checks DSG == `SparseGrid` within round-off for
+  each operator (scalar, vector, cached); wrong sizes raise; keep-alive of `MIVecSGGenInstr`'s
+  `LvlMIVec` for DSGs (CLAUDE.md §6).
+- **E2E filter**: `^quad/dsg/|^interp(lin)?/` (A/A expected). **Micro**: none.
+- **Functional change**: new Python API (agreed by the owner 2026-11-12). **Dependencies**: WP-45
+  accepted (its overloads included); WP-47 accepted.
+- **From WP-45** (accepted 2026-11-12): overloads `interpolate(SourceFunc | VectorSourceFunc [,
+  span], point, const DeltasSparseGrid&)` in `operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp`;
+  bind like the DSG quadrature (float / DataVector); internals to keep out: `misc::DSGGlobalInterpIndex`,
+  `tools::dsg_global_interpolation::*`, `generic_dsg_operator_context.hpp`; the new public virtual
+  `InterpolationMethod::basisValues` is not wrapped (`InterpolationMethod` isn't). cheb1 → the DSG
+  constructor throws (Python must raise). The judged suite holds `interp/dsg/...` (owner applies
+  the WP-45 patch before this WP).
+- **Status**: in progress (prompt 2026-11-12; rank 1).
+
+## WP-51 — DSG row loop at low d: split large delta TGs across threads (from WP-45)
+- **Source**: WP-45 summary, profile shift / follow-ups 1 and 3.
+- **Location**: `tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.{hpp,cpp}`
+  (`forEachGPWithGlobalWeight`, `processDeltaTensorGrid`; shared by the DSG quadrature and WP-45's
+  DSG `interpolate` in `tools/operators/global_interpolation/deltas_sparse_grid_global_interpolation_tools.cpp`).
+- **Hypothesis**: at low d a few delta TGs hold most points (cc d2 L12: largest 12,288 points ≈ 0.5
+  of 0.82 ms per DSG interpolation call) and a delta TG is the unit of parallel work → critical
+  path. Split the rows of large delta TGs into chunks processed by several threads (ordered
+  combination of the chunk sums for determinism). Second: WP-45's largest-first delta-TG order
+  paid 1.11–1.38x on its parallel cases, unlike an earlier DSG quadrature test → re-check for
+  `quad/dsg` at low d.
+- **Evidence**: WP-45 (16 t): `interp/dsg` cc d2 0.051 s for all points vs. d3 0.042 s; critical
+  path analysis above. `quad/dsg` low-d thread scaling: not measured (session measures first).
+- **Expected gain**: `interp/dsg` d2 ≈ 0.02–0.03 s per suite pass (est.); `quad/dsg` b0 low d unknown;
+  if neither shows ≥ ≈ 2 % on its group → NO-GAIN.
+- **Risk**: chunk sums change summation order (refcheck; results must stay bitwise thread-count
+  independent as WP-45's); the row loop is `[[gnu::aligned(64)]]` and placement sensitive
+  (WP-04, WP-17: do not touch its body without A/B).
+- **Tests**: `dsg_global_interpolation/*` (serial == parallel bitwise), `quadratureDelta_*`,
+  `vector_delta_quadrature`. **Micro**: `micro/interp/dsg/*`, `micro/dsg/*`.
+- **E2E filter**: `^(quad/dsg|interp/dsg)/` · **Functional change**: none.
+- **Dependencies**: WP-45 accepted; independent of WP-19 (SG analogue).
+- **Status**: ready (rank 10; low).
 
 ## WP-37 — pysgpp `DataVector`: iteration / bounds-checked indexing (from WP-29d; needs decision)
 - **Source**: WP-29d summary (follow-ups).

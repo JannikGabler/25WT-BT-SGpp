@@ -33,11 +33,12 @@
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
-#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
@@ -148,6 +149,14 @@ const TensorGridCTData& largestTensorGrid(const Grid& grid) {
     if (tgData.tensorGrid.nGP() > largest->tensorGrid.nGP()) largest = &tgData;
   }
   return *largest;
+}
+
+/// Number of grid points of all tensor grids of @p grid.
+template <typename Grid>
+double sumOfGridPoints(const Grid& grid) {
+  double sum = 0.0;
+  for (const TensorGridCTData& tgData : grid) sum += static_cast<double>(tgData.tensorGrid.nGP());
+  return sum;
 }
 
 /*******************************************************************************
@@ -431,10 +440,10 @@ void addProcessDeltaTG(Suite& suite, const std::string& nodes, const LvlType bou
         const cg::misc::FlatNestedVec<double, 3> weights1D =
             cg::tools::dsg_quadrature::comp1DWeights(dsg);
         const cg::misc::CTCoeffTrie coeffTrie(dsg.getTensorGrids(), nDim);
-        const cg::misc::DeltaQuadratureContext context{.deltasSparseGrid = dsg,
-                                                       .domain = dsg.getGenInstr().getDomain(),
-                                                       .weights1D = weights1D,
-                                                       .coeffTrie = coeffTrie};
+        const cg::misc::GenericDSGOperatorContext context{.deltasSparseGrid = dsg,
+                                                          .domain = dsg.getGenInstr().getDomain(),
+                                                          .weights1D = weights1D,
+                                                          .coeffTrie = coeffTrie};
         cg::misc::DeltaQuadratureScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
         const TensorGridCTData& tgData = largestTensorGrid(dsg);
 
@@ -478,10 +487,10 @@ void addSubTries(Suite& suite, const std::string& nodes, const LvlType boundary,
         const cg::misc::FlatNestedVec<double, 3> weights1D =
             cg::tools::dsg_quadrature::comp1DWeights(dsg);
         const cg::misc::CTCoeffTrie coeffTrie(dsg.getTensorGrids(), nDim);
-        const cg::misc::DeltaQuadratureContext context{.deltasSparseGrid = dsg,
-                                                       .domain = dsg.getGenInstr().getDomain(),
-                                                       .weights1D = weights1D,
-                                                       .coeffTrie = coeffTrie};
+        const cg::misc::GenericDSGOperatorContext context{.deltasSparseGrid = dsg,
+                                                          .domain = dsg.getGenInstr().getDomain(),
+                                                          .weights1D = weights1D,
+                                                          .coeffTrie = coeffTrie};
         cg::misc::DeltaQuadratureScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
 
         run.setItems(static_cast<double>((dsg.nTG() + stride - 1) / stride));
@@ -516,10 +525,10 @@ void addProcessDeltaTGs(Suite& suite, const std::string& nodes, const LvlType bo
         const cg::misc::FlatNestedVec<double, 3> weights1D =
             cg::tools::dsg_quadrature::comp1DWeights(dsg);
         const cg::misc::CTCoeffTrie coeffTrie(dsg.getTensorGrids(), nDim);
-        const cg::misc::DeltaQuadratureContext context{.deltasSparseGrid = dsg,
-                                                       .domain = dsg.getGenInstr().getDomain(),
-                                                       .weights1D = weights1D,
-                                                       .coeffTrie = coeffTrie};
+        const cg::misc::GenericDSGOperatorContext context{.deltasSparseGrid = dsg,
+                                                          .domain = dsg.getGenInstr().getDomain(),
+                                                          .weights1D = weights1D,
+                                                          .coeffTrie = coeffTrie};
         cg::misc::DeltaQuadratureScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
 
         size_t nGP = 0;
@@ -556,7 +565,7 @@ struct VectorDeltaQuadSetup {
     for (const TensorGridCTData* tgData : tgs) nGP += static_cast<double>(tgData->tensorGrid.nGP());
   }
 
-  cg::misc::DeltaQuadratureContext context() const {
+  cg::misc::GenericDSGOperatorContext context() const {
     return {.deltasSparseGrid = *dsg,
             .domain = dsg->getGenInstr().getDomain(),
             .weights1D = *weights1D,
@@ -591,7 +600,7 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
 
   suite.addMicro(kernel + "_scalar_x_m/" + name, [=](MicroRun& run) {
     const VectorDeltaQuadSetup s(nodes, boundary, nDim, maxLvl, stride);
-    const cg::misc::DeltaQuadratureContext context = s.context();
+    const cg::misc::GenericDSGOperatorContext context = s.context();
     cg::misc::DeltaQuadratureScratch scratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim());
     std::vector<SourceFunc> funcs;
     for (size_t k = 0; k < m; k++) {
@@ -612,7 +621,7 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
 
   suite.addMicro(kernel + "_vec/" + name, [=](MicroRun& run) {
     const VectorDeltaQuadSetup s(nodes, boundary, nDim, maxLvl, stride);
-    const cg::misc::DeltaQuadratureContext context = s.context();
+    const cg::misc::GenericDSGOperatorContext context = s.context();
     cg::misc::DeltaQuadratureScratch scratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim(), m);
     const cg::VectorSourceFunc f(
         [](const DataVector& x, std::span<double> out) {
@@ -669,6 +678,26 @@ void addInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, cons
       doNotOptimize(cg::tools::global_interpolation::processTensorGrid(sourceFunc, normPoint,
                                                                        tgData, sg.getGenInstr()));
     });
+  });
+}
+
+/**
+ * The complete global interpolation operator interpolate on a SparseGrid at one query point
+ * (perf::cosProd on the shifted domain, boundary level offset 0; items = grid points of all
+ * tensor grids). Control case of the deltas sparse grid operator micro/interp/dsg/...
+ */
+void addGlobalSGOperator(Suite& suite, const std::string& nodes, const size_t nDim,
+                         const LvlType maxLvl) {
+  suite.addMicro("micro/interp/sg/" + cfg(nodes, 0, nDim, maxLvl), [=](MicroRun& run) {
+    const HyperCubeArea domain = perf::shiftedDomain(nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, nodes, 0, domain);
+    const SparseGrid sg(genInstr);
+    const SourceFunc sourceFunc(perf::cosProd);
+    const DataVector point = perf::randomPoints(domain, 1, 97)[0];
+
+    run.setItems(sumOfGridPoints(sg));
+    run.measure([&]() { doNotOptimize(sgpp::combigrid::interpolate(sourceFunc, point, sg)); });
   });
 }
 
@@ -738,8 +767,8 @@ void addLinearSGOperator(Suite& suite, const size_t nDim, const LvlType maxLvl) 
  * points assembled incrementally and scratch reused; integrandOnly: the source-function calls
  * alone (sum of the values).
  */
-void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim,
-                    const LvlType maxLvl, const bool integrandOnly) {
+void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, const LvlType maxLvl,
+                    const bool integrandOnly) {
   const std::string kind = integrandOnly ? "interp_tg_integrand/" : "interp_tg/";
   suite.addMicro("micro/sol/" + kind + cfg(nodes, 0, nDim, maxLvl), [=](MicroRun& run) {
     const HyperCubeArea domain = perf::shiftedDomain(nDim);
@@ -781,27 +810,26 @@ void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim,
  * trivial-result scan).
  */
 void addSolBarycentricCached(Suite& suite, const GPCntType nNodes) {
-  suite.addMicro(
-      "micro/sol/barycentric_1d/generic_cached_weights/n" + std::to_string(nNodes),
-      [=](MicroRun& run) {
-        cg::NodeGenFunc* const nodeGenFunc = perf::nodeGenFuncByName("cheb1");
-        const DataVector nodesVec = nodeGenFunc->genNodes(nNodes, false);
-        const std::vector<double> x(nodesVec.begin(), nodesVec.end());
-        const std::vector<double> w = cg::tools::barycentricFormulaWeights(x);
-        std::vector<double> values(nNodes);
-        for (GPCntType i = 0; i < nNodes; i++) values[i] = std::cos(3.0 * x[i]);
+  suite.addMicro("micro/sol/barycentric_1d/generic_cached_weights/n" + std::to_string(nNodes),
+                 [=](MicroRun& run) {
+                   cg::NodeGenFunc* const nodeGenFunc = perf::nodeGenFuncByName("cheb1");
+                   const DataVector nodesVec = nodeGenFunc->genNodes(nNodes, false);
+                   const std::vector<double> x(nodesVec.begin(), nodesVec.end());
+                   const std::vector<double> w = cg::tools::barycentricFormulaWeights(x);
+                   std::vector<double> values(nNodes);
+                   for (GPCntType i = 0; i < nNodes; i++) values[i] = std::cos(3.0 * x[i]);
 
-        run.setItems(static_cast<double>(nNodes));
-        run.measure([&]() {
-          double numerator = 0.0, denominator = 0.0;
-          for (GPCntType i = 0; i < nNodes; i++) {
-            const double factor = w[i] / (0.3141 - x[i]);
-            numerator += factor * values[i];
-            denominator += factor;
-          }
-          doNotOptimize(numerator / denominator);
-        });
-      });
+                   run.setItems(static_cast<double>(nNodes));
+                   run.measure([&]() {
+                     double numerator = 0.0, denominator = 0.0;
+                     for (GPCntType i = 0; i < nNodes; i++) {
+                       const double factor = w[i] / (0.3141 - x[i]);
+                       numerator += factor * values[i];
+                       denominator += factor;
+                     }
+                     doNotOptimize(numerator / denominator);
+                   });
+                 });
 }
 
 /**
@@ -884,6 +912,46 @@ void addLinearDSGOperator(Suite& suite, const size_t nDim, const LvlType maxLvl,
             }
           });
         });
+  }
+}
+
+/**
+ * The global interpolation operator interpolate on a DeltasSparseGrid (every grid point evaluated
+ * once, weighted with its global weight) at the query point of addGlobalSGOperator (items: grid
+ * points of all tensor grids of the SparseGrid, as there); m > 0: a VectorSourceFunc with m
+ * outputs (micro/interp/dsg_vec, with the SparseGrid operator as micro/interp/sg_vec).
+ */
+void addGlobalDSGOperator(Suite& suite, const std::string& nodes, const size_t nDim,
+                          const LvlType maxLvl, const size_t m) {
+  const std::string suffix = m == 0 ? "" : "/m" + std::to_string(m);
+  for (const bool deltas : {false, true}) {
+    if (!deltas && m == 0) continue;  // micro/interp/sg (addGlobalSGOperator)
+    const std::string kind = std::string(deltas ? "dsg" : "sg") + (m == 0 ? "/" : "_vec/");
+    suite.addMicro("micro/interp/" + kind + cfg(nodes, 0, nDim, maxLvl) + suffix,
+                   [=](MicroRun& run) {
+                     const HyperCubeArea domain = perf::shiftedDomain(nDim);
+                     CompleteSGGenInstr genInstr(maxLvl, nDim);
+                     perf::configure(genInstr, nodes, 0, domain);
+                     const SparseGrid sg(genInstr);
+                     const DeltasSparseGrid dsg(genInstr);
+                     const SourceFunc sourceFunc(perf::cosProd);
+                     const cg::VectorSourceFunc vecFunc = cosProdVectorFunc(std::max<size_t>(m, 1));
+                     const DataVector point = perf::randomPoints(domain, 1, 97)[0];
+                     std::vector<double> out(m);
+
+                     run.setItems(sumOfGridPoints(sg));
+                     run.measure([&]() {
+                       if (m == 0) {
+                         doNotOptimize(cg::interpolate(sourceFunc, point, dsg));
+                       } else if (deltas) {
+                         cg::interpolate(vecFunc, point, dsg, out);
+                         doNotOptimize(out[0]);
+                       } else {
+                         cg::interpolate(vecFunc, point, sg, out);
+                         doNotOptimize(out[0]);
+                       }
+                     });
+                   });
   }
 }
 
@@ -1127,6 +1195,20 @@ int main(int argc, char** argv) {
   addInterpTG(suite, "cc", 10, 2);  // WP-29c: high / low d, equi (generic formula)
   addInterpTG(suite, "cc", 2, 12);
   addInterpTG(suite, "equi", 3, 5);
+  // WP-45: the whole operator at one query point (SparseGrid; control of micro/interp/dsg)
+  addGlobalSGOperator(suite, "cc", 8, 2);
+  addGlobalSGOperator(suite, "cc", 5, 5);
+  addGlobalSGOperator(suite, "cc", 3, 8);
+  addGlobalSGOperator(suite, "cc", 2, 12);
+  addGlobalSGOperator(suite, "equi", 3, 5);
+  // WP-45: the deltas sparse grid operator (same configurations), vector-valued with m = 4
+  addGlobalDSGOperator(suite, "cc", 8, 2, 0);
+  addGlobalDSGOperator(suite, "cc", 5, 5, 0);
+  addGlobalDSGOperator(suite, "cc", 3, 8, 0);
+  addGlobalDSGOperator(suite, "cc", 2, 12, 0);
+  addGlobalDSGOperator(suite, "equi", 3, 5, 0);
+  addGlobalDSGOperator(suite, "cc", 5, 5, 4);
+  addGlobalDSGOperator(suite, "cc", 2, 12, 4);
   addBarycentric1D(suite, false, 9);
   addBarycentric1D(suite, false, 65);
   addBarycentric1D(suite, true, 9);

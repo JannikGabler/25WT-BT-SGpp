@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
+#include <span>
 #include <vector>
 
 namespace sgpp {
@@ -62,6 +63,16 @@ class BarycentricFormula : public InterpolationMethod {
    */
   void interpolate(const double pos, const std::vector<double>& nodes,
                    const std::vector<double>& values, size_t nOutputs, double* out) const override;
+
+  /**
+   * @brief Computes the weights of the values at @p pos (the Lagrange basis polynomials) in one
+   * pass: the factors @f$w_i / (pos - x_i)@f$ of the formula, each divided by their sum.
+   * @param pos   Evaluation position.
+   * @param nodes 1D node positions (size @c n).
+   * @param out   Output: the n weights.
+   */
+  void basisValues(const double pos, const std::vector<double>& nodes,
+                   std::span<double> out) const override;
 
  private:
   // TODO: Optimize (caching) (double long could be used in pre-computation)

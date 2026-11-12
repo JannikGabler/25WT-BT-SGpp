@@ -11,7 +11,7 @@
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
-#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -26,9 +26,9 @@
 #include <stdexcept>
 
 using sgpp::combigrid::misc::CTCoeffTrie;
-using sgpp::combigrid::misc::DeltaQuadratureContext;
 using sgpp::combigrid::misc::DeltaQuadratureScratch;
 using sgpp::combigrid::misc::FlatNestedVec;
+using sgpp::combigrid::misc::GenericDSGOperatorContext;
 using sgpp::combigrid::tools::dsg_quadrature::combineDeltaTensorGrids;
 using sgpp::combigrid::tools::dsg_quadrature::comp1DWeights;
 using sgpp::combigrid::tools::dsg_quadrature::processDeltaTensorGrid;
@@ -43,10 +43,10 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
   const FlatNestedVec<double, 3> weights1D = comp1DWeights(deltasSparseGrid);
   const CTCoeffTrie coeffTrie(deltasSparseGrid.getTensorGrids(), nDim);
 
-  const DeltaQuadratureContext context{.deltasSparseGrid = deltasSparseGrid,
-                                       .domain = genInstr.getDomain(),
-                                       .weights1D = weights1D,
-                                       .coeffTrie = coeffTrie};
+  const GenericDSGOperatorContext context{.deltasSparseGrid = deltasSparseGrid,
+                                          .domain = genInstr.getDomain(),
+                                          .weights1D = weights1D,
+                                          .coeffTrie = coeffTrie};
 
   double result = 0.0;
 
@@ -79,10 +79,10 @@ void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& delt
   const FlatNestedVec<double, 3> weights1D = comp1DWeights(deltasSparseGrid);
   const CTCoeffTrie coeffTrie(deltasSparseGrid.getTensorGrids(), deltasSparseGrid.nDim());
 
-  const DeltaQuadratureContext context{.deltasSparseGrid = deltasSparseGrid,
-                                       .domain = genInstr.getDomain(),
-                                       .weights1D = weights1D,
-                                       .coeffTrie = coeffTrie};
+  const GenericDSGOperatorContext context{.deltasSparseGrid = deltasSparseGrid,
+                                          .domain = genInstr.getDomain(),
+                                          .weights1D = weights1D,
+                                          .coeffTrie = coeffTrie};
 
   combineDeltaTensorGrids(context, sourceFunc, result);
 

@@ -42,7 +42,7 @@
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -102,7 +102,7 @@ misc::FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSpars
  * @param scratch     Per-thread scratch space; reused across calls.
  * @return Sum of the global weight times the function value over the grid points.
  */
-double processDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
+double processDeltaTensorGrid(const misc::GenericDSGOperatorContext& context,
                               const SourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
                               misc::DeltaQuadratureScratch& scratch);
 
@@ -116,7 +116,7 @@ double processDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
  * @param scratch     Per-thread scratch space, constructed with m outputs; reused across calls.
  * @param out         Output: the m sums of the delta tensor grid (size m).
  */
-void processDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
+void processDeltaTensorGrid(const misc::GenericDSGOperatorContext& context,
                             const VectorSourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
                             misc::DeltaQuadratureScratch& scratch, std::span<double> out);
 
@@ -128,7 +128,7 @@ void processDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
  * @param sourceFunc Vector-valued source function (m outputs).
  * @param result     Output: the m sums (size m).
  */
-void combineDeltaTensorGrids(const misc::DeltaQuadratureContext& context,
+void combineDeltaTensorGrids(const misc::GenericDSGOperatorContext& context,
                              const VectorSourceFunc& sourceFunc, std::span<double> result);
 
 /**
@@ -144,7 +144,7 @@ void combineDeltaTensorGrids(const misc::DeltaQuadratureContext& context,
  * The projected coefficients are sums of many products that cancel; they are accumulated in
  * double-double arithmetic, so that they are correct to about one rounding.
  */
-void compSubTrie(const misc::DeltaQuadratureContext& context, const LvlMI& deltaTGMI,
+void compSubTrie(const misc::GenericDSGOperatorContext& context, const LvlMI& deltaTGMI,
                  misc::DeltaQuadratureScratch& scratch);
 
 /**
@@ -152,7 +152,7 @@ void compSubTrie(const misc::DeltaQuadratureContext& context, const LvlMI& delta
  * sub-trie (@ref compSubTrie), maps the nodes onto the domain and sets the current grid point to
  * the first one.
  */
-void prepareDeltaTensorGrid(const misc::DeltaQuadratureContext& context,
+void prepareDeltaTensorGrid(const misc::GenericDSGOperatorContext& context,
                             const TensorGridCTData& deltaTGData,
                             misc::DeltaQuadratureScratch& scratch);
 
@@ -206,7 +206,7 @@ void compRowWeights(misc::DeltaQuadratureScratch& scratch, GPCntType nGP0);
  */
 template <typename Func>
 [[gnu::noinline, gnu::aligned(64)]] void forEachGPWithGlobalWeight(
-    const misc::DeltaQuadratureContext& context, const TensorGridCTData& deltaTGData,
+    const misc::GenericDSGOperatorContext& context, const TensorGridCTData& deltaTGData,
     misc::DeltaQuadratureScratch& scratch, Func&& func) {
   if (deltaTGData.tensorGrid.nGP() == 0) {
     return;

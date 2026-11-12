@@ -7,7 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
-#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/projected_sub_trie_builder.hpp>
@@ -16,9 +16,9 @@
 #include <vector>
 
 using sgpp::combigrid::misc::CTCoeffTrie;
-using sgpp::combigrid::misc::DeltaQuadratureContext;
 using sgpp::combigrid::misc::DeltaQuadratureScratch;
 using sgpp::combigrid::misc::FlatNestedVec;
+using sgpp::combigrid::misc::GenericDSGOperatorContext;
 
 namespace sgpp {
 namespace combigrid {
@@ -45,7 +45,7 @@ ProjectedSubTrieBuilder::DoubleDouble ProjectedSubTrieBuilder::DoubleDouble::ope
   return {product, std::fma(hi, factor, -product) + lo * factor};
 }
 
-ProjectedSubTrieBuilder::ProjectedSubTrieBuilder(const DeltaQuadratureContext& context,
+ProjectedSubTrieBuilder::ProjectedSubTrieBuilder(const GenericDSGOperatorContext& context,
                                                  const LvlMI& deltaTGMI,
                                                  DeltaQuadratureScratch& scratch)
     : context(context), deltaTGMI(deltaTGMI), scratch(scratch) {}
@@ -128,8 +128,8 @@ void ProjectedSubTrieBuilder::addChildren(const size_t dim, const size_t childBe
   const LvlType deltaLvl = deltaTGMI[dim];
   const auto firstChild = std::ranges::lower_bound(children, deltaLvl, {}, &CTCoeffTrie::Node::lvl);
 
-  const bool isProjDim = (path.nextProjDepth < scratch.projDims.size() &&
-                          scratch.projDims[path.nextProjDepth] == dim);
+  const bool isProjDim =
+      (path.nextProjDepth < scratch.projDims.size() && scratch.projDims[path.nextProjDepth] == dim);
   const size_t block = isProjDim ? childBlock(path) : 0;
   const Weights1DOfDim weights1DOfDim = context.weights1D[dim];
   const size_t weightIdx = deltaNodesStart(weights1DOfDim, deltaLvl);  // The single delta node

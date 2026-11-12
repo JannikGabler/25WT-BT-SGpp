@@ -1,0 +1,155 @@
+diff --git a/combigrid/benchmarks/perf/perf_e2e.cpp b/combigrid/benchmarks/perf/perf_e2e.cpp
+index 810a31a0b..ced705928 100644
+--- a/combigrid/benchmarks/perf/perf_e2e.cpp
++++ b/combigrid/benchmarks/perf/perf_e2e.cpp
+@@ -33,6 +33,7 @@
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+ #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
++#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
+ #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
+ #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
+ #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
+@@ -154,12 +155,14 @@ void addInterpolation(Suite& suite, const bool linear, const std::string& nodes,
+       });
+ }
+ 
+-/// Multilinear interpolation on a deltas sparse grid (every distinct corner evaluated once per
+-/// call): the problems, points and sizes of the interplin/sg cases (addInterpolation).
+-void addLinearInterpolationDSG(Suite& suite, const std::string& nodes, const LvlType boundary,
+-                               const size_t nDim, const LvlType maxLvl, const size_t nPoints) {
++/// Global (or multilinear) interpolation on a deltas sparse grid (global: every grid point
++/// evaluated once per call; multilinear: every distinct corner evaluated once per call): the
++/// problems, points and sizes of the interp/sg (interplin/sg) cases (addInterpolation).
++void addInterpolationDSG(Suite& suite, const bool linear, const std::string& nodes,
++                         const LvlType boundary, const size_t nDim, const LvlType maxLvl,
++                         const size_t nPoints) {
+   suite.addPipeline(
+-      caseName("interplin", "dsg", nodes, boundary, nDim,
++      caseName(linear ? "interplin" : "interp", "dsg", nodes, boundary, nDim,
+                "L" + std::to_string(maxLvl) + "/p" + std::to_string(nPoints)),
+       [=](PipelineRun& run) {
+         const HyperCubeArea domain = perf::shiftedDomain(nDim);
+@@ -178,7 +181,8 @@ void addLinearInterpolationDSG(Suite& suite, const std::string& nodes, const Lvl
+         run.phase("generation", [&]() { grid.emplace(*genInstr); });
+         run.phase("operator", [&]() {
+           for (const DataVector& point : points) {
+-            sum += interpolateLinear(*sourceFunc, point, *grid);
++            sum += linear ? interpolateLinear(*sourceFunc, point, *grid)
++                          : interpolate(*sourceFunc, point, *grid);
+           }
+         });
+ 
+@@ -259,16 +263,23 @@ int main(int argc, char** argv) {
+   addInterpolation(suite, false, "cheb1", 0, 3, 6, 64);
+   addInterpolation(suite, false, "cheb1", 0, 5, 4, 64);
+   addInterpolation(suite, false, "equi", 0, 3, 5, 64);
++  // Global interpolation on deltas sparse grids (nested nodes: the cc and equi problems)
++  addInterpolationDSG(suite, false, "cc", 0, 2, 12, 64);
++  addInterpolationDSG(suite, false, "cc", 0, 3, 9, 64);
++  addInterpolationDSG(suite, false, "cc", 0, 5, 6, 64);
++  addInterpolationDSG(suite, false, "cc", 0, 7, 4, 16);
++  addInterpolationDSG(suite, false, "cc", 0, 10, 2, 8);
++  addInterpolationDSG(suite, false, "equi", 0, 3, 5, 64);
+ 
+   // Multilinear interpolation
+   addInterpolation(suite, true, "equi", 1, 2, 16, 16384);
+   addInterpolation(suite, true, "equi", 1, 5, 8, 1024);
+   addInterpolation(suite, true, "equi", 1, 8, 5, 256);
+   addInterpolation(suite, true, "equi", 1, 10, 5, 32);
+-  addLinearInterpolationDSG(suite, "equi", 1, 2, 16, 16384);
+-  addLinearInterpolationDSG(suite, "equi", 1, 5, 8, 1024);
+-  addLinearInterpolationDSG(suite, "equi", 1, 8, 5, 256);
+-  addLinearInterpolationDSG(suite, "equi", 1, 10, 5, 32);
++  addInterpolationDSG(suite, true, "equi", 1, 2, 16, 16384);
++  addInterpolationDSG(suite, true, "equi", 1, 5, 8, 1024);
++  addInterpolationDSG(suite, true, "equi", 1, 8, 5, 256);
++  addInterpolationDSG(suite, true, "equi", 1, 10, 5, 32);
+ 
+   // Sparse grids from (adaptive-like) multi-index sets
+   addMIVec(suite, "cc", 1, 5, 16, 1000);
+diff --git a/combigrid/benchmarks/perf/perf_reference.cpp b/combigrid/benchmarks/perf/perf_reference.cpp
+index 6b6d0076b..4c1d8eb7b 100644
+--- a/combigrid/benchmarks/perf/perf_reference.cpp
++++ b/combigrid/benchmarks/perf/perf_reference.cpp
+@@ -37,6 +37,7 @@
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+ #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
++#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
+ #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
+ #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
+ #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
+@@ -48,7 +49,6 @@
+ #include <sgpp/combigrid/type_defs.hpp>
+ #include <string>
+ #include <tuple>
+-#include <type_traits>
+ #include <utility>
+ #include <vector>
+ 
+@@ -269,12 +269,8 @@ CaseFunc interpCase(const std::string& name, const bool linear, const std::strin
+     record.name = name;
+     record.op = linear ? "interplin" : "interp";
+     for (const DataVector& point : perf::randomPoints(domain, 8, 4000 + nDim)) {
+-      if constexpr (std::is_same_v<Grid, SparseGrid>) {
+-        record.values.push_back(linear ? interpolateLinear(sourceFunc, point, grid)
+-                                       : interpolate(sourceFunc, point, grid));
+-      } else {  // deltas sparse grid: multilinear interpolation only
+-        record.values.push_back(interpolateLinear(sourceFunc, point, grid));
+-      }
++      record.values.push_back(linear ? interpolateLinear(sourceFunc, point, grid)
++                                     : interpolate(sourceFunc, point, grid));
+       record.exact.push_back(perf::cosProd(point));
+     }
+     record.magnitude = 1.0;  // max |cosProd|
+@@ -327,6 +323,11 @@ std::vector<std::pair<std::string, CaseFunc>> allCases() {
+     for (const auto& [nDim, maxLvl] : interpSizes) {
+       const std::string name = "interp/sg/" + cfg(nodes, boundary, nDim, maxLvl) + "/cos-shifted";
+       add(name, interpCase(name, false, nodes, boundary, nDim, maxLvl));
++      if (nodes != "cheb1") {  // Deltas sparse grids need nested nodes
++        const std::string dsgName =
++            "interp/dsg/" + cfg(nodes, boundary, nDim, maxLvl) + "/cos-shifted";
++        add(dsgName, interpCase<DeltasSparseGrid>(dsgName, false, nodes, boundary, nDim, maxLvl));
++      }
+     }
+   }
+   const std::vector<std::pair<size_t, LvlType>> linearSizes{{1, 6}, {2, 6}, {3, 5}, {5, 4}};
+diff --git a/combigrid/perf/reference/reference.jsonl b/combigrid/perf/reference/reference.jsonl
+index ebd4ca4e1..3e17cc6dd 100644
+--- a/combigrid/perf/reference/reference.jsonl
++++ b/combigrid/perf/reference/reference.jsonl
+@@ -71,21 +71,33 @@
+ {"case":"mivec/sg/cc/b1/d6/S7/n80/exp-shifted","op":"quad","values":[220.46066551658879],"exact":[220.48715262165629],"magnitude":220.48715262165629,"sumAbsCoeffs":77,"sumGP":41800,"ints":{"nTG":"68","sumGP":"41800","tgHash":"147ee4b0c6ff568a","closureSize":"196","closureCoeffHash":"2bd63f92c80c6d74"},"floats":{"nodeChecksum":7845.0679035019493},"info":{"nEvals":41800}}
+ {"case":"mivec/sg/cc/b1/d10/S6/n60/exp-shifted","op":"quad","values":[107193.69680255558],"exact":[108429.75950179627],"magnitude":108429.75950179627,"sumAbsCoeffs":63,"sumGP":42954,"ints":{"nTG":"58","sumGP":"42954","tgHash":"198318ef51aab624","closureSize":"256","closureCoeffHash":"bff4e6664d0adc1b"},"floats":{"nodeChecksum":7632.2186992874886},"info":{"nEvals":42954}}
+ {"case":"interp/sg/cc/b0/d1/L6/cos-shifted","op":"interp","values":[0.77430818470259211,0.99767575753578785,0.84800001295622762,0.68372572519846553,0.31126818041209064,0.98428356597238786,0.89501086434727484,0.89353008107054144],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"1","sumGP":"129","tgHash":"0db006cfe9742ebc"},"floats":{"nodeChecksum":256.00030140177182},"info":{"nEvals":1032}}
++{"case":"interp/dsg/cc/b0/d1/L6/cos-shifted","op":"interp","values":[0.77430818470259211,0.99767575753578808,0.84800001295622818,0.68372572519846575,0.31126818041209037,0.98428356597238797,0.89501086434727539,0.89353008107054088],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"7","sumGP":"129","tgHash":"f67e45ae054c0088"},"floats":{"nodeChecksum":252.0034395219256},"info":{"nEvals":1032}}
+ {"case":"interp/sg/cc/b0/d2/L5/cos-shifted","op":"interp","values":[0.81307708076237928,0.11657614288301299,0.08878071857070377,0.026977297334403218,0.32084004819690093,0.13489259579591065,-0.038791897610996988,0.90666984103019588],"exact":[0.81307708076237706,0.1165761428830127,0.088780718570705089,0.026977297334402253,0.32084004819690176,0.13489259579591154,-0.03879189761099628,0.90666984103019599],"magnitude":1,"sumAbsCoeffs":11,"sumGP":1475,"ints":{"nTG":"11","sumGP":"1475","tgHash":"611071d6a1b5a99c"},"floats":{"nodeChecksum":1158.4152567121362},"info":{"nEvals":11800}}
++{"case":"interp/dsg/cc/b0/d2/L5/cos-shifted","op":"interp","values":[0.81307708076237839,0.11657614288301274,0.088780718570704339,0.026977297334403037,0.32084004819690087,0.13489259579591092,-0.03879189761099662,0.90666984103019588],"exact":[0.81307708076237706,0.1165761428830127,0.088780718570705089,0.026977297334402253,0.32084004819690176,0.13489259579591154,-0.03879189761099628,0.90666984103019599],"magnitude":1,"sumAbsCoeffs":11,"sumGP":577,"ints":{"nTG":"21","sumGP":"577","tgHash":"1dba0a7bc040d5b1"},"floats":{"nodeChecksum":708.64442485565769},"info":{"nEvals":4616}}
+ {"case":"interp/sg/cc/b0/d3/L4/cos-shifted","op":"interp","values":[-0.25221249635351795,-0.11422589654963305,-0.26403789099240904,0.88074261141271881,0.097010309548520413,0.17001053371326003,-0.057488629089188364,0.0052680701375784275],"exact":[-0.25221250324226957,-0.11422612451938521,-0.26403794633351912,0.88074266127657208,0.0970102988155261,0.17001054855332826,-0.057488620402428948,0.0052680729481205408],"magnitude":1,"sumAbsCoeffs":41,"sumGP":5687,"ints":{"nTG":"31","sumGP":"5687","tgHash":"0deee3d03bab5342"},"floats":{"nodeChecksum":2429.634310182932},"info":{"nEvals":45496}}
++{"case":"interp/dsg/cc/b0/d3/L4/cos-shifted","op":"interp","values":[-0.25221249635351739,-0.11422589654963335,-0.26403789099240904,0.88074261141271837,0.097010309548520746,0.17001053371325964,-0.057488629089188302,0.0052680701375784414],"exact":[-0.25221250324226957,-0.11422612451938521,-0.26403794633351912,0.88074266127657208,0.0970102988155261,0.17001054855332826,-0.057488620402428948,0.0052680729481205408],"magnitude":1,"sumAbsCoeffs":41,"sumGP":1505,"ints":{"nTG":"35","sumGP":"1505","tgHash":"ed4952b890790176"},"floats":{"nodeChecksum":1209.4814476552233},"info":{"nEvals":12040}}
+ {"case":"interp/sg/cc/b0/d5/L3/cos-shifted","op":"interp","values":[0.04553179914598024,-0.31367471677039693,-0.041816666394516824,-0.13593852642044424,0.35785645347445083,0.022069775018573157,-0.033669819776021709,-0.22476135953422183],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":129,"sumGP":55098,"ints":{"nTG":"56","sumGP":"55098","tgHash":"11bf1e706cc68d53"},"floats":{"nodeChecksum":6177.0231929055844},"info":{"nEvals":440784}}
++{"case":"interp/dsg/cc/b0/d5/L3/cos-shifted","op":"interp","values":[0.045531799145980073,-0.31367471677039754,-0.041816666394516776,-0.13593852642044421,0.35785645347445438,0.022069775018573125,-0.033669819776021764,-0.22476135953421927],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":129,"sumGP":12033,"ints":{"nTG":"56","sumGP":"12033","tgHash":"11bf1e706cc68d53"},"floats":{"nodeChecksum":3272.9802071241065},"info":{"nEvals":96264}}
+ {"case":"interp/sg/cc/b1/d1/L6/cos-shifted","op":"interp","values":[0.77430818470259211,0.99767575753578785,0.84800001295622762,0.68372572519846553,0.31126818041209064,0.98428356597238786,0.89501086434727484,0.89353008107054144],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"1","sumGP":"129","tgHash":"0db006cfe9742ebc"},"floats":{"nodeChecksum":256.00030140177182},"info":{"nEvals":1032}}
++{"case":"interp/dsg/cc/b1/d1/L6/cos-shifted","op":"interp","values":[0.77430818470259211,0.99767575753578808,0.84800001295622818,0.68372572519846575,0.31126818041209037,0.98428356597238797,0.89501086434727539,0.89353008107054088],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"7","sumGP":"129","tgHash":"f67e45ae054c0088"},"floats":{"nodeChecksum":253.5034395219256},"info":{"nEvals":1032}}
+ {"case":"interp/sg/cc/b1/d2/L5/cos-shifted","op":"interp","values":[0.81307708076237795,0.11657614288301296,0.088780718570703868,0.026977297334403308,0.32084004819690098,0.13489259579591073,-0.038791897610997085,0.90666984103019543],"exact":[0.81307708076237706,0.1165761428830127,0.088780718570705089,0.026977297334402253,0.32084004819690176,0.13489259579591154,-0.03879189761099628,0.90666984103019599],"magnitude":1,"sumAbsCoeffs":11,"sumGP":1083,"ints":{"nTG":"11","sumGP":"1083","tgHash":"611071d6a1b5a99c"},"floats":{"nodeChecksum":1137.4152567121359},"info":{"nEvals":8664}}
++{"case":"interp/dsg/cc/b1/d2/L5/cos-shifted","op":"interp","values":[0.81307708076237817,0.11657614288301368,0.088780718570704381,0.026977297334402961,0.32084004819690098,0.13489259579591065,-0.038791897610996551,0.90666984103019621],"exact":[0.81307708076237706,0.1165761428830127,0.088780718570705089,0.026977297334402253,0.32084004819690176,0.13489259579591154,-0.03879189761099628,0.90666984103019599],"magnitude":1,"sumAbsCoeffs":11,"sumGP":449,"ints":{"nTG":"21","sumGP":"449","tgHash":"1dba0a7bc040d5b1"},"floats":{"nodeChecksum":720.64442485565769},"info":{"nEvals":3592}}
+ {"case":"interp/sg/cc/b1/d3/L4/cos-shifted","op":"interp","values":[-0.25221246014753196,-0.11422513917601917,-0.26403767714079052,0.88074239050958569,0.097010623548808766,0.17001047175615519,-0.057488961555974827,0.0052680547339247763],"exact":[-0.25221250324226957,-0.11422612451938521,-0.26403794633351912,0.88074266127657208,0.0970102988155261,0.17001054855332826,-0.057488620402428948,0.0052680729481205408],"magnitude":1,"sumAbsCoeffs":41,"sumGP":2075,"ints":{"nTG":"31","sumGP":"2075","tgHash":"0deee3d03bab5342"},"floats":{"nodeChecksum":2177.6343101829348},"info":{"nEvals":16600}}
++{"case":"interp/dsg/cc/b1/d3/L4/cos-shifted","op":"interp","values":[-0.25221246014753096,-0.11422513917601947,-0.26403767714078991,0.8807423905095848,0.097010623548809044,0.17001047175615525,-0.057488961555974633,0.005268054733924693],"exact":[-0.25221250324226957,-0.11422612451938521,-0.26403794633351912,0.88074266127657208,0.0970102988155261,0.17001054855332826,-0.057488620402428948,0.0052680729481205408],"magnitude":1,"sumAbsCoeffs":41,"sumGP":737,"ints":{"nTG":"35","sumGP":"737","tgHash":"ed4952b890790176"},"floats":{"nodeChecksum":1194.4814476552222},"info":{"nEvals":5896}}
+ {"case":"interp/sg/cc/b1/d5/L3/cos-shifted","op":"interp","values":[0.048566965376698204,-0.037118337979064803,-0.043367584289803564,-0.13259503891718089,0.085847388796623902,0.027295637632923087,-0.013562928941115352,-0.15303721735541287],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":129,"sumGP":2556,"ints":{"nTG":"56","sumGP":"2556","tgHash":"11bf1e706cc68d53"},"floats":{"nodeChecksum":4339.5231929055799},"info":{"nEvals":20448}}
++{"case":"interp/dsg/cc/b1/d5/L3/cos-shifted","op":"interp","values":[0.04856696537669801,-0.03711833797906524,-0.043367584289803592,-0.13259503891718089,0.085847388796624416,0.02729563763292344,-0.013562928941115243,-0.15303721735541279],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":129,"sumGP":1201,"ints":{"nTG":"56","sumGP":"1201","tgHash":"11bf1e706cc68d53"},"floats":{"nodeChecksum":2560.4802071241093},"info":{"nEvals":9608}}
+ {"case":"interp/sg/cheb1/b0/d1/L6/cos-shifted","op":"interp","values":[0.77430818470258722,0.99767575753573856,0.84800001295624183,0.68372572519846464,0.31126818041208171,0.98428356597240485,0.89501086434726551,0.8935300810705249],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"1","sumGP":"129","tgHash":"0db006cfe9742ebc"},"floats":{"nodeChecksum":256.00030624051715},"info":{"nEvals":1032}}
+ {"case":"interp/sg/cheb1/b0/d2/L5/cos-shifted","op":"interp","values":[0.81307708076238605,0.11657614288301318,0.088780718570700579,0.026977297334404699,0.32084004819689155,0.13489259579590887,-0.038791897611002206,0.90666984103018722],"exact":[0.81307708076237706,0.1165761428830127,0.088780718570705089,0.026977297334402253,0.32084004819690176,0.13489259579591154,-0.03879189761099628,0.90666984103019599],"magnitude":1,"sumAbsCoeffs":11,"sumGP":1475,"ints":{"nTG":"11","sumGP":"1475","tgHash":"611071d6a1b5a99c"},"floats":{"nodeChecksum":1160.3841852055657},"info":{"nEvals":11800}}
+ {"case":"interp/sg/cheb1/b0/d3/L4/cos-shifted","op":"interp","values":[-0.25221249813647328,-0.11422551210353613,-0.26403805923205648,0.88074235841817661,0.097010354636149765,0.17001051517856269,-0.0574886995991266,0.0052680625604065931],"exact":[-0.25221250324226957,-0.11422612451938521,-0.26403794633351912,0.88074266127657208,0.0970102988155261,0.17001054855332826,-0.057488620402428948,0.0052680729481205408],"magnitude":1,"sumAbsCoeffs":41,"sumGP":5687,"ints":{"nTG":"31","sumGP":"5687","tgHash":"0deee3d03bab5342"},"floats":{"nodeChecksum":2444.5234712556062},"info":{"nEvals":45496}}
+ {"case":"interp/sg/cheb1/b0/d5/L3/cos-shifted","op":"interp","values":[0.045563566622479096,-0.31364723923168958,-0.04181290794579573,-0.1359052987755886,0.35784754257290141,0.022073353498311993,-0.033677955953176464,-0.22471142254292392],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":129,"sumGP":55098,"ints":{"nTG":"56","sumGP":"55098","tgHash":"11bf1e706cc68d53"},"floats":{"nodeChecksum":6225.9639434813744},"info":{"nEvals":440784}}
+ {"case":"interp/sg/equi/b0/d1/L6/cos-shifted","op":"interp","values":[0.77430818470260221,0.99767575753533921,0.8480000129562274,0.68372572519974284,0.89915257223255474,0.98428356597238731,0.89501086434727506,0.89353008107054144],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"1","sumGP":"129","tgHash":"0db006cfe9742ebc"},"floats":{"nodeChecksum":256},"info":{"nEvals":1032}}
++{"case":"interp/dsg/equi/b0/d1/L6/cos-shifted","op":"interp","values":[0.7743081847025941,0.99767575753548954,0.84800001295622762,0.68372572520001995,0.90625,0.98428356597238675,0.89501086434727573,0.8935300810705421],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"7","sumGP":"129","tgHash":"f67e45ae054c0088"},"floats":{"nodeChecksum":250.5234375},"info":{"nEvals":1032}}
+ {"case":"interp/sg/equi/b0/d2/L5/cos-shifted","op":"interp","values":[0.81307708076237839,-0.0031977024382287868,0.088780718570053901,0.026978922660093916,0.32084004819690187,0.1349008164445315,-0.038791897487372676,0.58279985652396737],"exact":[0.81307708076237706,0.1165761428830127,0.088780718570705089,0.026977297334402253,0.32084004819690176,0.13489259579591154,-0.03879189761099628,0.90666984103019599],"magnitude":1,"sumAbsCoeffs":11,"sumGP":1475,"ints":{"nTG":"11","sumGP":"1475","tgHash":"611071d6a1b5a99c"},"floats":{"nodeChecksum":1154.953125},"info":{"nEvals":11800}}
++{"case":"interp/dsg/equi/b0/d2/L5/cos-shifted","op":"interp","values":[0.81307708076236906,0.15625,0.088780718569448136,0.026981353759765625,0.32084004819690193,0.1348876953125,-0.038791897397478667,0.20939329333666024],"exact":[0.81307708076237706,0.1165761428830127,0.088780718570705089,0.026977297334402253,0.32084004819690176,0.13489259579591154,-0.03879189761099628,0.90666984103019599],"magnitude":1,"sumAbsCoeffs":11,"sumGP":577,"ints":{"nTG":"21","sumGP":"577","tgHash":"1dba0a7bc040d5b1"},"floats":{"nodeChecksum":694.59375},"info":{"nEvals":4616}}
+ {"case":"interp/sg/equi/b0/d3/L4/cos-shifted","op":"interp","values":[-0.2522125224385442,-0.11422609805826295,-0.26403795328106872,0.88074267872480827,0.097010291372678192,0.17001054506940427,-0.057488608317973852,0.0052680733737309887],"exact":[-0.25221250324226957,-0.11422612451938521,-0.26403794633351912,0.88074266127657208,0.0970102988155261,0.17001054855332826,-0.057488620402428948,0.0052680729481205408],"magnitude":1,"sumAbsCoeffs":41,"sumGP":5687,"ints":{"nTG":"31","sumGP":"5687","tgHash":"0deee3d03bab5342"},"floats":{"nodeChecksum":2402.25},"info":{"nEvals":45496}}
++{"case":"interp/dsg/equi/b0/d3/L4/cos-shifted","op":"interp","values":[-0.25221252299935587,-0.11422609805826295,-0.26403795328111834,0.88074267872478762,0.097010291372384927,0.17001054506940411,-0.057488608317669332,0.0052680733737311691],"exact":[-0.25221250324226957,-0.11422612451938521,-0.26403794633351912,0.88074266127657208,0.0970102988155261,0.17001054855332826,-0.057488620402428948,0.0052680729481205408],"magnitude":1,"sumAbsCoeffs":41,"sumGP":1505,"ints":{"nTG":"35","sumGP":"1505","tgHash":"ed4952b890790176"},"floats":{"nodeChecksum":1175.4375},"info":{"nEvals":12040}}
+ {"case":"interp/sg/equi/b0/d5/L3/cos-shifted","op":"interp","values":[0.045501006611826683,-0.31369526148187976,-0.041818092038878041,-0.13596598554902395,0.35786064049484168,0.022066461987524148,-0.033662865798404426,-0.22479795120959034],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":129,"sumGP":55098,"ints":{"nTG":"56","sumGP":"55098","tgHash":"11bf1e706cc68d53"},"floats":{"nodeChecksum":6095.625},"info":{"nEvals":440784}}
++{"case":"interp/dsg/equi/b0/d5/L3/cos-shifted","op":"interp","values":[0.045501006611827988,-0.3136952614819874,-0.041818092038877958,-0.13596598554902428,0.35786064049484134,0.022066461987350294,-0.033662865798404704,-0.22479795120962986],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":129,"sumGP":12033,"ints":{"nTG":"56","sumGP":"12033","tgHash":"11bf1e706cc68d53"},"floats":{"nodeChecksum":3212.8125},"info":{"nEvals":96264}}
+ {"case":"interplin/sg/equi/b0/d1/L6/cos-shifted","op":"interplin","values":[0.77428077337561929,0.99764994722746692,0.84796767573434839,0.68370899059575863,0.31126722490173897,0.98425628865287851,0.89500666292830955,0.89351185196176464],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"1","sumGP":"129","tgHash":"0db006cfe9742ebc"},"floats":{"nodeChecksum":256},"info":{"nEvals":16}}
+ {"case":"interplin/dsg/equi/b0/d1/L6/cos-shifted","op":"interplin","values":[0.77428077337561929,0.99764994722746692,0.84796767573434839,0.68370899059575874,0.31126722490173897,0.98425628865287862,0.89500666292830955,0.89351185196176464],"exact":[0.77430818470259222,0.99767575753578708,0.84800001295622796,0.68372572519846608,0.31126818041209026,0.98428356597238731,0.89501086434727561,0.89353008107054122],"magnitude":1,"sumAbsCoeffs":1,"sumGP":129,"ints":{"nTG":"7","sumGP":"129","tgHash":"f67e45ae054c0088"},"floats":{"nodeChecksum":250.5234375},"info":{"nEvals":16}}
+ {"case":"interplin/sg/equi/b0/d2/L6/cos-shifted","op":"interplin","values":[0.81298261946329808,0.11656605404496546,0.088771758993641106,0.026973596316644029,0.32080805778804156,0.13488054566209021,-0.038788524932923708,0.90661345970814211],"exact":[0.81307708076237706,0.1165761428830127,0.088780718570705089,0.026977297334402253,0.32084004819690176,0.13489259579591154,-0.03879189761099628,0.90666984103019599],"magnitude":1,"sumAbsCoeffs":13,"sumGP":3333,"ints":{"nTG":"13","sumGP":"3333","tgHash":"775bfaa65e17dadf"},"floats":{"nodeChecksum":2309.90625},"info":{"nEvals":416}}

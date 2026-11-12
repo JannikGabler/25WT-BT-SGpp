@@ -164,6 +164,22 @@ constexpr size_t DSG_PARALLEL_MIN_CORNER_VISITS = 256;
 }  // namespace lin_interpolation
 
 /**
+ * @brief Constants of the global interpolation operator (@c interpolate).
+ */
+namespace global_interpolation {
+
+/// The global interpolation on a deltas sparse grid evaluates every grid point once, in parallel
+/// over the delta tensor grids. Below this many grid points it runs on the calling thread only
+/// (outside of any parallel region: in a team of one thread, the OpenMP runtime still makes a
+/// system call at every barrier). Measured at 16 threads with a cheap integrand (a product of d
+/// cosines) and Clenshaw-Curtis nodes, serial vs. parallel per call: 65 grid points (d = 1) 7.3
+/// vs. 10.0 us, 49 (d = 2) 9.6 vs. 10.4 us, 113 (d = 2) 14.7 vs. 11.0 us, 257 (d = 1) 12.8 vs.
+/// 12.5 us, 225 (d = 3) 27 vs. 13 us.
+constexpr size_t DSG_PARALLEL_MIN_GRID_POINTS = 128;
+
+}  // namespace global_interpolation
+
+/**
  * @brief Constants controlling sparse-grid node lookup population.
  */
 namespace sg_gen_node_lookup {

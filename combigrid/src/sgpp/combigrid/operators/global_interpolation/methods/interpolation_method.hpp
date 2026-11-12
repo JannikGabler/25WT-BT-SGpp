@@ -15,6 +15,7 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
+#include <span>
 #include <vector>
 
 namespace sgpp {
@@ -33,6 +34,12 @@ namespace combigrid {
  * overload taking @c nOutputs. Its default applies the scalar @ref interpolate to every output;
  * a subclass may override it to share the work per node between the outputs (the built-in
  * barycentric formulas do).
+ *
+ * The interpolant is assumed to be linear in the values (as every Lagrange-type rule):
+ * @ref basisValues returns its weights @f$L_i(x)@f$, so that the interpolant equals
+ * @f$\sum_i L_i(x) f_i@f$ up to round-off. The global interpolation on a @c DeltasSparseGrid
+ * combines these weights across tensor grids instead of interpolating the values of every tensor
+ * grid.
  */
 class InterpolationMethod {
  public:
@@ -75,6 +82,23 @@ class InterpolationMethod {
   virtual void interpolate(double pos, const std::vector<double>& nodes,
                            const std::vector<double>& values, size_t nOutputs, double* out) const;
 
+  /**
+   * @brief Computes the weights of the values in the 1D interpolant at @p pos (for a Lagrange
+   * rule, the Lagrange basis polynomials at @p pos): @c interpolate(pos, nodes, values) equals
+   * @f$\sum_i@f$ @c out[i] * @c values[i] up to round-off, for all @p values.
+   *
+   * The default probes the scalar @ref interpolate with every unit vector, i.e. costs n
+   * interpolations (@f$O(n^2)@f$ for a rule with @f$O(n)@f$ work); the built-in barycentric
+   * formulas override it with one pass over the nodes. An override must handle the cases of
+   * @ref hasTrivialResult like @ref interpolate (see @ref hasTrivialBasisValues).
+   *
+   * @param pos   Evaluation position.
+   * @param nodes 1D node positions (size @c n).
+   * @param out   Output: the n weights (size @c n).
+   */
+  virtual void basisValues(double pos, const std::vector<double>& nodes,
+                           std::span<double> out) const;
+
   /// @brief Returns the unique identifier of this method.
   uint64_t id() const;
 
@@ -111,6 +135,19 @@ class InterpolationMethod {
    */
   bool hasTrivialResult(double pos, const std::vector<double>& nodes,
                         const std::vector<double>& values, size_t nOutputs, double* out) const;
+
+  /**
+   * @brief @ref hasTrivialResult for the weights of @ref basisValues: detects the same cases in
+   * the same order and writes the weights of their results (one node: 1; two nodes: the weights
+   * of the linear interpolant; @p pos on a node: the unit vector of that node).
+   *
+   * @param pos   Evaluation position.
+   * @param nodes 1D node positions.
+   * @param out   Output receiving the n weights, if the case is trivial.
+   * @return @c true if the weights were written into @p out.
+   */
+  bool hasTrivialBasisValues(double pos, const std::vector<double>& nodes,
+                             std::span<double> out) const;
 
  private:
   const uint64_t id_;  ///< Unique identifier.

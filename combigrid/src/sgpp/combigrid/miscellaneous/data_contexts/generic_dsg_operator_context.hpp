@@ -23,16 +23,18 @@ namespace misc {
  * @brief Read-only data of one delta-quadrature call, shared by all functions and threads.
  *
  * The source function (@c SourceFunc or @c VectorSourceFunc) is passed separately, so that the
- * same context serves both value types of the kernel.
+ * same context serves both value types of the kernel. The global interpolation on a deltas sparse
+ * grid uses the same context and kernel with the 1D basis values of its query point in place of the
+ * quadrature weights (see @c tools::dsg_global_interpolation).
  */
-struct DeltaQuadratureContext {
+struct GenericDSGOperatorContext {
   // Top-level arguments
   const DeltasSparseGrid& deltasSparseGrid;
   const HyperCubeArea& domain;
 
   // Precomputed values
   /// @brief @c weights1D[dim][lvl]: 1D quadrature weights of level @c lvl in delta order (see
-  /// @c tools::dsg_quadrature::comp1DWeights).
+  /// @c tools::dsg_quadrature::comp1DWeights; global interpolation: the 1D basis values).
   const FlatNestedVec<double, 3>& weights1D;
   /// @brief Trie over the levels of the tensor grids with a non-zero coefficient.
   const CTCoeffTrie& coeffTrie;

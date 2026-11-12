@@ -27,7 +27,7 @@ grids/
   tensor_grid            anisotropic tensor grid (per-dim node lists)
   sparse_grid_base       common base: nDim, vector<TensorGridCTData> (not SWIG-wrapped)
   sparse_grid            CT sparse grid (+ optional shared SGGenInstr)
-  deltas_sparse_grid     delta representation for the DSG quadrature and linear interpolation
+  deltas_sparse_grid     delta representation for the DSG quadrature, global and linear interpolation
                          (every grid point in exactly one delta tensor grid; not in the umbrella
                          header / Python); holds an OperatorDataCache (lazily built operator data)
   extensive_sparse_grid  commented out
@@ -36,14 +36,15 @@ miscellaneous/         (namespace misc)
   ct_coefficient_trie/   CTCoeffTrie: prefix tree over the tensor grids' level MIs (DSG quadrature)
   operator_data_cache/   OperatorDataCache: thread-safe, type-keyed store of lazily built
                          query-independent operator data of a grid (DeltasSparseGrid::
-                         getOperatorData; e.g. DSGLinInterpIndex), so the grid's header names no
-                         operator type
+                         getOperatorData; e.g. DSGLinInterpIndex, DSGGlobalInterpIndex), so the
+                         grid's header names no operator type
   closure_trie/          ClosureTrie: trie over a downwards-closed MI set, MI -> dense rank by one
                          lookup per dimension (DSG linear interpolation; reusable for other DSG
                          operators)
-  data_contexts/         read-only data of one operator call (QuadratureContext, DeltaQuadratureContext;
+  data_contexts/         read-only data of one operator call (QuadratureContext, GenericDSGOperatorContext;
                          DSGLinInterpIndex (per grid) and DSGLinInterpQuery (per call) of the DSG
-                         linear interpolation)
+                         linear interpolation; DSGGlobalInterpIndex (per grid) of the DSG global
+                         interpolation)
   data_scratches/        per-thread scratch (quadrature, delta quadrature, linear interpolation, DSG
                          linear interpolation)
   operators/value_types/ ScalarValues / VectorValues: value types the operator kernels are
@@ -79,8 +80,10 @@ miscellaneous/         (namespace misc)
 multiindices/          MI<T>, MIVec<T> (flat array ~ matrix), views, references, iterators, hashes,
                        lexicographic less
 operators/
-  global_interpolation/  interpolate(); methods/ (InterpolationMethod, barycentric formula,
-                         optimized barycentric formula for Chebyshev 2nd kind, getters)
+  global_interpolation/  interpolate() for SparseGrid (global_interpolation.cpp) and
+                         DeltasSparseGrid (deltas_sparse_grid_global_interpolation.cpp); methods/
+                         (InterpolationMethod incl. basisValues, barycentric formula, optimized
+                         barycentric formula for Chebyshev 2nd kind, getters)
   linear_interpolation/  interpolateLinear() for SparseGrid (linear_interpolation.cpp) and
                          DeltasSparseGrid (deltas_sparse_grid_linear_interpolation.cpp)
   quadrature/            quadrature() for SparseGrid (quadrature.cpp) and DeltasSparseGrid
@@ -95,7 +98,9 @@ tools/                 (namespace tools)
                          (SG), deltas_sparse_grid_quadrature_tools (DSG internals),
                          ProjectedSubTrieBuilder (DSG)), global_interpolation/
                          (global_interpolation_tools, namespace tools::global_interpolation;
-                         interpolation_methods/: generic barycentric weights),
+                         deltas_sparse_grid_global_interpolation_tools, namespace
+                         tools::dsg_global_interpolation; interpolation_methods/: generic
+                         barycentric weights),
                          linear_interpolation/ (linear_interpolation_tools, namespace
                          tools::lin_interpolation; dsg_linear_interpolation_tools, namespace
                          tools::dsg_lin_interpolation)
@@ -127,6 +132,19 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   call and kept in the grid); three passes in one parallel region (mark the corners of all
   tensor grids, evaluate the marked slots, gather per tensor grid with the `SparseGrid` kernel's
   weights and order), serial below `DSG_PARALLEL_MIN_CORNER_VISITS`. C++ only.
+  `interpolate(const SourceFunc&, const DataVector&, const DeltasSparseGrid&)` (+ vector overloads;
+  [deltas_sparse_grid_global_interpolation.hpp](../src/sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp))
+  evaluates every grid point once per call (WP-45): the CT interpolant regrouped by grid point,
+  `Σ_p W_p(x) f(p)` with `W_p = Σ_{ℓ ≥ m(p)} c_ℓ Π_k L_{k,ℓ_k,p_k}(x_k)`, i.e. the DSG quadrature's
+  global weights with the 1D quadrature weights replaced by the 1D basis values at x
+  (`InterpolationMethod::basisValues`: barycentric formulas O(n) per row, user methods O(n²) by
+  probing). Per grid (`DSGGlobalInterpIndex`, first call): `CTCoeffTrie`, per (dim, level) the
+  regular nodes, method and delta order. Per call, one parallel region: basis values per row
+  (largest first), then `dsg_quadrature::processDeltaTensorGrid` per delta TG (largest first);
+  the delta-TG sums are added in grid order (bitwise independent of the thread count — matters for
+  high-Lebesgue rules, e.g. equidistant d2 L5); serial below `DSG_PARALLEL_MIN_GRID_POINTS`.
+  Nested nodes only (the DSG constructor throws otherwise; cheb1 is not nested). Per-TG sums are
+  not formed (refinement indicators would need the `SparseGrid` operator). C++ only.
 - `TensorGrid` ([grids/tensor_grid.hpp](../src/sgpp/combigrid/grids/tensor_grid.hpp)): per-dim counts
   + flat per-dim node lists, first-dimension-fastest linear indexing.
 - `TensorGridCTData`
@@ -216,6 +234,10 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   interpolation interpolates all m outputs per 1D step through the multi-output overload
   `InterpolationMethod::interpolate(pos, nodes, values /* n × m, node-major */, m, out)` (default:
   the scalar formula per output; both barycentric formulas override it: factors once per node).
+  `InterpolationMethod::basisValues(pos, nodes, out)` returns the weights of the values in the
+  1D interpolant (Lagrange basis values; default: n scalar interpolations with unit vectors; both
+  barycentric formulas override it with one pass; trivial cases as `hasTrivialResult`), used by the
+  DSG global interpolation.
   Output k equals the scalar run of component k within round-off (not bitwise). For m = 1 use
   `SourceFunc` (the vector path is slower there). Python: `VectorSourceFunc(callable, nOutputs)`
   (callable returns a sequence of m numbers; [python-bindings.md](python-bindings.md)).

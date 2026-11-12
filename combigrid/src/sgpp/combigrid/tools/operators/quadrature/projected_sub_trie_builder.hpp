@@ -11,7 +11,7 @@
 #pragma once
 
 #include <cstddef>
-#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
@@ -44,7 +44,7 @@ class [[gnu::visibility("hidden")]] ProjectedSubTrieBuilder {  // NOLINT(whitesp
    * @param scratch   Scratch of the calling thread; its projected sub-trie and slots are
    *                  overwritten by @ref build.
    */
-  ProjectedSubTrieBuilder(const misc::DeltaQuadratureContext& context, const LvlMI& deltaTGMI,
+  ProjectedSubTrieBuilder(const misc::GenericDSGOperatorContext& context, const LvlMI& deltaTGMI,
                           misc::DeltaQuadratureScratch& scratch);
 
   /// @brief Sets @c scratch.projDims and fills @c scratch.trieNodes (see
@@ -129,9 +129,9 @@ class [[gnu::visibility("hidden")]] ProjectedSubTrieBuilder {  // NOLINT(whitesp
    */
   bool appendProjectedChildren(std::size_t projDepth, std::size_t block, LvlType projExcess);
 
-  const misc::DeltaQuadratureContext& context;  ///< See the constructor.
-  const LvlMI& deltaTGMI;                       ///< See the constructor.
-  misc::DeltaQuadratureScratch& scratch;        ///< See the constructor.
+  const misc::GenericDSGOperatorContext& context;  ///< See the constructor.
+  const LvlMI& deltaTGMI;                          ///< See the constructor.
+  misc::DeltaQuadratureScratch& scratch;           ///< See the constructor.
   /// @brief Maximum 1-norm of the levels of the tensor grids minus the one of @ref deltaTGMI.
   LvlType slack = 0;
 };

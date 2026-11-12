@@ -45,7 +45,7 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
-#include <sgpp/combigrid/miscellaneous/data_contexts/delta_quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -320,7 +320,7 @@ struct DeltaQuadratureData {
   const SourceFunc& sourceFunc;
   const misc::FlatNestedVec<double, 3> weights1D;
   const misc::CTCoeffTrie coeffTrie;
-  const misc::DeltaQuadratureContext context;
+  const misc::GenericDSGOperatorContext context;
   misc::DeltaQuadratureScratch scratch;
 };
 

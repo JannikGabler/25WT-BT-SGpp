@@ -9,6 +9,7 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
+#include <span>
 #include <vector>
 
 namespace sgpp {
@@ -32,6 +33,19 @@ void InterpolationMethod::interpolate(const double pos, const std::vector<double
       outputValues[i] = values[i * nOutputs + k];
     }
     out[k] = interpolate(pos, nodes, outputValues);
+  }
+}
+
+void InterpolationMethod::basisValues(const double pos, const std::vector<double>& nodes,
+                                      const std::span<double> out) const {
+  assert(out.size() == nodes.size());
+
+  std::vector<double> unitVector(nodes.size(), 0.0);
+
+  for (size_t i = 0; i < nodes.size(); i++) {
+    unitVector[i] = 1.0;
+    out[i] = interpolate(pos, nodes, unitVector);
+    unitVector[i] = 0.0;
   }
 }
 
@@ -82,6 +96,34 @@ bool InterpolationMethod::hasTrivialResult(const double pos, const std::vector<d
   for (size_t i = 0; i < nNodes; i++) {
     if (tools::nearlyEqual(pos, nodes[i])) {
       std::copy_n(values.data() + i * nOutputs, nOutputs, out);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool InterpolationMethod::hasTrivialBasisValues(const double pos, const std::vector<double>& nodes,
+                                                const std::span<double> out) const {
+  assert(out.size() == nodes.size());
+  const size_t nNodes = nodes.size();
+
+  if (nNodes == 0) {
+    return true;
+  } else if (nNodes == 1) {
+    out[0] = 1.0;
+    return true;
+  } else if (nNodes == 2) {
+    const double t = (pos - nodes[0]) / (nodes[1] - nodes[0]);
+    out[0] = 1.0 - t;
+    out[1] = t;
+    return true;
+  }
+
+  for (size_t i = 0; i < nNodes; i++) {
+    if (tools::nearlyEqual(pos, nodes[i])) {
+      std::fill(out.begin(), out.end(), 0.0);
+      out[i] = 1.0;
       return true;
     }
   }
