@@ -33,6 +33,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
@@ -154,12 +155,14 @@ void addInterpolation(Suite& suite, const bool linear, const std::string& nodes,
       });
 }
 
-/// Multilinear interpolation on a deltas sparse grid (every distinct corner evaluated once per
-/// call): the problems, points and sizes of the interplin/sg cases (addInterpolation).
-void addLinearInterpolationDSG(Suite& suite, const std::string& nodes, const LvlType boundary,
-                               const size_t nDim, const LvlType maxLvl, const size_t nPoints) {
+/// Global (or multilinear) interpolation on a deltas sparse grid (global: every grid point
+/// evaluated once per call; multilinear: every distinct corner evaluated once per call): the
+/// problems, points and sizes of the interp/sg (interplin/sg) cases (addInterpolation).
+void addInterpolationDSG(Suite& suite, const bool linear, const std::string& nodes,
+                         const LvlType boundary, const size_t nDim, const LvlType maxLvl,
+                         const size_t nPoints) {
   suite.addPipeline(
-      caseName("interplin", "dsg", nodes, boundary, nDim,
+      caseName(linear ? "interplin" : "interp", "dsg", nodes, boundary, nDim,
                "L" + std::to_string(maxLvl) + "/p" + std::to_string(nPoints)),
       [=](PipelineRun& run) {
         const HyperCubeArea domain = perf::shiftedDomain(nDim);
@@ -178,7 +181,8 @@ void addLinearInterpolationDSG(Suite& suite, const std::string& nodes, const Lvl
         run.phase("generation", [&]() { grid.emplace(*genInstr); });
         run.phase("operator", [&]() {
           for (const DataVector& point : points) {
-            sum += interpolateLinear(*sourceFunc, point, *grid);
+            sum += linear ? interpolateLinear(*sourceFunc, point, *grid)
+                          : interpolate(*sourceFunc, point, *grid);
           }
         });
 
@@ -259,16 +263,23 @@ int main(int argc, char** argv) {
   addInterpolation(suite, false, "cheb1", 0, 3, 6, 64);
   addInterpolation(suite, false, "cheb1", 0, 5, 4, 64);
   addInterpolation(suite, false, "equi", 0, 3, 5, 64);
+  // Global interpolation on deltas sparse grids (nested nodes: the cc and equi problems)
+  addInterpolationDSG(suite, false, "cc", 0, 2, 12, 64);
+  addInterpolationDSG(suite, false, "cc", 0, 3, 9, 64);
+  addInterpolationDSG(suite, false, "cc", 0, 5, 6, 64);
+  addInterpolationDSG(suite, false, "cc", 0, 7, 4, 16);
+  addInterpolationDSG(suite, false, "cc", 0, 10, 2, 8);
+  addInterpolationDSG(suite, false, "equi", 0, 3, 5, 64);
 
   // Multilinear interpolation
   addInterpolation(suite, true, "equi", 1, 2, 16, 16384);
   addInterpolation(suite, true, "equi", 1, 5, 8, 1024);
   addInterpolation(suite, true, "equi", 1, 8, 5, 256);
   addInterpolation(suite, true, "equi", 1, 10, 5, 32);
-  addLinearInterpolationDSG(suite, "equi", 1, 2, 16, 16384);
-  addLinearInterpolationDSG(suite, "equi", 1, 5, 8, 1024);
-  addLinearInterpolationDSG(suite, "equi", 1, 8, 5, 256);
-  addLinearInterpolationDSG(suite, "equi", 1, 10, 5, 32);
+  addInterpolationDSG(suite, true, "equi", 1, 2, 16, 16384);
+  addInterpolationDSG(suite, true, "equi", 1, 5, 8, 1024);
+  addInterpolationDSG(suite, true, "equi", 1, 8, 5, 256);
+  addInterpolationDSG(suite, true, "equi", 1, 10, 5, 32);
 
   // Sparse grids from (adaptive-like) multi-index sets
   addMIVec(suite, "cc", 1, 5, 16, 1000);

@@ -37,6 +37,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
@@ -48,7 +49,6 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <string>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -269,12 +269,8 @@ CaseFunc interpCase(const std::string& name, const bool linear, const std::strin
     record.name = name;
     record.op = linear ? "interplin" : "interp";
     for (const DataVector& point : perf::randomPoints(domain, 8, 4000 + nDim)) {
-      if constexpr (std::is_same_v<Grid, SparseGrid>) {
-        record.values.push_back(linear ? interpolateLinear(sourceFunc, point, grid)
-                                       : interpolate(sourceFunc, point, grid));
-      } else {  // deltas sparse grid: multilinear interpolation only
-        record.values.push_back(interpolateLinear(sourceFunc, point, grid));
-      }
+      record.values.push_back(linear ? interpolateLinear(sourceFunc, point, grid)
+                                     : interpolate(sourceFunc, point, grid));
       record.exact.push_back(perf::cosProd(point));
     }
     record.magnitude = 1.0;  // max |cosProd|
@@ -327,6 +323,11 @@ std::vector<std::pair<std::string, CaseFunc>> allCases() {
     for (const auto& [nDim, maxLvl] : interpSizes) {
       const std::string name = "interp/sg/" + cfg(nodes, boundary, nDim, maxLvl) + "/cos-shifted";
       add(name, interpCase(name, false, nodes, boundary, nDim, maxLvl));
+      if (nodes != "cheb1") {  // Deltas sparse grids need nested nodes
+        const std::string dsgName =
+            "interp/dsg/" + cfg(nodes, boundary, nDim, maxLvl) + "/cos-shifted";
+        add(dsgName, interpCase<DeltasSparseGrid>(dsgName, false, nodes, boundary, nDim, maxLvl));
+      }
     }
   }
   const std::vector<std::pair<size_t, LvlType>> linearSizes{{1, 6}, {2, 6}, {3, 5}, {5, 4}};
