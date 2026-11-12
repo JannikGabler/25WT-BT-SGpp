@@ -111,9 +111,10 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | WP-17 | Batched source-function evaluation (from D-4; proposal for the owner) | rejected (owner 2026-11-04: NO-GAIN, option a) | measured: judged e2e 38.316 → 39.931 s (0.960x, 29/38 SLOWER, 0 FASTER), memory 1.003 (1 MEM−), refcheck OK (60/72 quadrature outputs non-bitwise); Python per-point 16 t 25.1 → 0.88 µs (28x), NumPy batch 0.18 µs/point, warm cache 1.12–1.29x |
 | – | WP-36 | Interpolation operators: exploration after WP-29c (owner's request) | accepted (2026-11-11; benchmarks kept) | measured levers (16 t): interp dedup per call 3.45 s, corner loop 1.01 s, global kernel 0.64 s, generic weights 0.42 s, interplin dedup ≈ 2.3–3.0 s (est.); multi-point 0 judged |
 | – | WP-08 | Linear interpolation: corner loop (+ WP-46 cross-TG corner dedup prototyped and measured) | accepted (2026-11-11; dedup → WP-47, owner option (c)) | measured: interplin 4.525 → 3.506 s (−1.02 s; d10 1.334x, d8 1.267x, d5 1.251x, d2 noise), memory geomean 1.009, 0 MEM±, refcheck OK, per-TG bitwise |
-| 1 | WP-47 | `DeltasSparseGrid` linear interpolation operator: each distinct corner once per call (from WP-08 / WP-46; owner option (c), before WP-45) + drafted judged-suite cases `interplin/dsg/...` (patch) | in progress (prompt 2026-11-11) | judged 0 (new feature); DSG callers vs. `SparseGrid` operator (WP-08 prototype, 16 t): d10 1.84 → 0.55 s (3.33x), d8 1.21 → 0.49 s (2.46x), d5 0.36 → 0.25 s (1.47x), d2 0.30x (gate) |
-| 2 | WP-45 | `DeltasSparseGrid` global interpolation operator (owner 2026-11-11; new overload) + drafted judged-suite cases `interp/dsg/...` (patch; owner applies) | ready (after WP-47; reuses its DSG interpolation infrastructure) | judged 0 (new feature); DSG callers ≈ 1.7–3.9x vs. the `SparseGrid` operator (WP-36 dedup prototype) |
-| 3 | WP-06 | Global interpolation: operator overhead | ready (after WP-45; `SparseGrid` operator stays per-TG CT) | 0.64 s (d ≥ 7 0.42 s) measured (WP-36 sol kernel) |
+| – | WP-47 | `DeltasSparseGrid` linear interpolation operator: each distinct corner once per call (from WP-08 / WP-46; owner option (c)) + judged-suite cases `interplin/dsg/...` | accepted (2026-11-12; owner applies the judged-case patch + rehash) | measured: judged 1.005x (`^interplin/`, 8 rounds), memory 1.001, refcheck OK (104/104; drafted 120/120); DSG vs. `SparseGrid` operator (16 t): d10 4.56x, d8 3.28x, d5 1.98x, d2 0.60x; evaluations ÷ 8.30 / 6.97 / 6.73 / 1.94; new cases +1.2 s per suite pass |
+| 1 | WP-45 | `DeltasSparseGrid` global interpolation operator (owner 2026-11-11; new overload) + drafted judged-suite cases `interp/dsg/...` (patch; owner applies) | in progress (prompt 2026-11-12; reuses WP-47's infrastructure) | judged 0 (new feature); DSG callers ≈ 1.7–3.9x vs. the `SparseGrid` operator (WP-36 dedup prototype) |
+| 2 | WP-06 | Global interpolation: operator overhead | ready (after WP-45; `SparseGrid` operator stays per-TG CT) | 0.64 s (d ≥ 7 0.42 s) measured (WP-36 sol kernel) |
+| 3 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | ready (after WP-45; numerics / refinement trade-off → summary) | judged `interplin/dsg/` (≈ 1.2 s, from WP-47-after on): ≈ 0.15–0.25 s (d10 1 t: gather 26 % + mark 22 %); estimate |
 | 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 5 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
 | 6 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | ready | 0.5–0.8 s (d ≤ 3); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1072 → ≈ 280–730 MiB; + `DeltaQuadratureScratch` on demand |
@@ -2096,6 +2097,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   depend on the memory limit or on exact point bits. Verify with the test TUs built normally, with
   `-ffp-contract=off` and with explicit contraction (e.g. `-ffp-contract=fast` + PGO from a
   training run, or a variant computing the domain with `std::fma`).
+- **From WP-47** (2026-11-12): new recurrence `equidistant_nodes/linear_func_unit_cube_1D` (SparseGrid
+  quadrature, untouched; expected 0.0016 from a·0.5 + b, 1e-14 relative) failed once in a normal run,
+  5/5 reruns passed → include in the audit.
 - **Expected gain**: e2e nil; reliable `perf.py test` in every work session.
 - **Risk**: low; tolerances must stay tight enough to catch real errors (justify each new floor
   from the rule's error bound or measured round-off). **Micro / E2E**: none (no source change).
@@ -2189,8 +2193,17 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   fed2cdb4e and in WP-45-before): they count from WP-45-after on (later A/Bs, RP-4), not in the
   cumulative "vs. baseline" numbers.
 - **Functional change**: new public operator overload (agreed by the owner 2026-11-11).
-- **Status**: ready (after WP-47, owner 2026-11-11: linear first; reuse WP-47's DSG interpolation
-  infrastructure / judged-case patch format where it fits — read the WP-47 summary).
+- **From WP-47** (accepted 2026-11-12; summary `summaries/WP-47-dsg-linear-interpolation.md`):
+  reusable: `misc::ClosureTrie` (`miscellaneous/closure_trie/`: λ → dense rank in d lookups, any
+  downwards-closed set), per-grid `misc::OperatorDataCache` (`getOperatorData().get<T>(build)`:
+  thread-safe, one lazily built object per type; the grid header names no operator type), the
+  per-call store + three-pass skeleton in one parallel region with a serial work gate (libgomp
+  makes futex syscalls at barriers even in `if(false)` regions → bypass regions below the gate),
+  `evaluateInto` / `valueAt` in `ScalarValues` / `VectorValues`, the judged-case patch format
+  (`results/WP-47/judged-cases.{md,patch}`). Global interpolation needs one value per DSG grid
+  point (delta-TG order) instead of corner slots. WP-47's DSG operator is C++-only, not in the
+  umbrella header (like the DSG quadrature).
+- **Status**: in progress (prompt 2026-11-12; rank 1).
 
 ## WP-46 — Linear interpolation: each distinct corner once per call (from WP-36; merged into WP-08)
 - **Source**: WP-36 summary, follow-up (2). **Owner 2026-11-11**: "I will decide on this with the
@@ -2252,7 +2265,16 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   memory, refcheck vs. the drafted references), report the added e2e time. On acceptance the owner
   applies it and runs `perf.py protect --authorized-by-owner`. No baseline for the new cases.
 - **Functional change**: new public operator overload (agreed by the owner 2026-11-11, option (c)).
-- **Status**: in progress (prompt 2026-11-11; rank 1, owner 2026-11-11).
+- **Result** (summary 2026-11-12): **accepted** by the owner 2026-11-12 (commit pending). DSG vs.
+  `SparseGrid` operator (16 t, `perf_interp_explore`): d10 1.971 → 0.432 s (4.56x), d8 3.28x, d5
+  1.98x, d2 0.60x (1 t: 4.45 / 3.44 / 2.52 / 1.11x); judged `^interplin/` 1.005x, memory 1.001,
+  refcheck OK. Infrastructure: `misc::ClosureTrie`, per-grid `misc::OperatorDataCache`
+  (`DeltasSparseGrid::getOperatorData()`, lazily built index), `DSGLinInterpIndex` / `Query`,
+  three passes (mark / evaluate / gather) with serial gate `DSG_PARALLEL_MIN_CORNER_VISITS` = 256,
+  `evaluateInto` / `valueAt` in the value types. Owner applies `results/WP-47/judged-cases.patch`
+  (+4 e2e `interplin/dsg/...`, references 104 → 120) and rehashes. Follow-ups: global slot weights
+  → WP-49 (owner 2026-11-12); d2 single-buffer scratch (≈ 0.5 µs of 9–11 µs) not planned (owner).
+- **Status**: accepted (2026-11-12).
 
 ## WP-48 — Operator drivers: `std::fma`-pinned CT combination + small-call gate (from WP-08)
 - **Source**: WP-08 follow-ups. (1) The CT combination `result += c·v` in the operator drivers is
@@ -2264,6 +2286,33 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   changes in `BarycentricFormula`, not in the drivers); all operators (quadrature SG / DSG, interp,
   interplin, scalar + vector). (2) threshold tuning; generalize only if other small cases gain.
 - **E2E filter**: all (1), `^interplin/` (2). **Status**: ready (low).
+
+## WP-49 — DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47)
+- **Source**: WP-47 summary, profile shift / follow-up 1; planned by the owner 2026-11-12 (the d2
+  single-buffer follow-up is not planned).
+- **Location**: `tools/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation_tools.{hpp,cpp}`,
+  `miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_{index,query}.{hpp,cpp}`.
+- **Hypothesis**: the gather pass walks the 2^d corners of every combination TG (≈ 10 ns per corner
+  visit, walk-bound) and the mark pass does the same walk (≈ 8.5 ns). Instead compute one global
+  weight per slot, W_slot(x) = Σ_ℓ c_ℓ Π_j w_j(ℓ_j), factorized along a trie over the box
+  [λ, last-level(id)] as the DSG quadrature does, then I(x) = Σ_slot W_slot · f(slot). This drops
+  the per-TG gather; whether marking can be derived from the weight pass (only slots that are
+  corners of some combination TG may be evaluated — observable) is for the session.
+- **Evidence** (WP-47, d10 L5, 1 t): integrand ≈ 40 %, gather 26 %, mark 22 %, evaluate 6 %;
+  16 t d10 0.432 s, d8 0.371 s, d5 0.18–0.25 s (bimodal), d2 0.175 s.
+- **Expected gain**: judged `interplin/dsg/` cases (in the suite once the owner applied WP-47's
+  patch; ≈ 1.2 s per pass): ≈ 0.15–0.25 s (d ≥ 7 most of it); estimate.
+- **Risk / trade-offs**: per-TG (per-MI) sums are lost → result bits change (refcheck OK/WARN
+  expected; the refs are the unoptimized SG values) and per-MI contributions for refinement
+  disappear from this path (owner 2026-10-29 note: report in the summary; options e.g. keep the
+  gather path available). Memory: weights per slot (8 B × slots; d10 ≈ 2.9 MiB). Evaluation
+  set and count must stay exactly WP-47's (counting-function tests).
+- **Tests**: `dsg_linear_interpolation/*` (DSG == SG within round-off, counting function, vector),
+  pinning `interpolation_pinning/Linear_Interpolation_Golden_Values`.
+- **Micro**: `micro/interplin/dsg/*`, `micro/interplin/dsg_vec/*`. **E2E filter**: `^interplin/`.
+- **Functional change**: none intended (operator results within round-off).
+- **Dependencies**: WP-47 accepted; after WP-45 (may share the slot-weight trie idea).
+- **Status**: ready (rank 3).
 
 ## WP-37 — pysgpp `DataVector`: iteration / bounds-checked indexing (from WP-29d; needs decision)
 - **Source**: WP-29d summary (follow-ups).

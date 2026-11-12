@@ -41,7 +41,10 @@
  *     marked ones evaluated, then per TG the values gathered with the weights and the corner order
  *     of the production kernel (one parallel region, three passes); "lin dedup all": without the
  *     marking pass, every slot of the store evaluated (slots no corner uses: coordinates of the
- *     domain's lower corner).
+ *     domain's lower corner);
+ *   - dsg api (multilinear): the p single-point calls of the production operator interpolateLinear
+ *     on the DeltasSparseGrid of the same instruction (every distinct corner once per call; its
+ *     index is built in the warm-up round).
  *   The results are compared with api (largest absolute difference; they differ only by the
  *   summation order over the TGs, and kernel's corner order in multilinear interpolation).
  *
@@ -71,11 +74,13 @@
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
+#include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
@@ -130,6 +135,7 @@ struct Problem {
   HyperCubeArea domain;
   CompleteSGGenInstr genInstr;
   std::unique_ptr<SparseGrid> grid;
+  std::unique_ptr<cg::DeltasSparseGrid> dsg;  ///< Multilinear configurations only.
   SourceFunc func{perf::cosProd};
   std::vector<DataVector> points;
   std::vector<DataVector> normPoints;
@@ -142,6 +148,7 @@ struct Problem {
       : cfg(c), domain(perf::shiftedDomain(c.nDim)), genInstr(c.maxLvl, c.nDim) {
     perf::configure(genInstr, c.nodes, c.boundary, domain);
     grid = std::make_unique<SparseGrid>(genInstr);
+    if (c.linear) dsg = std::make_unique<cg::DeltasSparseGrid>(genInstr);
     points = perf::randomPoints(domain, c.nPoints, 1000 + c.nDim);
     points.resize(std::min(nPoints, points.size()));
     for (const DataVector& x : points) {
@@ -509,6 +516,16 @@ double runGlobalDedup(const Problem& pr, const DeltaIndex& ix, const bool multi,
 Multilinear interpolation
 *******************************************************************************/
 
+/// dsg api: the p single-point calls of interpolateLinear on the DeltasSparseGrid (production
+/// operator: every distinct corner once per call).
+double runLinearDsgApi(const Problem& pr, std::vector<double>& out) {
+  const auto start = std::chrono::steady_clock::now();
+  for (size_t q = 0; q < pr.points.size(); q++) {
+    out[q] = cg::interpolateLinear(pr.func, pr.points[q], *pr.dsg);
+  }
+  return seconds(start);
+}
+
 /// kernel (weights) or sol_api (integrand only) of the p single-point calls.
 double runLinear(const Problem& pr, const bool weights, std::vector<double>& out) {
   const auto start = std::chrono::steady_clock::now();
@@ -862,7 +879,7 @@ std::vector<std::string> dedupRows;
 /// Median times of the variants (one entry per repetition).
 struct Times {
   std::vector<double> api, kernel, kernelW, solApi, multi, multiW, solMulti, cached, dedup,
-      multiDedup, linDedup, linDedupAll;
+      multiDedup, linDedup, linDedupAll, dsgApi;
 };
 
 /// Rows of the multilinear deduplication table (printed last).
@@ -889,6 +906,7 @@ void timeRound(const Problem& pr, const DeltaIndex* ix, const LinDedupIndex* lix
   t.linDedup.push_back(lix ? runLinearDedup(pr, *lix, true, res[9], linEvals) : 0.0);
   size_t allEvals = 0;
   t.linDedupAll.push_back(lix ? runLinearDedup(pr, *lix, false, res[10], allEvals) : 0.0);
+  t.dsgApi.push_back(pr.dsg ? runLinearDsgApi(pr, res[11]) : 0.0);
 }
 
 std::string fmtTime(const std::vector<double>& t, const double api, const bool show) {
@@ -908,7 +926,7 @@ std::string fmtDiff(const std::vector<double>& a, const std::vector<double>& b, 
 void timeCase(const Problem& pr, const int reps) {
   const size_t p = pr.points.size();
   const bool lin = pr.cfg.linear, generic = !lin && pr.cfg.nodes != "cc";
-  std::vector<std::vector<double>> res(11, std::vector<double>(p));
+  std::vector<std::vector<double>> res(12, std::vector<double>(p));
   const bool nested = !lin && pr.cfg.nodes != "cheb1";
   const std::optional<DeltaIndex> ix =
       nested ? std::optional<DeltaIndex>(buildDeltaIndex(pr)) : std::nullopt;
@@ -948,7 +966,9 @@ void timeCase(const Problem& pr, const int reps) {
                   distinct, perCall / distinct);
     linDedupRows.push_back(pr.cfg.name() + " | " + buf + fmtTime(t.linDedup, api, true) + " | " +
                            fmtTime(t.linDedupAll, api, true) + " | " +
-                           fmtDiff(res[0], res[9], true) + " / " + fmtDiff(res[0], res[10], true));
+                           fmtDiff(res[0], res[9], true) + " / " + fmtDiff(res[0], res[10], true) +
+                           " | " + fmtTime(t.dsgApi, api, true) + " | " +
+                           fmtDiff(res[0], res[11], true));
   }
   std::fflush(stdout);
   if (sink == 42.0) std::printf("#\n");
@@ -1003,7 +1023,8 @@ int main(int argc, char** argv) {
   std::printf(
       "\n| case (multilinear) | slots | store per call (values + marks) | evals per call (api) | "
       "distinct evals per call | api / distinct | lin dedup [s] (api/x) | lin dedup all [s] "
-      "(api/x) | max diff lin dedup / all |\n|---|---|---|---|---|---|---|---|---|\n");
+      "(api/x) | max diff lin dedup / all | dsg api [s] (api/x) | max diff dsg api "
+      "|\n|---|---|---|---|---|---|---|---|---|---|---|\n");
   for (const std::string& row : linDedupRows) std::printf("| %s |\n", row.c_str());
   return 0;
 }

@@ -102,6 +102,21 @@ class VectorValues {
         point, area, std::span<double>(dst.data() + idx * nOutputs_, nOutputs_));
   }
 
+  /**
+   * @brief Evaluates the source function and writes the m values to @p dst (slot of a value
+   * store).
+   * @param point Point in problem coordinates.
+   * @param dst   Destination (m doubles).
+   */
+  void evaluateInto(const base::DataVector& point, double* const dst) const {
+    sourceFunc->evaluate(point, std::span<double>(dst, nOutputs_));
+  }
+
+  /// @brief Returns the m values in slot @p slot of a value store (m doubles per slot).
+  const double* valueAt(const double* const store, const size_t slot) const {
+    return store + slot * nOutputs_;
+  }
+
   /// @brief @p acc += @p weight * @p values (m values, output by output).
   void addScaled(const Acc acc, const double weight, const double* const values) const {
     for (size_t k = 0; k < nOutputs_; k++) {

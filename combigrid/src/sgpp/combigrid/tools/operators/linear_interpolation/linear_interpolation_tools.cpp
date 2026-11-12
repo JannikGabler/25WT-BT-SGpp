@@ -71,12 +71,15 @@ void prepareCorners(const base::DataVector& point, const TensorGrid& tg,
     scratch.curGridPoint[k] = bracket[2 * k];
   }
 
-  // Weight table by doubling: entry j + 2^k = entry j times the upper weight of dimension k,
-  // entry j times the lower one. Every entry is the product of its 1D weights in the order of the
-  // dimensions, starting from 1.0 (bitwise the weights of the definition).
-  double* const table = scratch.weightTable();
+  fillWeightTable(factors, scratch.tableDim(), scratch.weightTable());
+}
+
+void fillWeightTable(const double* const factors, const size_t tableDim, double* const table) {
+  // Doubling: entry j + 2^k = entry j times the upper weight of dimension k, entry j times the
+  // lower one. Every entry is the product of its 1D weights in the order of the dimensions,
+  // starting from 1.0 (bitwise the weights of the definition).
   table[0] = 1.0;
-  for (size_t k = 0; k < scratch.tableDim(); k++) {
+  for (size_t k = 0; k < tableDim; k++) {
     const size_t half = size_t{1} << k;
     for (size_t j = 0; j < half; j++) {
       table[j + half] = table[j] * factors[2 * k + 1];

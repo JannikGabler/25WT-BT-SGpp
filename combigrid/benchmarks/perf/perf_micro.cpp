@@ -41,6 +41,7 @@
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
+#include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -712,6 +713,26 @@ void addLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl) {
 }
 
 /**
+ * The complete linear interpolation operator interpolateLinear on a SparseGrid at one query point
+ * (the micro/interplin/tg configurations; 2^d corners per tensor grid, items = corners of all
+ * tensor grids). Control case of the deltas sparse grid operator micro/interplin/dsg/...
+ */
+void addLinearSGOperator(Suite& suite, const size_t nDim, const LvlType maxLvl) {
+  suite.addMicro("micro/interplin/sg/" + cfg("equi", 1, nDim, maxLvl), [=](MicroRun& run) {
+    const HyperCubeArea domain = perf::shiftedDomain(nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, "equi", 1, domain);
+    const SparseGrid sg(genInstr);
+    const SourceFunc sourceFunc(perf::cosProd);
+    const DataVector point = perf::randomPoints(domain, 1, 98)[0];
+
+    run.setItems(static_cast<double>(sg.nTG()) * std::pow(2.0, static_cast<double>(nDim)));
+    run.measure(
+        [&]() { doNotOptimize(sgpp::combigrid::interpolateLinear(sourceFunc, point, sg)); });
+  });
+}
+
+/**
  * Speed of light for addInterpTG (perf_interp_sol.hpp): the same source-function calls and 1D
  * rules on the same tensor grid and point, with the nodes mapped onto the domain once, grid
  * points assembled incrementally and scratch reused; integrandOnly: the source-function calls
@@ -825,6 +846,45 @@ cg::VectorSourceFunc cosProdVectorFunc(const size_t m) {
         for (size_t k = 0; k < out.size(); k++) out[k] = cosProdK(x, k);
       },
       m);
+}
+
+/**
+ * The linear interpolation operator interpolateLinear on a DeltasSparseGrid (every distinct corner
+ * evaluated once) at the query point of addLinearSGOperator (items: corners of all combination
+ * tensor grids, as there); m > 0: a VectorSourceFunc with m outputs (micro/interplin/dsg_vec, with
+ * the SparseGrid operator as micro/interplin/sg_vec).
+ */
+void addLinearDSGOperator(Suite& suite, const size_t nDim, const LvlType maxLvl, const size_t m) {
+  const std::string suffix = m == 0 ? "" : "/m" + std::to_string(m);
+  for (const bool deltas : {false, true}) {
+    if (!deltas && m == 0) continue;  // micro/interplin/sg (addLinearSGOperator)
+    const std::string kind = std::string(deltas ? "dsg" : "sg") + (m == 0 ? "/" : "_vec/");
+    suite.addMicro(
+        "micro/interplin/" + kind + cfg("equi", 1, nDim, maxLvl) + suffix, [=](MicroRun& run) {
+          const HyperCubeArea domain = perf::shiftedDomain(nDim);
+          CompleteSGGenInstr genInstr(maxLvl, nDim);
+          perf::configure(genInstr, "equi", 1, domain);
+          const SparseGrid sg(genInstr);
+          const DeltasSparseGrid dsg(genInstr);
+          const SourceFunc sourceFunc(perf::cosProd);
+          const cg::VectorSourceFunc vecFunc = cosProdVectorFunc(std::max<size_t>(m, 1));
+          const DataVector point = perf::randomPoints(domain, 1, 98)[0];
+          std::vector<double> out(m);
+
+          run.setItems(static_cast<double>(sg.nTG()) * std::pow(2.0, static_cast<double>(nDim)));
+          run.measure([&]() {
+            if (m == 0) {
+              doNotOptimize(cg::interpolateLinear(sourceFunc, point, dsg));
+            } else if (deltas) {
+              cg::interpolateLinear(vecFunc, point, dsg, out);
+              doNotOptimize(out[0]);
+            } else {
+              cg::interpolateLinear(vecFunc, point, sg, out);
+              doNotOptimize(out[0]);
+            }
+          });
+        });
+  }
 }
 
 /// Sparse grid, query point and largest tensor grid of the vector-valued interpolation cases.
@@ -1076,6 +1136,18 @@ int main(int argc, char** argv) {
   addLinearTG(suite, 2, 16);
   addLinearTG(suite, 5, 8);
   addLinearTG(suite, 16, 2);  // 2^16 corners per tensor grid
+  // WP-47: the whole operator at one query point (SparseGrid; control of micro/interplin/dsg)
+  addLinearSGOperator(suite, 10, 5);
+  addLinearSGOperator(suite, 8, 5);
+  addLinearSGOperator(suite, 5, 8);
+  addLinearSGOperator(suite, 2, 16);
+  // WP-47: the deltas sparse grid operator (same configurations), vector-valued with m = 4
+  addLinearDSGOperator(suite, 10, 5, 0);
+  addLinearDSGOperator(suite, 8, 5, 0);
+  addLinearDSGOperator(suite, 5, 8, 0);
+  addLinearDSGOperator(suite, 2, 16, 0);
+  addLinearDSGOperator(suite, 8, 5, 4);
+  addLinearDSGOperator(suite, 2, 16, 4);
   // Speed of light of the per-TG interpolation kernels and of the generic barycentric formula
   // with cached weights (perf_interp_sol.hpp)
   for (const bool integrandOnly : {false, true}) {

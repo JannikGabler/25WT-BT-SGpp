@@ -131,6 +131,18 @@ void prepareCorners(const base::DataVector& point, const TensorGrid& tg,
                     const HyperCubeArea& domain, misc::LinInterpScratch& scratch);
 
 /**
+ * @brief Fills the corner weight table of the first @p tableDim dimensions: entry j (j <
+ * 2^@p tableDim) is the product of the 1D weights of the corner whose bit k selects the upper
+ * neighbor in dimension k, multiplied from 1.0 in the order of the dimensions (bitwise the
+ * weights of the definition).
+ *
+ * @param factors  1D weights: lower / upper neighbor of dimension k at 2k / 2k + 1.
+ * @param tableDim Number of dimensions of the table.
+ * @param table    Output: 2^@p tableDim weights.
+ */
+void fillWeightTable(const double* factors, size_t tableDim, double* table);
+
+/**
  * @brief Moves the current grid point from corner @p corner - 1 to corner @p corner.
  *
  * With t the lowest set bit of @p corner, the coordinates of dimensions 0 ... t - 1 change to

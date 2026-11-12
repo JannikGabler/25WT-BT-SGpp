@@ -100,7 +100,7 @@ C++ → Python translation:
 | C++ API | reason |
 |---|---|
 | `SparseGridBase` (abstract base of `SparseGrid` and `DeltasSparseGrid`) | irrelevant for Python users; its public methods are declared again on `SparseGrid` (see decision 7). Its protected manual-assembly methods (`addTensorGrid`, `setTensorGrid`, …) stay hidden: a grid without instruction or with unset size caches crashes the operators |
-| `DeltasSparseGrid` and its quadrature (scalar and vector) | not in the umbrella header |
+| `DeltasSparseGrid` and its quadrature and linear interpolation (scalar and vector) | not in the umbrella header |
 | `finishOperatorCall` of `SourceFunc`, `VectorSourceFunc`, the cached classes and `SourceFuncCache` | the end-of-operator hook is an internal step of the operators |
 | the `std::function` constructors of `CachedSourceFunc` / `CachedVectorSourceFunc` | replaced by `PyObject*` constructors (`%extend`, all three variants: own cache with default config, shared cache, config) |
 | the `std::span` overloads of the vector-valued `interpolate` / `interpolateLinear` / `quadrature` and of `VectorSourceFunc::evaluate`; the `std::function` constructors of `VectorSourceFunc`; `VectorSourceFunc::evaluateNormalizedInPlace` | `std::span` has no typemap: the `DataVector`-returning overloads cover them (`evaluate(point)` is an `%extend` helper); the constructors are replaced by the `PyObject*` constructor; `evaluateNormalizedInPlace` is an internal step of the operators |

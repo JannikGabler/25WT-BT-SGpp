@@ -19,8 +19,10 @@
  *   @c area in place, as @c SourceFunc::evaluateNormalizedInPlace);
  * - @c evaluateNormalizedInPlace(point, area, dst, idx): the same, written to slot @c idx of the
  *   vector @c dst (m doubles per slot; the scalar instantiation is @c dst[idx] = value);
- * - @c addScaled(acc, weight, values): @c acc += weight * values (values: of @c evaluate or an
- *   accumulator);
+ * - @c evaluateInto(point, dst): the values at a point, written to a slot of a value store (m
+ *   doubles from @c dst); @c valueAt(store, slot): the values in a slot of a value store;
+ * - @c addScaled(acc, weight, values): @c acc += weight * values (values: of @c evaluate,
+ *   @c valueAt or an accumulator);
  * - @c store(acc, out): writes the accumulated values of all outputs to @c out;
  * - @c interpolate(method, pos, nodes, values, dst, idx): the 1D interpolants of all outputs
  *   (values: m per node, node-major) at @c pos, written to slot @c idx of @c dst.
@@ -82,6 +84,18 @@ class ScalarValues {
                                  std::vector<double>& dst, const size_t idx) const {
     dst[idx] = sourceFunc->evaluateNormalizedInPlace(point, area);
   }
+
+  /**
+   * @brief Evaluates the source function and writes the value to @p dst (slot of a value store).
+   * @param point Point in problem coordinates.
+   * @param dst   Destination (one @c double).
+   */
+  void evaluateInto(const base::DataVector& point, double* const dst) const {
+    *dst = sourceFunc->evaluate(point);
+  }
+
+  /// @brief Returns the value in slot @p slot of a value store (one @c double per slot).
+  static double valueAt(const double* const store, const size_t slot) { return store[slot]; }
 
   /// @brief @p acc += @p weight * @p value.
   static void addScaled(Acc& acc, const double weight, const double value) {

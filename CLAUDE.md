@@ -37,7 +37,8 @@ modules are irrelevant.
 Pipeline: a generation instruction (`CompleteSGGenInstr(maxLvl, nDim)` or `MIVecSGGenInstr(miVec)`
 for custom / adaptive MI sets) → `SparseGrid` (list of `TensorGridCTData {mi, coefficient,
 tensorGrid}`) → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid` +
-its `quadrature` overload (C++ only) evaluates every grid point once. User functions are wrapped in
+its `quadrature` overload (C++ only) evaluates every grid point once; its `interpolateLinear`
+overloads (C++ only, WP-47) every distinct corner once per call (index built on the first call). User functions are wrapped in
 `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators (`interpolate`, `interpolateLinear`,
 both quadratures; Python: all but the C++-only DSG quadrature)); nodes / weights live on [0,1]^d,
 the user domain enters only via `setDomain()` (all operators map with `tools::mapToDomain` =

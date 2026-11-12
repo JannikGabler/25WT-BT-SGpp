@@ -27,14 +27,25 @@ grids/
   tensor_grid            anisotropic tensor grid (per-dim node lists)
   sparse_grid_base       common base: nDim, vector<TensorGridCTData> (not SWIG-wrapped)
   sparse_grid            CT sparse grid (+ optional shared SGGenInstr)
-  deltas_sparse_grid     delta representation for the DSG quadrature (every grid point in exactly
-                         one delta tensor grid; not in the umbrella header / Python)
+  deltas_sparse_grid     delta representation for the DSG quadrature and linear interpolation
+                         (every grid point in exactly one delta tensor grid; not in the umbrella
+                         header / Python); holds an OperatorDataCache (lazily built operator data)
   extensive_sparse_grid  commented out
 miscellaneous/         (namespace misc)
   tensor_grid/           TensorGridCTData {mi, coefficient, tensorGrid}
   ct_coefficient_trie/   CTCoeffTrie: prefix tree over the tensor grids' level MIs (DSG quadrature)
-  data_contexts/         read-only data of one operator call (QuadratureContext, DeltaQuadratureContext)
-  data_scratches/        per-thread scratch (quadrature, delta quadrature, linear interpolation)
+  operator_data_cache/   OperatorDataCache: thread-safe, type-keyed store of lazily built
+                         query-independent operator data of a grid (DeltasSparseGrid::
+                         getOperatorData; e.g. DSGLinInterpIndex), so the grid's header names no
+                         operator type
+  closure_trie/          ClosureTrie: trie over a downwards-closed MI set, MI -> dense rank by one
+                         lookup per dimension (DSG linear interpolation; reusable for other DSG
+                         operators)
+  data_contexts/         read-only data of one operator call (QuadratureContext, DeltaQuadratureContext;
+                         DSGLinInterpIndex (per grid) and DSGLinInterpQuery (per call) of the DSG
+                         linear interpolation)
+  data_scratches/        per-thread scratch (quadrature, delta quadrature, linear interpolation, DSG
+                         linear interpolation)
   operators/value_types/ ScalarValues / VectorValues: value types the operator kernels are
                          templates over (scalar vs. m outputs)
   flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
@@ -70,7 +81,8 @@ multiindices/          MI<T>, MIVec<T> (flat array ~ matrix), views, references,
 operators/
   global_interpolation/  interpolate(); methods/ (InterpolationMethod, barycentric formula,
                          optimized barycentric formula for Chebyshev 2nd kind, getters)
-  linear_interpolation/  interpolateLinear()
+  linear_interpolation/  interpolateLinear() for SparseGrid (linear_interpolation.cpp) and
+                         DeltasSparseGrid (deltas_sparse_grid_linear_interpolation.cpp)
   quadrature/            quadrature() for SparseGrid (quadrature.cpp) and DeltasSparseGrid
                          (deltas_sparse_grid_quadrature.cpp); quadrature_rules/ (Clenshaw-Curtis,
                          Simpson, trapezoidal, getters); fast_quadrature.* commented out
@@ -85,7 +97,8 @@ tools/                 (namespace tools)
                          (global_interpolation_tools, namespace tools::global_interpolation;
                          interpolation_methods/: generic barycentric weights),
                          linear_interpolation/ (linear_interpolation_tools, namespace
-                         tools::lin_interpolation)
+                         tools::lin_interpolation; dsg_linear_interpolation_tools, namespace
+                         tools::dsg_lin_interpolation)
   downwards_closedness, paretoMaxima, multiindex_bounding_box_generation, multiindex_domination
   multiindex/, multiindex_view/, multiindex_vector/ (component-wise max)   MI helpers
   math/ (binomial, pow, ceil), comparison/ (nearly_equal), data_vector/ (normalization
@@ -105,7 +118,15 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 - `DeltasSparseGrid` ([grids/deltas_sparse_grid.hpp](../src/sgpp/combigrid/grids/deltas_sparse_grid.hpp)):
   constructed from an `SGGenInstr`; `quadrature(const SourceFunc&, const DeltasSparseGrid&)`
   ([deltas_sparse_grid_quadrature.hpp](../src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp))
-  evaluates every grid point once, with global weights from a `CTCoeffTrie`. C++ only.
+  evaluates every grid point once, with global weights from a `CTCoeffTrie`;
+  `interpolateLinear(const SourceFunc&, const DataVector&, const DeltasSparseGrid&)` (+ vector
+  overloads; [deltas_sparse_grid_linear_interpolation.hpp](../src/sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp))
+  evaluates every distinct corner of the combination tensor grids once per call (WP-47): a corner
+  coordinate is identified by the level at which it first brackets the query coordinate, a corner
+  by a slot of a per-call store (one block per closure MI, `DSGLinInterpIndex`, built on the first
+  call and kept in the grid); three passes in one parallel region (mark the corners of all
+  tensor grids, evaluate the marked slots, gather per tensor grid with the `SparseGrid` kernel's
+  weights and order), serial below `DSG_PARALLEL_MIN_CORNER_VISITS`. C++ only.
 - `TensorGrid` ([grids/tensor_grid.hpp](../src/sgpp/combigrid/grids/tensor_grid.hpp)): per-dim counts
   + flat per-dim node lists, first-dimension-fastest linear indexing.
 - `TensorGridCTData`
@@ -269,8 +290,8 @@ operation machinery.
 - **Dimension-adaptive refinement** is not implemented; the caller builds the loop on
   `MIVecSGGenInstr` (highest-priority future work; planned by the owner).
 - **Vector-valued source functions in Python** (WP-29d): `VectorSourceFunc` and the
-  `DataVector`-returning overloads of all three operators are bound; the DSG quadrature (also the
-  scalar one) and the `std::span` overloads are C++ only. Python callables run serially under the
+  `DataVector`-returning overloads of all three operators are bound; the DSG operators (quadrature
+  and linear interpolation, also the scalar ones) and the `std::span` overloads are C++ only. Python callables run serially under the
   GIL; a vector callable needs one call per grid point for all m outputs.
 - **Source-function caching** (WP-26, WP-28, WP-27): policy "always" (`CachedSourceFunc`; "none"
   = plain `SourceFunc`) in memory or with a temporary / persistent LMDB file, or adaptive
@@ -282,8 +303,9 @@ operation machinery.
   shared points are re-evaluated across tensor grids and operator calls. Python misses still run
   serially under the GIL.
 - **Reduced representation**: `SparseGrid` operators process full tensor grids, so shared points are
-  evaluated repeatedly (Tasmanian / SGMK win at d ≳ 7 for this reason); only the DSG quadrature
-  evaluates every point once.
+  evaluated repeatedly (Tasmanian / SGMK win at d ≳ 7 for this reason); the DSG quadrature
+  evaluates every point once, the DSG linear interpolation every distinct corner once per call
+  (no global interpolation on the DSG yet).
 - One global `boundaryLevelOffset` for all dimensions; no Leja nodes.
 - `USE_DAKOTA` is declared combigrid-only in SConstruct but unused in `combigrid/src/` (dormant).
 

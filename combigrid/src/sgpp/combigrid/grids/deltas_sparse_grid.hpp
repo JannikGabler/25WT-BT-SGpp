@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
+#include <sgpp/combigrid/miscellaneous/operator_data_cache/operator_data_cache.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 
 namespace sgpp {
@@ -34,6 +35,12 @@ class DeltasSparseGrid : public SparseGridBase {
   /// @brief Returns the (shared) generation instruction or @c nullptr if none was attached.
   const SGGenInstr& getGenInstr() const noexcept;
 
+  /**
+   * @brief Returns the cache of query-independent data that operators build on their first call
+   * on this grid (e.g. the index of the linear interpolation); internal to the operators.
+   */
+  misc::OperatorDataCache& getOperatorData() const noexcept { return operatorData; }
+
   /// @}
 
   /// @name Setters
@@ -58,6 +65,9 @@ class DeltasSparseGrid : public SparseGridBase {
   /// @{
 
   const std::unique_ptr<SGGenInstr> genInstr;  ///< Generation instruction that produced this SG.
+
+  /// Lazily built operator data (see @ref getOperatorData): only by operators that need it.
+  mutable misc::OperatorDataCache operatorData;
 
   /// @}
 };
