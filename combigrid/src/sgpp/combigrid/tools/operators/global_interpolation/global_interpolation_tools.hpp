@@ -5,27 +5,29 @@
 
 /**
  * @file global_interpolation_tools.hpp
- * @brief Per-tensor-grid kernels of the global interpolation operator (@c interpolate).
+ * @brief Per-tensor-grid kernel of the global interpolation operator (@c interpolate) on a
+ * @c SparseGrid.
  *
- * The tensor-product evaluation proceeds dimension by dimension: the
- * first dimension is collapsed by interpolating across slices of the
- * tensor grid (consuming function values produced by the source function); each
- * subsequent dimension is collapsed by interpolating the intermediate
- * results. For m outputs, every intermediate result holds m values (node-major), and the 1D
- * rules interpolate all outputs at once.
- *
- * The kernel templates are written once for both value types (@c misc::ScalarValues,
- * @c misc::VectorValues); they are defined and instantiated in the @c .cpp only, the exported
- * entry points are the two @ref processTensorGrid overloads.
+ * The tensor-product interpolant of a tensor grid at a query point x is
+ * @f$\sum_p \prod_k L_{k,p_k}(x_k) f(p)@f$, where @f$L_{k,i}(x_k)@f$ are the 1D basis values
+ * of the interpolation method of dimension k (@c InterpolationMethod::basisValues), computed
+ * once per tensor grid and dimension. The sum is the quadrature row loop
+ * (@c tools::quadrature::sumOverRows) with the basis values in place of the quadrature weights:
+ * nodes mapped onto the domain once per tensor grid, grid points visited row by row, dimensions
+ * with one node (basis value 1) skipped, scratch reused across tensor grids. For m outputs, the
+ * same operations are performed per output.
  */
 #pragma once
 
+#include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/global_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <span>
-#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -34,23 +36,57 @@ namespace tools {
 namespace global_interpolation {
 
 /**
- * @brief Tensor-product global interpolation on a single tensor grid.
+ * @brief Tensor-product global interpolation of @p sourceFunc on the tensor grid @p tg.
  *
- * @param sourceFunc Source function to evaluate at grid points.
+ * @param sourceFunc Source function to evaluate at the grid points.
+ * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param tg         Tensor grid (of @p genInstr's sparse grid).
+ * @param genInstr   Generation instruction (domain, node-generation functions and their 1D
+ *                   interpolation methods).
+ * @param scratch    Scratch of the calling thread (sized for the sparse grid of @p tg).
+ * @return Interpolated value on @p tg (0 for a tensor grid without grid points).
+ */
+double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& normPoint,
+                         const TensorGrid& tg, const SGGenInstr& genInstr,
+                         misc::GlobalInterpScratch& scratch);
+
+/**
+ * @brief Tensor-product global interpolation of a vector-valued source function on @p tg: the m
+ * interpolated values.
+ *
+ * @param sourceFunc Vector-valued source function to evaluate at the grid points.
+ * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param tg         Tensor grid (of @p genInstr's sparse grid).
+ * @param genInstr   Generation instruction.
+ * @param scratch    Scratch of the calling thread, created with m outputs.
+ * @param out        Output: the m interpolated values (size m; zero for a tensor grid without
+ *                   grid points).
+ */
+void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
+                       const TensorGrid& tg, const SGGenInstr& genInstr,
+                       misc::GlobalInterpScratch& scratch, std::span<double> out);
+
+/**
+ * @brief As @ref processTensorGrid(const SourceFunc&, const base::DataVector&, const TensorGrid&,
+ * const SGGenInstr&, misc::GlobalInterpScratch&), with a scratch of its own.
+ * @note Allocates the scratch; the operator reuses one scratch per thread.
+ *
+ * @param sourceFunc Source function to evaluate at the grid points.
  * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param tgData     Tensor grid + level multi-index + combination coefficient.
- * @param genInstr   Generation instruction (provides domain, node-generation
- *                   functions, and 1D interpolation methods).
+ * @param genInstr   Generation instruction.
  * @return Interpolated value on this single tensor grid.
  */
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& point,
                          const TensorGridCTData& tgData, const SGGenInstr& genInstr);
 
 /**
- * @brief Tensor-product global interpolation of a vector-valued source function on a single
- * tensor grid: the m interpolated values.
+ * @brief As @ref processTensorGrid(const VectorSourceFunc&, const base::DataVector&,
+ * const TensorGrid&, const SGGenInstr&, misc::GlobalInterpScratch&, std::span<double>), with a
+ * scratch of its own.
+ * @note Allocates the scratch; the operator reuses one scratch per thread.
  *
- * @param sourceFunc Vector-valued source function to evaluate at grid points.
+ * @param sourceFunc Vector-valued source function to evaluate at the grid points.
  * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param tgData     Tensor grid + level multi-index + combination coefficient.
  * @param genInstr   Generation instruction.
@@ -61,72 +97,41 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
                        std::span<double> out);
 
 /**
- * @brief Kernel of both @ref processTensorGrid overloads: collapses dimension 0
- * (@ref interpolateFirstDim), then every later dimension (@ref interpolateLaterDim).
+ * @brief Sets @p result to the combination of the vector-valued interpolants of all tensor
+ * grids of @p sparseGrid at @p normPoint, in parallel (per thread first, then added to
+ * @p result, as the reduction of the scalar operator does output by output).
  *
- * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues (m outputs).
- * @param values   View of the source function (its buffer is not used).
- * @param point    Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tgData   Tensor grid + level multi-index + combination coefficient.
- * @param genInstr Generation instruction.
- * @param out      Output: the m interpolated values (m = 1 for scalar values); all zero for a
- *                 0-dimensional tensor grid.
+ * @param sourceFunc Vector-valued source function.
+ * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param sparseGrid Sparse grid.
+ * @param result     Output: the m combined values (size m).
  */
-template <typename ValueType>
-void processTensorGridInternal(const ValueType values, const base::DataVector& point,
-                               const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                               double* const out);
+void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
+                        const SparseGrid& sparseGrid, std::span<double> result);
 
 /**
- * @brief Collapses dimension 0: evaluates the source function on the grid points, slice by
- * slice of @f$n_0@f$ consecutive grid points, and interpolates every slice at @p point.
+ * @brief Prepares the row loop over @p tg: 1D basis values at @p normPoint
+ * (@ref fillBasisValues), nodes on the domain and iterated dimensions (as the quadrature).
  *
- * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues.
- * @param values          View of the source function.
- * @param point           Coordinate 0 of the query point (normalized).
- * @param tgData          Tensor grid + level multi-index + combination coefficient.
- * @param genInstr        Generation instruction (domain, node-generation functions, boundary
- *                        level offset).
- * @param nInterpolations Number of slices, @f$\prod_{j>0} n_j@f$.
- * @return The @p nInterpolations interpolated values, m values per slice (node-major).
+ * @param normPoint Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param tg        Tensor grid (at least one dimension and one grid point).
+ * @param genInstr  Generation instruction.
+ * @param scratch   Scratch of the calling thread.
  */
-template <typename ValueType>
-std::vector<double> interpolateFirstDim(const ValueType values, double point,
-                                        const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                                        size_t nInterpolations);
+void prepareTensorGrid(const base::DataVector& normPoint, const TensorGrid& tg,
+                       const SGGenInstr& genInstr, misc::GlobalInterpScratch& scratch);
 
 /**
- * @brief Collapses dimension @p dim @f$\geq 1@f$ in place: interpolates every group of
- * @f$n_{dim}@f$ consecutive intermediate results at @p point.
+ * @brief Writes the 1D basis values of every dimension of @p tg at @p normPoint to
+ * @c scratch.rows.weights1D (per-dimension blocks back-to-back, in the order of the nodes).
  *
- * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues.
- * @param values               View of the source function (provides m and the 1D rule).
- * @param dim                  Dimension to collapse.
- * @param point                Coordinate @p dim of the query point (normalized).
- * @param tgData               Tensor grid + level multi-index + combination coefficient.
- * @param genInstr             Generation instruction.
- * @param nInterpolations      Number of results after the collapse, @f$\prod_{j>dim} n_j@f$.
- * @param interpolationResults In: the results of dimension @p dim - 1
- *                             (@f$n_{dim} \cdot@f$ @p nInterpolations, times m); out: the
- *                             @p nInterpolations results (times m).
+ * @param normPoint Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param tg        Tensor grid.
+ * @param genInstr  Generation instruction (the interpolation method of every dimension).
+ * @param scratch   Scratch of the calling thread.
  */
-template <typename ValueType>
-void interpolateLaterDim(const ValueType values, size_t dim, double point,
-                         const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                         size_t nInterpolations, std::vector<double>& interpolationResults);
-
-/**
- * @brief Computes how many 1D interpolations remain after collapsing each
- * dimension.
- *
- * Entry @c k of the returned vector is @f$\prod_{j>k} n_j@f$, i.e. the
- * number of intermediate values that must be produced when the algorithm
- * is about to collapse dimension @c k.
- *
- * @param tensorGrid Tensor grid.
- * @return Per-dimension interpolation count.
- */
-std::vector<size_t> getInterpolationCntPerDim(const TensorGrid& tensorGrid);
+void fillBasisValues(const base::DataVector& normPoint, const TensorGrid& tg,
+                     const SGGenInstr& genInstr, misc::GlobalInterpScratch& scratch);
 
 }  // namespace global_interpolation
 }  // namespace tools

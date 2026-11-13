@@ -46,6 +46,10 @@ namespace combigrid {
  * @c constants::global_interpolation::DSG_PARALLEL_MIN_GRID_POINTS grid points are processed on
  * the calling thread.
  *
+ * @note As on a @c SparseGrid, a non-finite value (inf, NaN) of @p sourceFunc at any grid point
+ * makes the result non-finite (points with a global weight of 0 enter as well), also if
+ * @p point lies on a node.
+ *
  * @param sourceFunc       Black-box source function to interpolate.
  * @param point            Evaluation point (in the domain of the grid's generation instruction);
  *                         must have @c size() == deltasSparseGrid.nDim().

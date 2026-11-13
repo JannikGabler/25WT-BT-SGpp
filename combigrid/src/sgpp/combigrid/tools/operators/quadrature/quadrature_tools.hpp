@@ -85,13 +85,23 @@ void getWeights(const misc::QuadratureContext& context, const TensorGrid& tg,
                 misc::QuadratureScratch& scratch);
 
 /**
- * TODO: Document
+ * @brief Maps the nodes of @p tg onto @p domain (@c tools::mapToDomain, once per tensor grid)
+ * into @c scratch.nodesPerDim and moves @c scratch.gp to the first grid point.
+ *
+ * @param domain  Domain of the source function.
+ * @param tg      Tensor grid.
+ * @param scratch Scratch space (@c nodesPerDim large enough for the nodes of @p tg).
  */
-void mapNodesOntoDomain(const misc::QuadratureContext& context, const TensorGrid& tg,
+void mapNodesOntoDomain(const HyperCubeArea& domain, const TensorGrid& tg,
                         misc::QuadratureScratch& scratch);
 
 /**
- * TODO: Document
+ * @brief Sets up the iterated dimensions of the row loop (@ref sumOverRows) over @p tg, using
+ * the nodes of @ref mapNodesOntoDomain and the weights in @c scratch.weights1D (one per node,
+ * per-dimension blocks back-to-back).
+ *
+ * @param tg      Tensor grid (at least one dimension).
+ * @param scratch Scratch space with the nodes and weights of @p tg.
  */
 void setUpIterDims(const TensorGrid& tg, misc::QuadratureScratch& scratch);
 
@@ -106,6 +116,18 @@ size_t findRowDim(const GPMI& nGPPerDim);
 void updateWeightProducts(const double* const* const weightsOfIterDim, const GPCntType* const gpMI,
                           double* const weightProducts, size_t j);
 
+/**
+ * @brief Sums the weight times the source function over all grid points of a tensor grid
+ * prepared by @ref mapNodesOntoDomain and @ref setUpIterDims; the weight of a grid point is the
+ * product of the 1D weights of its nodes.
+ *
+ * Instantiated for @c misc::ScalarValues and @c misc::VectorValues (in the @c .cpp).
+ *
+ * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues.
+ * @param values  View of the source function.
+ * @param scratch Prepared scratch space.
+ * @return Accumulator of the sums (slot @c misc::QuadratureScratch::TG_SUM_ACC).
+ */
 template <typename ValueType>
 typename ValueType::Acc sumOverRows(const ValueType values, misc::QuadratureScratch& scratch);
 

@@ -45,8 +45,8 @@ miscellaneous/         (namespace misc)
                          DSGLinInterpIndex (per grid) and DSGLinInterpQuery (per call) of the DSG
                          linear interpolation; DSGGlobalInterpIndex (per grid) of the DSG global
                          interpolation)
-  data_scratches/        per-thread scratch (quadrature, delta quadrature, linear interpolation, DSG
-                         linear interpolation)
+  data_scratches/        per-thread scratch (quadrature, delta quadrature, global interpolation
+                         (wraps the quadrature's), linear interpolation, DSG linear interpolation)
   operators/value_types/ ScalarValues / VectorValues: value types the operator kernels are
                          templates over (scalar vs. m outputs)
   flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
@@ -282,10 +282,13 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 - **On-demand assembly**: `TensorGrid` stores only 1D node lists (O(d·n) instead of O(n^d)); d-dim
   points are assembled on demand (`getGridPoints(DataMatrix&)`, iterators). Main memory advantage over
   other frameworks.
-- **Global interpolation**: dimension-wise barycentric formula of the 2nd kind, d nested 1D
-  interpolations (innermost = dim 1). Weights in log space; the generic formula (equidistant,
-  Chebyshev 1st kind) recomputes them in O(n²) per 1D call (not cached); Chebyshev 2nd kind uses
-  closed-form weights. Given the weights, O(n) per dimension and point.
+- **Global interpolation**: barycentric formula of the 2nd kind per dimension. On a tensor grid
+  (`SparseGrid`, WP-06) the interpolant is Σ_p Π_k L_{k,p_k}(x_k) f(p) with the 1D basis values
+  (`InterpolationMethod::basisValues`, once per tensor grid and dimension), summed by the quadrature
+  row loop (`quadrature::sumOverRows`; basis values in place of the weights). The DSG overload
+  combines the basis values across tensor grids (global weights, WP-45). Barycentric weights in log
+  space; the generic formula (equidistant, Chebyshev 1st kind) recomputes them in O(n²) per
+  `basisValues` / 1D call (not cached); Chebyshev 2nd kind uses closed-form weights.
 - **Quadrature rules** per dimension by node type and parity: equidistant odd → composite Simpson,
   even → trapezoidal; Chebyshev 2nd kind → Clenshaw-Curtis (Waldvogel FFT with `USE_EIGEN` /
   `USE_ARMADILLO`, else O(n²)). Result × |Ω|.

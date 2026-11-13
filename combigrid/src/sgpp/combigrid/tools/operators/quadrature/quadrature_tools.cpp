@@ -97,7 +97,7 @@ void combineTensorGrids(const QuadratureContext& context, const VectorSourceFunc
 void prepareTensorGrid(const QuadratureContext& context, const TensorGrid& tg,
                        QuadratureScratch& scratch) {
   getWeights(context, tg, scratch);
-  mapNodesOntoDomain(context, tg, scratch);
+  mapNodesOntoDomain(context.domain, tg, scratch);
   setUpIterDims(tg, scratch);
 }
 
@@ -124,7 +124,7 @@ void getWeights(const QuadratureContext& context, const TensorGrid& tg,
  * tools::mapToDomain, as interpolation, so that both evaluate bitwise identical points) and moves
  * to the first grid point (all node indices 0).
  */
-void mapNodesOntoDomain(const QuadratureContext& context, const TensorGrid& tg,
+void mapNodesOntoDomain(const HyperCubeArea& domain, const TensorGrid& tg,
                         QuadratureScratch& scratch) {
   const size_t nDim = tg.nDim();
   const GPMI& nGPPerDim = tg.getGPCntPerDim();
@@ -135,8 +135,8 @@ void mapNodesOntoDomain(const QuadratureContext& context, const TensorGrid& tg,
   size_t offset = 0;
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    const double lower = context.domain[dim].first;
-    const double width = context.domain[dim].second - context.domain[dim].first;
+    const double lower = domain[dim].first;
+    const double width = domain[dim].second - domain[dim].first;
     double* const nodes = scratch.nodesPerDim.data() + offset;
 
     for (GPCntType nodeIdx = 0; nodeIdx < nGPPerDim[dim]; nodeIdx++) {
@@ -279,6 +279,11 @@ typename ValueType::Acc sumOverRows(const ValueType values, QuadratureScratch& s
     updateWeightProducts(weightsOfIterDim, gpMI, weightProducts, j);
   }
 }
+
+// The row loop is also the kernel of the global interpolation on a tensor grid (weights: the 1D
+// basis values at the query point), which calls these instantiations.
+template misc::ScalarValues::Acc sumOverRows(misc::ScalarValues values, QuadratureScratch& scratch);
+template misc::VectorValues::Acc sumOverRows(misc::VectorValues values, QuadratureScratch& scratch);
 
 std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
                                                  const std::vector<NodeGenFunc*>& nodeGenFuncs) {

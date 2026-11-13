@@ -11,7 +11,8 @@
  * Unlike the multilinear operator in @c linear_interpolation.hpp, the
  * global operator uses a (potentially high-degree) 1D interpolation rule
  * per dimension (e.g. a barycentric formula), assembled into a tensor
- * product via successive collapse along each dimension.
+ * product: on a tensor grid, the interpolant is the sum over its grid points of the function
+ * value times the product of the 1D basis values (@c InterpolationMethod::basisValues).
  */
 #pragma once
 
@@ -36,6 +37,11 @@ namespace combigrid {
  * node-generation function (e.g. a barycentric Lagrange formula for
  * Chebyshev nodes).
  *
+ * @note Every grid point of every tensor grid enters with its weight, also with a weight of 0
+ * (e.g. if a coordinate of @p point is a node, the other nodes of that dimension have the
+ * weight 0). So a non-finite value (inf, NaN) of @p sourceFunc at any grid point makes the
+ * result non-finite, also if @p point lies on a node.
+ *
  * @param sourceFunc Black-box source function.
  * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().
  * @param sparseGrid Sparse grid with attached generation instruction.
@@ -50,7 +56,8 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
  * global interpolants of the m outputs of @p sourceFunc at @p point, evaluating it once per grid
  * point.
  *
- * Output k equals the scalar interpolation of output k (as a @c SourceFunc) up to round-off.
+ * Output k equals the scalar interpolation of output k (as a @c SourceFunc) up to round-off; as
+ * there, a non-finite value of output k at any grid point makes output k non-finite.
  *
  * @param sourceFunc Vector-valued source function (m = @c sourceFunc.nOutputs()).
  * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().

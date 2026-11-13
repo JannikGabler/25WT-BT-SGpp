@@ -5,17 +5,27 @@
 
 #include <algorithm>
 #include <cassert>
-#include <limits>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/global_interpolation_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
+#include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
+
+using sgpp::combigrid::misc::GlobalInterpScratch;
+using sgpp::combigrid::misc::QuadratureScratch;
 
 namespace sgpp {
 namespace combigrid {
@@ -23,122 +33,108 @@ namespace combigrid {
 namespace tools {
 namespace global_interpolation {
 
+double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& normPoint,
+                         const TensorGrid& tg, const SGGenInstr& genInstr,
+                         GlobalInterpScratch& scratch) {
+  if (tg.nDim() == 0 || tg.nGP() == 0) {
+    return 0;
+  }
+
+  prepareTensorGrid(normPoint, tg, genInstr, scratch);
+
+  return quadrature::sumOverRows(misc::ScalarValues(sourceFunc), scratch.rows);
+}
+
+void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
+                       const TensorGrid& tg, const SGGenInstr& genInstr,
+                       GlobalInterpScratch& scratch, const std::span<double> out) {
+  assert(out.size() == sourceFunc.nOutputs());
+  assert(scratch.rows.valueBuffer.size() ==
+         misc::VectorValues::bufferSize(sourceFunc.nOutputs(), QuadratureScratch::N_ACCS));
+
+  if (tg.nDim() == 0 || tg.nGP() == 0) {
+    std::ranges::fill(out, 0.0);
+    return;
+  }
+
+  prepareTensorGrid(normPoint, tg, genInstr, scratch);
+
+  const misc::VectorValues values(sourceFunc, scratch.rows.valueBuffer);
+  values.store(quadrature::sumOverRows(values, scratch.rows), out.data());
+}
+
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& point,
                          const TensorGridCTData& tgData, const SGGenInstr& genInstr) {
-  double result;
-  processTensorGridInternal(misc::ScalarValues(sourceFunc), point, tgData, genInstr, &result);
-  return result;
+  const TensorGrid& tg = tgData.tensorGrid;
+  GlobalInterpScratch scratch(tg.nDim(), tg.getNodesPerDim().size());
+  return processTensorGrid(sourceFunc, point, tg, genInstr, scratch);
 }
 
 void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
                        const TensorGridCTData& tgData, const SGGenInstr& genInstr,
                        const std::span<double> out) {
-  assert(out.size() == sourceFunc.nOutputs());
-
-  // The kernel writes the values to its own vectors (the overloads of evaluateNormalizedInPlace
-  // and interpolate with a slot) and never uses the buffer of the view, so out serves as that
-  // buffer.
-  processTensorGridInternal(misc::VectorValues(sourceFunc, out), point, tgData, genInstr,
-                            out.data());
+  const TensorGrid& tg = tgData.tensorGrid;
+  GlobalInterpScratch scratch(tg.nDim(), tg.getNodesPerDim().size(), sourceFunc.nOutputs());
+  processTensorGrid(sourceFunc, point, tg, genInstr, scratch, out);
 }
 
-template <typename ValueType>
-void processTensorGridInternal(const ValueType values, const base::DataVector& point,
-                               const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                               double* const out) {
-  const size_t nDim = tgData.tensorGrid.nDim();
+void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
+                        const SparseGrid& sparseGrid, const std::span<double> result) {
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  const size_t nOutputs = result.size();
 
-  if (nDim == 0) {
-    std::fill_n(out, values.nOutputs(), 0.0);
-    return;
-  }
+  std::ranges::fill(result, 0.0);
 
-  const std::vector<size_t> interpolationCntPerDim = getInterpolationCntPerDim(tgData.tensorGrid);
+#pragma omp parallel
+  {
+    GlobalInterpScratch scratch(sparseGrid.nDim(), sparseGrid.getMaxTGSumOverGPCntsPerDim(),
+                                nOutputs);
+    std::vector<double> tgResult(nOutputs);
+    std::vector<double> threadResult(nOutputs, 0.0);
 
-  std::vector<double> interpolationResults =
-      interpolateFirstDim(values, point[0], tgData, genInstr, interpolationCntPerDim[0]);
-
-  for (size_t dim = 1; dim < nDim; dim++) {
-    interpolateLaterDim(values, dim, point[dim], tgData, genInstr, interpolationCntPerDim[dim],
-                        interpolationResults);
-  }
-
-  assert(interpolationResults.size() == values.nOutputs());
-  std::copy_n(interpolationResults.data(), values.nOutputs(), out);
-}
-
-/*
- * The kernels are written once for both value types (misc::ScalarValues, misc::VectorValues):
- * an intermediate result holds the values of all outputs (node-major), and the 1D rule
- * interpolates all outputs at once (ValueType::interpolate). The two collapse steps are
- * separate functions for readability only: they carry no inlining attributes, and in the
- * optimized build (LTO) both are inlined into processTensorGridInternal, which stays one
- * function per value type called by the exported overloads (WP-29c: no measurable difference
- * to the former structure with noinline collapse steps).
- */
-
-template <typename ValueType>
-std::vector<double> interpolateFirstDim(const ValueType values, const double point,
-                                        const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                                        const size_t nInterpolations) {
-  const size_t nOutputs = values.nOutputs();
-  const HyperCubeArea& bounds = genInstr.getDomain();
-  const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[0];
-  const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(0);
-  const bool addBoundary = tgData.mi[0] >= genInstr.getBoundaryLevelOffset();
-  const std::vector<double> nodes = nodeGenFunc->genNodes(nNodes, addBoundary);
-  const InterpolationMethod* method = nodeGenFunc->getInterpolationMethod(nNodes);
-
-  base::DataVector gp(tgData.tensorGrid.nDim());
-  std::vector<double> results(nInterpolations * nOutputs);
-  std::vector<double> funcValues(nNodes * nOutputs);
-
-  for (size_t i = 0; i < nInterpolations; i++) {
-    const size_t start = i * nNodes;
-    for (size_t j = 0; j < nNodes; j++) {
-      tgData.tensorGrid.getGridPoint(start + j, gp);
-      values.evaluateNormalizedInPlace(gp, bounds, funcValues, j);
+#pragma omp for schedule(guided) nowait
+    for (const TensorGridCTData& tgData : sparseGrid) {
+      processTensorGrid(sourceFunc, normPoint, tgData.tensorGrid, genInstr, scratch, tgResult);
+      for (size_t k = 0; k < nOutputs; k++) {
+        threadResult[k] += tgData.coefficient * tgResult[k];
+      }
     }
 
-    values.interpolate(*method, point, nodes, funcValues, results, i);
+#pragma omp critical
+    for (size_t k = 0; k < nOutputs; k++) {
+      result[k] += threadResult[k];
+    }
   }
-
-  return results;
 }
 
-template <typename ValueType>
-void interpolateLaterDim(const ValueType values, const size_t dim, const double point,
-                         const TensorGridCTData& tgData, const SGGenInstr& genInstr,
-                         const size_t nInterpolations, std::vector<double>& interpolationResults) {
-  const size_t nOutputs = values.nOutputs();
-  const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[dim];
-  const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
-  const bool addBoundary = tgData.mi[dim] >= genInstr.getBoundaryLevelOffset();
-  const std::vector<double> nodes = nodeGenFunc->genNodes(nNodes, addBoundary);
-  const InterpolationMethod* method = nodeGenFunc->getInterpolationMethod(nNodes);
-  std::vector<double> inputValues(nNodes * nOutputs);
-
-  for (size_t i = 0; i < nInterpolations; i++) {
-    std::copy_n(interpolationResults.data() + i * nNodes * nOutputs, nNodes * nOutputs,
-                inputValues.begin());
-
-    values.interpolate(*method, point, nodes, inputValues, interpolationResults, i);
-  }
-  interpolationResults.resize(nInterpolations * nOutputs);
+void prepareTensorGrid(const base::DataVector& normPoint, const TensorGrid& tg,
+                       const SGGenInstr& genInstr, GlobalInterpScratch& scratch) {
+  fillBasisValues(normPoint, tg, genInstr, scratch);
+  quadrature::mapNodesOntoDomain(genInstr.getDomain(), tg, scratch.rows);
+  quadrature::setUpIterDims(tg, scratch.rows);
 }
 
-std::vector<size_t> getInterpolationCntPerDim(const TensorGrid& tensorGrid) {
-  const size_t nDim = tensorGrid.nDim();
-  const GPMI gpCntPerDim = tensorGrid.getGPCntPerDim();
-  std::vector<size_t> interpolationCntPerDim(nDim, 0);
+void fillBasisValues(const base::DataVector& normPoint, const TensorGrid& tg,
+                     const SGGenInstr& genInstr, GlobalInterpScratch& scratch) {
+  assert(normPoint.size() >= tg.nDim());
 
-  size_t curCnt = 1;
-  for (size_t dim = nDim - 1; dim != std::numeric_limits<size_t>::max(); dim--) {
-    interpolationCntPerDim[dim] = curCnt;
-    curCnt *= gpCntPerDim[dim];
+  const GPMI& nGPPerDim = tg.getGPCntPerDim();
+  const base::DataVector& nodesPerDim = tg.getNodesPerDim();
+  base::DataVector& basisValues = scratch.rows.weights1D;
+  basisValues.resize(nodesPerDim.size());
+  size_t offset = 0;
+
+  for (size_t dim = 0; dim < tg.nDim(); dim++) {
+    const GPCntType nNodes = nGPPerDim[dim];
+    const InterpolationMethod* const method =
+        genInstr.getNodeGenFuncForDim(dim)->getInterpolationMethod(nNodes);
+
+    // The interpolation methods take the nodes of one dimension as a vector of their own
+    scratch.nodes1D.assign(nodesPerDim.begin() + offset, nodesPerDim.begin() + offset + nNodes);
+    method->basisValues(normPoint[dim], scratch.nodes1D,
+                        std::span<double>(basisValues.data() + offset, nNodes));
+    offset += nNodes;
   }
-
-  return interpolationCntPerDim;
 }
 
 }  // namespace global_interpolation

@@ -1201,6 +1201,7 @@ int main(int argc, char** argv) {
   addGlobalSGOperator(suite, "cc", 3, 8);
   addGlobalSGOperator(suite, "cc", 2, 12);
   addGlobalSGOperator(suite, "equi", 3, 5);
+  addGlobalSGOperator(suite, "cheb1", 5, 4);  // WP-06: generic formula, many tensor grids
   // WP-45: the deltas sparse grid operator (same configurations), vector-valued with m = 4
   addGlobalDSGOperator(suite, "cc", 8, 2, 0);
   addGlobalDSGOperator(suite, "cc", 5, 5, 0);
