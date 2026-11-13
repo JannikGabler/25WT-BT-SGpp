@@ -1,0 +1,8 @@
+profile of `^quad/sg/equi-sin/b0/d7/L7$` (e2e, 16 threads, self time)
+    74.80%  perf_e2e  libm.so.6                [.] __sin_fma
+    13.75%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::sinProd
+     5.62%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+     3.28%  perf_e2e  perf_e2e                 [.] sin@plt
+     0.77%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+
+samples per process: 1 warm-up + 2

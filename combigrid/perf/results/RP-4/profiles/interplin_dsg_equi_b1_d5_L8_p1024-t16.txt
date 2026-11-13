@@ -1,0 +1,19 @@
+profile of `^interplin/dsg/equi/b1/d5/L8/p1024$` (e2e, 16 threads, self time)
+    22.87%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::dsg_lin_interpolation::markCorners
+    20.85%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>
+    16.99%  perf_e2e  libm.so.6                [.] __cos_fma
+     7.16%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     4.95%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     3.77%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     3.73%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::dsg_lin_interpolation::{anon}::prepareTG
+     3.42%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::dsg_lin_interpolation::evaluateMarked<sgpp::combigrid::misc::ScalarValues>
+     2.96%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     2.32%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     2.26%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     1.62%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::dsg_lin_interpolation::{anon}::prepareBlock
+     1.56%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.76%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a82
+     0.73%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c70
+     0.51%  perf_e2e  perf_e2e                 [.] cos@plt
+
+samples per process: 1 warm-up + 8

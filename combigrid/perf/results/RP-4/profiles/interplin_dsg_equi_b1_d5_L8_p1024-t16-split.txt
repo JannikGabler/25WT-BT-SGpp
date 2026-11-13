@@ -1,0 +1,73 @@
+samples: 29822
+
+## per dso
+ 51.67 %  libsgppcombigrid.so
+ 20.33 %  libgomp.so.1.0.0
+ 16.72 %  libm.so.6
+  4.33 %  perf_e2e
+  3.34 %  libopenblasp-r0.3.32.so
+  3.23 %  [unknown]
+  0.32 %  libc.so.6
+  0.04 %  libsgppbase.so
+  0.01 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 22.46 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  [libsgppcombigrid.so]
+ 20.45 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+ 20.31 %  [unknown]  [libgomp.so.1.0.0]
+ 16.72 %  __cos_fma  [libm.so.6]
+  5.25 %  sgpp::combigrid::tools::dsg_lin_interpolation::  [libsgppcombigrid.so]
+  3.69 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  3.34 %  [unknown]  [libopenblasp-r0.3.32.so]
+  3.32 %  mbigrid::tools::dsg_lin_interpolation::evaluateMarked<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  3.23 %  [unknown]  [[unknown]]
+  0.49 %  cos@plt  [perf_e2e]
+  0.14 %  std::_Function_handler<double   [perf_e2e]
+  0.12 %  _mid_memalign  [libc.so.6]
+  0.07 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  0.05 %  __posix_memalign  [libc.so.6]
+  0.04 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.04 %  operator new  [libsgppbase.so]
+  0.03 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.02 %  sgpp::combigrid::misc::DSGLinInterpScratch::DSGLinInterpScratch  [libsgppcombigrid.so]
+  0.02 %  _int_free_merge_chunk  [libc.so.6]
+  0.02 %  omp_get_num_threads  [libgomp.so.1.0.0]
+  0.01 %  sgpp::combigrid::tools::dsg_lin_interpolation::prepareDimension  [libsgppcombigrid.so]
+  0.01 %  _int_malloc  [libc.so.6]
+  0.01 %  std::vector<double, std::allocator<double> >::vector  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::deltas_sparse_grid_generation::genTGData  [libsgppcombigrid.so]
+  0.01 %  _int_free_chunk  [libc.so.6]
+  0.01 %  _int_memalign  [libc.so.6]
+  0.01 %  operator new  [libsgppcombigrid.so]
+  0.01 %  _int_free_maybe_trim  [libc.so.6]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  GOMP_loop_ull_nonmonotonic_dynamic_next@plt  [libsgppcombigrid.so]
+  0.01 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  start_thread  [libc.so.6]
+  0.00 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.00 %  GOMP_loop_end@plt  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::tools::deltas_sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::misc::DSGLinInterpIndex::collectDeltaNodes  [libsgppcombigrid.so]
+  0.00 %  er<std::ranges::__detail::__make_comp_proj<sgpp::combigrid::misc::ClosureTrie::ClosureTrie  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::SourceFunc::finishOperatorCall  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+ 16.24 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  forEachCornerSlot<sgpp::combigrid::tools::dsg_lin_interpolation::markCorners
+ 14.83 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  combigrid::tools::dsg_lin_interpolation::sumTGCorners<sgpp::combigrid::misc::ScalarValues>
+  2.52 %  sgpp::combigrid::tools::dsg_lin_interpolation::  <=  sgpp::combigrid::tools::dsg_lin_interpolation::
+  2.47 %  mbigrid::tools::dsg_lin_interpolation::evaluateMarked<sgpp::combigrid::misc::ScalarValues>  <=  ombigrid::tools::dsg_lin_interpolation::evaluateBlock<sgpp::combigrid::misc::ScalarValues>
+  2.31 %  sgpp::combigrid::tools::dsg_lin_interpolation::  <=  sgpp::combigrid::tools::lin_interpolation::fillWeightTable
+  1.75 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  sgpp::combigrid::misc::DSGLinInterpQuery::idShift
+  1.68 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::DSGLinInterpQuery::idShift
+  1.66 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  1.47 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  sgpp::combigrid::misc::DSGLinInterpQuery::idLvl
+  1.36 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  _ZSt11countr_zeroITkSt18__unsigned_integermEiT_
+  1.11 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::DSGLinInterpQuery::idLvl
+  0.86 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners
+  0.70 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  _ZSt11countr_zeroITkSt18__unsigned_integermEiT_
+  0.65 %  mbigrid::tools::dsg_lin_interpolation::evaluateMarked<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.59 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  sgpp::combigrid::tools::dsg_lin_interpolation::setCornerIds
+  0.42 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>
+  0.36 %  sgpp::combigrid::tools::dsg_lin_interpolation::  <=  sgpp::combigrid::misc::DSGLinInterpIndex::row

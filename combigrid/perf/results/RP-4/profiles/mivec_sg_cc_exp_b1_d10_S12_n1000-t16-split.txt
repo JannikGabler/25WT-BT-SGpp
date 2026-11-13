@@ -1,0 +1,61 @@
+samples: 22790
+
+## per dso
+ 44.79 %  libm.so.6
+ 28.71 %  perf_e2e
+ 11.97 %  libsgppcombigrid.so
+  8.22 %  libgomp.so.1.0.0
+  4.89 %  libopenblasp-r0.3.32.so
+  1.22 %  [unknown]
+  0.14 %  libc.so.6
+  0.03 %  libsgppbase.so
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libstdc++.so.6.0.35
+
+## per symbol
+ 24.40 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 22.36 %  exp@@GLIBC_2.29  [libm.so.6]
+ 20.69 %  __ieee754_exp_fma  [libm.so.6]
+ 11.59 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  8.22 %  [unknown]  [libgomp.so.1.0.0]
+  4.89 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.52 %  exp@plt  [perf_e2e]
+  1.79 %  std::_Function_handler<double   [perf_e2e]
+  1.59 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  1.22 %  [unknown]  [[unknown]]
+  0.20 %  sgpp::combigrid::tools::computeCTCoeffs  [libsgppcombigrid.so]
+  0.07 %  __sincos_fma  [libm.so.6]
+  0.06 %  __cos_fma  [libm.so.6]
+  0.05 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFT  [libsgppcombigrid.so]
+  0.04 %  _mid_memalign  [libc.so.6]
+  0.02 %  _int_malloc  [libc.so.6]
+  0.02 %  _int_free_merge_chunk  [libc.so.6]
+  0.02 %  __cexp  [libm.so.6]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsInplace  [libsgppcombigrid.so]
+  0.01 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.01 %  Eigen::internal::kiss_cpx_fft<double>::bfly4  [libsgppcombigrid.so]
+  0.01 %  unlink_chunk.isra.0  [libc.so.6]
+  0.01 %  _int_free_maybe_trim  [libc.so.6]
+  0.01 %  operator new  [libsgppbase.so]
+  0.01 %  sgpp::combigrid::MIVec<unsigned int>::lookup  [libsgppcombigrid.so]
+  0.01 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.01 %  Eigen::internal::kissfft_impl<double>::get_plan  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::quadrature::getWeights  [libsgppcombigrid.so]
+  0.01 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.01 %  _int_free_chunk  [libc.so.6]
+  0.00 %  _setjmp  [libc.so.6]
+  0.00 %  __printf_buffer  [libc.so.6]
+  0.00 %  sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::NodeGenFunc::genNodesWithBoundary  [libsgppcombigrid.so]
+  0.00 %    [perf_e2e]
+  0.00 %  sgpp::combigrid::misc::WeightedSumScratch::WeightedSumScratch  [libsgppcombigrid.so]
+  0.00 %  free@plt  [libsgppbase.so]
+  0.00 %  sgpp::combigrid::tools::extensive_sparse_grid_generation::partitionForExtensiveSG  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  6.66 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  3.39 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  1.15 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.20 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::weighted_sum::updateWeightProducts

@@ -1,0 +1,64 @@
+samples: 57774
+
+## per dso
+ 43.41 %  libsgppcombigrid.so
+ 28.97 %  libm.so.6
+ 20.83 %  perf_e2e
+  2.09 %  libc.so.6
+  1.79 %  libgomp.so.1.0.0
+  1.78 %  libopenblasp-r0.3.32.so
+  1.10 %  [unknown]
+  0.01 %  ld-linux-x86-64.so.2
+  0.01 %  libsgppbase.so
+
+## per symbol
+ 41.50 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  [libsgppcombigrid.so]
+ 16.83 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 14.47 %  __ieee754_exp_fma  [libm.so.6]
+ 12.97 %  exp@@GLIBC_2.29  [libm.so.6]
+  2.52 %  exp@plt  [perf_e2e]
+  2.00 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  1.79 %  [unknown]  [libgomp.so.1.0.0]
+  1.78 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.53 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  1.49 %  std::_Function_handler<double   [perf_e2e]
+  1.10 %  [unknown]  [[unknown]]
+  0.53 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  [libsgppcombigrid.so]
+  0.47 %  memset@plt  [libsgppcombigrid.so]
+  0.31 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren  [libsgppcombigrid.so]
+  0.25 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock  [libsgppcombigrid.so]
+  0.22 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  [libsgppcombigrid.so]
+  0.06 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::childBlock  [libsgppcombigrid.so]
+  0.04 %  _int_malloc  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::dsg_weighted_sum::prepareDeltaTensorGrid  [libsgppcombigrid.so]
+  0.01 %  _int_free_merge_chunk  [libc.so.6]
+  0.01 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::blockWidth  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::doublingLvl2GPCntFunction  [libsgppcombigrid.so]
+  0.01 %  _mid_memalign  [libc.so.6]
+  0.01 %  sgpp::combigrid::misc::CTCoeffTrie::CTCoeffTrie  [libsgppcombigrid.so]
+  0.01 %  _int_free_chunk  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::deltas_sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::deltas_sparse_grid_generation::getNodesPerDimForTG  [libsgppcombigrid.so]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  _int_memalign  [libc.so.6]
+  0.01 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::dsg_quadrature::comp1DWeights  [libsgppcombigrid.so]
+  0.01 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.00 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.00 %  start_thread  [libc.so.6]
+  0.00 %  __ctype_init  [libc.so.6]
+  0.00 %  _int_free_maybe_trim  [libc.so.6]
+  0.00 %  sgpp::combigrid::SparseGridBase::setTensorGrids  [libsgppcombigrid.so]
+  0.00 %  GOMP_loop_nonmonotonic_dynamic_next@plt  [libsgppcombigrid.so]
+  0.00 %  unlink_chunk.isra.0  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+ 13.56 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::updateCoeffSums
+ 10.65 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::compRowWeights
+  9.59 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::
+  5.26 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.81 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.64 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::evaluate
+  0.46 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren
+  0.25 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren

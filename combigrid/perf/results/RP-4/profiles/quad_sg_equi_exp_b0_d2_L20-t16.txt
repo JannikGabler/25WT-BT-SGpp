@@ -1,0 +1,21 @@
+profile of `^quad/sg/equi-exp/b0/d2/L20$` (e2e, 16 threads, self time)
+    16.03%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+    15.83%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+    13.98%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+    10.80%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+     5.00%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     4.21%  perf_e2e  libsgppbase.so           [.] sgpp::base::DataVector::DataVector
+     4.01%  perf_e2e  perf_e2e                 [.] exp@plt
+     3.11%  perf_e2e  [unknown]                [k] 0xffffffffbbe34fca
+     2.45%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     2.13%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     2.03%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     1.65%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     1.42%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     1.09%  perf_e2e  [unknown]                [k] 0xffffffffbb6011b2
+     0.91%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.77%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     0.57%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary
+     0.56%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::weighted_sum::mapNodesOntoDomain
+
+samples per process: 1 warm-up + 3

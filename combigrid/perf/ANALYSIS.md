@@ -17,6 +17,7 @@ AC, idle; e2e at 16 threads, micro at 1 thread. Raw data: `baseline/` (protected
 9. [Re-profiling RP-1](#re-profiling-rp-1) (after WP-01, WP-13, WP-14; incl. peak memory)
 10. [Re-profiling RP-2](#re-profiling-rp-2) (after WP-20, WP-02; WP-21/WP-22 sizing, code placement, peak memory)
 11. [Re-profiling RP-3](#re-profiling-rp-3) (after WP-03; mivec split, WP-29 kernel shares, OpenBLAS cold first call, peak memory)
+12. [Re-profiling RP-4](#re-profiling-rp-4) (after WP-08, WP-06, WP-52; DSG interpolation groups, benchmark-binary placement, `sumOverRows` alignment check, low-d thread scan)
 
 ## Measurement noise
 
@@ -946,3 +947,139 @@ confirmed (WP-07 and WP-08 at twice their estimates); the largest lever without 
 evaluating each distinct point once per call (proposed new WPs "WP-45" global, "WP-46" linear;
 both need owner decisions on memory and structure); WP-09's multi-point API gains only for new-API callers and
 should build on WP-45's value store; WP-17 has no interpolation part.
+
+## Re-profiling RP-4
+
+Work session RP-4, 2026-11-13. Code: 6ac45a05d (= `rp-4` snapshot; since RP-3 the accepted
+WP-29a–d, WP-26/27/28/40 (caching, judged suite unaffected), WP-08, WP-47, WP-45 (+ judged cases
+`interplin/dsg`, `interp/dsg`), WP-50, WP-06, WP-52). Judged configuration, boost off,
+`calibrate` OK (e2e 1.001 burst / 1.000 sustained, micro 1.003 / 0.999). Reports in `results/RP-4/`:
+- A/Bs: `e2e.md/.json` (full suite baseline → rp-4), `e2e-rp-3-vs-rp-4-quad-mivec.md/.json`
+  (unchanged groups, direct), `e2e-binary-placement.md/.json` (hybrid snapshot, below),
+  `placement-{micro,e2e,opcache}.md` (+ `.json`; `sumOverRows` alignment check, patch
+  `sumoverrows-aligned64.patch`, reverted);
+- `micro-run.md/.json` (93 classic cases), `thread-scan/` (low-d cases at 1 / 4 / 16 t);
+- derived: `groups.md`, `profile-splits.md`; `profiles/` (31 top lists + splits);
+- scripts: `groups.py`, `run_profiles.sh`, `summarize_profiles.py`, `opcache_stat.py`,
+  `thread-scan/table.py` (the split itself: `../RP-3/profile_split.py`).
+
+### Cumulative progress baseline → rp-4
+
+Full e2e A/B (`ab e2e baseline rp-4`, 48 cases, 38 in both, 5 rounds, foreign load ≤ 0.3 %, rounds
+226 s each). rp-3 = the RP-3 report (other session):
+
+| group | baseline | rp-3 | rp-4 | baseline → rp-4 | rp-3 → rp-4 | d ≥ 7: baseline → rp-4 | peak RSS geomean | share of rp-4 |
+|---|---|---|---|---|---|---|---|---|
+| quad/sg (13) | 22.28 s | 9.20 s | 9.24 s | 2.41x | 0.996x | 18.50 → 6.89 s (2.68x) | 1.083 | 24.2 % |
+| quad/dsg (9) | 26.72 s | 17.75 s | 17.83 s | 1.50x | 0.995x | 26.12 → 17.27 s (1.51x) | 0.984 | 46.7 % (b0 40.3, b1 6.4) |
+| interp/sg (8) | 6.60 s | 5.70 s | **4.24 s** | 1.56x | **1.345x** | 3.70 → 2.63 s (1.41x) | 0.935 | 11.1 % |
+| interplin/sg (4) | 4.97 s | 4.55 s | **3.52 s** | 1.41x | **1.293x** | 4.36 → 3.05 s (1.43x) | 1.016 | 9.2 % |
+| mivec (4) | 9.33 s | 1.26 s | 1.34 s | 6.97x | 0.940x | 7.12 → 0.51 s (13.9x) | 1.024 | 3.5 % |
+| **common (38)** | **69.89 s** | **38.45 s** | **36.16 s** | **1.933x** | **1.063x** | 59.80 → 30.36 s (1.97x) | **1.014** | 94.7 % |
+| interp/dsg (6, new) | – | – | 0.82 s | – | – | – | – | 2.1 % |
+| interplin/dsg (4, new) | – | – | 1.20 s | – | – | – | – | 3.1 % |
+| **suite (48)** | | | **38.17 s** | | | | | 100 % |
+
+- Verdicts (`total`, common cases): 37 faster, 1 within noise (`interplin/sg/equi/b1/d2/L16`,
+  0.986x; WP-08 left d2 unchanged), **0 SLOWER**. Longest: dsg b0 d10 cc / equi 6.85 / 5.37 s (31.9 % of the suite),
+  `quad/sg/equi-sin/b0/d7/L7` 2.40 s, interplin/sg d10 1.85 s, interp/sg cc d10 1.63 s.
+- New cases (absolute, 16 t): interp/dsg cc d10 / d7 / d5 / d3 / d2 0.393 / 0.149 / 0.171 /
+  0.043 / 0.052 s, equi d3 6.5 ms; interplin/dsg d10 / d8 / d5 / d2 0.435 / 0.392 / 0.186 /
+  **0.184 s** (SG d2: 0.111 s).
+- Peak memory: 12 `MEM+`, 4 `MEM−`. As at RP-3: sg d2 (WP-01 scratch) equi 364 → 620 MiB, cc
+  799 → 1079 MiB; 6 dsg b0 (WP-02 slots) +1.8…+6.1 MiB; dsg b1 d20 331 → 218 MiB, d15 231 →
+  151 MiB (`MEM−`). New: interp/sg cc d10 23.7 → 12.2 MiB, d7 13.0 → 12.2 MiB (`MEM−`, WP-06),
+  cc d2 14.9 → 16.1 MiB (WP-06); small `MEM+` of +0.6…+2.7 MiB (quad/sg equi d5, cc d3, mivec
+  d5; process floor 10.2 → 10.4 MiB). Direct rp-3 → rp-4 on quad + mivec: geomean 1.012, 3 small
+  `MEM+` (≤ +0.5 MiB).
+
+### Unchanged code, changed timings: the benchmark binary
+
+Direct A/B `rp-3` vs. `rp-4` on the groups without operator changes (`^(quad|mivec)/`, 26 cases):
+sum 0.994x (−0.17 s); SLOWER: dsg b0 equi d3 / d5 / d7 0.962 / 0.961 / 0.966, dsg cc d10 0.990,
+sg cc d2 0.954, mivec d5 0.931; the rest noise. The earlier WP reports locate the step between
+`WP-45-after` (equi d7 1.146 s) and `WP-50-before` (1.172 s), i.e. at the commit that added the
+judged `interp/dsg` cases to `perf_e2e.cpp` (protected). Hybrid snapshot `rp-4-binWP45` (rp-4
+libraries + the `WP-45-after` `perf_e2e`, same public API): vs. rp-4 dsg equi d5 **1.036**
+[1.029, 1.044], d7 **1.022** [1.016, 1.027], mivec d5 **1.063** [1.008, 1.121]; d3, cc d10, sg cc
+d2 noise (`e2e-binary-placement.md`). Integrand placement in the benchmark binary:
+`perf::expSum` starts at 64-byte-line offset 16 (rp-3, WP-45-after) vs. 48 (WP-50-before, rp-4).
+Consequence: cross-snapshot comparisons that also change `perf_e2e` carry ±2–6 % on cheap
+integrands (`exp`); baseline → rp-4 understates the DSG equi gains by ≈ 2–4 %. Not a combigrid
+lever (protected file).
+
+### Where the time goes (rp-4)
+
+Profiles of 31 cases (16 t; ≥ 1 per group, high d first; `profile-splits.md`). Absolute times =
+share × rp-4 median `total`. [RP-3 shares in brackets.]
+
+| case (rp-4 total) | integrand | operator (inline split) | libgomp / OpenBLAS / other |
+|---|---|---|---|
+| quad/dsg/equi-exp/b0/d10/L7 (5.37 s) | 52.5 % [52.4] | row loop **43.0 %** [43.2] = `updateCoeffSums` 14.1 · `compRowWeights` 11.1 · row + advance 10.4 · dispatch 7.4 | 0.5 / 0.4, libc 2.2 |
+| quad/dsg/cc-uq/b0/d10/L7 (6.85 s) | 63.9 % [63.3] | row loop 32.4 % [33.1] = 10.6 / 8.3 / 7.7 / 5.8 | libc 1.6 |
+| quad/dsg equi / cc b0 d7 (1.17 / 1.44 s) | 49.8 / 59.0 % | row loop 41.5 / 33.6 % [43.3 / 33.8] | 1.8 / 1.8 |
+| quad/dsg/equi-exp/b1/d20/L6 (1.21 s) | 52.1 % [51.9] | row loop 20.9 % [21.1] · builder 13.6 % [13.1] (`addChildren` 12.4) | 2.9 / 2.1 |
+| quad/dsg/equi-exp/b1/d15/L7 (1.23 s) | 54.8 % [55.2] | row loop 25.0 % [24.9] · builder 9.4 % [9.0] | 2.7 / 2.2 |
+| quad/dsg/equi-exp/b0/d3/L16 (0.096 s) | 39.1 % | row loop 25.2 % | **23.0** / 5.9 (6.4x on 16 t) |
+| quad/sg equi-exp d10 / cc-uq d10 / equi-sin d7 / b1 d20 | 72.7 / 79.8 / 92.2 / 70.2 % | `sumOverRows` (now out of line) 22.7 / 16.3 / 5.6 / 14.0 % [`processTensorGrid` 25.2 / 18.6 / 6.3 / 12.7] | b1 d20 6.2 / 4.0 |
+| quad/sg/cc-uq/b0/d2/L20 (1.24 s) | 32.8 % | CC weights (kissfft 14.5, `genWeightsFFT` 3.3, sincos/cos 5.1, `cexp` 1.1, resize/memmove 1.2) ≈ **25.2 %** [≈ 24.8] · kernel (page faults, zero fill) 23.3 % + `DataVector` 2.2 · `sumOverRows` 5.1 | 4.7 / 4.9 |
+| quad/sg/equi-exp/b0/d2/L20 (0.44 s) | 53.6 % | `sumOverRows` 10.7 · kernel 16.0 + `DataVector` 4.2 | 8.0 / 5.9 |
+| interp/sg cc d10 / d7 / d5 | **88.9 / 88.2 / 86.9 %** [70.7 / 70.7 / 67.2] | `sumOverRows` 3.6 / 4.8 / 5.7 % [`interpolateFirstDim` + barycentric 22.6 / 22.6 / 26.0] | 4.5 / 3.7 / 4.6 |
+| interp/sg cheb1 d5 / cc d2 | 73.9 / 45.2 % | `sumOverRows` 5.3 / 4.8; generic weights + `log` ≈ 1.1 % [24.8] | **13.5 / 43.2** |
+| interp/dsg cc d10 / d7 / d5 | 81.4 / 79.0 / 72.8 % | row loop 6.7 / 10.2 / 13.5 % | 6.2 / 3.1 / 4.0 |
+| interp/dsg cc d2 / equi d3 | 40.2 / 22.7 % (equi: of which the weights' `log` ≈ 10) | row loop 9.7 / 3.8; equi: `barycentricFormulaWeights` 2.9 + builder 2.6 | **39.2 / 56.6** |
+| interplin/sg d10 / d8 / d5 | **86.8 / 84.0 / 72.7 %** [66.7 / 66.6 / –] | `sumOverCorners` 6.0 / 6.5 / 8.2 (+ d5 neighbors 3.9) [corner loop 28.1 / 25.8] | 4.5 / 5.9 / 10.1 |
+| interplin/dsg d10 / d8 / d5 | 44.6 / 39.2 / 21.0 % | `gatherCorners` 20.4 / 20.0 / 20.4 · `markCorners` 17.2 / 17.5 / 22.5 · `evaluateMarked` 3.8 / 4.0 / 3.3 | 8.9 / 12.4 / 20.3 |
+| interplin/dsg d2 (0.184 s) | 7.3 % | 21.3 % (evaluate / gather / mark / prepare) | 30.6 / **32.2** (1 t: 0.180 s) |
+| mivec d5 / d10 | 78.1 / 73.5 % | `sumOverRows` 14.6 / 11.6 % [15.2 / 11.8] | 3.1 / 8.2 |
+
+Absolute:
+- **quad/dsg b0 d7/d10**: row loop **5.50 s** [5.55], per-row trie work 3.21 s [3.30], dispatch
+  0.98 s [0.92]; b1 d15 + d20: row loop 0.56 s, builder **0.28 s** [0.27], dispatch 0.13 s.
+  Shares unchanged within ≈ 1 point (LTO recompiles left the row loop alone).
+- **quad/sg**: shares unchanged (WP-06 moved `sumOverRows` out of line; it now appears as its own
+  symbol instead of `processTensorGrid`). sg d2: CC weights 0.31 s, page faults / zero fill
+  0.33 s (cc) + 0.09 s (equi), libgomp + OpenBLAS 0.18 s.
+- **interp/sg is at the integrand floor**: operator kernel 0.19 s over all 8 cases, libgomp
+  0.23 s (mostly the short cases); micro `interp/global_tg` vs. `sol/interp_tg_integrand`
+  (integrand only): cc d10 1.041x, d5 1.025x, d2 1.082x, cheb1 d5 1.076x.
+- **interplin/sg is at the floor**: kernel 0.24 s, libgomp 0.19 s; micro `interplin/tg` vs.
+  `sol/interplin_tg_integrand`: d8 1.003x, d5 1.019x, d10 0.894x (faster than the reference loop).
+- **interplin/dsg**: gather + mark **0.40 s** (d10 0.16, d8 0.15, d5 0.08 s), libgomp 0.13 s;
+  **d2 is serial**: 0.180 s at 1 t, 0.183 s at 16 t (SG d2 0.215 s at 1 t, 0.110 s at 16 t).
+- interp/dsg: row loop 0.07 s over all cases.
+- WP-07's remaining target is ≈ 2–3 ms per suite pass (cheb1 d5 weights + `log` 1.1 % of 117 ms;
+  dsg equi d3 log + weights ≈ 14 % of 6.5 ms).
+
+### Low-d thread scan (`thread-scan/table.md`, 1 / 4 / 16 t, 1 sample)
+
+1 → 16 t: sg cc d2 3.95x, sg equi d2 5.26x, dsg equi d3 6.39x, interp sg / dsg cc d2 6.48 /
+6.53x, interp/dsg equi d3 4.11x, interplin/sg d2 1.96x (4 t as fast as 16 t), **interplin/dsg
+d2 0.99x** (serial: per-call fixed cost ≈ 11 µs for 16384 calls). Every other case is fastest at
+16 t: capping threads gains nothing.
+
+### Placement check: `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows` (owner, from WP-52)
+
+Experimental snapshot `rp-4-sor-a64` (patch `results/RP-4/sumoverrows-aligned64.patch`, both
+instantiations; scalar 0x832f0 (offset 48) → 0x83380 (0), vector 0x83b10 (16) → 0x83bc0 (0);
+`.text` +176 B; `perf_e2e` / `perf_micro` byte-identical; reverted, rebuilt lib byte-identical
+to rp-4):
+- micro (26 cases, 5 rounds): sum 1.000x; `interp/sg/cc/b0/d8/L2` 0.995 [0.985, 1.005] (not
+  recovered); SLOWER `quad/process_tg/equi/b0/d10/L4` 0.987, `cc/b0/d10/L4` 0.993; rest noise.
+- e2e `^(interp|quad)/sg/` (21 cases, 8 rounds): sum **0.994x** (−79 ms); interp/sg all noise
+  (`cc/b0/d10/L2/p8` 0.997 [0.978, 1.016]); **5 quad/sg SLOWER** (equi-exp b0 d5 / d7 / d10 0.989
+  / 0.991 / 0.992, b1 d10 0.983, cc d7 0.995); memory 1.002.
+- Counters (3 alternating processes): identical instructions; op-cache misses e2e interp cc
+  d10 −11 % (cycles +0.1 %), quad equi d10 +2.4 % (cycles +0.5 %), b1 d10 −1.9 % (cycles
+  +1.0 %); micro interp d8 +15 %, quad d10 +21 %.
+- Verdict: no gain on interp/sg, a small loss on quad/sg → **no WP**. The WP-52 shift
+  (0.990x on one case) is the ±1–4 % placement band, and line alignment does not control it.
+
+### Findings → work packages (RP-4)
+
+Re-ranking with expected savings: `summaries/RP-4-reprofiling.md` ("Profile shift / follow-ups").
+In short: interp/sg and interplin/sg are at the integrand floor (no operator lever ≥ 0.2 s left);
+quad/dsg b0's row loop (5.5 s, 14 % of the suite) stays the largest operator pool; WP-07 has no
+judged target left (≈ 0.003 s); WP-49 is confirmed (gather + mark 0.40 s) and should include the
+serial interplin/dsg d2 (0.07 s vs. SG); WP-05 (0.5–0.7 s at d ≤ 3) and WP-21 / WP-44 /
+WP-19 / WP-51 estimates stand or narrow; no alignment WP.

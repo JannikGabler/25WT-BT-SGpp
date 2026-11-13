@@ -1,0 +1,62 @@
+samples: 26547
+
+## per dso
+ 36.44 %  perf_e2e
+ 33.81 %  libm.so.6
+ 15.90 %  libsgppcombigrid.so
+  6.25 %  libgomp.so.1.0.0
+  4.05 %  libopenblasp-r0.3.32.so
+  2.21 %  [unknown]
+  1.25 %  libc.so.6
+  0.07 %  libsgppbase.so
+  0.03 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 33.74 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 23.58 %  __ieee754_exp_fma  [libm.so.6]
+ 14.04 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  9.29 %  exp@@GLIBC_2.29  [libm.so.6]
+  6.25 %  [unknown]  [libgomp.so.1.0.0]
+  4.05 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.21 %  [unknown]  [[unknown]]
+  1.52 %  exp@plt  [perf_e2e]
+  1.17 %  std::_Function_handler<double   [perf_e2e]
+  0.95 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.48 %  _int_malloc  [libc.so.6]
+  0.36 %  sgpp::combigrid::tools::quadrature::getWeights  [libsgppcombigrid.so]
+  0.34 %  sgpp::combigrid::tools::weighted_sum::mapNodesOntoDomain  [libsgppcombigrid.so]
+  0.21 %  sgpp::combigrid::tools::sparse_grid_generation::getNodesPerDimForTG  [libsgppcombigrid.so]
+  0.16 %  sgpp::combigrid::tools::weighted_sum::setUpIterDims  [libsgppcombigrid.so]
+  0.14 %  _mid_memalign  [libc.so.6]
+  0.14 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.14 %  unlink_chunk.isra.0  [libc.so.6]
+  0.14 %  sgpp::combigrid::tools::sparse_grid_generation::getGPCntPerDim  [libsgppcombigrid.so]
+  0.13 %  sgpp::combigrid::doublingLvl2GPCntFunction  [libsgppcombigrid.so]
+  0.13 %  _int_memalign  [libc.so.6]
+  0.12 %  _int_free_merge_chunk  [libc.so.6]
+  0.12 %  sgpp::combigrid::quadrature_rules::SimpsonQuadRule::genWeightsInplace  [libsgppcombigrid.so]
+  0.09 %  _int_free_maybe_trim  [libc.so.6]
+  0.08 %  sgpp::combigrid::tools::sparse_grid_generation::genTGData  [libsgppcombigrid.so]
+  0.07 %  sgpp::combigrid::NodeGenFunc::genNodesWithBoundary  [libsgppcombigrid.so]
+  0.05 %  _int_free_chunk  [libc.so.6]
+  0.05 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::getQuadRule  [libsgppcombigrid.so]
+  0.04 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.03 %  sgpp::combigrid::tools::complete_sg_gen::addBarPosAsMI  [libsgppcombigrid.so]
+  0.03 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.02 %  sgpp::combigrid::tools::complete_sg_gen::populateMIVecSerial  [libsgppcombigrid.so]
+  0.02 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.02 %  __posix_memalign  [libc.so.6]
+  0.02 %  operator new  [libsgppbase.so]
+  0.02 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.01 %  sgpp::combigrid::SparseGridBase::setTensorGrids  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::quadrature  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  5.84 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  4.83 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.67 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::evaluate
+  0.93 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.76 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::weighted_sum::updateWeightProducts
+  0.31 %  sgpp::combigrid::tools::quadrature::getWeights  <=  sgpp::combigrid::tools::quadrature::getWeights

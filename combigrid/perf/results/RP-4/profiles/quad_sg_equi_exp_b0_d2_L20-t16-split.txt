@@ -1,0 +1,42 @@
+samples: 22882
+
+## per dso
+ 33.73 %  libm.so.6
+ 19.89 %  perf_e2e
+ 16.00 %  [unknown]
+ 12.19 %  libsgppcombigrid.so
+  7.95 %  libgomp.so.1.0.0
+  5.91 %  libopenblasp-r0.3.32.so
+  4.25 %  libsgppbase.so
+  0.06 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 16.00 %  [unknown]  [[unknown]]
+ 15.92 %  exp@@GLIBC_2.29  [libm.so.6]
+ 15.70 %  __ieee754_exp_fma  [libm.so.6]
+ 13.88 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 10.72 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  7.95 %  [unknown]  [libgomp.so.1.0.0]
+  5.91 %  [unknown]  [libopenblasp-r0.3.32.so]
+  4.24 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  3.99 %  exp@plt  [perf_e2e]
+  2.12 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  2.02 %  std::_Function_handler<double   [perf_e2e]
+  0.57 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.56 %  sgpp::combigrid::tools::weighted_sum::mapNodesOntoDomain  [libsgppcombigrid.so]
+  0.35 %  sgpp::combigrid::quadrature_rules::SimpsonQuadRule::genWeightsInplace  [libsgppcombigrid.so]
+  0.06 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  strcmp  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_init  [ld-linux-x86-64.so.2]
+  0.00 %  _mid_memalign  [libc.so.6]
+  0.00 %  operator new  [libsgppbase.so]
+  0.00 %  td::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::~map  [libsgppbase.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  6.42 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  4.23 %  sgpp::base::DataVector::DataVector  <=  double* std::uninitialized_fill_n<double*, unsigned long, double>
+  2.84 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  1.12 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.57 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary  <=  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary

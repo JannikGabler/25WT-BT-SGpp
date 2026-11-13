@@ -1,0 +1,11 @@
+profile of `^quad/dsg/cc-uq/b0/d10/L7$` (e2e, 16 threads, self time)
+    42.56%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::uqIntegrand
+    32.45%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::{anon}::sumWithGlobalWeights<sgpp::combigrid::misc::ScalarValues>
+    10.36%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     8.17%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     1.62%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     1.14%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     0.88%  perf_e2e  perf_e2e                 [.] exp@plt
+     0.84%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+
+samples per process: 1 warm-up + 2

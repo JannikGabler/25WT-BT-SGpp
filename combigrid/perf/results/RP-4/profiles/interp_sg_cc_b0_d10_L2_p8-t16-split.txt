@@ -1,0 +1,33 @@
+samples: 75723
+
+## per dso
+ 73.50 %  libm.so.6
+ 15.43 %  perf_e2e
+  4.49 %  libgomp.so.1.0.0
+  3.62 %  libsgppcombigrid.so
+  1.62 %  [unknown]
+  1.32 %  libopenblasp-r0.3.32.so
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libc.so.6
+
+## per symbol
+ 73.50 %  __cos_fma  [libm.so.6]
+ 12.86 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  4.49 %  [unknown]  [libgomp.so.1.0.0]
+  3.62 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  2.24 %  cos@plt  [perf_e2e]
+  1.62 %  [unknown]  [[unknown]]
+  1.32 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.33 %  std::_Function_handler<double   [perf_e2e]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_check_map_versions  [ld-linux-x86-64.so.2]
+  0.00 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.00 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::basisValues  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::tools::weighted_sum::mapNodesOntoDomain  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  2.06 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  0.72 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.35 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::weighted_sum::updateWeightProducts
+  0.30 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled

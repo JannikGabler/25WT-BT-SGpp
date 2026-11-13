@@ -1,0 +1,20 @@
+profile of `^interp/dsg/cc/b0/d2/L12/p64$` (e2e, 16 threads, self time)
+    27.43%  perf_e2e  libm.so.6                [.] __cos_fma
+    15.48%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+    11.13%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+    10.24%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     9.73%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::{anon}::sumWithGlobalWeights<sgpp::combigrid::misc::ScalarValues>
+     5.21%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     3.68%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     3.29%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     2.31%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     1.46%  perf_e2e  libc.so.6                [.] __memset_avx2_unaligned_erms
+     1.43%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c70
+     1.11%  perf_e2e  perf_e2e                 [.] cos@plt
+     0.96%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a82
+     0.86%  perf_e2e  libsgppbase.so           [.] sgpp::base::DataVector::DataVector
+     0.69%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::global_interpolation::OptBarycentricFormula::basisValues
+     0.66%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::ProjectedSubTrieBuilder::build
+     0.56%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+
+samples per process: 1 warm-up + 25

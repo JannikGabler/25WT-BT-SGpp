@@ -1,0 +1,59 @@
+samples: 20238
+
+## per dso
+ 26.19 %  libsgppcombigrid.so
+ 25.24 %  libm.so.6
+ 22.96 %  libgomp.so.1.0.0
+ 13.82 %  perf_e2e
+  5.89 %  libopenblasp-r0.3.32.so
+  3.04 %  [unknown]
+  1.50 %  libsgppbase.so
+  1.34 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 25.19 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  [libsgppcombigrid.so]
+ 22.96 %  [unknown]  [libgomp.so.1.0.0]
+ 13.33 %  __ieee754_exp_fma  [libm.so.6]
+ 10.76 %  exp@@GLIBC_2.29  [libm.so.6]
+ 10.12 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+  5.89 %  [unknown]  [libopenblasp-r0.3.32.so]
+  3.04 %  [unknown]  [[unknown]]
+  2.24 %  exp@plt  [perf_e2e]
+  1.50 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  1.45 %  std::_Function_handler<double   [perf_e2e]
+  1.16 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  1.15 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.22 %  memset@plt  [libsgppcombigrid.so]
+  0.21 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  [libsgppcombigrid.so]
+  0.15 %  sgpp::combigrid::tools::dsg_quadrature::comp1DWeights  [libsgppcombigrid.so]
+  0.13 %  sgpp::combigrid::tools::dsg_weighted_sum::prepareDeltaTensorGrid  [libsgppcombigrid.so]
+  0.09 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.07 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.05 %  _int_malloc  [libc.so.6]
+  0.05 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock  [libsgppcombigrid.so]
+  0.05 %  istant_node_gen_function::mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::childBlock  [libsgppcombigrid.so]
+  0.02 %  unlink_chunk.isra.0  [libc.so.6]
+  0.02 %  sgpp::combigrid::quadrature_rules::SimpsonQuadRule::genWeightsInplace  [libsgppcombigrid.so]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  _mid_memalign  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::blockWidth  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::quadrature  [libsgppcombigrid.so]
+  0.01 %  _int_free_merge_chunk  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::deltas_sparse_grid_generation::genTGData  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::deltas_sparse_grid_generation::getNodesPerDimForTG  [libsgppcombigrid.so]
+  0.01 %  _int_free_chunk  [libc.so.6]
+  0.00 %  _int_free_maybe_trim  [libc.so.6]
+  0.00 %  operator new  [libsgppbase.so]
+  0.00 %  std::vector<double, std::allocator<double> >::vector  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::misc::DeltaWeightedSumScratch::DeltaWeightedSumScratch  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  6.19 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::compRowWeights
+  6.03 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::updateCoeffSums
+  5.70 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::
+  5.09 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.65 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  1.49 %  sgpp::base::DataVector::DataVector  <=  double* std::uninitialized_fill_n<double*, unsigned long, double>
+  0.53 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::evaluate

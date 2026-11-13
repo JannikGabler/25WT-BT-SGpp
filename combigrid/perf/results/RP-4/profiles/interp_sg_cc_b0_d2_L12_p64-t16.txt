@@ -1,0 +1,15 @@
+profile of `^interp/sg/cc/b0/d2/L12/p64$` (e2e, 16 threads, self time)
+    30.57%  perf_e2e  libm.so.6                [.] __cos_fma
+    19.71%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+    13.06%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+    12.50%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     6.60%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     4.79%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+     3.56%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     1.88%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c70
+     1.67%  perf_e2e  perf_e2e                 [.] cos@plt
+     1.07%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     0.63%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.61%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+
+samples per process: 1 warm-up + 10

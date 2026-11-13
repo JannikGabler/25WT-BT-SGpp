@@ -1,0 +1,16 @@
+profile of `^interplin/sg/equi/b1/d5/L8/p1024$` (e2e, 16 threads, self time)
+    57.13%  perf_e2e  libm.so.6                [.] __cos_fma
+    13.38%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     8.25%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+     3.53%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     2.85%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     2.34%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     2.17%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::TensorGrid::getNeighborsForLinInterpolation
+     1.94%  perf_e2e  perf_e2e                 [.] cos@plt
+     1.84%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::lin_interpolation::prepareCorners
+     1.35%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     1.11%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     0.91%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     0.82%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+
+samples per process: 1 warm-up + 4

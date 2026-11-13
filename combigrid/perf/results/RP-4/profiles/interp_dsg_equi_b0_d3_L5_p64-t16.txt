@@ -1,0 +1,19 @@
+profile of `^interp/dsg/equi/b0/d3/L5/p64$` (e2e, 16 threads, self time)
+    24.02%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+    15.88%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     9.01%  perf_e2e  libm.so.6                [.] __cos_fma
+     8.73%  perf_e2e  libm.so.6                [.] __ieee754_log_fma
+     8.02%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     4.92%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     3.80%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::{anon}::sumWithGlobalWeights<sgpp::combigrid::misc::ScalarValues>
+     2.91%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::barycentricFormulaWeights
+     2.80%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     2.78%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     2.64%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::ProjectedSubTrieBuilder::build
+     2.34%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c70
+     1.66%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     1.03%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a82
+     0.98%  perf_e2e  libm.so.6                [.] log@@GLIBC_2.29
+     0.56%  perf_e2e  libc.so.6                [.] _mid_memalign
+
+samples per process: 1 warm-up + 150

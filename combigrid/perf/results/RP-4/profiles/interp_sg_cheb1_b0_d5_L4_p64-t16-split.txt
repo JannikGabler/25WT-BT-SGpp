@@ -1,0 +1,61 @@
+samples: 22627
+
+## per dso
+ 57.22 %  libm.so.6
+ 16.66 %  perf_e2e
+ 13.49 %  libgomp.so.1.0.0
+  5.98 %  libsgppcombigrid.so
+  4.48 %  libopenblasp-r0.3.32.so
+  1.72 %  [unknown]
+  0.35 %  libc.so.6
+  0.08 %  libsgppbase.so
+  0.03 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 56.26 %  __cos_fma  [libm.so.6]
+ 14.20 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+ 13.48 %  [unknown]  [libgomp.so.1.0.0]
+  5.30 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  4.48 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.97 %  cos@plt  [perf_e2e]
+  1.72 %  [unknown]  [[unknown]]
+  0.69 %  __ieee754_log_fma  [libm.so.6]
+  0.49 %  std::_Function_handler<double   [perf_e2e]
+  0.37 %  sgpp::combigrid::tools::barycentricFormulaWeights  [libsgppcombigrid.so]
+  0.14 %  _mid_memalign  [libc.so.6]
+  0.10 %  log@@GLIBC_2.29  [libm.so.6]
+  0.08 %  __ieee754_exp_fma  [libm.so.6]
+  0.07 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.06 %  exp@@GLIBC_2.29  [libm.so.6]
+  0.06 %  sgpp::combigrid::InterpolationMethod::hasTrivialBasisValues  [libsgppcombigrid.so]
+  0.06 %  operator new  [libsgppbase.so]
+  0.06 %  sgpp::combigrid::global_interpolation::BarycentricFormula::basisValues  [libsgppcombigrid.so]
+  0.05 %  sgpp::combigrid::tools::global_interpolation::fillBasisValues  [libsgppcombigrid.so]
+  0.04 %  pthread_mutex_lock@@GLIBC_2.2.5  [libc.so.6]
+  0.04 %  __log_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.03 %  __GI___lll_lock_wait  [libc.so.6]
+  0.03 %  log@plt  [libsgppcombigrid.so]
+  0.03 %  sgpp::combigrid::getBarycentricFormula  [libsgppcombigrid.so]
+  0.02 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.02 %  __posix_memalign  [libc.so.6]
+  0.02 %  sgpp::combigrid::tools::weighted_sum::setUpIterDims  [libsgppcombigrid.so]
+  0.02 %  pthread_mutex_unlock@@GLIBC_2.2.5  [libc.so.6]
+  0.01 %  operator delete  [libsgppcombigrid.so]
+  0.01 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.01 %  sgpp::combigrid::interpolate  [libsgppcombigrid.so]
+  0.01 %  operator new  [libsgppcombigrid.so]
+  0.01 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.01 %  std::vector<double, std::allocator<double> >::vector  [libsgppcombigrid.so]
+  0.01 %  posix_memalign@plt  [libsgppbase.so]
+  0.01 %  sgpp::combigrid::tools::weighted_sum::mapNodesOntoDomain  [libsgppcombigrid.so]
+  0.00 %  strcmp  [ld-linux-x86-64.so.2]
+  0.00 %  operator delete  [libsgppbase.so]
+  0.00 %  free@plt  [libsgppbase.so]
+  0.00 %  memmove@plt  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  2.63 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  1.52 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.46 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.43 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::weighted_sum::updateWeightProducts
+  0.27 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::evaluate

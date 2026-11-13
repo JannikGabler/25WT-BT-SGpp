@@ -1,0 +1,14 @@
+diff --git a/combigrid/src/sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp b/combigrid/src/sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp
+index 172b1e75e..bc9766733 100644
+--- a/combigrid/src/sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp
++++ b/combigrid/src/sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp
+@@ -84,7 +84,8 @@ void updateWeightProducts(const double* const* const weightsOfIterDim, const GPC
+  * @return Accumulator of the sums (slot @c misc::WeightedSumScratch::TG_SUM_ACC).
+  */
+ template <typename ValueType>
+-typename ValueType::Acc sumOverRows(const ValueType values, misc::WeightedSumScratch& scratch);
++[[gnu::aligned(64)]] typename ValueType::Acc sumOverRows(const ValueType values,
++                                                         misc::WeightedSumScratch& scratch);
+ 
+ }  // namespace weighted_sum
+ }  // namespace tools

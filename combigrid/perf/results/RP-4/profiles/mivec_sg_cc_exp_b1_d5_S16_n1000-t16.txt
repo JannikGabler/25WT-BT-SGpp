@@ -1,0 +1,13 @@
+profile of `^mivec/sg/cc-exp/b1/d5/S16/n1000$` (e2e, 16 threads, self time)
+    26.71%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::expSum
+    22.06%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+    19.73%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+    14.66%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+     5.04%  perf_e2e  perf_e2e                 [.] exp@plt
+     2.55%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     2.50%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     2.14%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     1.02%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     0.69%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+
+samples per process: 1 warm-up + 2

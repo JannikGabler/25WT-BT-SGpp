@@ -1,0 +1,40 @@
+samples: 33033
+
+## per dso
+ 67.60 %  libm.so.6
+ 13.79 %  perf_e2e
+  6.76 %  libsgppcombigrid.so
+  6.25 %  libgomp.so.1.0.0
+  3.03 %  libopenblasp-r0.3.32.so
+  2.22 %  [unknown]
+  0.34 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 67.60 %  __cos_fma  [libm.so.6]
+ 11.36 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  6.68 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  [libsgppcombigrid.so]
+  6.25 %  [unknown]  [libgomp.so.1.0.0]
+  3.03 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.22 %  [unknown]  [[unknown]]
+  2.07 %  cos@plt  [perf_e2e]
+  0.37 %  std::_Function_handler<double   [perf_e2e]
+  0.33 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.06 %  memset@plt  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  [libsgppcombigrid.so]
+  0.01 %  _mid_memalign  [libc.so.6]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  _int_memalign  [libc.so.6]
+  0.00 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::childBlock  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::tools::dsg_global_interpolation::fillBasisValuesOfRow  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::tools::dsg_weighted_sum::prepareDeltaTensorGrid  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  1.95 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::
+  1.87 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::updateCoeffSums
+  1.55 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::compRowWeights
+  0.94 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.27 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::addScaled
