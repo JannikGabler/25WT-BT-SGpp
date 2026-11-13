@@ -33,7 +33,8 @@ grids/
   extensive_sparse_grid  commented out
 miscellaneous/         (namespace misc)
   tensor_grid/           TensorGridCTData {mi, coefficient, tensorGrid}
-  ct_coefficient_trie/   CTCoeffTrie: prefix tree over the tensor grids' level MIs (DSG quadrature)
+  ct_coefficient_trie/   CTCoeffTrie: prefix tree over the tensor grids' level MIs (DSG quadrature
+                         and global interpolation)
   operator_data_cache/   OperatorDataCache: thread-safe, type-keyed store of lazily built
                          query-independent operator data of a grid (DeltasSparseGrid::
                          getOperatorData; e.g. DSGLinInterpIndex, DSGGlobalInterpIndex), so the
@@ -45,11 +46,17 @@ miscellaneous/         (namespace misc)
                          DSGLinInterpIndex (per grid) and DSGLinInterpQuery (per call) of the DSG
                          linear interpolation; DSGGlobalInterpIndex (per grid) of the DSG global
                          interpolation)
-  data_scratches/        per-thread scratch (quadrature, delta quadrature, global interpolation
-                         (wraps the quadrature's), linear interpolation, DSG linear interpolation)
+  data_scratches/        per-thread scratch: WeightedSumScratch (SG weighted sum; wrapped by
+                         QuadratureScratch + quadrature rules and GlobalInterpScratch + 1D nodes),
+                         DeltaWeightedSumScratch (DSG weighted sum: quadrature and global
+                         interpolation; its projected sub-trie of ProjectedTrieNode), linear
+                         interpolation, DSG linear interpolation
   operators/value_types/ ScalarValues / VectorValues: value types the operator kernels are
                          templates over (scalar vs. m outputs)
   flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
+  numerics/              DoubleDouble: unevaluated sum hi + lo of two doubles (FMA product,
+                         TwoSum), header-inline; the projected coefficients of the DSG sub-tries
+                         (ProjectedSubTrieBuilder)
   iterators/             TensorGridIterator (grid points + MIs without materializing the grid)
   bounding_boxes/        discrete rectangular / unit boxes over MI grids + iterators
   caching/               boost_point_value_table/: BoostPointValueTable (sharded table of the
@@ -94,9 +101,16 @@ tools/                 (namespace tools)
   combitech_coefficients/               computeCTCoeffs, computeCTCoeffSingle
   sparse_grid_generation/               SparseGrid / DeltasSparseGrid generation, node lookup
   sparse_grid_generation_instructions/  MI generation of the complete sparse grid
-  operators/             per-tensor-grid kernels of the operators: quadrature/ (quadrature_tools
-                         (SG), deltas_sparse_grid_quadrature_tools (DSG internals),
-                         ProjectedSubTrieBuilder (DSG)), global_interpolation/
+  operators/             per-tensor-grid kernels of the operators: weighted_sum/ (the weighted
+                         sum over the grid points shared by quadrature (1D quadrature weights) and
+                         global interpolation (1D basis values): weighted_sum_tools, namespace
+                         tools::weighted_sum (SG row loop sumOverRows);
+                         deltas_sparse_grid_weighted_sum_tools, namespace tools::dsg_weighted_sum
+                         (DSG global weights: processDeltaTensorGrid, forEachGPWithGlobalWeight,
+                         compSubTrie); ProjectedSubTrieBuilder), quadrature/ (quadrature_tools,
+                         namespace tools::quadrature: 1D quadrature weights + SG kernel;
+                         deltas_sparse_grid_quadrature_tools, namespace tools::dsg_quadrature:
+                         comp1DWeights, combineDeltaTensorGrids), global_interpolation/
                          (global_interpolation_tools, namespace tools::global_interpolation;
                          deltas_sparse_grid_global_interpolation_tools, namespace
                          tools::dsg_global_interpolation; interpolation_methods/: generic
@@ -140,7 +154,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   (`InterpolationMethod::basisValues`: barycentric formulas O(n) per row, user methods O(n²) by
   probing). Per grid (`DSGGlobalInterpIndex`, first call): `CTCoeffTrie`, per (dim, level) the
   regular nodes, method and delta order. Per call, one parallel region: basis values per row
-  (largest first), then `dsg_quadrature::processDeltaTensorGrid` per delta TG (largest first);
+  (largest first), then `dsg_weighted_sum::processDeltaTensorGrid` per delta TG (largest first;
+  the DSG quadrature's kernel with the basis values as 1D weights);
   the delta-TG sums are added in grid order (bitwise independent of the thread count — matters for
   high-Lebesgue rules, e.g. equidistant d2 L5); serial below `DSG_PARALLEL_MIN_GRID_POINTS`.
   Nested nodes only (the DSG constructor throws otherwise; cheb1 is not nested). Per-TG sums are
@@ -264,7 +279,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   Python binds). OpenMP over tensor grids in the drivers (`quadrature.cpp`,
   `deltas_sparse_grid_quadrature.cpp`, `global_interpolation.cpp`, `linear_interpolation.cpp`);
   the per-tensor-grid kernels live in `tools/operators/` (`tools::quadrature::processTensorGrid`,
-  `tools::dsg_quadrature::processDeltaTensorGrid`, `tools::global_interpolation::processTensorGrid`,
+  `tools::dsg_weighted_sum::processDeltaTensorGrid` (DSG quadrature and global interpolation),
+  `tools::global_interpolation::processTensorGrid`,
   `tools::lin_interpolation::processTensorGrid`; scalar and vector overloads around one template
   kernel each); generation and CT coefficients are parallel above the thresholds in
   `constants.hpp`.
@@ -285,7 +301,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 - **Global interpolation**: barycentric formula of the 2nd kind per dimension. On a tensor grid
   (`SparseGrid`, WP-06) the interpolant is Σ_p Π_k L_{k,p_k}(x_k) f(p) with the 1D basis values
   (`InterpolationMethod::basisValues`, once per tensor grid and dimension), summed by the quadrature
-  row loop (`quadrature::sumOverRows`; basis values in place of the weights). The DSG overload
+  row loop (`weighted_sum::sumOverRows`, shared with the quadrature; basis values in place of the
+  quadrature weights). The DSG overload
   combines the basis values across tensor grids (global weights, WP-45). Barycentric weights in log
   space; the generic formula (equidistant, Chebyshev 1st kind) recomputes them in O(n²) per
   `basisValues` / 1D call (not cached); Chebyshev 2nd kind uses closed-form weights.

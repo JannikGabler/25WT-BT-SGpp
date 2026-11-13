@@ -11,7 +11,7 @@
 #pragma once
 
 #include <cstddef>
-#include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
 #include <vector>
 
 namespace sgpp {
@@ -25,9 +25,10 @@ namespace misc {
  *
  * On a tensor grid, the interpolant at a query point x is
  * @f$\sum_p \prod_k L_{k,p_k}(x_k) f(p)@f$ with the 1D basis values @f$L_{k,i}(x_k)@f$ of the
- * interpolation method of dimension k: the quadrature row loop with the basis values in place of
- * the quadrature weights. @ref rows is its scratch (the basis values in @c weights1D); its size
- * does not depend on the number of grid points.
+ * interpolation method of dimension k: the weighted sum over the grid points
+ * (@c tools::weighted_sum::sumOverRows) with the basis values as 1D weights. @ref rows is its
+ * scratch (the basis values in @c weights1D); its size does not depend on the number of grid
+ * points.
  */
 struct GlobalInterpScratch {
   /**
@@ -43,7 +44,7 @@ struct GlobalInterpScratch {
       : rows(nDim, maxTGSumOfGPCntsPerDim, nOutputs) {}
 
   /// @brief Scratch of the row loop: basis values (in @c weights1D), mapped nodes, iteration.
-  QuadratureScratch rows;
+  WeightedSumScratch rows;
   /// @brief The (normalized) nodes of one dimension, as the interpolation methods take them.
   std::vector<double> nodes1D;
 };

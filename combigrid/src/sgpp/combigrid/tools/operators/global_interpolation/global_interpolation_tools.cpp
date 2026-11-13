@@ -12,20 +12,20 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/global_interpolation_scratch.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
-#include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
+#include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
 
 using sgpp::combigrid::misc::GlobalInterpScratch;
-using sgpp::combigrid::misc::QuadratureScratch;
+using sgpp::combigrid::misc::WeightedSumScratch;
 
 namespace sgpp {
 namespace combigrid {
@@ -42,7 +42,7 @@ double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& n
 
   prepareTensorGrid(normPoint, tg, genInstr, scratch);
 
-  return quadrature::sumOverRows(misc::ScalarValues(sourceFunc), scratch.rows);
+  return weighted_sum::sumOverRows(misc::ScalarValues(sourceFunc), scratch.rows);
 }
 
 void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
@@ -50,7 +50,7 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
                        GlobalInterpScratch& scratch, const std::span<double> out) {
   assert(out.size() == sourceFunc.nOutputs());
   assert(scratch.rows.valueBuffer.size() ==
-         misc::VectorValues::bufferSize(sourceFunc.nOutputs(), QuadratureScratch::N_ACCS));
+         misc::VectorValues::bufferSize(sourceFunc.nOutputs(), WeightedSumScratch::N_ACCS));
 
   if (tg.nDim() == 0 || tg.nGP() == 0) {
     std::ranges::fill(out, 0.0);
@@ -60,7 +60,7 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
   prepareTensorGrid(normPoint, tg, genInstr, scratch);
 
   const misc::VectorValues values(sourceFunc, scratch.rows.valueBuffer);
-  values.store(quadrature::sumOverRows(values, scratch.rows), out.data());
+  values.store(weighted_sum::sumOverRows(values, scratch.rows), out.data());
 }
 
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& point,
@@ -110,8 +110,8 @@ void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVect
 void prepareTensorGrid(const base::DataVector& normPoint, const TensorGrid& tg,
                        const SGGenInstr& genInstr, GlobalInterpScratch& scratch) {
   fillBasisValues(normPoint, tg, genInstr, scratch);
-  quadrature::mapNodesOntoDomain(genInstr.getDomain(), tg, scratch.rows);
-  quadrature::setUpIterDims(tg, scratch.rows);
+  weighted_sum::mapNodesOntoDomain(genInstr.getDomain(), tg, scratch.rows);
+  weighted_sum::setUpIterDims(tg, scratch.rows);
 }
 
 void fillBasisValues(const base::DataVector& normPoint, const TensorGrid& tg,

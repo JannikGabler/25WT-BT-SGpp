@@ -18,7 +18,6 @@
  * @c NodeGenFunc::genNodesWithoutBoundary (independently of the deltas sparse grid generation).
  */
 
-#include "sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/context.hpp>
@@ -46,7 +45,7 @@
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
@@ -57,6 +56,9 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
+#include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
@@ -321,7 +323,7 @@ struct DeltaQuadratureData {
   const misc::FlatNestedVec<double, 3> weights1D;
   const misc::CTCoeffTrie coeffTrie;
   const misc::GenericDSGOperatorContext context;
-  misc::DeltaQuadratureScratch scratch;
+  misc::DeltaWeightedSumScratch scratch;
 };
 
 /// A level multi-index (as plain vector, ordered lexicographically) with its CT coefficient.
@@ -513,7 +515,7 @@ std::pair<std::vector<size_t>, std::vector<MIWithCoeff>> expectedProjectedSubTri
  */
 void checkProjectedSubTrie(const DeltasSparseGrid& deltasSG, DeltaQuadratureData& data,
                            const TensorGridCTData& deltaTG) {
-  tools::dsg_quadrature::compSubTrie(data.context, deltaTG.mi, data.scratch);
+  tools::dsg_weighted_sum::compSubTrie(data.context, deltaTG.mi, data.scratch);
 
   const auto [projDims, expectedLeaves] = expectedProjectedSubTrie(deltasSG, deltaTG);
   BOOST_REQUIRE(data.scratch.projDims == projDims);
@@ -583,7 +585,7 @@ void checkSubTries(const DeltasSparseGrid& deltasSG) {
   for (const LvlMI& outsideMI : levelsOutside(deltasSG)) {
     BOOST_TEST_CONTEXT("Level outside the level set " << toString(outsideMI)) {
       BOOST_REQUIRE(nonZeroCoeffMIs(deltasSG, outsideMI).empty());
-      tools::dsg_quadrature::compSubTrie(data.context, outsideMI, data.scratch);
+      tools::dsg_weighted_sum::compSubTrie(data.context, outsideMI, data.scratch);
 
       for (const auto& nodes : data.scratch.trieNodes) {
         BOOST_CHECK(nodes.empty());
@@ -1042,7 +1044,7 @@ void checkGlobalWeightsOfDeltaTGs(const SGGenInstr& genInstr) {
 
   for (const TensorGridCTData& deltaTG : deltasSG) {
     nGP += deltaTG.tensorGrid.nGP();
-    tools::dsg_quadrature::forEachGPWithGlobalWeight(
+    tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
         data.context, deltaTG, data.scratch, [&](const DataVector& gp, const double globalWeight) {
           // Back onto the unit domain, where the tensor grids of sg are
           DataVector unitGP(nDim);
@@ -1314,7 +1316,7 @@ BOOST_AUTO_TEST_CASE(Node_Index_Map_Functions) {
   const DeltasSparseGrid deltasSG(genInstr);
 
   const std::vector<NodeIdxLvlMapFunc> maps =
-      tools::dsg_quadrature::compNodeIdxLvlMapFuncs(deltasSG);
+      tools::deltas_sparse_grid_generation::compNodeIdxLvlMapFuncs(deltasSG);
 
   BOOST_REQUIRE_EQUAL(maps.size(), size_t{3});
   for (size_t dim = 0; dim < 3; dim++) {
@@ -1348,9 +1350,10 @@ BOOST_AUTO_TEST_CASE(Map_Node_Idx_Preserves_The_Node) {
 
             for (GPCntType i = 0; i < deltaNodes.size(); i++) {
               const GPCntType mappedIdx =
-                  tools::dsg_quadrature::mapNodeIdx(static_cast<GPCntType>(deltaNodes.size()),
-                                                    static_cast<GPCntType>(targetNodes.size()),
-                                                    deltaLvl, targetLvl, i, map, boundaryLvlOffset);
+                  tools::deltas_sparse_grid_generation::mapDeltaNodeIdxToRegular(
+                      static_cast<GPCntType>(deltaNodes.size()),
+                      static_cast<GPCntType>(targetNodes.size()), deltaLvl, targetLvl, i, map,
+                      boundaryLvlOffset);
 
               BOOST_TEST_CONTEXT("Delta node index " << i << " -> " << mappedIdx) {
                 BOOST_REQUIRE_LT(mappedIdx, targetNodes.size());
@@ -1396,7 +1399,7 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
                 const TensorGridCTData deltaTG = expectedDeltaTGData(deltaMI, genInstr);
 
                 std::vector<std::pair<DataVector, double>> visited;
-                tools::dsg_quadrature::forEachGPWithGlobalWeight(
+                tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
                     data.context, deltaTG, data.scratch,
                     [&](const DataVector& gp, const double globalWeight) {
                       visited.emplace_back(gp, globalWeight);
@@ -1530,9 +1533,9 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Independent_Of_Visit_Order) {
 
           using Visited = std::vector<std::pair<std::vector<double>, double>>;
           const auto visit = [&](const TensorGridCTData& deltaTG,
-                                 misc::DeltaQuadratureScratch& scratch) {
+                                 misc::DeltaWeightedSumScratch& scratch) {
             Visited visited;
-            tools::dsg_quadrature::forEachGPWithGlobalWeight(
+            tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
                 shared.context, deltaTG, scratch,
                 [&](const DataVector& gp, const double globalWeight) {
                   visited.emplace_back(std::vector<double>(gp.begin(), gp.end()), globalWeight);
@@ -1542,13 +1545,13 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Independent_Of_Visit_Order) {
 
           for (const size_t tgIdx : randomPermutation(deltasSG.nTG())) {
             const TensorGridCTData& deltaTG = deltasSG.getTensorGrid(tgIdx);
-            misc::DeltaQuadratureScratch fresh(nDim, deltasSG.getMaxTGSumOverGPCntsPerDim());
+            misc::DeltaWeightedSumScratch fresh(nDim, deltasSG.getMaxTGSumOverGPCntsPerDim());
 
             BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaTG.mi)) {
               BOOST_CHECK(visit(deltaTG, shared.scratch) == visit(deltaTG, fresh));
-              BOOST_CHECK_EQUAL(tools::dsg_quadrature::processDeltaTensorGrid(
+              BOOST_CHECK_EQUAL(tools::dsg_weighted_sum::processDeltaTensorGrid(
                                     shared.context, sourceFunc, deltaTG, shared.scratch),
-                                tools::dsg_quadrature::processDeltaTensorGrid(
+                                tools::dsg_weighted_sum::processDeltaTensorGrid(
                                     shared.context, sourceFunc, deltaTG, fresh));
             }
           }
@@ -1582,7 +1585,7 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Reproduce_Quadrature) {
 
               double result = 0.0;
               for (const LvlMI& deltaMI : completeSGLevels(nDim, maxLvl)) {
-                result += tools::dsg_quadrature::processDeltaTensorGrid(
+                result += tools::dsg_weighted_sum::processDeltaTensorGrid(
                     data.context, sourceFunc, expectedDeltaTGData(deltaMI, genInstr), data.scratch);
               }
 

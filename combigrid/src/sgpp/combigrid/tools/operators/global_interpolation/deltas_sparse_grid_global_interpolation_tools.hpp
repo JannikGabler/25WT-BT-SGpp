@@ -17,9 +17,10 @@
  * @f$W_p(\vec{x}) = \sum_{\vec{\ell} \geq \vec{m}} c_{\vec{\ell}} \prod_k L_{k,\ell_k,p_k}(x_k)
  * @f$ (@f$\vec{m}@f$: the level of the delta tensor grid of p). These are the global weights of
  * the deltas sparse grid quadrature with the 1D quadrature weights replaced by the 1D basis
- * values at @f$\vec{x}@f$, so the operator reuses its row loop (@c dsg_quadrature): a call
- * computes the basis values of every (dimension, level) in delta order (@ref compBasisValues),
- * then sums the weighted values of the delta tensor grids (in parallel).
+ * values at @f$\vec{x}@f$, so both operators share the weighted sum over the grid points
+ * (@c tools::dsg_weighted_sum): a call computes the basis values of every (dimension, level) in
+ * delta order (@ref compBasisValues), then sums the weighted values of the delta tensor grids
+ * (in parallel).
  */
 #pragma once
 
@@ -79,7 +80,7 @@ misc::FlatNestedVec<double, 3> compBasisValues(const misc::DSGGlobalInterpIndex&
  * @brief Evaluates the interpolant at the query point: computes the basis values, then sums the
  * global weight times the source function over all grid points of @p deltasSparseGrid (every grid
  * point evaluated once): the sums of the delta tensor grids
- * (@c dsg_quadrature::processDeltaTensorGrid), added in the grid's order.
+ * (@c dsg_weighted_sum::processDeltaTensorGrid), added in the grid's order.
  *
  * @param index            Index of @p deltasSparseGrid.
  * @param deltasSparseGrid Deltas sparse grid.

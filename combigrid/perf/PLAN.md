@@ -62,6 +62,20 @@ LTO-inlines `interpolateFirstDim` / `interpolateLaterDim`; also `getInterpolatio
 `tools/operators/linear_interpolation/linear_interpolation_tools.{hpp,cpp}`
 (`tools::lin_interpolation::processTensorGrid`, `sumOverCorners`, `computeNeighborGPWithWeight`).
 Entries written before keep the old paths: functions are located by name.
+WP-06 (2026-11-13): the SG global-interpolation kernel `tools::global_interpolation::processTensorGrid`
+now runs the quadrature row loop (`tools::quadrature::sumOverRows` / `mapNodesOntoDomain` /
+`setUpIterDims`) on 1D basis values; `processTensorGridInternal`, `interpolateFirstDim`,
+`interpolateLaterDim`, `getInterpolationCntPerDim` are gone; scratch `misc::GlobalInterpScratch`.
+WP-52 (2026-11-13): the shared weighted-sum kernels (SG and DSG, used by quadrature and global
+interpolation) live in `tools/operators/weighted_sum/`: `tools::weighted_sum::{sumOverRows,
+mapNodesOntoDomain, setUpIterDims, findRowDim, updateWeightProducts}` + `misc::WeightedSumScratch`
+(was `tools::quadrature::…` / `QuadratureScratch` row part); `tools::dsg_weighted_sum::{processDeltaTensorGrid,
+forEachGPWithGlobalWeight, compSubTrie, prepareDeltaTensorGrid, updateCoeffSums, compRowWeights}` +
+`misc::DeltaWeightedSumScratch` (was `tools::dsg_quadrature::…` / `DeltaQuadratureScratch`);
+`ProjectedSubTrieBuilder` moved there; `TrieNode` → `misc::ProjectedTrieNode`; `ProjLeafSlot` +
+builder `DoubleDouble` → `misc::DoubleDouble` (`miscellaneous/numerics/`); `dsg_quadrature::mapNodeIdx`
+/ `compNodeIdxLvlMapFuncs` → `tools::deltas_sparse_grid_generation::{mapDeltaNodeIdxToRegular,
+compNodeIdxLvlMapFuncs}`. Full map: WP-52 summary "Renames".
 
 Baseline e2e time per operator group (sum of `total` medians, `baseline/e2e_t16.jsonl`;
 generation ≤ 1–2 % except MIVec; boost off, total 70.0 s): quad/sg 22.3 s (18.5 s at d ≥ 7) ·
@@ -113,8 +127,10 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | WP-08 | Linear interpolation: corner loop (+ WP-46 cross-TG corner dedup prototyped and measured) | accepted (2026-11-11; dedup → WP-47, owner option (c)) | measured: interplin 4.525 → 3.506 s (−1.02 s; d10 1.334x, d8 1.267x, d5 1.251x, d2 noise), memory geomean 1.009, 0 MEM±, refcheck OK, per-TG bitwise |
 | – | WP-47 | `DeltasSparseGrid` linear interpolation operator: each distinct corner once per call (from WP-08 / WP-46; owner option (c)) + judged-suite cases `interplin/dsg/...` | accepted (2026-11-12; owner applies the judged-case patch + rehash) | measured: judged 1.005x (`^interplin/`, 8 rounds), memory 1.001, refcheck OK (104/104; drafted 120/120); DSG vs. `SparseGrid` operator (16 t): d10 4.56x, d8 3.28x, d5 1.98x, d2 0.60x; evaluations ÷ 8.30 / 6.97 / 6.73 / 1.94; new cases +1.2 s per suite pass |
 | – | WP-45 | `DeltasSparseGrid` global interpolation operator (global weights through the DSG quadrature's row loop; new public virtual `InterpolationMethod::basisValues`) + judged-suite cases `interp/dsg/...` | accepted (2026-11-12; owner applies the judged-case patch + rehash) | measured: judged e2e 1.001x (`^(interp\|interplin\|quad/dsg)/`), memory 0.999, 0 MEM±, refcheck OK (120/120; drafted 132/132, bitwise 1 t = 16 t); DSG vs. `SparseGrid` operator (16 t): cc d10 5.05x, d7 8.48x, d5 8.38x, d3 5.71x, d2 3.40x, equi d3 7.77x; placement `interp/sg/cheb1/b0/d5` 0.980x (→ WP-07); new cases +0.82 s per suite pass |
-| 1 | WP-50 | Python bindings for `DeltasSparseGrid` + its operators (quadrature, `interpolateLinear`, WP-45 `interpolate`; scalar + vector) (owner 2026-11-12) | in progress (prompt 2026-11-12) | e2e nil (C++ libraries unchanged); Python DSG callers get the C++ DSG ratios (fewer evaluations also reduce GIL contention, WP-34) |
-| 2 | WP-06 | Global interpolation: operator overhead | ready (`SparseGrid` operator stays per-TG CT) | 0.64 s (d ≥ 7 0.42 s) measured (WP-36 sol kernel) |
+| – | WP-50 | Python bindings for `DeltasSparseGrid` + its operators (quadrature, `interpolateLinear`, WP-45 `interpolate`; scalar + vector) (owner 2026-11-12) | accepted (2026-11-12, 266193bc6) | measured: Python DSG vs. SG 1 t 4.2–7.0x, 16 t 2.2–5.8x; C++ `.text` byte-identical, e2e A/A 1.002x / 0.998x, memory 1.001, refcheck OK |
+| – | WP-06 | Global interpolation: per-TG kernel of the `SparseGrid` operator (1D basis values + quadrature row loop) | accepted (2026-11-13) | measured: `^interp/sg/` 5.671 → 4.205 s (1.35x, −1.47 s; d ≥ 7 −0.63 s); cc d10 1.230x, d7 1.241x, d5 1.280x; cheb1 d5 2.96x, cheb1 d3 5.33x, equi d3 4.30x; memory geomean 0.975 (cc d10 24.3 → 12.1 MiB; cc d2 +0.9 MiB); refcheck WARN (known equi d2 case) |
+| – | WP-52 | Shared weighted-sum kernels: operator-neutral names / place for the SG + DSG kernels used by quadrature and global interpolation (owner 2026-11-13; refactoring) | accepted (2026-11-13) | measured: e2e `^(quad/\|interp/)` 0.999x (`interp/sg/cc/b0/d10/L2/p8` 0.990x, placement: `sumOverRows` at line offset 48, op-cache misses +20 %), memory 0.998, refcheck identical (known WARN), 1 t output byte-identical |
+| 1 | RP-4 | Re-profiling after WP-08 / WP-06 (+ cumulative memory; size the new `interp/dsg`, `interplin/dsg` groups; re-rank; `sumOverRows` alignment check) | in progress (prompt 2026-11-13) | – |
 | 3 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | ready (numerics / refinement trade-off → summary) | judged `interplin/dsg/` (≈ 1.2 s, from WP-47-after on): ≈ 0.15–0.25 s (d10 1 t: gather 26 % + mark 22 %); estimate |
 | 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 5 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
@@ -216,6 +232,17 @@ After WP-29a (accepted 2026-10-30, incl. the owner's file restructuring): a feat
 memory 1.002) → no re-profiling trigger, ranks unchanged; WP-29b next. Follow-ups: WP-35 (flaky
 time-seeded test, test-only, new, low rank), WP-30 (small-m costs), WP-05 (CC weights not bitwise
 reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
+After WP-06 (accepted 2026-11-13): interp/sg 1.35x (≥ 1.3x) and the second accepted optimization
+since RP-3 (WP-08, WP-06) → RP-4 is due before the next optimization WP. The owner's refactoring
+WP-52 (no runtime change) runs first, so RP-4 profiles the final kernel names / layout and doubles
+as its cumulative neutrality check. interp/sg cc is now at the integrand floor (L1 1.01–1.03x at
+d ≥ 5): only fewer evaluations help there (WP-45 DSG overload, WP-09). WP-07 shrinks: WP-06 took
+the per-1D-call O(n²) weights (cheb1 / equi 0.41 s); left: weights per TG and dimension +
+allocation + `getBarycentricFormula` mutex (cheb1 d5 117 ms, d3 34 ms, equi d3 12 ms) and the DSG
+equi rows → RP-4 re-sizes it.
+After WP-52 (accepted 2026-11-13; refactoring, not counted): RP-4 next. Owner: the `sumOverRows`
+placement follow-up (interp/sg cc L2 −1 %) is checked inside RP-4 (measurement only); a small
+low-rank WP follows only if RP-4 shows a real, recoverable effect.
 
 ---
 
@@ -537,7 +564,19 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   formulas, vectorized in the optimized one). The session may check whether the per-TG kernel
   gains from it (basis values per dimension once per TG, then contraction) vs. the nested
   collapse; results change within round-off only (refcheck; the equi d2 WARN case).
-- **Status**: in progress (prompt 2026-11-12; rank 1).
+- **Result** (accepted 2026-11-13, [summary](summaries/WP-06-global-interp-kernel.md)): kernel =
+  1D basis values once per TG and dimension (`InterpolationMethod::basisValues`, from the stored
+  nodes) + the quadrature row loop (`quadrature::sumOverRows`); one per-thread
+  `misc::GlobalInterpScratch`; no per-TG allocations. `^interp/sg/` 5.671 → 4.205 s (1.35x); cc
+  1.23–1.32x (above the 1.12–1.24x estimate: basis values also replace the per-slice formula),
+  cheb1 / equi 2.96–5.33x; memory 0.975; refcheck WARN on the known equi d2 case only. Behavior
+  change (owner 2026-11-13, option A: keep and document): inf / NaN at a grid point with an on-node
+  query now gives NaN (0·inf), as the DSG operator; documented `@note`s. Not taken: option (B) fix
+  unit-vector dimensions (old behavior independent of dimension order, n_k fewer evaluations at
+  on-node queries; changes evaluation counts, DSG would differ) — only if the owner asks.
+  Vector quadrature micro `process_tg_vec equi d10 L4 m1` 0.991x (out-of-line
+  `sumOverRows<VectorValues>`; feature path) → WP-30.
+- **Status**: accepted (2026-11-13).
 
 ## WP-07 — Generic barycentric formula: cache the weights
 - **Location**: `operators/global_interpolation/methods/default_methods/barycentric_formula.cpp`,
@@ -579,6 +618,12 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   shifted the generic formula's code placement: `interp/sg/cheb1/b0/d5/L4/p64` 0.980x (8 rounds;
   identical function sizes, op-cache misses 38M → 101M) — this WP replaces that path; report it.
   E2E filter now `^interp/(sg|dsg)/(cheb1|equi)/`.
+- **From WP-06** (accepted 2026-11-13): the SG operator now computes the generic weights once per
+  TG and dimension (via `basisValues`): cheb1 d5 344 → 117 ms, cheb1 d3 183 → 34 ms, equi d3 51 →
+  12 ms (most of this WP's 0.42 s is taken). Left: O(n²) log weights + allocation + the mutex in
+  `getBarycentricFormula` per TG and dimension (cache per node family and n), and the DSG equi
+  rows (point 1 above). The cheb1 d5 placement issue of WP-45 is gone with the replaced path.
+  Expected gain: RP-4 re-sizes (≤ ≈ 0.1 s judged, est.).
 
 ## WP-08 — Linear interpolation: corner loop
 - **Location**: `operators/linear_interpolation/linear_interpolation.cpp`, `TensorGrid::getNeighborsForLinInterpolation`.
@@ -695,6 +740,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   query point through the quadrature row loop; a multi-point DSG variant needs one evaluation pass
   for all points and W_p(x_q) per point (no value store needed if the points are processed in
   blocks against one value pass; memory: distinct × m × 8 B otherwise).
+- **From WP-06** (accepted 2026-11-13): `interp/sg` cc runs at the integrand floor (L1 1.01–1.03x
+  at d ≥ 5); the per-TG basis values could be computed per query point block against one value
+  pass (same kernel). Judged gain still 0.
 
 ## WP-10 — Do not link Armadillo when Eigen provides the FFT (from D-3)
 - **Source**: D-3. Owner, 2026-10-24: keep the WP; if it only reduces start-up times it is
@@ -1949,6 +1997,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   (0xc87 B) costs 5–7 % at n = 3; `std::function` call per point.
 - **From WP-08**: interplin `tg_vec` d2 m4 / m8 0.987–0.994x after the corner-loop kernel (4
   corners per TG); vector d10 m1 1.04x of the scalar path.
+- **From WP-06**: `sumOverRows<VectorValues>` is now out of line (shared by vector quadrature and
+  vector interpolation): `micro/quad/process_tg_vec/equi/.../d10/L4/m1` 0.991x (−0.3 % instr, +1 %
+  cycles; placement / loop codegen). interp `global_tg_vec` m1 / m4 1.19–2.05 / 1.06–1.28x faster.
 
 ## RP-3 — Re-profiling after WP-03
 - **Source**: rule 7: WP-03 changed the mivec group by 5.08x (6.32 → 1.24 s) and its hot-spot
@@ -2123,6 +2174,11 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **From WP-47** (2026-11-12): new recurrence `equidistant_nodes/linear_func_unit_cube_1D` (SparseGrid
   quadrature, untouched; expected 0.0016 from a·0.5 + b, 1e-14 relative) failed once in a normal run,
   5/5 reruns passed → include in the audit.
+- **From WP-52** (2026-11-13): caught with its seed: `equidistant_nodes/` and
+  `clenshaw_curtis_nodes/linear_func_unit_cube_1D`, seed 1794588878, relative difference 1.6e-14 vs.
+  tolerance 1e-14 (`a/2 + b` = 0.0079 cancels); pre-WP-52 debug build bitwise identical with that
+  seed → pre-existing. Fix: absolute tolerance (scaled by |a|/2 + |b|) or bounded draws; pin the
+  seed. 2 of ≈ 50 full-suite runs failed once each in WP-52.
 - **Expected gain**: e2e nil; reliable `perf.py test` in every work session.
 - **Risk**: low; tolerances must stay tight enough to catch real errors (justify each new floor
   from the rule's error bound or measured round-off). **Micro / E2E**: none (no source change).
@@ -2420,6 +2476,81 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
 - **Dependencies**: WP-45 accepted; independent of WP-19 (SG analogue).
 - **Status**: ready (rank 10; low).
 
+## WP-52 — Shared weighted-sum kernels: operator-neutral names and place (owner 2026-11-13)
+- **Source**: WP-06 summary, follow-up requested by the owner (2026-11-13). Refactoring only.
+- **Finding**: code shared by several operators is named and placed as quadrature code:
+  - SG (since WP-06): `tools::quadrature::sumOverRows` / `mapNodesOntoDomain` / `setUpIterDims`
+    and `misc::QuadratureScratch` are also the global-interpolation kernel;
+    `misc::GlobalInterpScratch` wraps `QuadratureScratch`.
+  - DSG (since WP-45): `tools::dsg_quadrature::processDeltaTensorGrid` (+ `prepareDeltaTensorGrid`,
+    `compSubTrie`, `updateCoeffSums`, `compRowWeights`, row loop `forEachGPWithGlobalWeight`),
+    `misc::DeltaQuadratureScratch` and `ProjectedSubTrieBuilder` (`tools/operators/quadrature/`)
+    also run the DSG global interpolation.
+  - `dsg_quadrature::mapNodeIdx` / `NodeIdxLvlMapFunc` / `compNodeIdxLvlMapFuncs` (delta →
+    regular node index) is DSG structure, used by `DSGGlobalInterpIndex`.
+- **Scope** (proposal from the summary; the session settles names / paths in its spirit): move
+  the weighted-sum kernels and their scratches to an operator-neutral place, e.g.
+  `tools/operators/weighted_sum/` with names like `processWeightedTensorGrid`, `WeightedSumScratch`,
+  `DeltaWeightedSumScratch`; move the node-index mapping next to the DSG generation tools; docs
+  (Doxygen, `claude/module-reference.md`) say that quadrature (quadrature weights) and global
+  interpolation (1D basis values) both use them. Stays quadrature-specific: `comp1DWeights`,
+  `combineDeltaTensorGrids`, quadrature rules, `getWeights`. Already neutral, unchanged:
+  `GenericDSGOperatorContext`, `CTCoeffTrie`, `OperatorDataCache`, `FlatNestedVec`, `ClosureTrie`.
+  The DSG linear interpolation shares nothing with them. Optional: the stale cpplint warnings in
+  `quadrature_tools.{hpp,cpp}` (WP-38) where the code moves.
+- **Constraints**: no public API change, no Python impact (internals only; if an umbrella-header
+  header changes, rebuild with `SG_PYTHON=1` and run the Python examples), results bitwise
+  unchanged (refcheck identical to WP-52-before; tests unchanged except include paths / names).
+  Keep `[[gnu::aligned(64)]]` on the DSG row loop and the explicit instantiations; no
+  header-inline changes. Protected benchmarks must compile unchanged (else BLOCKED). Micro case
+  names stay (the perf history references them).
+- **Expected gain**: e2e nil; check placement neutrality (hot loops shift ±3–4 % with code moves:
+  check op-cache misses before attributing; `.text` sizes of the kernels unchanged).
+- **Tests**: all quadrature / DSG / global-interpolation suites incl. `interpolation_kernel_pinning/*`,
+  `interpolation_pinning/*`, `dsg_global_interpolation/*`, `quadratureDelta_*`, vector suites.
+- **Micro**: `micro/quad/process_tg*`, `micro/quad/process_all_tgs/*`, `micro/dsg/*`,
+  `micro/interp/global_tg*`, `micro/interp/sg/*`, `micro/interp/dsg/*`.
+- **E2E filter**: `^(quad/|interp/)` · **Functional change**: none.
+- **Dependencies**: WP-06 accepted. Before RP-4 (RP-4 then profiles the final names).
+- **Result** (accepted 2026-11-13, [summary](summaries/WP-52-weighted-sum-kernels.md)): as scoped,
+  names chosen in-session (rename map in the summary and the header note above); plus the owner's
+  review follow-up (one type per file: `misc::ProjectedTrieNode`, `misc::DoubleDouble` header-inline
+  with test `double_double`; builder helpers as private members). e2e 0.999x, memory 0.998,
+  refcheck identical, 1 t byte-identical; DSG types follow-up 1.000x. Placement: scalar
+  `sumOverRows` moved from line offset 32 to 48 → `interp/sg/cc/b0/d10/L2/p8` 0.990x, micro
+  `interp/sg/cc/b0/d8/L2` 0.983x (op-cache misses +9 / +20 %) → checked in RP-4 (owner). Fixed
+  WP-38 leftovers in the moved code (`TODO: Document`, `TODO: Delete`, final newlines, banner +
+  `@file` of `deltas_sparse_grid_generation.{hpp,cpp}`).
+- **Status**: accepted (2026-11-13).
+
+## RP-4 — Re-profiling after WP-08 / WP-06
+- **Source**: rule 7: two accepted optimizations since RP-3 (WP-08 interplin 1.29x, WP-06
+  interp/sg 1.35x ≥ 1.3x; both shifted their groups' hot spots). After WP-52 (refactoring).
+- **Content** (no source changes): `calibrate`; snapshots `baseline` (if missing: `--commit
+  fed2cdb4e`) and `rp-4` (HEAD); `ab e2e baseline rp-4` (cumulative progress and peak memory;
+  the `interp/dsg`, `interplin/dsg` cases exist only from WP-47 / WP-45 on, not in `baseline` /
+  `rp-3`: report their absolute times and shares); per-group change since RP-3 (ANALYSIS.md RP-3 numbers);
+  `profile` of the top cases by absolute time (high d first, ≥ 1 per operator group incl. the DSG
+  interpolation groups); micro runs of the hot spots; section "Re-profiling RP-4" in ANALYSIS.md;
+  re-ranked expected savings and new / changed WP proposals in the summary.
+- **Questions**: suite total and group sums now (interp/sg at the integrand floor?); re-size WP-07
+  (remaining generic weights + DSG equi rows), WP-49 (≈ 0.15–0.25 s), WP-21 (0.1–0.2 s), WP-05
+  (0.5–0.8 s, d ≤ 3, memory), WP-19, WP-51, WP-44 (≈ 0.2–0.3 s) against the new profile; quad/dsg
+  (largest group, 46 % at RP-3) and quad/sg shares unchanged (LTO recompiles, WP-06 moved
+  `sumOverRows` out of line for the vector instantiation)?; what now dominates interp / interplin
+  (integrand vs. operator) and whether any operator-side lever ≥ ≈ 0.2 s remains.
+- **Memory**: cumulative baseline → rp-4 per case (WP-06 MEM− cc d10 / d7, MEM+ cc d2).
+- **Placement check** (owner 2026-11-13, from WP-52): WP-52 moved the scalar
+  `tools::weighted_sum::sumOverRows` (1821 B) from 64-byte-line offset 32 to 48 → `interp/sg/cc/
+  b0/d10/L2/p8` 0.990x (8 rounds), micro `interp/sg/cc/b0/d8/L2` 0.983x, op-cache misses +9 % (micro)
+  / +20 % (e2e) at identical instructions; quadrature and other cases unchanged. Measure only: an
+  experimental build with `[[gnu::aligned(64)]]` on `sumOverRows` (both instantiations; not kept,
+  RP packages change no source) vs. rp-4 on `^interp/sg/` + `^quad/sg/` and the micro
+  `interp/sg/*`, `quad/process_tg*` cases, with op-cache misses. WP-29c saw aligning the collapse
+  templates raise op-cache misses 6x → report both directions; propose a small WP only if the
+  effect is real (CI) and does not cost elsewhere.
+- **Dependencies**: WP-52 accepted. **Status**: in progress (prompt 2026-11-13; rank 1).
+
 ## WP-37 — pysgpp `DataVector`: iteration / bounds-checked indexing (from WP-29d; needs decision)
 - **Source**: WP-29d summary (follow-ups).
 - **Finding**: in Python, base's `DataVector` has an unchecked `__getitem__` and no `__iter__`, so
@@ -2460,6 +2591,9 @@ reproducible under LTO), WP-29b–d details in entry WP-29 "From WP-29a".
   pitfall: reading a snapshot's files (`cmp`, `objcopy`) before `ab e2e` raises that side's peak
   RSS by ≈ 0.8 MiB (fault-around of page-cached pages) → evict with `posix_fadvise(DONTNEED)` or
   compare `.text` afterwards (README only if not protected).
+  **From WP-06**: stale cpplint warnings in `tools/operators/quadrature/quadrature_tools.{hpp,cpp}`
+  (TODO without username, missing final newline) — **done in WP-52** (also `TODO: Delete` assert
+  removed, banner + `@file` of `tools/sparse_grid_generation/deltas_sparse_grid_generation.{hpp,cpp}`).
 - **Scope**: fix the checker's logic; run it over the repo; fix combigrid files. If the fixed
   checker fails files of other modules (the build would fail for everyone), do not change those
   modules: BLOCKED with options (fix all / restrict to combigrid / leave the checker). Leftovers:

@@ -38,7 +38,7 @@
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -50,6 +50,7 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
+#include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
@@ -314,8 +315,8 @@ struct DeltaQuadratureData {
 std::vector<double> checkDeltaTensorGrids(const DeltasSparseGrid& dsg, const size_t nOutputs) {
   const DeltaQuadratureData data(dsg);
   const size_t maxSum = dsg.getMaxTGSumOverGPCntsPerDim();
-  misc::DeltaQuadratureScratch scalarScratch(dsg.nDim(), maxSum);
-  misc::DeltaQuadratureScratch vectorScratch(dsg.nDim(), maxSum, nOutputs);
+  misc::DeltaWeightedSumScratch scalarScratch(dsg.nDim(), maxSum);
+  misc::DeltaWeightedSumScratch vectorScratch(dsg.nDim(), maxSum, nOutputs);
 
   std::vector<DataVector> vectorPoints, scalarPoints;
   const VectorSourceFunc vectorFunc(
@@ -331,8 +332,8 @@ std::vector<double> checkDeltaTensorGrids(const DeltasSparseGrid& dsg, const siz
   for (const TensorGridCTData& tgData : dsg) {
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
-    tools::dsg_quadrature::processDeltaTensorGrid(data.context, vectorFunc, tgData, vectorScratch,
-                                                  out);
+    tools::dsg_weighted_sum::processDeltaTensorGrid(data.context, vectorFunc, tgData, vectorScratch,
+                                                    out);
     BOOST_CHECK_EQUAL(vectorPoints.size(), tgData.tensorGrid.nGP());
 
     for (size_t k = 0; k < nOutputs; k++) {
@@ -341,12 +342,12 @@ std::vector<double> checkDeltaTensorGrids(const DeltasSparseGrid& dsg, const siz
         return component(x, k);
       });
       scalarPoints.clear();
-      const double scalar = tools::dsg_quadrature::processDeltaTensorGrid(data.context, scalarFunc,
-                                                                          tgData, scalarScratch);
+      const double scalar = tools::dsg_weighted_sum::processDeltaTensorGrid(
+          data.context, scalarFunc, tgData, scalarScratch);
       BOOST_CHECK(scalarPoints == vectorPoints);
 
       double scale = 0.0;
-      tools::dsg_quadrature::forEachGPWithGlobalWeight(
+      tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
           data.context, tgData, scalarScratch,
           [&scale, k](const DataVector& x, const double globalWeight) {
             scale += std::abs(globalWeight * component(x, k));
@@ -501,14 +502,14 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
         for (double& value : out) value = 1.0;
       },
       3);
-  misc::DeltaQuadratureScratch scratch(3, dsg.getMaxTGSumOverGPCntsPerDim(), 3);
+  misc::DeltaWeightedSumScratch scratch(3, dsg.getMaxTGSumOverGPCntsPerDim(), 3);
 
   for (const GPMI& nGPPerDim : {GPMI{3, 0, 5}, GPMI{0, 3, 5}, GPMI{3, 5, 0}}) {
     const TensorGridCTData tgData{
         .mi = LvlMI(3, 0), .coefficient = 1, .tensorGrid = TensorGrid(nGPPerDim)};
     BOOST_REQUIRE_EQUAL(tgData.tensorGrid.nGP(), 0u);
     std::vector<double> out(3, std::numeric_limits<double>::quiet_NaN());
-    tools::dsg_quadrature::processDeltaTensorGrid(data.context, sourceFunc, tgData, scratch, out);
+    tools::dsg_weighted_sum::processDeltaTensorGrid(data.context, sourceFunc, tgData, scratch, out);
     for (const double value : out) BOOST_CHECK_EQUAL(value, 0.0);
   }
 

@@ -6,13 +6,16 @@
 /**
  * @file projected_sub_trie_builder.hpp
  * @brief Defines @c ProjectedSubTrieBuilder, which computes the projected sub-trie of a delta
- * tensor grid for the delta quadrature (see @c tools::dsg_quadrature::compSubTrie).
+ * tensor grid for the global weights of the deltas sparse grid operators (see
+ * @c tools::dsg_weighted_sum::compSubTrie).
  */
 #pragma once
 
 #include <cstddef>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
+#include <sgpp/combigrid/miscellaneous/numerics/double_double.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -22,63 +25,58 @@ namespace tools {
 
 /**
  * @brief Builds the projected sub-trie of the tensor grids @f$\vec{\ell} \geq \vec{m}@f$ of a
- * delta tensor grid of level @f$\vec{m}@f$ (see @c tools::dsg_quadrature::compSubTrie) into
+ * delta tensor grid of level @f$\vec{m}@f$ (see @c tools::dsg_weighted_sum::compSubTrie) into
  * the scratch of the calling thread.
  *
  * Two steps: a depth-first search over the coefficient trie accumulates the projected coefficients
- * in the slots of @c scratch.projLeafSlots (see @c misc::DeltaQuadratureScratch::projChildBlocks),
+ * in the slots of @c scratch.projLeafSlots (see @c misc::DeltaWeightedSumScratch::projChildBlocks),
  * which merges the tensor grids with equal levels in the projected dimensions; then the slots with
  * a non-zero projected coefficient below them are copied, in level order, to
  * @c scratch.trieNodes.
  *
+ * The projected coefficients are sums of many products @f$c_{\vec{\ell}} \prod_k w_k(\ell_k)@f$
+ * that cancel (the @f$c_{\vec{\ell}}@f$ are large integers of alternating sign); accumulated in
+ * double, their round-off exceeds the one of the nested sums along the trie. They are therefore
+ * accumulated as @c misc::DoubleDouble, which makes them correct to about one rounding.
+ *
  * @note Internal to @c libsgppcombigrid (hidden visibility). As exported functions, the member
- * functions were compiled differently than in an anonymous namespace (212 of the 738 instructions
- * of the recursive @ref addChildren differed; @c micro/dsg/sub_tries 1-3 % slower); hidden, they
+ * functions were compiled differently than in an anonymous namespace; hidden, they
  * compile to the same instructions. Targets without symbol visibility (e.g. MinGW) ignore it.
  */
 class [[gnu::visibility("hidden")]] ProjectedSubTrieBuilder {  // NOLINT(whitespace/braces)
  public:
   /**
-   * @param context   Data of the delta quadrature call (coefficient trie and 1D weights).
+   * @param context   Data of the operator call (coefficient trie and 1D weights).
    * @param deltaTGMI Level @f$\vec{m}@f$ of the delta tensor grid.
    * @param scratch   Scratch of the calling thread; its projected sub-trie and slots are
    *                  overwritten by @ref build.
    */
   ProjectedSubTrieBuilder(const misc::GenericDSGOperatorContext& context, const LvlMI& deltaTGMI,
-                          misc::DeltaQuadratureScratch& scratch);
+                          misc::DeltaWeightedSumScratch& scratch);
 
   /// @brief Sets @c scratch.projDims and fills @c scratch.trieNodes (see
-  /// @c tools::dsg_quadrature::compSubTrie).
+  /// @c tools::dsg_weighted_sum::compSubTrie).
   void build();
 
  private:
-  /**
-   * @brief Unevaluated sum @c hi + @c lo of two doubles (double-double). The projected
-   * coefficients are sums of many products @f$c_{\vec{\ell}} \prod_k w_k(\ell_k)@f$ that cancel
-   * (the @f$c_{\vec{\ell}}@f$ are large integers of alternating sign); accumulated in double, their
-   * round-off exceeds the one of the nested sums along the trie (results up to 9x farther from the
-   * exact combination at d = 15). In double-double, they are correct to about one rounding.
-   */
-  struct DoubleDouble {
-    double hi;
-    double lo;
-
-    /// @brief Product with @p factor; the rounding error of @c hi * @p factor is exact (FMA).
-    DoubleDouble operator*(double factor) const;
-  };
+  /// @brief 1D weights of one dimension, per level (@c context.weights1D[dim]).
+  using Weights1DOfDim = misc::FlatNestedVec<double, 3>::const_entry_type;
 
   /// @brief State of the depth-first search (@ref addChildren) on the current path, before a
   /// dimension @c dim.
   struct Path {
-    std::size_t nextProjDepth;   ///< Number of projected dimensions < @c dim.
-    std::size_t parentSlot;      ///< Slot of the deepest of them (in nextProjDepth - 1).
-    LvlType projExcess;          ///< Sum of @f$\ell_k - m_k@f$ over them.
-    DoubleDouble weightProduct;  ///< Product of the weights of the other dimensions < @c dim.
+    std::size_t nextProjDepth;         ///< Number of projected dimensions < @c dim.
+    std::size_t parentSlot;            ///< Slot of the deepest of them (in nextProjDepth - 1).
+    LvlType projExcess;                ///< Sum of @f$\ell_k - m_k@f$ over them.
+    misc::DoubleDouble weightProduct;  ///< Product of the weights of the other dimensions < @c dim.
   };
 
-  /// @brief Adds @p term to @p sum; the rounding error of the sum of the high parts is exact
-  /// (TwoSum).
-  static void addTo(misc::DeltaQuadratureScratch::ProjLeafSlot& sum, const DoubleDouble& term);
+  /**
+   * @brief Returns the index of the first weight of the delta nodes of level @p deltaLvl in
+   * @c weights1DOfDim[lvl] (for every @c lvl @f$\geq@f$ @p deltaLvl): they follow the ones of the
+   * levels @c 0, ..., @p deltaLvl - 1.
+   */
+  static std::size_t deltaNodesStart(const Weights1DOfDim& weights1DOfDim, LvlType deltaLvl);
 
   /**
    * @brief Sets @c scratch.projDims.
@@ -131,7 +129,7 @@ class [[gnu::visibility("hidden")]] ProjectedSubTrieBuilder {  // NOLINT(whitesp
 
   const misc::GenericDSGOperatorContext& context;  ///< See the constructor.
   const LvlMI& deltaTGMI;                          ///< See the constructor.
-  misc::DeltaQuadratureScratch& scratch;           ///< See the constructor.
+  misc::DeltaWeightedSumScratch& scratch;          ///< See the constructor.
   /// @brief Maximum 1-norm of the levels of the tensor grids minus the one of @ref deltaTGMI.
   LvlType slack = 0;
 };

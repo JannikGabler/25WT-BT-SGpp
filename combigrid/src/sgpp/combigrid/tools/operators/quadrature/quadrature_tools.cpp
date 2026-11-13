@@ -6,17 +6,20 @@
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
+#include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
 using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;
+using sgpp::combigrid::misc::WeightedSumScratch;
 
 namespace sgpp {
 namespace combigrid {
@@ -34,7 +37,7 @@ double processTensorGrid(const QuadratureContext& context, const SourceFunc& sou
 
   prepareTensorGrid(context, tg, scratch);
 
-  return sumOverRows(misc::ScalarValues(sourceFunc), scratch);
+  return weighted_sum::sumOverRows(misc::ScalarValues(sourceFunc), scratch.rows);
 }
 
 void processTensorGrid(const QuadratureContext& context, const VectorSourceFunc& sourceFunc,
@@ -42,8 +45,8 @@ void processTensorGrid(const QuadratureContext& context, const VectorSourceFunc&
                        const std::span<double> out) {
   assert(tg.nDim() == context.sparseGrid.nDim());
   assert(out.size() == sourceFunc.nOutputs());
-  assert(scratch.valueBuffer.size() ==
-         misc::VectorValues::bufferSize(sourceFunc.nOutputs(), QuadratureScratch::N_ACCS));
+  assert(scratch.rows.valueBuffer.size() ==
+         misc::VectorValues::bufferSize(sourceFunc.nOutputs(), WeightedSumScratch::N_ACCS));
 
   if (tg.nGP() == 0) {
     std::ranges::fill(out, 0.0);
@@ -52,8 +55,8 @@ void processTensorGrid(const QuadratureContext& context, const VectorSourceFunc&
 
   prepareTensorGrid(context, tg, scratch);
 
-  const misc::VectorValues values(sourceFunc, scratch.valueBuffer);
-  values.store(sumOverRows(values, scratch), out.data());
+  const misc::VectorValues values(sourceFunc, scratch.rows.valueBuffer);
+  values.store(weighted_sum::sumOverRows(values, scratch.rows), out.data());
 }
 
 /**
@@ -91,199 +94,31 @@ void combineTensorGrids(const QuadratureContext& context, const VectorSourceFunc
 }
 
 /**
- * Prepares the row loop over @p tg (sumOverRows): 1D weights, nodes on the domain, iterated
- * dimensions.
+ * Prepares the row loop over @p tg (weighted_sum::sumOverRows): 1D quadrature weights, nodes on
+ * the domain, iterated dimensions.
  */
 void prepareTensorGrid(const QuadratureContext& context, const TensorGrid& tg,
                        QuadratureScratch& scratch) {
   getWeights(context, tg, scratch);
-  mapNodesOntoDomain(context.domain, tg, scratch);
-  setUpIterDims(tg, scratch);
+  weighted_sum::mapNodesOntoDomain(context.domain, tg, scratch.rows);
+  weighted_sum::setUpIterDims(tg, scratch.rows);
 }
 
 void getWeights(const QuadratureContext& context, const TensorGrid& tg,
                 QuadratureScratch& scratch) {
   const GPMI& gpCntPerDim = tg.getGPCntPerDim();
-  scratch.weights1D.resize(gpCntPerDim.sumOfElems<size_t>());
+  base::DataVector& weights1D = scratch.rows.weights1D;
+  weights1D.resize(gpCntPerDim.sumOfElems<size_t>());
   getQuadRulesForTensorGrid(tg, context.nodeGenFuncs, scratch.quadRules);
 
   size_t writeIdx = 0;
 
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
-    assert(scratch.weights1D.size() >= writeIdx + gpCntPerDim[dim]);  // TODO: Delete
-
     const GPCntType nNodes = gpCntPerDim[dim];
-    scratch.quadRules[dim]->genWeightsInplace(
-        std::span(scratch.weights1D).subspan(writeIdx, nNodes));
+    scratch.quadRules[dim]->genWeightsInplace(std::span(weights1D).subspan(writeIdx, nNodes));
     writeIdx += nNodes;
   }
 }
-
-/**
- * Maps the nodes of @p tg onto the domain (once, instead of for every grid point; with
- * tools::mapToDomain, as interpolation, so that both evaluate bitwise identical points) and moves
- * to the first grid point (all node indices 0).
- */
-void mapNodesOntoDomain(const HyperCubeArea& domain, const TensorGrid& tg,
-                        QuadratureScratch& scratch) {
-  const size_t nDim = tg.nDim();
-  const GPMI& nGPPerDim = tg.getGPCntPerDim();
-  const base::DataVector& nodesPerDim = tg.getNodesPerDim();
-
-  assert(scratch.nodesPerDim.size() >= nodesPerDim.size());
-
-  size_t offset = 0;
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    const double lower = domain[dim].first;
-    const double width = domain[dim].second - domain[dim].first;
-    double* const nodes = scratch.nodesPerDim.data() + offset;
-
-    for (GPCntType nodeIdx = 0; nodeIdx < nGPPerDim[dim]; nodeIdx++) {
-      nodes[nodeIdx] = tools::mapToDomain(nodesPerDim[offset + nodeIdx], lower, width);
-    }
-
-    scratch.gp[dim] = nodes[0];
-    offset += nGPPerDim[dim];
-  }
-}
-
-/**
- * Determines the iterated dimensions of @p tg (see QuadratureScratch) with their nodes (mapped by
- * mapNodesOntoDomain) and weights (filled in by getWeights), all at node index 0, and the weight
- * products of the first grid point.
- */
-void setUpIterDims(const TensorGrid& tg, QuadratureScratch& scratch) {
-  const size_t nDim = tg.nDim();
-  const GPMI& nGPPerDim = tg.getGPCntPerDim();
-  const size_t rowDim = findRowDim(nGPPerDim);
-
-  assert(nDim >= 1);
-  assert(scratch.weights1D.size() == tg.getNodesPerDim().size());
-
-  size_t nIterDims = 1;
-  double constWeight = 1.0;  // Product of the weights of the dimensions that are not iterated
-  size_t offset = 0;
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    const GPCntType nNodes = nGPPerDim[dim];
-    const double* const nodes = scratch.nodesPerDim.data() + offset;
-    const double* const weights = scratch.weights1D.data() + offset;
-    offset += nNodes;
-
-    if (dim != rowDim && nNodes == 1) {
-      constWeight *= weights[0];
-      continue;
-    }
-
-    const size_t j = (dim == rowDim) ? 0 : nIterDims++;
-    scratch.iterDims[j] = dim;
-    scratch.nGPOfIterDim[j] = nNodes;
-    scratch.nodesOfIterDim[j] = nodes;
-    scratch.weightsOfIterDim[j] = weights;
-    scratch.gpMI[j] = 0;
-  }
-
-  scratch.nIterDims = nIterDims;
-  scratch.weightProducts[nIterDims] = constWeight;
-  updateWeightProducts(scratch.weightsOfIterDim.data(), scratch.gpMI.data(),
-                       scratch.weightProducts.data(), nIterDims - 1);
-}
-
-/**
- * Returns the row dimension: the first dimension with more than one node (or the last dimension
- * if there is none).
- */
-size_t findRowDim(const GPMI& nGPPerDim) {
-  size_t rowDim = 0;
-
-  while (rowDim + 1 < nGPPerDim.size() && nGPPerDim[rowDim] == 1) {
-    rowDim++;
-  }
-
-  return rowDim;
-}
-
-/**
- * Recomputes the weight products of the iterated dimensions @p j, ..., 1 (see QuadratureScratch)
- * after their node indices changed (@c weightProducts[j + 1] must be up to date).
- */
-void updateWeightProducts(const double* const* const weightsOfIterDim, const GPCntType* const gpMI,
-                          double* const weightProducts, size_t j) {
-  for (; j >= 1; j--) {
-    weightProducts[j] = weightsOfIterDim[j][gpMI[j]] * weightProducts[j + 1];
-  }
-}
-
-/**
- * Sums the weight times the source function over all grid points, row by row, starting at the
- * first grid point (set up by prepareTensorGrid), and returns the accumulator of the sums.
- * Written once for both value types (misc::ScalarValues, misc::VectorValues), which perform
- * the same operations per output.
- *
- * The data of the scratch is copied into locals first: the source function may write to any
- * memory as far as the compiler knows, so accessing the scratch vectors in the loop would reload
- * them for every row. For the same reason, @p values (a small view) is taken by value.
- */
-template <typename ValueType>
-typename ValueType::Acc sumOverRows(const ValueType values, QuadratureScratch& scratch) {
-  const size_t nIterDims = scratch.nIterDims;
-  const size_t* const iterDims = scratch.iterDims.data();
-  const GPCntType* const nGPOfIterDim = scratch.nGPOfIterDim.data();
-  const double* const* const nodesOfIterDim = scratch.nodesOfIterDim.data();
-  const double* const* const weightsOfIterDim = scratch.weightsOfIterDim.data();
-  double* const weightProducts = scratch.weightProducts.data();
-  GPCntType* const gpMI = scratch.gpMI.data();
-  double* const gp = scratch.gp.data();
-  const base::DataVector& gpVec = scratch.gp;
-
-  const size_t rowDim = iterDims[0];
-  const GPCntType nGPOfRow = nGPOfIterDim[0];
-  const double* const rowNodes = nodesOfIterDim[0];
-  const double* const rowWeights = weightsOfIterDim[0];
-
-  typename ValueType::Acc result = values.zeroAcc(QuadratureScratch::TG_SUM_ACC);
-
-  while (true) {
-    // Row of grid points: all node indices of the row dimension, the other ones fixed. The
-    // weights of the other dimensions are the same for the whole row and multiplied in once.
-    typename ValueType::Acc rowSum = values.zeroAcc(QuadratureScratch::ROW_SUM_ACC);
-
-    for (GPCntType rowIdx = 0; rowIdx < nGPOfRow; rowIdx++) {
-      gp[rowDim] = rowNodes[rowIdx];
-      values.addScaled(rowSum, rowWeights[rowIdx], values.evaluate(gpVec));
-    }
-
-    values.addScaled(result, weightProducts[1], rowSum);
-
-    // Advances to the next row: increments the node index of the first iterated dimension
-    // (after the row dimension) that does not wrap around
-    size_t j = 1;
-
-    for (; j < nIterDims; j++) {
-      const size_t dim = iterDims[j];
-
-      if (++gpMI[j] < nGPOfIterDim[j]) {
-        gp[dim] = nodesOfIterDim[j][gpMI[j]];
-        break;
-      }
-
-      gpMI[j] = 0;
-      gp[dim] = nodesOfIterDim[j][0];
-    }
-
-    if (j == nIterDims) {  // Wrapped around in every iterated dimension: all rows are done
-      return result;
-    }
-
-    updateWeightProducts(weightsOfIterDim, gpMI, weightProducts, j);
-  }
-}
-
-// The row loop is also the kernel of the global interpolation on a tensor grid (weights: the 1D
-// basis values at the query point), which calls these instantiations.
-template misc::ScalarValues::Acc sumOverRows(misc::ScalarValues values, QuadratureScratch& scratch);
-template misc::VectorValues::Acc sumOverRows(misc::VectorValues values, QuadratureScratch& scratch);
 
 std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
                                                  const std::vector<NodeGenFunc*>& nodeGenFuncs) {

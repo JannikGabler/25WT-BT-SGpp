@@ -14,7 +14,6 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -92,9 +91,9 @@ void DSGGlobalInterpIndex::addRowsOfDim(const DeltasSparseGrid& deltasSparseGrid
           tools::getDeltaNodeCnt(deltaLvl, lvl2GPCntFunc, deltaLvl == boundaryLvlOffset);
 
       for (GPCntType deltaNodeIdx = 0; deltaNodeIdx < nDeltaNodes; deltaNodeIdx++) {
-        deltaOrder_.push_back(tools::dsg_quadrature::mapNodeIdx(nDeltaNodes, nNodes, deltaLvl, lvl,
-                                                                deltaNodeIdx, nodeIdxLvlMapFunc,
-                                                                boundaryLvlOffset));
+        deltaOrder_.push_back(tools::deltas_sparse_grid_generation::mapDeltaNodeIdxToRegular(
+            nDeltaNodes, nNodes, deltaLvl, lvl, deltaNodeIdx, nodeIdxLvlMapFunc,
+            boundaryLvlOffset));
         assert(deltaOrder_.back() < nNodes);
       }
     }

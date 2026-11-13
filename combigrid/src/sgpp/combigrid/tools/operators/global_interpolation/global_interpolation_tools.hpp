@@ -11,11 +11,11 @@
  * The tensor-product interpolant of a tensor grid at a query point x is
  * @f$\sum_p \prod_k L_{k,p_k}(x_k) f(p)@f$, where @f$L_{k,i}(x_k)@f$ are the 1D basis values
  * of the interpolation method of dimension k (@c InterpolationMethod::basisValues), computed
- * once per tensor grid and dimension. The sum is the quadrature row loop
- * (@c tools::quadrature::sumOverRows) with the basis values in place of the quadrature weights:
- * nodes mapped onto the domain once per tensor grid, grid points visited row by row, dimensions
- * with one node (basis value 1) skipped, scratch reused across tensor grids. For m outputs, the
- * same operations are performed per output.
+ * once per tensor grid and dimension. The sum is the weighted sum over the grid points
+ * (@c tools::weighted_sum::sumOverRows) with the basis values as 1D weights: nodes mapped onto
+ * the domain once per tensor grid, grid points visited row by row, dimensions with one node
+ * (basis value 1) skipped, scratch reused across tensor grids. For m outputs, the same operations
+ * are performed per output.
  */
 #pragma once
 
@@ -111,7 +111,8 @@ void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVect
 
 /**
  * @brief Prepares the row loop over @p tg: 1D basis values at @p normPoint
- * (@ref fillBasisValues), nodes on the domain and iterated dimensions (as the quadrature).
+ * (@ref fillBasisValues), nodes mapped onto the domain and iterated dimensions
+ * (@c tools::weighted_sum).
  *
  * @param normPoint Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param tg        Tensor grid (at least one dimension and one grid point).

@@ -15,20 +15,20 @@
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/deltas_sparse_grid_global_interpolation_tools.hpp>
-#include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
+#include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
 #include <span>
 #include <vector>
 
-using sgpp::combigrid::misc::DeltaQuadratureScratch;
+using sgpp::combigrid::misc::DeltaWeightedSumScratch;
 using sgpp::combigrid::misc::DSGGlobalInterpIndex;
 using sgpp::combigrid::misc::FlatNestedVec;
 using sgpp::combigrid::misc::GenericDSGOperatorContext;
-using sgpp::combigrid::tools::dsg_quadrature::processDeltaTensorGrid;
+using sgpp::combigrid::tools::dsg_weighted_sum::processDeltaTensorGrid;
 
 namespace sgpp {
 namespace combigrid {
@@ -60,7 +60,7 @@ void runPasses(const DSGGlobalInterpIndex& index, const DeltasSparseGrid& deltas
     for (const size_t row : rowsBySize) {
       fillBasisValuesOfRow(index, normPoint, row, regular, weights);
     }
-    DeltaQuadratureScratch scratch(nDim, maxSumOfGPCnts, nOutputs);
+    DeltaWeightedSumScratch scratch(nDim, maxSumOfGPCnts, nOutputs);
     for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
       process(tgIdx, scratch);
     }
@@ -76,7 +76,7 @@ void runPasses(const DSGGlobalInterpIndex& index, const DeltasSparseGrid& deltas
       fillBasisValuesOfRow(index, normPoint, rowsBySize[k], regular, weights);
     }
 
-    DeltaQuadratureScratch scratch(nDim, maxSumOfGPCnts, nOutputs);
+    DeltaWeightedSumScratch scratch(nDim, maxSumOfGPCnts, nOutputs);
 
 #pragma omp for schedule(dynamic)
     for (size_t k = 0; k < nTG; k++) {
@@ -136,7 +136,7 @@ double evaluateInterpolant(const DSGGlobalInterpIndex& index,
   std::vector<double> tgSums(deltasSparseGrid.nTG());
 
   runPasses(index, deltasSparseGrid, normPoint, weights, 0, parallel,
-            [&](const size_t tgIdx, DeltaQuadratureScratch& scratch) {
+            [&](const size_t tgIdx, DeltaWeightedSumScratch& scratch) {
               tgSums[tgIdx] = processDeltaTensorGrid(
                   context, sourceFunc, deltasSparseGrid.getTensorGrid(tgIdx), scratch);
             });
@@ -160,7 +160,7 @@ void evaluateInterpolant(const DSGGlobalInterpIndex& index,
   std::vector<double> tgSums(deltasSparseGrid.nTG() * nOutputs);
 
   runPasses(index, deltasSparseGrid, normPoint, weights, nOutputs, parallel,
-            [&](const size_t tgIdx, DeltaQuadratureScratch& scratch) {
+            [&](const size_t tgIdx, DeltaWeightedSumScratch& scratch) {
               processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getTensorGrid(tgIdx),
                                      scratch,
                                      std::span<double>(tgSums.data() + tgIdx * nOutputs, nOutputs));

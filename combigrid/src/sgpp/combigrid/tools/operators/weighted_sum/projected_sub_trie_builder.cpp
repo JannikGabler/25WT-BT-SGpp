@@ -5,53 +5,35 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/projected_trie_node.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/tools/operators/quadrature/projected_sub_trie_builder.hpp>
+#include <sgpp/combigrid/miscellaneous/numerics/double_double.hpp>
+#include <sgpp/combigrid/tools/operators/weighted_sum/projected_sub_trie_builder.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
 
 using sgpp::combigrid::misc::CTCoeffTrie;
-using sgpp::combigrid::misc::DeltaQuadratureScratch;
-using sgpp::combigrid::misc::FlatNestedVec;
+using sgpp::combigrid::misc::DeltaWeightedSumScratch;
+using sgpp::combigrid::misc::DoubleDouble;
 using sgpp::combigrid::misc::GenericDSGOperatorContext;
+using sgpp::combigrid::misc::ProjectedTrieNode;
 
 namespace sgpp {
 namespace combigrid {
 
 namespace tools {
 
-namespace {
-
-using ProjLeafSlot = DeltaQuadratureScratch::ProjLeafSlot;
-using Weights1DOfDim = FlatNestedVec<double, 3>::const_entry_type;
-constexpr size_t NO_BLOCK = DeltaQuadratureScratch::NO_BLOCK;
-
-/// Index of the first weight of the delta nodes of level @p deltaLvl in @c weights1DOfDim[lvl]
-/// (for every lvl >= deltaLvl): they follow the ones of the levels 0, ..., deltaLvl - 1.
-size_t deltaNodesStart(const Weights1DOfDim& weights1DOfDim, const LvlType deltaLvl) {
-  return (deltaLvl == 0) ? 0 : weights1DOfDim[deltaLvl - 1].size();
-}
-
-}  // namespace
-
-ProjectedSubTrieBuilder::DoubleDouble ProjectedSubTrieBuilder::DoubleDouble::operator*(
-    const double factor) const {
-  const double product = hi * factor;
-  return {product, std::fma(hi, factor, -product) + lo * factor};
-}
-
 ProjectedSubTrieBuilder::ProjectedSubTrieBuilder(const GenericDSGOperatorContext& context,
                                                  const LvlMI& deltaTGMI,
-                                                 DeltaQuadratureScratch& scratch)
+                                                 DeltaWeightedSumScratch& scratch)
     : context(context), deltaTGMI(deltaTGMI), scratch(scratch) {}
 
 void ProjectedSubTrieBuilder::build() {
-  for (std::vector<DeltaQuadratureScratch::TrieNode>& nodes : scratch.trieNodes) {
+  for (std::vector<ProjectedTrieNode>& nodes : scratch.trieNodes) {
     nodes.clear();
   }
 
@@ -81,12 +63,9 @@ void ProjectedSubTrieBuilder::build() {
   appendProjectedChildren(0, 0, 0);
 }
 
-void ProjectedSubTrieBuilder::addTo(ProjLeafSlot& sum, const DoubleDouble& term) {
-  const double hi = sum.hi + term.hi;
-  const double termPart = hi - sum.hi;
-  const double error = (sum.hi - (hi - termPart)) + (term.hi - termPart);
-  sum.hi = hi;
-  sum.lo += error + term.lo;
+size_t ProjectedSubTrieBuilder::deltaNodesStart(const Weights1DOfDim& weights1DOfDim,
+                                                const LvlType deltaLvl) {
+  return (deltaLvl == 0) ? 0 : weights1DOfDim[deltaLvl - 1].size();
 }
 
 bool ProjectedSubTrieBuilder::setProjDims() {
@@ -114,6 +93,7 @@ bool ProjectedSubTrieBuilder::setProjDims() {
   return nDim > 0;
 }
 
+// TODO: Functional decomposition (?) if feasible without performance loss
 void ProjectedSubTrieBuilder::addChildren(const size_t dim, const size_t childBegin,
                                           const size_t childEnd, const LvlType lvlSumAfterDim,
                                           const Path& path) {
@@ -150,8 +130,7 @@ void ProjectedSubTrieBuilder::addChildren(const size_t dim, const size_t childBe
 
     if (isLeafDepth) {  // childPath.parentSlot is a slot of the last projected depth
       assert(childPath.nextProjDepth == scratch.projDims.size());
-      addTo(scratch.projLeafSlots[childPath.parentSlot],
-            childPath.weightProduct * leafCoeffs[childIdx]);
+      scratch.projLeafSlots[childPath.parentSlot] += childPath.weightProduct * leafCoeffs[childIdx];
     } else {
       // = coeffTrie.childBegin(dim, childIdx), from the local span
       const size_t grandChildBegin = (childIdx == 0) ? 0 : nodesOfDim[childIdx - 1].childEnd;
@@ -169,7 +148,7 @@ size_t ProjectedSubTrieBuilder::childBlock(const Path& path) {
   // Not invalidated by allocBlock, which appends to the slots of the next projected depth
   size_t& block = scratch.projChildBlocks[path.nextProjDepth - 1][path.parentSlot];
 
-  if (block == NO_BLOCK) {
+  if (block == DeltaWeightedSumScratch::NO_BLOCK) {
     block = allocBlock(path.nextProjDepth, path.projExcess);
   }
 
@@ -181,13 +160,13 @@ size_t ProjectedSubTrieBuilder::allocBlock(const size_t projDepth, const LvlType
 
   if (projDepth + 1 == scratch.projDims.size()) {
     const size_t start = scratch.projLeafSlots.size();
-    scratch.projLeafSlots.resize(start + width, ProjLeafSlot{0.0, 0.0});
+    scratch.projLeafSlots.resize(start + width, DoubleDouble{0.0, 0.0});
     return start;
   }
 
   std::vector<size_t>& slots = scratch.projChildBlocks[projDepth];
   const size_t start = slots.size();
-  slots.resize(start + width, NO_BLOCK);
+  slots.resize(start + width, DeltaWeightedSumScratch::NO_BLOCK);
   return start;
 }
 
@@ -206,22 +185,21 @@ bool ProjectedSubTrieBuilder::appendProjectedChildren(const size_t projDepth, co
   const size_t weightsStart = deltaNodesStart(weights1DOfDim, deltaLvl);
   const size_t width = blockWidth(projDepth, projExcess);
   const bool isLeafDepth = (projDepth + 1 == scratch.projDims.size());
-  std::vector<DeltaQuadratureScratch::TrieNode>& nodes = scratch.trieNodes[projDepth];
+  std::vector<ProjectedTrieNode>& nodes = scratch.trieNodes[projDepth];
   bool appended = false;
 
   for (LvlType excess = 0; excess < width; excess++) {
     const double* const weights = weights1DOfDim[deltaLvl + excess].data() + weightsStart;
 
     if (isLeafDepth) {
-      const ProjLeafSlot& slot = scratch.projLeafSlots[block + excess];
-      const double coeff = slot.hi + slot.lo;
+      const double coeff = scratch.projLeafSlots[block + excess].value();
 
       if (coeff != 0.0) {
         nodes.push_back({weights, 0, coeff});
         appended = true;
       }
     } else if (const size_t childBlock = scratch.projChildBlocks[projDepth][block + excess];
-               childBlock != NO_BLOCK) {
+               childBlock != DeltaWeightedSumScratch::NO_BLOCK) {
       nodes.push_back({weights, 0, 0.0});
 
       if (appendProjectedChildren(projDepth + 1, childBlock,

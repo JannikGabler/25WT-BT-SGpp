@@ -1,7 +1,7 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-50 (2026-11-12; accepted, commit pending) ·
-Next free WP number: 52 ·
+Last processed: WP-52 (2026-11-13; accepted, commit pending) ·
+Next free WP number: 53 ·
 Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC 15.2,
@@ -64,13 +64,15 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 | – | WP-08 | Linear interpolation: corner loop (weight table by doubling, index order, per-TG bitwise) + cross-TG dedup prototype | accepted (11-11, 6df60cb50) | interplin 4.525 → 3.506 s (−1.02 s; d10 1.334x, d8 1.267x, d5 1.251x), memory 1.009, refcheck OK; dedup prototype −2.12 s more → WP-47 (owner: option (c)) | [WP-08](summaries/WP-08-corner-loop.md) |
 | – | WP-47 | `DeltasSparseGrid` linear interpolation (each distinct corner once per call; `ClosureTrie`, per-grid `OperatorDataCache`, 3 passes + serial gate) + judged cases `interplin/dsg/...` (patch) | accepted (11-12, 7d04b5dbc; judged cases 6138b8b9e) | DSG vs. SG operator 16 t: d10 4.56x, d8 3.28x, d5 1.98x, d2 0.60x; judged 1.005x, memory 1.001, refcheck OK (drafted 120/120); new cases +1.2 s / pass | [WP-47](summaries/WP-47-dsg-linear-interpolation.md) |
 | – | WP-45 | `DeltasSparseGrid` global interpolation (global weights through the DSG quadrature's row loop; new public virtual `InterpolationMethod::basisValues`) + judged cases `interp/dsg/...` (patch) | accepted (11-12, 8665bba7b; judged cases 007cf530f) | DSG vs. SG operator 16 t: cc d10 5.05x, d7 8.48x, d5 8.38x, d3 5.71x, d2 3.40x, equi d3 7.77x; judged 1.001x, memory 0.999, refcheck OK (drafted 132/132, bitwise 1 t = 16 t); cheb1 d5 0.980x (placement → WP-07); new cases +0.82 s / pass | [WP-45](summaries/WP-45-dsg-global-interpolation.md) |
-| – | WP-50 | Python bindings for `DeltasSparseGrid` + its quadrature / `interpolateLinear` / `interpolate` (scalar, vector, cached) | accepted (11-12; commit pending) | Python DSG vs. SG 1 t 4.2–7.0x, 16 t 2.2–5.8x; C++ `.text` byte-identical, e2e A/A 1.002x / 0.998x, memory 1.001, refcheck OK | [WP-50](summaries/WP-50-dsg-python-bindings.md) |
-| 1 | WP-06 | Global interpolation kernel; `SparseGrid` operator stays per-TG CT (0.64 s) | in progress (prompt 11-12) | | |
+| – | WP-50 | Python bindings for `DeltasSparseGrid` + its quadrature / `interpolateLinear` / `interpolate` (scalar, vector, cached) | accepted (11-12, 266193bc6) | Python DSG vs. SG 1 t 4.2–7.0x, 16 t 2.2–5.8x; C++ `.text` byte-identical, e2e A/A 1.002x / 0.998x, memory 1.001, refcheck OK | [WP-50](summaries/WP-50-dsg-python-bindings.md) |
+| – | WP-06 | Global interpolation kernel of the `SparseGrid` operator (1D basis values + quadrature row loop; per-TG CT kept) | accepted (11-13, 85106468a) | `^interp/sg/` 5.67 → 4.20 s (1.35x; d ≥ 7 −0.63 s): cc d10 1.23x, d5 1.28x, cheb1 d5 2.96x, d3 5.33x, equi d3 4.30x; memory 0.975 (cc d10 24.3 → 12.1 MiB, cc d2 +0.9 MiB); refcheck WARN (known equi d2); inf/NaN on-node → NaN (owner: option A, documented) | [WP-06](summaries/WP-06-global-interp-kernel.md) |
+| – | WP-52 | Shared weighted-sum kernels (SG + DSG, quadrature + global interpolation): `tools/operators/weighted_sum/`, `WeightedSumScratch`, `DeltaWeightedSumScratch`, `ProjectedTrieNode`, `DoubleDouble` (owner 11-13; refactoring) | accepted (11-13; commit pending) | e2e 0.999x, memory 0.998, refcheck identical, 1 t byte-identical; `interp/sg/cc/b0/d10/L2/p8` 0.990x (placement of `sumOverRows` → RP-4 check) | [WP-52](summaries/WP-52-weighted-sum-kernels.md) |
+| 1 | RP-4 | Re-profiling after WP-08 / WP-06 (+ DSG interpolation groups; re-rank; `sumOverRows` alignment check, owner 11-13) | in progress (prompt 11-13) | | |
 | 2 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (≈ 0.15–0.25 s on `interplin/dsg/`; loses per-TG sums) | ready | | |
 | 3 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse | ready | | |
 | 4 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
 | 5 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand | ready | | |
-| 6 | WP-07 | Generic barycentric formula: cache the weights (0.42 s; + DSG equi rows, cheb1 d5 placement) | ready | | |
+| 6 | WP-07 | Generic barycentric formula: cache the weights (WP-06 took most: ≤ ≈ 0.1 s left; + DSG equi rows) | ready (RP-4 re-sizes) | | |
 | 7 | WP-09 | Multi-point interpolation API (proposal: gains vs. complexity) | ready | | |
 | 8 | WP-19 | SG quadrature: load balancing at low d | ready (after WP-05) | | |
 | 9 | WP-51 | DSG row loop at low d: split large delta TGs across threads + largest-first for `quad/dsg` (from WP-45; ≈ 0.02–0.03 s est.) | ready (low; measure first) | | |
@@ -91,12 +93,11 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30 (RP-0 = setup)
 
 ## Next action
 
-**WP-50 accepted** (11-12); the owner commits it (combigrid.i, umbrella header, DSG headers /
-.cpp comments, 2 examples, docs incl. CLAUDE.md, summary, `results/WP-50/`, STATUS/PLAN) — tree
-clean before WP-06. `lib/` holds the OPT=0 libraries of WP-50's `SG_PYTHON=1` build → the WP-06
-session runs `perf.py build normal` first (in the prompt). **WP-06 in progress** (prompt 11-12).
-Then WP-49, WP-21. RP-4 after the next accepted optimization (WP-06 counts). Next master start:
-process the WP-06 summary.
+**WP-52 accepted** (11-13); the owner commits it ("Accept WP-52: …": code, new `double_double`
+test, `perf_micro.cpp` renames, CLAUDE.md §2, module-reference, summary, `results/WP-52/`,
+STATUS/PLAN) — tree clean before RP-4. **RP-4 in progress** (prompt 11-13; incl. the owner's
+`sumOverRows` alignment check). Next master start: process the RP-4 summary, re-rank PLAN.md from
+it (WP-49 / WP-21 / WP-07 / WP-05 / …), add the alignment WP only if RP-4 shows a real effect.
 
 ## Open decisions for the owner
 
@@ -112,6 +113,9 @@ process the WP-06 summary.
   16 t 25.1 µs ≈ 32x, WP-50 DSG 0.6–0.9 vs. 23 µs / document, e.g. `OMP_NUM_THREADS=1` hint; WP-17's batch path rejected 11-04). WP-39: placement.
 - Adaptive as the default `CachePolicy` (WP-27 follow-up; not planned, owner 11-03): cheap
   functions 0.57–0.91x of plain instead of 0.07–0.30x; expensive pay ≈ 3–7 ns per hit.
+- WP-06 option (B) (not planned; only if the owner asks): fix dimensions whose basis values are a
+  unit vector (on-node queries: old inf/NaN robustness independent of dimension order, n_k fewer
+  evaluations; changes evaluation counts, DSG would differ).
 - Optional moves: WP-05 before WP-18 (0.5–0.8 s at d ≤ 3 vs. ≈ 0.05 s); WP-35 up (test
   runs hit it: WP-29a 2 of 16, WP-28 1 of 15; re-check 0 of ≈ 12).
 - Owner files outdated: CLAUDE.md §5 banner "build fails otherwise" (checker never checks C++,
@@ -155,6 +159,9 @@ process the WP-06 summary.
   slot, 2 passes; 1 t d10 124.7 vs. 116.2 ms, 16 t d5 269 vs. 226 µs); per-thread mark bitsets (d8
   1.61 vs. 1.51 ms, d2 14.0 vs. 8.8 µs); evaluating all slots ("all" variant: non-corner
   evaluations are observable).
+- WP-06 SG global-interpolation kernel as nested collapse with premapped nodes, odometer and
+  reused scratch (WP-36 "sol"): cc 5–10 % and cheb1 2x slower than basis values + quadrature row
+  loop → basis-value kernel.
 - WP-45 DSG global interpolation: per-TG gather (WP-36 prototype, option (A)) 2.0–7.2x slower than
   global weights (B); unordered reduction over delta TGs (thread-count dependent in the Lebesgue
   regime, ≤ 0.37) → ordered sums; gate 512 (crossover 65–113 points) → 128; serial basis values
@@ -184,27 +191,26 @@ process the WP-06 summary.
 
 ## Re-profiling
 
-Last: RP-3 (2026-10-30; rp-3 = 0c6ecfc4b). Accepted optimizations since: **1** (WP-08; interplin
-1.29x < 1.3x, its hot spot is gone but WP-36 / WP-08 already measured the new interplin profile:
-integrand floor). Features (WP-29a–d,
-WP-26, WP-28, WP-40, WP-27 accepted 11-03; scalar 0.995–1.002x) count only if a group changes
+Last: RP-3 (2026-10-30; rp-3 = 0c6ecfc4b). Accepted optimizations since: **2** (WP-08, WP-06 →
+**RP-4 due**, after the refactoring WP-52; WP-06 changed interp/sg 1.35x). WP-08: interplin
+1.29x < 1.3x, hot spot gone (WP-36 / WP-08 measured the new interplin profile: integrand
+floor). Features (WP-29a–d, WP-26, WP-28, WP-40, WP-27 accepted 11-03; scalar 0.995–1.002x) count only if a group changes
 ≥ 1.3x or a hot-spot ranking shifts (none did).
 WP-04 (11-03), WP-17 (11-04) rejected. WP-47 (11-12) is a feature (judged `^interplin/` 1.005x)
 → not counted; its `interplin/dsg/...` cases count from WP-47-after on (no baseline). WP-45 (11-12)
 is a feature too (judged 1.001x; `interp/dsg/...` count from WP-45-after on); WP-50 (bindings, accepted 11-12)
-does not count. RP-4 after the next accepted optimization (WP-06 / WP-49 / WP-07 count) or another
-rule-7 trigger.
+does not count. WP-52 (refactoring, accepted 11-13) does not count; RP-4 (issued 11-13) profiles its final layout.
 
 ## Log
 
-- 2026-11-12 WP-50 summary processed: **accepted** by the owner (commit pending; WP-45 committed
-  8665bba7b, its judged cases 007cf530f). Python DSG operators 1 t 4.2–7.0x / 16 t 2.2–5.8x vs.
-  SG; C++ unchanged (`.text` identical, A/A), refcheck OK. Follow-ups: WP-34 (DSG GIL numbers,
-  `OMP_NUM_THREADS=1` hint), WP-38 (owner: `explicit` SG / DSG converting ctors = agreed C++ API
-  change; cpplint false positive; perf README RSS pitfall). No RP-4. **WP-06 prompt issued.**
+- 2026-11-13 WP-52 summary processed: **accepted** by the owner (commit pending; WP-06 committed
+  85106468a). Refactoring: e2e 0.999x, memory 0.998, refcheck identical; placement −1 % on
+  interp/sg cc L2 → owner: check inside RP-4. WP-35 (+ `linear_func_unit_cube_1D` seed), WP-38
+  (quadrature leftovers done) updated. **RP-4 prompt issued.**
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone), WP-47 1, WP-45 0; new in WP-47:
-  `equidistant_nodes/linear_func_unit_cube_1D` once (5/5 reruns pass) → WP-35. Report recurrences.
+  `equidistant_nodes/linear_func_unit_cube_1D` once (5/5 reruns pass) → WP-35; WP-52: 2 of ≈ 50 runs
+  (`{equidistant,clenshaw_curtis}_nodes/linear_func_unit_cube_1D`, seed 1794588878, pre-existing). Report recurrences.
 
 ## Archive
 
@@ -236,4 +242,6 @@ rule-7 trigger.
   (6df60cb50; dedup → WP-47 option (c), before WP-45; WP-46 dropped; new WP-48); WP-47 issued.
   11-12 WP-47 accepted (7d04b5dbc; judged cases 6138b8b9e; follow-up WP-49; owner: DSG bindings →
   WP-50 after WP-45, option (a)); WP-45 issued. WP-45 accepted (8665bba7b; judged cases
-  007cf530f; follow-up WP-51); WP-50 issued.
+  007cf530f; follow-up WP-51); WP-50 issued. WP-50 accepted (266193bc6; Python DSG 1 t 4.2–7.0x / 16 t
+  2.2–5.8x; follow-ups WP-34, WP-38 `explicit` ctors); WP-06 issued. 11-13 WP-06 accepted (85106468a; inf/NaN
+  on-node → NaN, owner option A; RP-4 due); owner's refactoring WP-52 issued before RP-4.

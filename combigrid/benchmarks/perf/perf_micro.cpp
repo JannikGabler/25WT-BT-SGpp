@@ -35,7 +35,7 @@
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
@@ -56,6 +56,7 @@
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
+#include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <string>
@@ -428,7 +429,7 @@ void addCCWeights(Suite& suite, const GPCntType nNodes) {
 Deltas sparse grid quadrature
 *******************************************************************************/
 
-/// tools::dsg_quadrature::processDeltaTensorGrid on the largest delta tensor grid.
+/// tools::dsg_weighted_sum::processDeltaTensorGrid on the largest delta tensor grid.
 void addProcessDeltaTG(Suite& suite, const std::string& nodes, const LvlType boundary,
                        const size_t nDim, const LvlType maxLvl) {
   suite.addMicro(
@@ -444,13 +445,13 @@ void addProcessDeltaTG(Suite& suite, const std::string& nodes, const LvlType bou
                                                           .domain = dsg.getGenInstr().getDomain(),
                                                           .weights1D = weights1D,
                                                           .coeffTrie = coeffTrie};
-        cg::misc::DeltaQuadratureScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
+        cg::misc::DeltaWeightedSumScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
         const TensorGridCTData& tgData = largestTensorGrid(dsg);
 
         run.setItems(static_cast<double>(tgData.tensorGrid.nGP()));
         run.measure([&]() {
-          doNotOptimize(cg::tools::dsg_quadrature::processDeltaTensorGrid(context, sourceFunc,
-                                                                          tgData, scratch));
+          doNotOptimize(cg::tools::dsg_weighted_sum::processDeltaTensorGrid(context, sourceFunc,
+                                                                            tgData, scratch));
         });
       });
 }
@@ -474,7 +475,7 @@ void addDeltaPrep(Suite& suite, const std::string& nodes, const LvlType boundary
   });
 }
 
-/// tools::dsg_quadrature::compSubTrie (the per-delta-tensor-grid trie work) for every
+/// tools::dsg_weighted_sum::compSubTrie (the per-delta-tensor-grid trie work) for every
 /// @p stride -th delta tensor grid (all of them take minutes at d20).
 void addSubTries(Suite& suite, const std::string& nodes, const LvlType boundary, const size_t nDim,
                  const LvlType maxLvl, const size_t stride) {
@@ -491,13 +492,13 @@ void addSubTries(Suite& suite, const std::string& nodes, const LvlType boundary,
                                                           .domain = dsg.getGenInstr().getDomain(),
                                                           .weights1D = weights1D,
                                                           .coeffTrie = coeffTrie};
-        cg::misc::DeltaQuadratureScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
+        cg::misc::DeltaWeightedSumScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
 
         run.setItems(static_cast<double>((dsg.nTG() + stride - 1) / stride));
         run.measure([&]() {
           size_t nNodes = 0;
           for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
-            cg::tools::dsg_quadrature::compSubTrie(context, dsg.getTensorGrid(tg).mi, scratch);
+            cg::tools::dsg_weighted_sum::compSubTrie(context, dsg.getTensorGrid(tg).mi, scratch);
             nNodes += scratch.trieNodes[0].size();
           }
           doNotOptimize(nNodes);
@@ -505,7 +506,7 @@ void addSubTries(Suite& suite, const std::string& nodes, const LvlType boundary,
       });
 }
 
-/// tools::dsg_quadrature::processDeltaTensorGrid (sub-trie, global weights, integrand
+/// tools::dsg_weighted_sum::processDeltaTensorGrid (sub-trie, global weights, integrand
 /// perf::expSum) for every @p stride -th delta tensor grid: the whole per-delta-tensor-grid work
 /// of the operator at 1 thread, as opposed to process_delta_tg on the largest grid only.
 /// @p constant: micro/dsg/row_loop/...: the same with a constant integrand, i.e. the row loop
@@ -529,7 +530,7 @@ void addProcessDeltaTGs(Suite& suite, const std::string& nodes, const LvlType bo
                                                           .domain = dsg.getGenInstr().getDomain(),
                                                           .weights1D = weights1D,
                                                           .coeffTrie = coeffTrie};
-        cg::misc::DeltaQuadratureScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
+        cg::misc::DeltaWeightedSumScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
 
         size_t nGP = 0;
         for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
@@ -539,7 +540,7 @@ void addProcessDeltaTGs(Suite& suite, const std::string& nodes, const LvlType bo
         run.measure([&]() {
           double result = 0.0;
           for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
-            result += cg::tools::dsg_quadrature::processDeltaTensorGrid(
+            result += cg::tools::dsg_weighted_sum::processDeltaTensorGrid(
                 context, sourceFunc, dsg.getTensorGrid(tg), scratch);
           }
           doNotOptimize(result);
@@ -601,7 +602,7 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
   suite.addMicro(kernel + "_scalar_x_m/" + name, [=](MicroRun& run) {
     const VectorDeltaQuadSetup s(nodes, boundary, nDim, maxLvl, stride);
     const cg::misc::GenericDSGOperatorContext context = s.context();
-    cg::misc::DeltaQuadratureScratch scratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim());
+    cg::misc::DeltaWeightedSumScratch scratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim());
     std::vector<SourceFunc> funcs;
     for (size_t k = 0; k < m; k++) {
       funcs.emplace_back([k](const DataVector& x) { return expSumK(x, k); });
@@ -612,7 +613,7 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
       for (const SourceFunc& f : funcs) {
         double sum = 0.0;
         for (const TensorGridCTData* tgData : s.tgs) {
-          sum += cg::tools::dsg_quadrature::processDeltaTensorGrid(context, f, *tgData, scratch);
+          sum += cg::tools::dsg_weighted_sum::processDeltaTensorGrid(context, f, *tgData, scratch);
         }
         doNotOptimize(sum);
       }
@@ -622,7 +623,7 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
   suite.addMicro(kernel + "_vec/" + name, [=](MicroRun& run) {
     const VectorDeltaQuadSetup s(nodes, boundary, nDim, maxLvl, stride);
     const cg::misc::GenericDSGOperatorContext context = s.context();
-    cg::misc::DeltaQuadratureScratch scratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim(), m);
+    cg::misc::DeltaWeightedSumScratch scratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim(), m);
     const cg::VectorSourceFunc f(
         [](const DataVector& x, std::span<double> out) {
           for (size_t k = 0; k < out.size(); k++) out[k] = expSumK(x, k);
@@ -632,14 +633,14 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
 
     // Vector vs. scalar results delta tensor grid by delta tensor grid (grid-major, output-minor)
     std::vector<double> vecPerTG, scalarPerTG;
-    cg::misc::DeltaQuadratureScratch scalarScratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim());
+    cg::misc::DeltaWeightedSumScratch scalarScratch(nDim, s.dsg->getMaxTGSumOverGPCntsPerDim());
     for (const TensorGridCTData* tgData : s.tgs) {
-      cg::tools::dsg_quadrature::processDeltaTensorGrid(context, f, *tgData, scratch, tgResult);
+      cg::tools::dsg_weighted_sum::processDeltaTensorGrid(context, f, *tgData, scratch, tgResult);
       vecPerTG.insert(vecPerTG.end(), tgResult.begin(), tgResult.end());
       for (size_t k = 0; k < m; k++) {
         const SourceFunc fk([k](const DataVector& x) { return expSumK(x, k); });
-        scalarPerTG.push_back(
-            cg::tools::dsg_quadrature::processDeltaTensorGrid(context, fk, *tgData, scalarScratch));
+        scalarPerTG.push_back(cg::tools::dsg_weighted_sum::processDeltaTensorGrid(
+            context, fk, *tgData, scalarScratch));
       }
     }
     compareResults(run, name, vecPerTG, scalarPerTG);
@@ -648,7 +649,7 @@ void addVectorDeltaQuad(Suite& suite, const std::string& nodes, const LvlType bo
     run.measure([&]() {
       std::fill(sum.begin(), sum.end(), 0.0);
       for (const TensorGridCTData* tgData : s.tgs) {
-        cg::tools::dsg_quadrature::processDeltaTensorGrid(context, f, *tgData, scratch, tgResult);
+        cg::tools::dsg_weighted_sum::processDeltaTensorGrid(context, f, *tgData, scratch, tgResult);
         for (size_t k = 0; k < m; k++) sum[k] += tgResult[k];
       }
       doNotOptimize(sum.data());

@@ -12,26 +12,26 @@
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/delta_quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
-#include <sgpp/combigrid/tools/operators/quadrature/projected_sub_trie_builder.hpp>
+#include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
 
 using sgpp::combigrid::misc::CTCoeffTrie;
-using sgpp::combigrid::misc::DeltaQuadratureScratch;
+using sgpp::combigrid::misc::DeltaWeightedSumScratch;
 using sgpp::combigrid::misc::FlatNestedVec;
 using sgpp::combigrid::misc::GenericDSGOperatorContext;
 using sgpp::combigrid::tools::dsg_quadrature::combineDeltaTensorGrids;
 using sgpp::combigrid::tools::dsg_quadrature::comp1DWeights;
-using sgpp::combigrid::tools::dsg_quadrature::processDeltaTensorGrid;
+using sgpp::combigrid::tools::dsg_weighted_sum::processDeltaTensorGrid;
 
 namespace sgpp {
 namespace combigrid {
@@ -52,11 +52,11 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
 
 #pragma omp parallel reduction(+ : result)
   {
-    DeltaQuadratureScratch scratch(nDim, deltasSparseGrid.getMaxTGSumOverGPCntsPerDim());
+    DeltaWeightedSumScratch scratch(nDim, deltasSparseGrid.getMaxTGSumOverGPCntsPerDim());
 
     // The delta tensor grids differ in size by orders of magnitude. Dynamic scheduling was up to
-    // 20% faster than guided scheduling (which hands out large chunks first) for large sparse
-    // grids; processing them largest-first gave no further gain.
+    // 20% faster than guided scheduling for large sparse grids.
+    // Processing them largest-first gave no further gain.
 #pragma omp for schedule(dynamic) nowait
     for (const TensorGridCTData& tgData : deltasSparseGrid) {
       result += processDeltaTensorGrid(context, sourceFunc, tgData, scratch);

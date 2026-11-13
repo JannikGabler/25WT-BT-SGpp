@@ -41,10 +41,11 @@ tensorGrid}`) → operators `interpolate`, `interpolateLinear`, `quadrature`. A 
 evaluates every grid point once; its `interpolateLinear` overloads (WP-47) every distinct corner
 once per call (index built on the first call); its `interpolate` overloads (WP-45) every grid point
 once per call, weighted with global weights from the 1D basis values
-(`InterpolationMethod::basisValues`) through the DSG quadrature's row loop (thread-count
-independent). User functions are wrapped in `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all
-operators on both grid types, also in Python); nodes / weights live on [0,1]^d,
-the user domain enters only via `setDomain()` (all operators map with `tools::mapToDomain` =
+(`InterpolationMethod::basisValues`) through the weighted-sum kernel it shares with the DSG
+quadrature (`tools::dsg_weighted_sum`; thread-count independent). User functions are wrapped in
+`SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators on both grid types, also in Python);
+nodes / weights live on [0,1]^d, the user domain enters only via `setDomain()` (all operators map
+with `tools::mapToDomain` =
 `std::fma`, so they evaluate bitwise identical points). Optional caching (WP-26): `CachedSourceFunc`
 / `CachedVectorSourceFunc` (a `SourceFunc` / `VectorSourceFunc` whose callable looks every point up
 in a shared `SourceFuncCache`; `SourceFuncCacheConfig{.memoryLimit, .nShards, .policy, .file,

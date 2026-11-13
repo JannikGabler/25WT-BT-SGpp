@@ -1,5 +1,12 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -93,6 +100,44 @@ base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr
   }
 
   return nodesPerDim;
+}
+
+std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const DeltasSparseGrid& deltasSparseGrid) {
+  const size_t nDim = deltasSparseGrid.nDim();
+  const std::vector<NodeGenFunc*>& nodeGenFuncs = deltasSparseGrid.getGenInstr().getNodeGenFuncs();
+  const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs =
+      deltasSparseGrid.getGenInstr().getLvl2GPCntFuncs();
+
+  std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs(nDim);
+
+  for (size_t dim = 0; dim < nDim; dim++) {
+    nodeIdxLvlMapFuncs[dim] =
+        nodeGenFuncs[dim]->getNodeIdxMapFromDeltaTGLvlToRegularLvl(lvl2GPCntFuncs[dim]);
+  }
+
+  return nodeIdxLvlMapFuncs;
+}
+
+GPCntType mapDeltaNodeIdxToRegular(const GPCntType nNodesInDeltaTG,
+                                   const GPCntType nNodesInTargetTG, const LvlType deltaTGLvl,
+                                   const LvlType targetTGLvl, const GPCntType gpIdxInDeltaTG,
+                                   const NodeIdxLvlMapFunc nodeIdxLvlMapFunc,
+                                   const LvlType boundaryLvlOffset) {
+  if (deltaTGLvl == boundaryLvlOffset) {  // Has the delta tensor grid boundary nodes?
+    if (gpIdxInDeltaTG == 0) {            // left boundary node
+      return 0;
+    } else if (gpIdxInDeltaTG == nNodesInDeltaTG - 1) {  // right boundary node
+      return nNodesInTargetTG - 1;
+    } else {
+      // Has the target tensor grid boundary nodes?
+      return nodeIdxLvlMapFunc(gpIdxInDeltaTG - 1, deltaTGLvl, targetTGLvl) +
+             (targetTGLvl >= boundaryLvlOffset ? 1 : 0);
+    }
+  } else {
+    // Has the target tensor grid boundary nodes?
+    return nodeIdxLvlMapFunc(gpIdxInDeltaTG, deltaTGLvl, targetTGLvl) +
+           (targetTGLvl >= boundaryLvlOffset ? 1 : 0);
+  }
 }
 
 }  // namespace deltas_sparse_grid_generation
