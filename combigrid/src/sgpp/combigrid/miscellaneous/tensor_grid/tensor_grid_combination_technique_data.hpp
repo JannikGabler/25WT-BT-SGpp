@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file tensor_grid_combination_technique_data.hpp
  * @brief Bundle of (level multi-index, combination coefficient, tensor grid)
@@ -11,7 +16,8 @@ namespace sgpp {
 namespace combigrid {
 
 /**
- * @brief Per-tensor-grid metadata stored inside a @c SparseGrid.
+ * @brief Owning bundle of the data of one summand of a sparse grid (e.g. a copy of a tensor grid
+ * of a @c SparseGrid, see @c TensorGridCTDataView::toTensorGridCTData).
  *
  * For a single summand
  * @f$c_{\vec{\ell}}\,f_{\vec{\ell}}@f$ of the combination technique, this

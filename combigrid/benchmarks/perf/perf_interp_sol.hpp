@@ -29,12 +29,16 @@
 #include <bit>
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
-#include <sgpp/combigrid/tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
+#include <sgpp/combigrid/tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
@@ -46,6 +50,25 @@ namespace interp_sol {
 
 /// Per-dimension coordinates of a tensor grid (nodes on the domain or normalized nodes).
 using NodesPerDim = std::vector<std::vector<double>>;
+
+/**
+ * @brief Stand-alone copy of the tensor grid @p tg of a sparse grid of @p genInstr with its nodes
+ * on the unit interval (the sparse grid stores them on the domain): the input of the reference
+ * kernels below, which map the nodes themselves.
+ */
+inline TensorGridCTData unitTGData(const SGGenInstr& genInstr, const TensorGridCTDataView& tg) {
+  const size_t nDim = tg.mi.size();
+  GPMI nPerDim(nDim);
+  base::DataVector nodes(tg.tensorGrid.sumOfGPCntsPerDim());
+  size_t offset = 0;
+  for (size_t k = 0; k < nDim; k++) {
+    nPerDim[k] = tg.tensorGrid.nGPInDim(k);
+    genInstr.getNodeGenFuncForDim(k)->genNodes(
+        nPerDim[k], nodes, tg.mi[k] >= genInstr.getBoundaryLevelOffset(), offset);
+    offset += nPerDim[k];
+  }
+  return {tg.mi.toMI(), tg.coefficient, TensorGrid(nPerDim, nodes)};
+}
 
 /// @brief Normalized nodes of @p tg per dimension (@p unit) and their images in @p domain.
 inline void tgNodes(const TensorGrid& tg, const HyperCubeArea& domain, NodesPerDim& unit,

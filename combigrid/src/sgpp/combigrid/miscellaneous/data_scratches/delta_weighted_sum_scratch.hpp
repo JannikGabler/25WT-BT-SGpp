@@ -63,7 +63,6 @@ struct DeltaWeightedSumScratch {
                           const size_t nOutputs = 0)
       : trieNodes(nDim),
         projChildBlocks(nDim),
-        nodesPerDim(maxTGSumOverGPCntsPerDim),
         nodesOfProjDepth(nDim),
         gpCntOfProjDepth(nDim),
         gp(nDim),
@@ -91,12 +90,12 @@ struct DeltaWeightedSumScratch {
    * coefficient accumulated so far, in double-double (see @c tools::dsg_weighted_sum::compSubTrie).
    */
   std::vector<DoubleDouble> projLeafSlots;
-  /// @brief Node positions of the delta tensor grid, mapped onto the domain (per dimension
-  /// back-to-back).
-  base::DataVector nodesPerDim;
-  /// @brief @c nodesOfProjDepth[t]: start of the nodes of dimension @c projDims[t] in
-  /// @ref nodesPerDim.
+  /// @brief @c nodesOfProjDepth[t]: start of the nodes of dimension @c projDims[t] (in the node
+  /// table of the grid, in domain coordinates; for t = 0 in @ref rowNodes).
   std::vector<const double*> nodesOfProjDepth;
+  /// @brief Copy of the nodes of the row dimension (@c projDims[0]) of the current delta tensor
+  /// grid (@c nodesOfProjDepth[0] points to it); grows on demand.
+  std::vector<double> rowNodes;
   /// @brief @c gpCntOfProjDepth[t]: number of nodes of dimension @c projDims[t].
   GPMI gpCntOfProjDepth;
   /// @brief Current grid point (in domain coordinates).

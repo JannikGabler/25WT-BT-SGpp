@@ -12,15 +12,15 @@
  * with the 1D quadrature weights as @f$w_{k,i}@f$ (@c tools::quadrature::processTensorGrid), the
  * global interpolation with the 1D basis values at the query point
  * (@c tools::global_interpolation::processTensorGrid). The caller writes the 1D weights to
- * @c misc::WeightedSumScratch::weights1D, then prepares the row loop (@ref mapNodesOntoDomain,
- * @ref setUpIterDims) and runs it (@ref sumOverRows).
+ * @c misc::WeightedSumScratch::weights1D, then prepares the row loop (@ref setUpIterDims) and runs
+ * it (@ref sumOverRows). The nodes are read from the node table of the sparse grid, which stores
+ * them in domain coordinates.
  */
 #pragma once
 
 #include <cstddef>
-#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -30,33 +30,23 @@ namespace tools {
 namespace weighted_sum {
 
 /**
- * @brief Maps the nodes of @p tg onto @p domain (@c tools::mapToDomain, once per tensor grid)
- * into @c scratch.nodesPerDim and moves @c scratch.gp to the first grid point.
- *
- * @param domain  Domain of the source function.
- * @param tg      Tensor grid.
- * @param scratch Scratch space (@c nodesPerDim large enough for the nodes of @p tg).
- */
-void mapNodesOntoDomain(const HyperCubeArea& domain, const TensorGrid& tg,
-                        misc::WeightedSumScratch& scratch);
-
-/**
  * @brief Sets up the iterated dimensions of the row loop (@ref sumOverRows) over @p tg, using
- * the nodes of @ref mapNodesOntoDomain and the weights in @c scratch.weights1D (one per node,
- * per-dimension blocks back-to-back).
+ * its nodes (in domain coordinates, from the node table of the sparse grid) and the weights in
+ * @c scratch.weights1D (one per node, per-dimension blocks back-to-back), and moves
+ * @c scratch.gp to the first grid point.
  *
  * @param tg      Tensor grid (at least one dimension).
- * @param scratch Scratch space with the nodes and weights of @p tg.
+ * @param scratch Scratch space with the weights of @p tg.
  */
-void setUpIterDims(const TensorGrid& tg, misc::WeightedSumScratch& scratch);
+void setUpIterDims(TensorGridView tg, misc::WeightedSumScratch& scratch);
 
 /**
  * @brief Returns the row dimension of the row loop: the first dimension with more than one node
  * (or the last dimension if there is none).
  *
- * @param nGPPerDim Number of nodes per dimension of the tensor grid (at least one dimension).
+ * @param tg Tensor grid (at least one dimension).
  */
-size_t findRowDim(const GPMI& nGPPerDim);
+size_t findRowDim(TensorGridView tg);
 
 /**
  * @brief Recomputes the weight products of the iterated dimensions @p j, ..., 1 (see
@@ -73,7 +63,7 @@ void updateWeightProducts(const double* const* const weightsOfIterDim, const GPC
 
 /**
  * @brief Sums the weight times the source function over all grid points of a tensor grid
- * prepared by @ref mapNodesOntoDomain and @ref setUpIterDims; the weight of a grid point is the
+ * prepared by @ref setUpIterDims; the weight of a grid point is the
  * product of the 1D weights of its nodes.
  *
  * Instantiated for @c misc::ScalarValues and @c misc::VectorValues (in the @c .cpp).

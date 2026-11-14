@@ -40,7 +40,7 @@ namespace dsg_global_interpolation {
 
 /**
  * @brief Returns the index of the global interpolation on @p deltasSparseGrid, built on the first
- * call (thread-safe) and kept in the grid's operator data (@c DeltasSparseGrid::getOperatorData).
+ * call (thread-safe) and kept in the grid's operator data (@c SparseGridBase::getOperatorData).
  */
 const misc::DSGGlobalInterpIndex& getIndex(const DeltasSparseGrid& deltasSparseGrid);
 

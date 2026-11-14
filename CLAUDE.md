@@ -35,8 +35,10 @@ modules are irrelevant.
 ## 2. Module essentials
 
 Pipeline: a generation instruction (`CompleteSGGenInstr(maxLvl, nDim)` or `MIVecSGGenInstr(miVec)`
-for custom / adaptive MI sets) → `SparseGrid` (list of `TensorGridCTData {mi, coefficient,
-tensorGrid}`) → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid`
+for custom / adaptive MI sets) → `SparseGrid` (struct of arrays in `SparseGridBase`: levels
+`LvlMIVec`, coefficients, `NodeTable` = 1D node lists once per (dim, level), on the domain; tensor
+grid i is a view `TensorGridCTDataView {mi, coefficient, tensorGrid}`, `toTensorGridCTData()` copies)
+→ operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid`
 (nested nodes only; Python-bound with its operators since WP-50) + its `quadrature` overload
 evaluates every grid point once; its `interpolateLinear` overloads (WP-47) every distinct corner
 once per call (index built on the first call); its `interpolate` overloads (WP-45) every grid point
@@ -44,9 +46,9 @@ once per call, weighted with global weights from the 1D basis values
 (`InterpolationMethod::basisValues`) through the weighted-sum kernel it shares with the DSG
 quadrature (`tools::dsg_weighted_sum`; thread-count independent). User functions are wrapped in
 `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators on both grid types, also in Python);
-nodes / weights live on [0,1]^d, the user domain enters only via `setDomain()` (all operators map
-with `tools::mapToDomain` =
-`std::fma`, so they evaluate bitwise identical points). Optional caching (WP-26): `CachedSourceFunc`
+weights live on [0,1]^d; the grids store their nodes mapped onto the `setDomain()` domain with
+`tools::mapToDomain` = `std::fma` (all operators evaluate these bitwise identical points; the SG
+interpolations keep a unit-node table as operator data for their normalized-coordinate math). Optional caching (WP-26): `CachedSourceFunc`
 / `CachedVectorSourceFunc` (a `SourceFunc` / `VectorSourceFunc` whose callable looks every point up
 in a shared `SourceFuncCache`; `SourceFuncCacheConfig{.memoryLimit, .nShards, .policy, .file,
 .storageSpaceLimit}`, `statistics()`, `flush()`, `clear(deletePersistentFile)`; Python too); always

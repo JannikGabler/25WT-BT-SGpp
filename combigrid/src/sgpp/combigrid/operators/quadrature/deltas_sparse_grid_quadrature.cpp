@@ -9,12 +9,10 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
-#include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
@@ -41,12 +39,11 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
   const size_t nDim = deltasSparseGrid.nDim();
 
   const FlatNestedVec<double, 3> weights1D = comp1DWeights(deltasSparseGrid);
-  const CTCoeffTrie coeffTrie(deltasSparseGrid.getTensorGrids(), nDim);
+  const CTCoeffTrie coeffTrie(deltasSparseGrid.getLevels().getView(),
+                              deltasSparseGrid.getCoefficients());
 
-  const GenericDSGOperatorContext context{.deltasSparseGrid = deltasSparseGrid,
-                                          .domain = genInstr.getDomain(),
-                                          .weights1D = weights1D,
-                                          .coeffTrie = coeffTrie};
+  const GenericDSGOperatorContext context{
+      .deltasSparseGrid = deltasSparseGrid, .weights1D = weights1D, .coeffTrie = coeffTrie};
 
   double result = 0.0;
 
@@ -58,8 +55,9 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
     // 20% faster than guided scheduling for large sparse grids.
     // Processing them largest-first gave no further gain.
 #pragma omp for schedule(dynamic) nowait
-    for (const TensorGridCTData& tgData : deltasSparseGrid) {
-      result += processDeltaTensorGrid(context, sourceFunc, tgData, scratch);
+    for (size_t tgIdx = 0; tgIdx < deltasSparseGrid.nTG(); tgIdx++) {
+      result += processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getTensorGrid(tgIdx),
+                                       scratch);
     }
   }
 
@@ -77,12 +75,11 @@ void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& delt
   const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
 
   const FlatNestedVec<double, 3> weights1D = comp1DWeights(deltasSparseGrid);
-  const CTCoeffTrie coeffTrie(deltasSparseGrid.getTensorGrids(), deltasSparseGrid.nDim());
+  const CTCoeffTrie coeffTrie(deltasSparseGrid.getLevels().getView(),
+                              deltasSparseGrid.getCoefficients());
 
-  const GenericDSGOperatorContext context{.deltasSparseGrid = deltasSparseGrid,
-                                          .domain = genInstr.getDomain(),
-                                          .weights1D = weights1D,
-                                          .coeffTrie = coeffTrie};
+  const GenericDSGOperatorContext context{
+      .deltasSparseGrid = deltasSparseGrid, .weights1D = weights1D, .coeffTrie = coeffTrie};
 
   combineDeltaTensorGrids(context, sourceFunc, result);
 

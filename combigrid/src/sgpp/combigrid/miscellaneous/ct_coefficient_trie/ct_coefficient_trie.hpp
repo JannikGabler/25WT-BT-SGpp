@@ -12,7 +12,6 @@
 
 #include <cstddef>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -68,14 +67,15 @@ class CTCoeffTrie {
   /// @{
 
   /**
-   * @brief Builds the trie over the level multi-indices of the tensor grids in @p tgData with a
-   * non-zero coefficient. Tensor grids with coefficient 0 are skipped.
+   * @brief Builds the trie over the level multi-indices @p levels with a non-zero coefficient
+   * (e.g. the storage of a sparse grid: @c SparseGridBase::getLevels and
+   * @c SparseGridBase::getCoefficients). Multi-indices with coefficient 0 are skipped.
    *
-   * @param tgData Tensor grids with pairwise distinct level multi-indices of @p nDim
-   *               components. Neither their order nor their tensor grids matter.
-   * @param nDim   Number of dimensions (the depth of the trie).
+   * @param levels       Pairwise distinct level multi-indices (in any order); their number of
+   *                     dimensions is the depth of the trie.
+   * @param coefficients Their combination coefficients.
    */
-  CTCoeffTrie(std::span<const TensorGridCTData> tgData, size_t nDim);
+  CTCoeffTrie(LvlMIVecView levels, std::span<const CTCoeffType> coefficients);
 
   /// @}
 
@@ -122,8 +122,8 @@ class CTCoeffTrie {
   /// @name Attributes
   /// @{
 
-  size_t nDim_;                   ///< Number of dimensions (depth of the trie).
-  FlatNestedVec<Node, 2> nodes;   ///< @c nodes[depth][idx]: nodes of each depth.
+  size_t nDim_;                     ///< Number of dimensions (depth of the trie).
+  FlatNestedVec<Node, 2> nodes;     ///< @c nodes[depth][idx]: nodes of each depth.
   std::vector<double> leafCoeffs_;  ///< Coefficients of the leaves (see @ref leafCoeffs).
 
   /// @}

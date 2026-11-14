@@ -138,10 +138,10 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | WP-52 | Shared weighted-sum kernels: operator-neutral names / place for the SG + DSG kernels used by quadrature and global interpolation (owner 2026-11-13; refactoring) | accepted (2026-11-13) | measured: e2e `^(quad/\|interp/)` 0.999x (`interp/sg/cc/b0/d10/L2/p8` 0.990x, placement: `sumOverRows` at line offset 48, op-cache misses +20 %), memory 0.998, refcheck identical (known WARN), 1 t output byte-identical |
 | – | RP-4 | Re-profiling after WP-08 / WP-06 (+ cumulative memory; size the new `interp/dsg`, `interplin/dsg` groups; re-rank; `sumOverRows` alignment check) | accepted (2026-11-13) | measured: baseline → rp-4 e2e 69.89 → 36.16 s (1.933x; d ≥ 7 1.97x; since rp-3 1.063x), 0 SLOWER; full suite incl. DSG interpolation 38.17 s; memory geomean 1.014; interp/sg + interplin/sg at the integrand floor; `sumOverRows` alignment 0.994x → no WP; benchmark-binary placement ±2–6 % on `exp` → WP-53 |
 | – | WP-53 | Benchmark integrands: pin their code placement (`perf_problems.hpp`, protected → patch) + baseline re-measurement (from RP-4; owner 2026-11-13) | dropped (owner 2026-11-13, option A: partial fix — start offset only, library-side placement ±3–4 % stays — at the cost of a long session, protected-file churn and a re-anchored baseline) | – (caveat + hybrid-snapshot check instead: PLAN header "Code placement") |
-| 1 | WP-05 | SG quadrature at low d: CC 1D weights + per-thread scratch on demand (incl. RP-1 NEW-A) | in progress (prompt 2026-11-13; owner: before WP-49) | RP-4: 0.5–0.7 s (d ≤ 3: cc d2 CC weights 0.31 s + page faults / zero fill 0.33 s, equi d2 0.09 s); memory equi d2 620 → ≈ 120–270 MiB, cc d2 1079 → ≈ 280–730 MiB; + `DeltaWeightedSumScratch` on demand |
-| 2 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | ready (+ serial d2 call, RP-4) | RP-4: 0.15–0.25 s (gather + mark 0.40 s: d10 0.16, d8 0.15, d5 0.08 s) + serial d2 ≈ 0.07 s (0.184 vs. SG 0.111 s) |
-| 3 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
-| 4 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | ready (owner decides the protected-benchmark constraint first) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface |
+| 1 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | in progress (prompt 2026-11-13; owner: before WP-05, mapped nodes only, nodes + SoA together, protected benchmarks: session proposes) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface; + per-thread mapped-node scratch (sg d2 ≈ 268 MiB, ≈ 0.2 s zero fill) |
+| 2 | WP-05 | SG quadrature at low d: CC 1D weights once per (rule, #nodes) per call + shared weight table / fewer FFT temporaries (nodes → WP-18; owner 2026-11-13) | ready (after WP-18) | ≈ 0.31 s CC weights + `weights1D` zero fill (d ≤ 3); memory ≈ 361 MB FFT temporaries + ≈ 268 MiB `weights1D` scratch at sg d2 |
+| 3 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | ready (+ serial d2 call, RP-4) | RP-4: 0.15–0.25 s (gather + mark 0.40 s: d10 0.16, d8 0.15, d5 0.08 s) + serial d2 ≈ 0.07 s (0.184 vs. SG 0.111 s) |
+| 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 5 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | RP-4: 0.1–0.2 s (d2; 1 → 16 t cc 3.95x, equi 5.26x) |
 | 6 | WP-51 | DSG row loop at low d: split the rows of large delta TGs across threads + largest-first delta-TG order for the DSG quadrature (from WP-45) | ready (low; measure first) | RP-4: ≤ 0.02–0.04 s (dsg equi d3 6.4x, interp/dsg cc d2 6.5x at 16 t) |
 | 7 | WP-09 | Multi-point interpolation API (proposal; owner 2026-11-11: acceptance depends on gains and complexity) | ready (proposal) | judged 0; new-API callers cc 6.3–10.6x (+ dedup 7.6–12.9x), generic 19.5–58.8x with WP-07 |
@@ -262,6 +262,9 @@ dsg equi d5 1.036x, mivec d5 1.063x with identical libraries) → WP-53 pins the
 and re-measures the baseline, first. Then dropped (owner 2026-11-13, option A, before its session):
 partial fix at a high cost → caveat + hybrid-snapshot check (header "Benchmark-binary placement").
 WP-05 is rank 1.
+Owner 2026-11-13 (after WP-05's first prompt, before its session ran): grid-side mapped 1D node
+buffer (WP-18) would make WP-05's node part redundant → **WP-18 first** (mapped nodes only, nodes +
+SoA together, protected benchmarks: session proposes); WP-05 narrowed to the weights, rank 2.
 
 ---
 
@@ -542,7 +545,16 @@ WP-05 is rank 1.
   kernel page faults / zero fill 23.3 % + `DataVector` 2.2 % = 0.33 s (cc) + 0.09 s (equi d2);
   libgomp + OpenBLAS 0.18 s (→ WP-19). Micro `quad/process_tg/cc/b0/d2/L16` 63.4 vs. equi 15.2
   ns/point. Expected **0.5–0.7 s** (d ≤ 3). Peaks unchanged: equi d2 620 MiB, cc d2 1079 MiB.
-  Owner 2026-11-13: runs before WP-49. **Status**: in progress (prompt 2026-11-13; rank 1).
+  Owner 2026-11-13: runs before WP-49.
+- **Relation to WP-18 / scope** (owner 2026-11-13): at sg cc d2 the peak 1079 MiB = per-thread
+  scratch ≈ 537 MiB (`nodesPerDim` ≈ 268 + `weights1D` ≈ 268) + CC FFT temporaries ≈ 361 MB + per-TG
+  node lists ≈ 101 MB. WP-18 now stores each distinct 1D node list once per sparse grid, **already
+  mapped to the domain**, so the operators read nodes from the grid and the per-thread `nodesPerDim`
+  copies go away there. Owner: **WP-18 first**; WP-05 then covers only the weights: (a) CC weights
+  once per (rule, #nodes) per `quadrature()` call in a table shared by all threads (`weights1D` →
+  pointer; domain-width scaling per call), fewer `genWeightsFFT` temporaries; DSG `comp1DWeights`
+  as the model. Expected ≈ 0.31 s + the `weights1D` zero fill (d ≤ 3); memory ≈ 361 MB + ≈ 268 MiB at
+  sg d2. Re-size from the WP-18 summary. **Status**: ready (rank 2, after WP-18).
 
 ## WP-06 — Global interpolation: operator overhead
 - **Location**: `operators/global_interpolation/global_interpolation.cpp`.
@@ -1186,6 +1198,31 @@ WP-05 is rank 1.
   `perf_e2e.cpp:81` / `perf_reference.cpp:136-144` use `tgData.mi`, `.coefficient`,
   `.tensorGrid.*` → a proxy must keep these names, or the owner adapts the protected files (owner
   decides before the prompt).
+- **Owner decisions 2026-11-13** (scheduled before WP-05):
+  - **Mapped nodes only**: each sparse grid (SG and DSG) stores each distinct 1D node list once
+    per dimension, already mapped to the domain with `tools::mapToDomain` (evaluated points stay
+    bitwise identical; cache keys too). `TensorGrid::getNodesPerDim` and Python then return domain
+    nodes: observable interface change, documented.
+  - The operators read nodes from the grid instead of mapping per tensor grid; the per-thread
+    `nodesPerDim` copies in `WeightedSumScratch` / `DeltaWeightedSumScratch` go away. Weights stay
+    with WP-05.
+  - **Nodes + SoA (WP-22) in one package**: the public storage changes once.
+  - **Protected benchmarks** (`perf_e2e.cpp:81`, `perf_reference.cpp:136-144` read `tgData.mi`,
+    `.coefficient`, `.tensorGrid.*`): the session designs freely and reports both variants (proxy
+    keeping the names vs. adapting the protected files). If the protected files must change:
+    BLOCKED with a drafted patch (worktree, WP-47 precedent).
+  - Still a proposal: adoption after the results.
+  - **Lazy construction for `SparseGrid`** (owner 2026-11-13, a suggestion to evaluate): build the
+    global mapped node buffer on first use instead of at grid construction (grids never used with
+    a node-reading operator pay nothing). Points to settle: thread-safe one-time initialization
+    on a `const` grid under concurrent operator calls (e.g. `std::call_once` / atomic publish;
+    preferably triggered outside the parallel region), copy / `clone()` / `operator==` semantics,
+    the accessors (`getNodesPerDim`) triggering construction, and the peak-memory picture. Report
+    lazy vs. eager (generation time, first-call cost, memory).
+- **Added scope from RP-4 / WP-05**: sg d2 L20 per-thread `nodesPerDim` ≈ 268 MiB (16 × 16.8 MiB) +
+  ≈ half of the kernel zero fill / page faults (0.33 s cc + 0.09 s equi) → ≈ 0.2 s; dsg b0 d3
+  per-thread node scratch.
+- **Status**: in progress (prompt 2026-11-13; rank 1).
 
 ## WP-19 — SG quadrature: load balancing at low d
 - **Source**: RP-1 summary (NEW-C).

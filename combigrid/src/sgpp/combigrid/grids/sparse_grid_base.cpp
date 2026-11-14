@@ -1,81 +1,32 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <algorithm>
 #include <cassert>
-#include <sgpp/base/exception/not_implemented_exception.hpp>
+#include <sgpp/combigrid/constants.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <span>
 #include <utility>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
 
-using iterator = std::vector<TensorGridCTData>::iterator;
-using const_iterator = std::vector<TensorGridCTData>::const_iterator;
-using reverse_iterator = std::vector<TensorGridCTData>::reverse_iterator;
-using const_reverse_iterator = std::vector<TensorGridCTData>::const_reverse_iterator;
-
-/// @name Getters
-/// @{
-
-size_t SparseGridBase::nDim() const noexcept { return nDim_; }
-
-size_t SparseGridBase::nTG() const noexcept { return tensorGridData.size(); }
-
-const TensorGridCTData& SparseGridBase::getTensorGrid(size_t idx) const noexcept {
-  assert(idx < tensorGridData.size());
-
-  return tensorGridData[idx];
+SparseGridBase::const_iterator SparseGridBase::getTensorGrid(const LvlMIView& mi) const noexcept {
+  return std::find_if(begin(), end(),
+                      [&mi](const TensorGridCTDataView& data) { return data.mi == mi; });
 }
-
-const_iterator SparseGridBase::getTensorGrid(const LvlMI& mi) const noexcept {
-  return std::find_if(tensorGridData.begin(), tensorGridData.end(),
-                      [&mi](const TensorGridCTData& data) { return data.mi == mi; });
-}
-
-std::span<const TensorGridCTData> SparseGridBase::getTensorGrids() const noexcept {
-  return tensorGridData;
-}
-
-size_t SparseGridBase::getMaxTGGPCnt() const noexcept { return maxTGGPCnt; }
-
-size_t SparseGridBase::getMaxTGSumOverGPCntsPerDim() const noexcept {
-  return maxTGSumOverGPCntsPerDim;
-}
-
-/// @}
-
-/// @name Iterators
-/// @{
-
-iterator SparseGridBase::begin() noexcept { return tensorGridData.begin(); }
-iterator SparseGridBase::end() noexcept { return tensorGridData.end(); }
-const_iterator SparseGridBase::begin() const noexcept { return tensorGridData.begin(); }
-const_iterator SparseGridBase::end() const noexcept { return tensorGridData.end(); }
-const_iterator SparseGridBase::cbegin() const noexcept { return tensorGridData.cbegin(); }
-const_iterator SparseGridBase::cend() const noexcept { return tensorGridData.cend(); }
-
-reverse_iterator SparseGridBase::rbegin() noexcept { return tensorGridData.rbegin(); }
-reverse_iterator SparseGridBase::rend() noexcept { return tensorGridData.rend(); }
-const_reverse_iterator SparseGridBase::rbegin() const noexcept { return tensorGridData.rbegin(); }
-const_reverse_iterator SparseGridBase::rend() const noexcept { return tensorGridData.rend(); }
-const_reverse_iterator SparseGridBase::crbegin() const noexcept { return tensorGridData.crbegin(); }
-const_reverse_iterator SparseGridBase::crend() const noexcept { return tensorGridData.crend(); }
-
-/// @}
-
-/// @name Operators
-/// @{
 
 bool SparseGridBase::operator==(const SparseGridBase& other) const {
   if (nDim() != other.nDim() || nTG() != other.nTG()) {
     return false;
   }
 
-  for (const TensorGridCTData& data : tensorGridData) {
-    const auto iter = std::find(other.tensorGridData.begin(), other.tensorGridData.end(), data);
-
-    if (iter == other.tensorGridData.end()) {
+  for (const TensorGridCTDataView data : *this) {
+    if (std::find(other.begin(), other.end(), data) == other.end()) {
       return false;
     }
   }
@@ -83,108 +34,48 @@ bool SparseGridBase::operator==(const SparseGridBase& other) const {
   return true;
 }
 
-/// @}
+SparseGridBase::SparseGridBase(const size_t nDim) : nDim_(nDim), levels_(nDim, 0) {}
 
-/// @name Protected Constructors
-/// @{
+void SparseGridBase::setStorage(LvlMIVec levels, std::vector<CTCoeffType> coefficients,
+                                NodeTable nodeTable) {
+  assert(levels.nDim() == nDim_ && nodeTable.nDim() == nDim_);
+  assert(levels.size() == coefficients.size());
 
-SparseGridBase::SparseGridBase(const size_t nDim) : nDim_(nDim) {}
-
-SparseGridBase::SparseGridBase(const size_t nDim, const size_t nTG)
-    : nDim_(nDim), tensorGridData(nTG) {}
-
-/// @}
-
-/// @name Protected setters
-/// @{
-
-void SparseGridBase::setTensorGrids(std::vector<TensorGridCTData>&& tgs) {
-  assert(std::all_of(tgs.begin(), tgs.end(), [this](const TensorGridCTData& tg) {
-    return tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_;
-  }));
-
-  tensorGridData = std::move(tgs);
-  recomputeMetaValues();
+  levels_ = std::move(levels);
+  coefficients_ = std::move(coefficients);
+  nodeTable_ = std::move(nodeTable);
+  computeMetaValues();
 }
 
-void SparseGridBase::addTensorGrid(const TensorGridCTData& tg) {
-  assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
+/**
+ * One pass over the contiguous levels (in parallel: a deltas sparse grid in high dimensions has
+ * hundreds of thousands of tensor grids), with the counts read from the node table.
+ */
+void SparseGridBase::computeMetaValues() {
+  const size_t nDim = nDim_;
+  const size_t nTG = this->nTG();
+  const LvlType* const lvls = levels_.data();
+  const NodeTable& table = nodeTable_;
+  size_t maxGPCnt = 0;
+  size_t maxSum = 0;
+  const bool parallel = nTG >= constants::sparse_grid_storage::MIN_TG_FOR_CONCURRENCY;
 
-  tensorGridData.push_back(tg);
-  updateMetaValuesAfterInsertion(tg);
-}
-
-void SparseGridBase::addTensorGrid(TensorGridCTData&& tg) {
-  assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
-
-  tensorGridData.push_back(std::move(tg));
-  updateMetaValuesAfterInsertion(tensorGridData.back());
-}
-
-void SparseGridBase::setTensorGrid(const size_t idx, const TensorGridCTData& tg) {
-  assert(idx < tensorGridData.size());
-  assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
-
-  const bool metaValuesInvalidated = checkMetaValuesBeforeSet(tensorGridData[idx], tg);
-  tensorGridData[idx] = TensorGridCTData(tg);
-  updateMetaValuesAfterSet(metaValuesInvalidated, tensorGridData[idx]);
-}
-
-void SparseGridBase::setTensorGrid(const size_t idx, TensorGridCTData&& tg) {
-  assert(idx < tensorGridData.size());
-  assert(tg.tensorGrid.nDim() == nDim_ && tg.mi.nDim() == nDim_);
-
-  const bool metaValuesInvalidated = checkMetaValuesBeforeSet(tensorGridData[idx], tg);
-  tensorGridData[idx] = std::move(tg);
-  updateMetaValuesAfterSet(metaValuesInvalidated, tensorGridData[idx]);
-}
-
-// void SparseGrid::setMaxTGGPCnt(const size_t maximum) { maxTGGPCnt = maximum; }
-
-// void SparseGrid::setMaxTGSumOverGPCntsPerDim(const size_t maximum) {
-//   maxTGSumOverGPCntsPerDim = maximum;
-// }
-
-/// @}
-
-/// @name Protected helpers
-/// @{
-
-void SparseGridBase::resize(size_t nTG) { tensorGridData.resize(nTG); }
-
-void SparseGridBase::reserve(const size_t n) { tensorGridData.reserve(n); }
-
-void SparseGridBase::recomputeMetaValues() {
-  maxTGGPCnt = 0;
-  maxTGSumOverGPCntsPerDim = 0;
-
-  for (const TensorGridCTData& tgData : tensorGridData) {
-    updateMetaValuesAfterInsertion(tgData);
+#pragma omp parallel for schedule(static) reduction(max : maxGPCnt, maxSum) if (parallel)
+  for (size_t tg = 0; tg < nTG; tg++) {
+    size_t product = (nDim == 0) ? 0 : 1;
+    size_t sum = 0;
+    for (size_t dim = 0; dim < nDim; dim++) {
+      const GPCntType nNodes = table.nNodes(dim, lvls[tg * nDim + dim]);
+      product *= nNodes;
+      sum += nNodes;
+    }
+    maxGPCnt = std::max(maxGPCnt, product);
+    maxSum = std::max(maxSum, sum);
   }
-}
 
-void SparseGridBase::updateMetaValuesAfterInsertion(const TensorGridCTData& tg) {
-  maxTGGPCnt = std::max(maxTGGPCnt, tg.tensorGrid.nGP());
-  maxTGSumOverGPCntsPerDim =
-      std::max(maxTGSumOverGPCntsPerDim, tg.tensorGrid.getNodesPerDim().size());
+  maxTGGPCnt_ = maxGPCnt;
+  maxTGSumOverGPCntsPerDim_ = maxSum;
 }
-
-bool SparseGridBase::checkMetaValuesBeforeSet(const TensorGridCTData& oldTG,
-                                              const TensorGridCTData& newTG) {
-  return oldTG.tensorGrid.nGP() == maxTGGPCnt ||
-         oldTG.tensorGrid.getNodesPerDim().size() == maxTGSumOverGPCntsPerDim;
-}
-
-void SparseGridBase::updateMetaValuesAfterSet(const bool haveToBeRecomputed,
-                                              const TensorGridCTData& newTG) {
-  if (haveToBeRecomputed) {
-    recomputeMetaValues();
-  } else {
-    updateMetaValuesAfterInsertion(newTG);
-  }
-}
-
-/// @}
 
 }  // namespace combigrid
 }  // namespace sgpp

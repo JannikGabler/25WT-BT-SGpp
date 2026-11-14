@@ -24,8 +24,10 @@
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -87,6 +89,16 @@ SourceFunc genSinSourceFunction() {
 
     return result;
   });
+}
+
+/// Node table with empty node lists (level 1 of dimension 0 and 2, level 0 of dimension 1):
+/// the tensor grids of the levels (0, 0, 0), (1, 1, 0), (0, 1, 1) have the counts (3, 0, 5),
+/// (0, 3, 5), (3, 3, 0).
+NodeTable tableWithEmptyLists() {
+  NodeTable table({0, 2, 4}, {1, 1, 1}, 6);
+  const size_t sizes[] = {3, 0, 0, 3, 5, 0};
+  for (size_t row = 0; row < 6; row++) table.rowNodes(row).resize(sizes[row]);
+  return table;
 }
 
 }  // namespace
@@ -1029,11 +1041,11 @@ struct NaiveTGQuadrature {
  * the quadrature rules of the node generation functions, and f at the point mapped onto the
  * domain.
  */
-NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGrid& tg,
+NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGridView tgView,
                                     const SGGenInstr& genInstr) {
+  const TensorGrid tg = tgView.toTensorGrid();  // Nodes on the domain
   const size_t nDim = tg.nDim();
   const GPMI& nGPPerDim = tg.getGPCntPerDim();
-  const HyperCubeArea& domain = genInstr.getDomain();
 
   std::vector<DataVector> weights1D(nDim);
   for (size_t dim = 0; dim < nDim; dim++) {
@@ -1053,7 +1065,6 @@ NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGr
     double weight = 1.0;
     for (size_t dim = 0; dim < nDim; dim++) {
       weight *= weights1D[dim][gpMI[dim]];
-      gp[dim] = gp[dim] * (domain[dim].second - domain[dim].first) + domain[dim].first;
     }
 
     const double summand = weight * sourceFunc.evaluate(gp);
@@ -1104,14 +1115,13 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
   const SourceFunc sourceFunc(gaussianFunc);
 
   const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .domain = sg.getGenInstr().getDomain(),
                                         .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
   misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
 
   double expectedTotal = 0.0;
   double absTotal = 0.0;
 
-  for (const TensorGridCTData& tgData : sg) {
+  for (const auto& tgData : sg) {
     const NaiveTGQuadrature expected = naiveTGQuadrature(sourceFunc, tgData.tensorGrid, genInstr);
 
     evaluatedPoints.clear();
@@ -1223,12 +1233,12 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
     return 1.0;
   });
   const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .domain = sg.getGenInstr().getDomain(),
                                         .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
   misc::QuadratureScratch scratch(3, sg.getMaxTGSumOverGPCntsPerDim());
 
-  for (const GPMI& nGPPerDim : {GPMI{3, 0, 5}, GPMI{0, 3, 5}, GPMI{3, 5, 0}}) {
-    const TensorGrid tg(nGPPerDim);
+  const NodeTable table = tableWithEmptyLists();
+  for (const LvlMI& lvls : {LvlMI{0, 0, 0}, LvlMI{1, 1, 0}, LvlMI{0, 1, 1}}) {
+    const TensorGridView tg(lvls, table);
     BOOST_REQUIRE_EQUAL(tg.nGP(), 0u);
     BOOST_CHECK_EQUAL(tools::quadrature::processTensorGrid(context, sourceFunc, tg, scratch), 0.0);
   }

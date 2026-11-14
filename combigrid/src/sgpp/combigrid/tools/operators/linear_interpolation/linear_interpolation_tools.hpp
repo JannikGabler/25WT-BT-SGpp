@@ -19,6 +19,12 @@
  * @f$(x_k - a_k) / (b_k - a_k)@f$ (upper neighbor @f$b_k@f$), or 0.5 for both if the cell has
  * zero extent in dimension k (the query point is a node). The corners are visited and summed in
  * the order of @c c.
+ *
+ * The cell and the weights are computed in normalized coordinates: the query point on
+ * @f$[0,1]^d@f$ and the nodes on the unit interval (@c misc::UnitNodeTable, see
+ * @c tools::node_table_generation::getUnitNodeTable); outside the nodes of a dimension, the cell
+ * is bounded by 0 resp. 1. The corners are mapped onto the domain with @c tools::mapToDomain, which
+ * gives bitwise the nodes of the grid's node table.
  */
 #pragma once
 
@@ -26,9 +32,8 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
-#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -50,13 +55,13 @@ namespace lin_interpolation {
  *
  * @param sourceFunc Source function to evaluate at the corner grid points.
  * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tgData     Tensor grid + level multi-index + combination coefficient.
+ * @param unitTG     Tensor grid with its nodes on the unit interval (@c misc::UnitNodeTable).
  * @param genInstr   Generation instruction (used for the domain).
  * @param scratch    Per-thread scratch space; reused across calls.
  * @return Interpolated value on this single tensor grid.
  */
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& point,
-                         const TensorGridCTData& tgData, const SGGenInstr& genInstr,
+                         const TensorGridView& unitTG, const SGGenInstr& genInstr,
                          misc::LinInterpScratch& scratch);
 
 /**
@@ -65,13 +70,13 @@ double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& p
  *
  * @param sourceFunc Vector-valued source function to evaluate at the corner grid points.
  * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tgData     Tensor grid + level multi-index + combination coefficient.
+ * @param unitTG     Tensor grid with its nodes on the unit interval (@c misc::UnitNodeTable).
  * @param genInstr   Generation instruction (used for the domain).
  * @param scratch    Per-thread scratch space, constructed with m outputs.
  * @param out        Output: the m interpolated values (size m).
  */
 void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                       const TensorGridCTData& tgData, const SGGenInstr& genInstr,
+                       const TensorGridView& unitTG, const SGGenInstr& genInstr,
                        misc::LinInterpScratch& scratch, std::span<double> out);
 
 /**
@@ -88,7 +93,7 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
  *                   @c misc::LinInterpScratch::RESULT_ACC of the view's buffer).
  * @param values   View of the source function.
  * @param point    Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tgData   Tensor grid + level multi-index + combination coefficient.
+ * @param unitTG   Tensor grid with its nodes on the unit interval (@c misc::UnitNodeTable).
  * @param genInstr Generation instruction (used for the domain).
  * @param scratch  Per-thread scratch space (neighbors, corner data, current corner).
  * @return Accumulator of the interpolated values (a @c double for scalar values, a pointer to
@@ -97,14 +102,14 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
  */
 template <typename ValueType>
 typename ValueType::Acc sumOverCorners(ValueType values, const base::DataVector& point,
-                                       const TensorGridCTData& tgData, const SGGenInstr& genInstr,
+                                       const TensorGridView& unitTG, const SGGenInstr& genInstr,
                                        misc::LinInterpScratch& scratch);
 
 /**
  * @brief 1D weights of the lower and the upper neighbor of a coordinate: the relative distances
  * to the other neighbor.
  *
- * @param x     Coordinate in @f$[\mathrm{lower}, \mathrm{upper}]@f$ (normalized).
+ * @param x     Coordinate in @f$[\mathrm{lower}, \mathrm{upper}]@f$.
  * @param lower Lower neighbor @f$a@f$.
  * @param upper Upper neighbor @f$b@f$.
  * @return @f$((b - x) / (b - a), (x - a) / (b - a))@f$, or @c (0.5, 0.5) if @f$a = b@f$ (the
@@ -115,19 +120,20 @@ std::pair<double, double> weights1D(double x, double lower, double upper);
 /**
  * @brief Prepares the corner loop (@ref sumOverCorners) on one tensor grid.
  *
- * Brackets @p point in @p tg (@c TensorGrid::getNeighborsForLinInterpolation), maps the
- * bracketing coordinates onto @p domain (@c tools::mapToDomain, as
- * @c tools::denormalizeDataVector), computes the 1D weights (@ref weights1D), builds the corner
- * weight table of the first @c misc::LinInterpScratch::tableDim dimensions and sets the current
- * grid point to corner 0 (all lower neighbors).
+ * Brackets @p point in @p unitTG (as @c TensorGrid::getNeighborsForLinInterpolation), maps the
+ * bracketing coordinates onto
+ * @p domain (@c tools::mapToDomain, as @c tools::denormalizeDataVector), computes the 1D weights
+ * (@ref weights1D), builds the corner weight table of the first
+ * @c misc::LinInterpScratch::tableDim dimensions and sets the current grid point to corner 0 (all
+ * lower neighbors).
  *
  * @param point   Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tg      Tensor grid of dimension d > 0.
+ * @param unitTG  Tensor grid of dimension d > 0, nodes on the unit interval.
  * @param domain  Domain of the sparse grid.
  * @param scratch Per-thread scratch space of dimension d (output: neighbors, corner data,
  *                current grid point).
  */
-void prepareCorners(const base::DataVector& point, const TensorGrid& tg,
+void prepareCorners(const base::DataVector& point, const TensorGridView& unitTG,
                     const HyperCubeArea& domain, misc::LinInterpScratch& scratch);
 
 /**

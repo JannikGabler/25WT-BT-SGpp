@@ -73,10 +73,10 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13 (RP-0 = setup)
 | – | WP-52 | Shared weighted-sum kernels (SG + DSG, quadrature + global interpolation): `tools/operators/weighted_sum/`, `WeightedSumScratch`, `DeltaWeightedSumScratch`, `ProjectedTrieNode`, `DoubleDouble` (owner 11-13; refactoring) | accepted (11-13, 6ac45a05d) | e2e 0.999x, memory 0.998, refcheck identical, 1 t byte-identical; `interp/sg/cc/b0/d10/L2/p8` 0.990x (placement of `sumOverRows` → RP-4 check) | [WP-52](summaries/WP-52-weighted-sum-kernels.md) |
 | – | RP-4 | Re-profiling after WP-08 / WP-06 / WP-52 (+ DSG interpolation groups; `sumOverRows` alignment check) | accepted (11-13; commit pending) | **rp-4 1.933x** (69.89 → 36.16 s; d ≥ 7 1.97x; since rp-3 1.063x), 0 SLOWER; quad/sg 2.41x, quad/dsg 1.50x, interp/sg 1.56x, interplin/sg 1.41x, mivec 6.97x; memory 1.014; interp/interplin at the integrand floor; alignment 0.994x → no WP | [RP-4](summaries/RP-4-reprofiling.md) |
 | – | WP-53 | Benchmark integrands: pin code placement + baseline re-measurement | dropped (owner 11-13, option A, before its session) | partial fix (start offset only; library placement ±3–4 % stays), < 0.5 % of the suite, high cost → caveat + hybrid-snapshot check | |
-| 1 | WP-05 | SG quadrature at low d: CC 1D weights + scratch on demand (owner 11-13: before WP-49; 0.5–0.7 s at d ≤ 3, memory 620 / 1079 MiB) | in progress (prompt 11-13) | | |
-| 2 | WP-49 | DSG linear interpolation: global slot weights (0.15–0.25 s) + serial d2 call (≈ 0.07 s, RP-4) | ready | | |
-| 3 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (0.1–0.2 s) | ready | | |
-| 4 | WP-18 | Tensor-grid storage: shared 1D nodes + SoA (memory; proposal) | ready (protected-benchmark decision first) | | |
+| 1 | WP-18 | Tensor-grid storage: shared domain-mapped 1D node lists + SoA (WP-22) + operators read nodes from the grid (memory; proposal) | in progress (prompt 11-13) | | |
+| 2 | WP-05 | SG quadrature at low d: CC 1D weights once per (rule, #nodes) per call, shared weight table (nodes → WP-18; ≈ 0.31 s + `weights1D` zero fill, ≈ 361 + 268 MiB at sg d2) | ready (after WP-18) | | |
+| 3 | WP-49 | DSG linear interpolation: global slot weights (0.15–0.25 s) + serial d2 call (≈ 0.07 s, RP-4) | ready | | |
+| 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (0.1–0.2 s) | ready | | |
 | 5 | WP-19 | SG quadrature: load balancing at low d (0.1–0.2 s) | ready (after WP-05) | | |
 | 6 | WP-51 | DSG row loop at low d: split large delta TGs (≤ 0.04 s) | ready (low; measure first) | | |
 | 7 | WP-09 | Multi-point interpolation API (proposal: gains vs. complexity) | ready | | |
@@ -99,15 +99,16 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13 (RP-0 = setup)
 ## Next action
 
 **RP-4 accepted** (11-13); the owner commits it ("Accept RP-4: …": summary, ANALYSIS.md section,
-`results/RP-4/`, STATUS/PLAN) — tree clean before WP-05. WP-53 dropped (owner, option A).
-**WP-05 in progress** (prompt 11-13). Next master start: process the WP-05 summary; then WP-49
-(WP-19 after WP-05 re-sizes the d2 cost split).
+`results/RP-4/`, STATUS/PLAN) — tree clean before WP-18. WP-53 dropped (owner, option A). The first
+WP-05 prompt is **withdrawn** (owner: WP-18 first). **WP-18 in progress** (prompt 11-13): shared
+domain-mapped node lists + SoA, a proposal. Next master start: process the WP-18 summary (adoption
+decision; possibly BLOCKED with a protected-file patch), re-size WP-05 (weights only), then WP-05.
 
 ## Open decisions for the owner
 
-- WP-09 / WP-18 (after their summaries): adopt the proposed interface or not. WP-18 (before
-  its prompt): protected `perf_e2e.cpp:81` / `perf_reference.cpp:136-144` read `tgData.mi`,
-  `.coefficient`, `.tensorGrid.*` → proxy keeps the names, or the owner adapts them.
+- WP-09 / WP-18 (after their summaries): adopt the proposed interface or not. WP-18 decided
+  11-13: mapped nodes only (`getNodesPerDim` returns domain nodes), nodes + SoA together;
+  protected benchmarks: the session proposes (proxy vs. patch; patch → BLOCKED with a draft).
 - WP-33 (after WP-32): drop / restrict / align large allocations only / keep base's `operator new`
   (WP-23: memory −5 %, dsg b1 −23 MiB, generation 1.1–1.4x; datadriven relies on it).
 - WP-04 `TrieNode` 24 → 16 B (optional): `git apply results/WP-04/block-loop.patch` +
@@ -211,7 +212,10 @@ baseline values; RP-4 reports them absolutely).
   `sumOverRows` alignment 0.994x → no WP (do-not-retry). Owner: WP-05 before WP-49; integrand
   placement pinned + baseline re-measured → WP-53, then dropped on the master's cost/benefit
   assessment (owner: option A; caveat + hybrid-snapshot check). WP-49 + serial d2; WP-07 demoted
-  (≈ 0.003 s). **WP-05 prompt issued.**
+  (≈ 0.003 s). WP-05 prompt issued, then withdrawn before its session: a grid-side mapped node
+  buffer (WP-18) makes WP-05's node part redundant → owner: **WP-18 first** (mapped nodes only,
+  nodes + SoA together, protected benchmarks: session proposes); WP-05 narrowed to the weights,
+  rank 2. **WP-18 prompt issued.**
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone), WP-47 1, WP-45 0; new in WP-47:
   `equidistant_nodes/linear_func_unit_cube_1D` once (5/5 reruns pass) → WP-35; WP-52: 2 of ≈ 50 runs

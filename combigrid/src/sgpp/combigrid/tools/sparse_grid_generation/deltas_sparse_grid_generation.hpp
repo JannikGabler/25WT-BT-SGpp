@@ -5,19 +5,12 @@
 
 /**
  * @file deltas_sparse_grid_generation.hpp
- * @brief Helpers that assemble a @c DeltasSparseGrid from a generation instruction, and the
- * mapping of delta node indices to regular node indices.
+ * @brief Delta nodes of a @c DeltasSparseGrid: their number per level and the mapping of delta
+ * node indices to regular node indices.
  */
 #pragma once
 
-#include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
-#include <sgpp/combigrid/grids/extensive_sparse_grid.hpp>
-#include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/bounding_boxes/discrete_rectangular_bounding_box.hpp>
-#include <sgpp/combigrid/miscellaneous/vector_map/vector_map.hpp>
-#include <sgpp/combigrid/multiindices/multiindex.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -26,7 +19,13 @@ namespace combigrid {
 namespace tools {
 
 /**
- * TODO: Document
+ * @brief Returns the number of delta nodes of level @p lvl: the nodes of level @p lvl that are not
+ * nodes of level @p lvl - 1 (nested nodes), plus the two boundary nodes if
+ * @p includeNodesOnBoundary (the level is the boundary level offset).
+ *
+ * @param lvl                    Level.
+ * @param lvl2GPCntFunc          Level-to-grid-point-count function (number of inner nodes).
+ * @param includeNodesOnBoundary Whether the boundary nodes belong to the level.
  */
 GPCntType getDeltaNodeCnt(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc, bool includeNodesOnBoundary);
 
@@ -35,58 +34,9 @@ Internal operations
 ******************/
 
 /**
- * @brief Implementation details of the deltas-sparse-grid populator.
+ * @brief Implementation details of the deltas sparse grid: mapping of delta node indices.
  */
 namespace deltas_sparse_grid_generation {
-
-/**
- * TODO: Document
- */
-std::vector<TensorGridCTData> genTGData(const SGGenInstr& genInstr, const LvlMIVecView mis,
-                                        const std::span<const CTCoeffType> coeffs);
-
-/**
- * @brief Constructs a single tensor grid for the given level multi-index.
- *
- * @param mi       Level multi-index.
- * @param genInstr Generation instruction.
- * @return Tensor grid with the proper per-dim node counts and node positions.
- */
-TensorGrid genTGForMI(const LvlMI& mi, const SGGenInstr& genInstr);
-
-/**
- * @brief Translates a level multi-index into the per-dimension grid-point
- * counts of the corresponding tensor grid.
- *
- * Applies the per-dim @ref Lvl2GPCntFunc and the boundary level offset
- * provided by @p genInstr.
- *
- * @param mi       Level multi-index.
- * @param genInstr Generation instruction.
- */
-GPMI getGPCntPerDim(const LvlMI& mi, const SGGenInstr& genInstr);
-
-// TODO: Delete (?)
-/**
- * @brief Returns the discrete bounding box used to iterate over all grid
- * points of a tensor grid with the given per-dim counts.
- *
- * @param gpCntPerDim Per-dim grid-point counts.
- */
-misc::DiscRectBB<GPCntType> getBBForIteration(GPMI gpCntPerDim);
-
-/**
- * @brief Concatenates the 1D node positions for every dimension of the
- * tensor grid identified by @p mi.
- *
- * @param mi          Level multi-index.
- * @param genInstr    Generation instruction.
- * @param gpCntPerDim Per-dim grid-point counts (must already match @p mi).
- * @return Flat vector of size @f$\sum_k n_k@f$ holding the per-dim node
- *         positions back-to-back.
- */
-base::DataVector getNodesPerDimForTG(const LvlMI& mi, const SGGenInstr& genInstr,
-                                     const GPMI& gpCntPerDim);
 
 /**
  * @brief Returns, per dimension, the function that maps the index of a delta node to the index

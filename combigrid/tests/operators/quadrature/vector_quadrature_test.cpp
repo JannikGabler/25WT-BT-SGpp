@@ -33,8 +33,10 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
@@ -42,6 +44,7 @@
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -118,7 +121,6 @@ void configure(SGGenInstr& genInstr, const std::string& nodes, const Lvl2GPCntFu
  */
 std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs) {
   const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .domain = sg.getGenInstr().getDomain(),
                                         .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
   misc::QuadratureScratch scalarScratch(sg.nDim(), sg.getMaxTGSumOverGPCntsPerDim());
   misc::QuadratureScratch vectorScratch(sg.nDim(), sg.getMaxTGSumOverGPCntsPerDim(), nOutputs);
@@ -134,7 +136,7 @@ std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs
 
   std::vector<double> scales(nOutputs, 0.0);
 
-  for (const TensorGridCTData& tgData : sg) {
+  for (const auto& tgData : sg) {
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
     tools::quadrature::processTensorGrid(context, vectorFunc, tgData.tensorGrid, vectorScratch,
@@ -188,6 +190,16 @@ void checkVectorQuadrature(const SGGenInstr& genInstr, const size_t nOutputs) {
         std::abs(viaDataVector[k] - scalar) <= tol,
         "output " << k << ": vector (DataVector) " << viaDataVector[k] << ", scalar " << scalar);
   }
+}
+
+/// Node table with empty node lists (level 1 of dimension 0 and 2, level 0 of dimension 1):
+/// the tensor grids of the levels (0, 0, 0), (1, 1, 0), (0, 1, 1) have the counts (3, 0, 5),
+/// (0, 3, 5), (3, 3, 0).
+NodeTable tableWithEmptyLists() {
+  NodeTable table({0, 2, 4}, {1, 1, 1}, 6);
+  const size_t sizes[] = {3, 0, 0, 3, 5, 0};
+  for (size_t row = 0; row < 6; row++) table.rowNodes(row).resize(sizes[row]);
+  return table;
 }
 
 }  // namespace
@@ -245,12 +257,12 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
       },
       3);
   const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .domain = sg.getGenInstr().getDomain(),
                                         .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
   misc::QuadratureScratch scratch(3, sg.getMaxTGSumOverGPCntsPerDim(), 3);
 
-  for (const GPMI& nGPPerDim : {GPMI{3, 0, 5}, GPMI{0, 3, 5}, GPMI{3, 5, 0}}) {
-    const TensorGrid tg(nGPPerDim);
+  const NodeTable table = tableWithEmptyLists();
+  for (const LvlMI& lvls : {LvlMI{0, 0, 0}, LvlMI{1, 1, 0}, LvlMI{0, 1, 1}}) {
+    const TensorGridView tg(lvls, table);
     BOOST_REQUIRE_EQUAL(tg.nGP(), 0u);
     std::vector<double> out(3, std::numeric_limits<double>::quiet_NaN());
     tools::quadrature::processTensorGrid(context, sourceFunc, tg, scratch, out);
@@ -295,11 +307,8 @@ LvlMIVec sparseAnisotropicMIs(const size_t nDim) {
 struct DeltaQuadratureData {
   explicit DeltaQuadratureData(const DeltasSparseGrid& dsg)
       : weights1D(tools::dsg_quadrature::comp1DWeights(dsg)),
-        coeffTrie(dsg.getTensorGrids(), dsg.nDim()),
-        context{.deltasSparseGrid = dsg,
-                .domain = dsg.getGenInstr().getDomain(),
-                .weights1D = weights1D,
-                .coeffTrie = coeffTrie} {}
+        coeffTrie(dsg.getLevels().getView(), dsg.getCoefficients()),
+        context{.deltasSparseGrid = dsg, .weights1D = weights1D, .coeffTrie = coeffTrie} {}
 
   const misc::FlatNestedVec<double, 3> weights1D;
   const misc::CTCoeffTrie coeffTrie;
@@ -329,7 +338,7 @@ std::vector<double> checkDeltaTensorGrids(const DeltasSparseGrid& dsg, const siz
 
   std::vector<double> scales(nOutputs, 0.0);
 
-  for (const TensorGridCTData& tgData : dsg) {
+  for (const auto& tgData : dsg) {
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
     tools::dsg_weighted_sum::processDeltaTensorGrid(data.context, vectorFunc, tgData, vectorScratch,
@@ -383,7 +392,7 @@ void checkVectorDeltaQuadrature(const SGGenInstr& genInstr, const size_t nOutput
 
   // Round-off of the combination grows with the sum of the absolute coefficients
   double sumOfAbsCoeffs = 0.0;
-  for (const TensorGridCTData& tgData : sg) {
+  for (const auto& tgData : sg) {
     sumOfAbsCoeffs += std::abs(static_cast<double>(tgData.coefficient));
   }
   const double sgTol = std::max(DSG_VS_SG_TOL, 64.0 * EPS * sumOfAbsCoeffs);
@@ -504,9 +513,9 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
       3);
   misc::DeltaWeightedSumScratch scratch(3, dsg.getMaxTGSumOverGPCntsPerDim(), 3);
 
-  for (const GPMI& nGPPerDim : {GPMI{3, 0, 5}, GPMI{0, 3, 5}, GPMI{3, 5, 0}}) {
-    const TensorGridCTData tgData{
-        .mi = LvlMI(3, 0), .coefficient = 1, .tensorGrid = TensorGrid(nGPPerDim)};
+  const NodeTable table = tableWithEmptyLists();
+  for (const LvlMI& lvls : {LvlMI{0, 0, 0}, LvlMI{1, 1, 0}, LvlMI{0, 1, 1}}) {
+    const TensorGridCTDataView tgData{lvls, 1, TensorGridView(lvls, table)};
     BOOST_REQUIRE_EQUAL(tgData.tensorGrid.nGP(), 0u);
     std::vector<double> out(3, std::numeric_limits<double>::quiet_NaN());
     tools::dsg_weighted_sum::processDeltaTensorGrid(data.context, sourceFunc, tgData, scratch, out);

@@ -95,7 +95,7 @@ inline void forEachCornerSlot(const uint32_t* const firstChild, const size_t* co
 
 /// Sets the corner ids and the 1D weights of the tensor grid of level @p mi in @p scratch and
 /// fills its weight table.
-void prepareTG(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query, const LvlMI& mi,
+void prepareTG(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query, const LvlMIView mi,
                DSGLinInterpScratch& scratch) {
   double* const factors = scratch.factors.data();
   for (size_t j = 0; j < index.nDim(); j++) {
@@ -112,7 +112,7 @@ void prepareTG(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query, c
 /// the dimensions that contribute a bit to the sub-index; returns their number.
 size_t prepareBlock(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query,
                     const size_t leaf, DSGLinInterpScratch& scratch) {
-  const LvlMI& lambda = index.leafMI(leaf);
+  const LvlMIView lambda = index.leafMI(leaf);
   size_t nMulti = 0;
   for (size_t j = 0; j < index.nDim(); j++) {
     const size_t r = index.row(j, lambda[j]);
@@ -239,8 +239,8 @@ std::pair<double, double> bracketOf(const double below, const double atOrAbove, 
   return {below, atOrAbove};
 }
 
-void setCornerIds(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query, const LvlMI& mi,
-                  DSGLinInterpScratch& scratch) {
+void setCornerIds(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query,
+                  const LvlMIView mi, DSGLinInterpScratch& scratch) {
   for (size_t j = 0; j < index.nDim(); j++) {
     const size_t r = index.row(j, mi[j]);
     scratch.cornerIds[2 * j] = query.cornerIds[2 * r];
@@ -250,14 +250,14 @@ void setCornerIds(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query
 
 void markCorners(const DSGLinInterpIndex& index, DSGLinInterpQuery& query,
                  DSGLinInterpScratch& scratch) {
-  const std::span<const TensorGridCTData* const> tgs = index.combinationTGs();
+  const std::span<const size_t> tgs = index.combinationTGs();
   const uint32_t* const firstChild = index.trie().firstChild();
   const size_t* const slotOffsets = index.slotOffsets();
   uint8_t* const marks = query.marks.data();
 
 #pragma omp for schedule(static)
   for (size_t t = 0; t < tgs.size(); t++) {
-    setCornerIds(index, query, tgs[t]->mi, scratch);
+    setCornerIds(index, query, index.mi(tgs[t]), scratch);
     forEachCornerSlot(firstChild, slotOffsets, scratch.cornerIds.data(), index.nDim(),
                       scratch.node.data(), scratch.sub.data(), [&](size_t, const size_t slot) {
                         // Read first: most slots are shared, writing only once keeps their cache
@@ -354,15 +354,15 @@ template <typename ValueType>
 typename ValueType::Acc gatherCorners(const ValueType values, const DSGLinInterpIndex& index,
                                       const DSGLinInterpQuery& query,
                                       DSGLinInterpScratch& scratch) {
-  const std::span<const TensorGridCTData* const> tgs = index.combinationTGs();
+  const std::span<const size_t> tgs = index.combinationTGs();
   typename ValueType::Acc total = values.zeroAcc(DSGLinInterpScratch::THREAD_ACC);
 
 #pragma omp for schedule(static) nowait
   for (size_t t = 0; t < tgs.size(); t++) {
-    prepareTG(index, query, tgs[t]->mi, scratch);
+    prepareTG(index, query, index.mi(tgs[t]), scratch);
     typename ValueType::Acc tgSum = values.zeroAcc(DSGLinInterpScratch::TG_ACC);
     sumTGCorners(values, index, query, scratch, tgSum);
-    values.addScaled(total, static_cast<double>(tgs[t]->coefficient), tgSum);
+    values.addScaled(total, static_cast<double>(index.coefficient(tgs[t])), tgSum);
   }
 
   return total;

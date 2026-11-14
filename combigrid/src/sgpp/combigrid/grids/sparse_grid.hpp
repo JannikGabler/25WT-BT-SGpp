@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file sparse_grid.hpp
  * @brief Combination-technique sparse grid: a collection of tensor grids
@@ -24,9 +29,14 @@ namespace combigrid {
  * where each @f$f_{\vec{\ell}}@f$ is the (anisotropic) tensor-product
  * approximation on the level @f$\vec{\ell}@f$ tensor grid and
  * @f$c_{\vec{\ell}}@f$ is the integer combination coefficient. A
- * @c SparseGrid stores those tensor grids together with the level
- * multi-index, the coefficient, and (optionally) the generation
- * instruction that produced them.
+ * @c SparseGrid stores the tensor grids with a non-zero coefficient (see
+ * @c SparseGridBase: their level multi-indices and coefficients, and the 1D
+ * node lists once per (dimension, level), already mapped onto the domain of
+ * the generation instruction) and a copy of the generation instruction.
+ *
+ * The nodes are in domain coordinates: @c tools::mapToDomain of the unit nodes
+ * of the node-generation functions, i.e. bitwise the coordinates at which the
+ * operators evaluate the source function.
  */
 class SparseGrid : public SparseGridBase {
  public:
@@ -52,23 +62,6 @@ class SparseGrid : public SparseGridBase {
 
   /// @brief Returns the (shared) generation instruction or @c nullptr if none was attached.
   const SGGenInstr& getGenInstr() const noexcept;
-
-  /// @}
-
-  /// @name Setters
-  /// @{
-
-  //   /**
-  //    * @brief Stores a copy of @p genInstr as the attached generation instruction.
-  //    * @param genInstr Generation instruction. Its dimension must match @ref nDim().
-  //    */
-  //   void setGenInstr(const SGGenInstr& genInstr);
-
-  //   /**
-  //    * @brief Adopts an existing shared generation instruction.
-  //    * @param genInstr Shared pointer to a generation instruction (moved-from).
-  //    */
-  //   void setGenInstr(std::shared_ptr<const SGGenInstr>&& genInstr);
 
   /// @}
 

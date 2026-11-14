@@ -15,25 +15,20 @@
 #include <cstddef>
 #include <cstdint>
 #include <sgpp/combigrid/miscellaneous/closure_trie/closure_trie.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <stdexcept>
 #include <vector>
 
 using sgpp::combigrid::LvlMI;
+using sgpp::combigrid::LvlMIVec;
 using sgpp::combigrid::LvlType;
-using sgpp::combigrid::TensorGridCTData;
 using sgpp::combigrid::misc::ClosureTrie;
 
 namespace {
 
-/// Tensor-grid data with the given multi-indices (coefficients and tensor grids unused).
-std::vector<TensorGridCTData> tgDataOf(const std::vector<LvlMI>& mis) {
-  std::vector<TensorGridCTData> result(mis.size());
-  for (size_t i = 0; i < mis.size(); i++) result[i].mi = mis[i];
-  return result;
-}
+/// The multi-indices @p mis as an LvlMIVec.
+LvlMIVec miVecOf(const std::vector<LvlMI>& mis) { return LvlMIVec(mis); }
 
 /// All multi-indices of d components with 1-norm <= maxSum, in an order that is not the
 /// lexicographic one (dimension 0 slowest).
@@ -69,8 +64,8 @@ BOOST_AUTO_TEST_CASE(Leaves_Are_Lexicographic_Ranks) {
     std::vector<LvlMI> mis;
     LvlMI mi(nDim, 0);
     completeMIs(nDim, 4, mi, 0, mis);
-    const std::vector<TensorGridCTData> tgData = tgDataOf(mis);
-    const ClosureTrie trie(tgData, nDim);
+    const LvlMIVec miVec = miVecOf(mis);
+    const ClosureTrie trie(miVec.getView());
 
     BOOST_CHECK_EQUAL(trie.nDim(), nDim);
     BOOST_REQUIRE_EQUAL(trie.nLeaves(), mis.size());
@@ -95,8 +90,8 @@ BOOST_AUTO_TEST_CASE(Child_Walk_Equals_Find) {
       }
     }
   }
-  const std::vector<TensorGridCTData> tgData = tgDataOf(mis);
-  const ClosureTrie trie(tgData, 3);
+  const LvlMIVec miVec = miVecOf(mis);
+  const ClosureTrie trie(miVec.getView());
 
   for (const LvlMI& mi : mis) {
     uint32_t node = ClosureTrie::ROOT;
@@ -112,11 +107,12 @@ BOOST_AUTO_TEST_CASE(Child_Walk_Equals_Find) {
 }
 
 BOOST_AUTO_TEST_CASE(Invalid_Sets_Are_Rejected) {
-  const std::vector<TensorGridCTData> gap = tgDataOf({LvlMI{0, 0}, LvlMI{2, 0}});
-  BOOST_CHECK_THROW(ClosureTrie(gap, 2), std::invalid_argument);
-  const std::vector<TensorGridCTData> duplicate = tgDataOf({LvlMI{0, 0}, LvlMI{0, 0}});
-  BOOST_CHECK_THROW(ClosureTrie(duplicate, 2), std::invalid_argument);
-  BOOST_CHECK_THROW(ClosureTrie(gap, 0), std::invalid_argument);
+  const LvlMIVec gap = miVecOf({LvlMI{0, 0}, LvlMI{2, 0}});
+  BOOST_CHECK_THROW(ClosureTrie(gap.getView()), std::invalid_argument);
+  const LvlMIVec duplicate = miVecOf({LvlMI{0, 0}, LvlMI{0, 0}});
+  BOOST_CHECK_THROW(ClosureTrie(duplicate.getView()), std::invalid_argument);
+  const LvlMIVec zeroDim(0, 0);
+  BOOST_CHECK_THROW(ClosureTrie(zeroDim.getView()), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

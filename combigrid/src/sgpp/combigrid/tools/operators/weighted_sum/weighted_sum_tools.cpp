@@ -4,12 +4,10 @@
 // sgpp.sparsegrids.org
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
@@ -22,56 +20,27 @@ namespace tools {
 namespace weighted_sum {
 
 /**
- * Maps the nodes of @p tg onto the domain (once, instead of for every grid point; with
- * tools::mapToDomain, as all operators, so that they evaluate bitwise identical points) and moves
- * to the first grid point (all node indices 0).
+ * Determines the iterated dimensions of @p tg (see WeightedSumScratch) with their nodes (from the
+ * node table, in domain coordinates) and weights (written to scratch.weights1D by the caller), all
+ * at node index 0, the first grid point and the weight products of the first grid point.
  */
-void mapNodesOntoDomain(const HyperCubeArea& domain, const TensorGrid& tg,
-                        WeightedSumScratch& scratch) {
+void setUpIterDims(const TensorGridView tg, WeightedSumScratch& scratch) {
   const size_t nDim = tg.nDim();
-  const GPMI& nGPPerDim = tg.getGPCntPerDim();
-  const base::DataVector& nodesPerDim = tg.getNodesPerDim();
-
-  assert(scratch.nodesPerDim.size() >= nodesPerDim.size());
-
-  size_t offset = 0;
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    const double lower = domain[dim].first;
-    const double width = domain[dim].second - domain[dim].first;
-    double* const nodes = scratch.nodesPerDim.data() + offset;
-
-    for (GPCntType nodeIdx = 0; nodeIdx < nGPPerDim[dim]; nodeIdx++) {
-      nodes[nodeIdx] = tools::mapToDomain(nodesPerDim[offset + nodeIdx], lower, width);
-    }
-
-    scratch.gp[dim] = nodes[0];
-    offset += nGPPerDim[dim];
-  }
-}
-
-/**
- * Determines the iterated dimensions of @p tg (see WeightedSumScratch) with their nodes (mapped by
- * mapNodesOntoDomain) and weights (written to scratch.weights1D by the caller), all at node index
- * 0, and the weight products of the first grid point.
- */
-void setUpIterDims(const TensorGrid& tg, WeightedSumScratch& scratch) {
-  const size_t nDim = tg.nDim();
-  const GPMI& nGPPerDim = tg.getGPCntPerDim();
-  const size_t rowDim = findRowDim(nGPPerDim);
+  const size_t rowDim = findRowDim(tg);
 
   assert(nDim >= 1);
-  assert(scratch.weights1D.size() == tg.getNodesPerDim().size());
+  assert(scratch.weights1D.size() == tg.sumOfGPCntsPerDim());
 
   size_t nIterDims = 1;
   double constWeight = 1.0;  // Product of the weights of the dimensions that are not iterated
   size_t offset = 0;
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    const GPCntType nNodes = nGPPerDim[dim];
-    const double* const nodes = scratch.nodesPerDim.data() + offset;
+    const GPCntType nNodes = tg.nGPInDim(dim);
+    const double* const nodes = tg.nodesInDim(dim);
     const double* const weights = scratch.weights1D.data() + offset;
     offset += nNodes;
+    scratch.gp[dim] = nodes[0];
 
     if (dim != rowDim && nNodes == 1) {
       constWeight *= weights[0];
@@ -96,10 +65,10 @@ void setUpIterDims(const TensorGrid& tg, WeightedSumScratch& scratch) {
  * Returns the row dimension: the first dimension with more than one node (or the last dimension
  * if there is none).
  */
-size_t findRowDim(const GPMI& nGPPerDim) {
+size_t findRowDim(const TensorGridView tg) {
   size_t rowDim = 0;
 
-  while (rowDim + 1 < nGPPerDim.size() && nGPPerDim[rowDim] == 1) {
+  while (rowDim + 1 < tg.nDim() && tg.nGPInDim(rowDim) == 1) {
     rowDim++;
   }
 
@@ -119,7 +88,7 @@ void updateWeightProducts(const double* const* const weightsOfIterDim, const GPC
 
 /**
  * Sums the weight times the source function over all grid points, row by row, starting at the
- * first grid point (set up by mapNodesOntoDomain and setUpIterDims), and returns the accumulator of
+ * first grid point (set up by setUpIterDims), and returns the accumulator of
  * the sums. Written once for both value types (misc::ScalarValues, misc::VectorValues), which
  * perform the same operations per output.
  *

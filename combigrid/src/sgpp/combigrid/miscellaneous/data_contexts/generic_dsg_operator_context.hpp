@@ -29,8 +29,7 @@ namespace misc {
  */
 struct GenericDSGOperatorContext {
   // Top-level arguments
-  const DeltasSparseGrid& deltasSparseGrid;
-  const HyperCubeArea& domain;
+  const DeltasSparseGrid& deltasSparseGrid;  ///< The grid (its node table holds the nodes).
 
   // Precomputed values
   /// @brief @c weights1D[dim][lvl]: 1D quadrature weights of level @c lvl in delta order (see

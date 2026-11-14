@@ -78,10 +78,10 @@
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
-#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
@@ -128,10 +128,10 @@ struct Config {
 };
 
 const std::vector<Config> CONFIGS = {
-    {false, "cc", 0, 2, 12, 64},    {false, "cc", 0, 3, 9, 64},     {false, "cc", 0, 5, 6, 64},
-    {false, "cc", 0, 7, 4, 16},     {false, "cc", 0, 10, 2, 8},     {false, "cheb1", 0, 3, 6, 64},
-    {false, "cheb1", 0, 5, 4, 64},  {false, "equi", 0, 3, 5, 64},   {true, "equi", 1, 2, 16, 16384},
-    {true, "equi", 1, 5, 8, 1024},  {true, "equi", 1, 8, 5, 256},   {true, "equi", 1, 10, 5, 32}};
+    {false, "cc", 0, 2, 12, 64},   {false, "cc", 0, 3, 9, 64},   {false, "cc", 0, 5, 6, 64},
+    {false, "cc", 0, 7, 4, 16},    {false, "cc", 0, 10, 2, 8},   {false, "cheb1", 0, 3, 6, 64},
+    {false, "cheb1", 0, 5, 4, 64}, {false, "equi", 0, 3, 5, 64}, {true, "equi", 1, 2, 16, 16384},
+    {true, "equi", 1, 5, 8, 1024}, {true, "equi", 1, 8, 5, 256}, {true, "equi", 1, 10, 5, 32}};
 
 /// A configuration with its grid, query points and per-TG data (setup, not timed).
 struct Problem {
@@ -143,6 +143,7 @@ struct Problem {
   SourceFunc func{perf::cosProd};
   std::vector<DataVector> points;
   std::vector<DataVector> normPoints;
+  std::vector<TensorGridCTData> ownedTGs;  ///< Copies with unit nodes (sol::unitTGData).
   std::vector<const TensorGridCTData*> tgs;
   std::vector<sol::NodesPerDim> mapped;  ///< Per TG: nodes on the domain (tools::mapToDomain).
   std::vector<sol::NodesPerDim> unit;    ///< Per TG: normalized nodes (as stored in the TG).
@@ -158,7 +159,8 @@ struct Problem {
     for (const DataVector& x : points) {
       normPoints.push_back(cg::tools::normalizeDataVector(x, domain));
     }
-    for (const TensorGridCTData& tgData : *grid) {
+    for (const auto& tgData : *grid) ownedTGs.push_back(sol::unitTGData(genInstr, tgData));
+    for (const TensorGridCTData& tgData : ownedTGs) {
       tgs.push_back(&tgData);
       addNodes(tgData.tensorGrid);
     }
@@ -247,12 +249,11 @@ double runGlobalKernel(const Problem& pr, const bool cachedWeights, std::vector<
 #pragma omp for schedule(guided) nowait
       for (size_t t = 0; t < pr.tgs.size(); t++) {
         const size_t nGP = pr.tgs[t]->tensorGrid.nGP();
-        const double v =
-            cachedWeights
-                ? sol::globalKernelTG(pr.func, pr.unit[t], pr.mapped[t], cached[t], nGP,
-                                      pr.normPoints[q], s)
-                : sol::globalKernelTG(pr.func, pr.unit[t], pr.mapped[t],
-                                      sol::ProductionRule(methods[t]), nGP, pr.normPoints[q], s);
+        const double v = cachedWeights ? sol::globalKernelTG(pr.func, pr.unit[t], pr.mapped[t],
+                                                             cached[t], nGP, pr.normPoints[q], s)
+                                       : sol::globalKernelTG(pr.func, pr.unit[t], pr.mapped[t],
+                                                             sol::ProductionRule(methods[t]), nGP,
+                                                             pr.normPoints[q], s);
         sum += pr.tgs[t]->coefficient * v;
       }
     }
@@ -504,9 +505,9 @@ double runGlobalDedup(const Problem& pr, const DeltaIndex& ix, const bool multi,
             std::copy_n(s.values.data() + j * n0, n0, s.slice.begin());
             s.work[j] = methods[0]->interpolate(pr.normPoints[q][0], nodes[0], s.slice);
           }
-          local[q] += pr.tgs[t]->coefficient *
-                      sol::collapseLaterDims(nodes, sol::ProductionRule(methods), pr.normPoints[q],
-                                             cnt, s);
+          local[q] +=
+              pr.tgs[t]->coefficient *
+              sol::collapseLaterDims(nodes, sol::ProductionRule(methods), pr.normPoints[q], cnt, s);
         }
       }
 #pragma omp critical

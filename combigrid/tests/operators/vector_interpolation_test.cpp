@@ -35,8 +35,10 @@
 #include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
@@ -49,6 +51,7 @@
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
@@ -147,9 +150,9 @@ double lagrangeBasis(const double* const nodes, const size_t n, const size_t j, 
  * Scale of the global interpolation on one tensor grid: per output, the sum over its grid points
  * of |Lagrange basis function at @p normPoint * value|.
  */
-std::vector<double> absLagrangeSums(const TensorGridCTData& tgData, const HyperCubeArea& domain,
+std::vector<double> absLagrangeSums(const TensorGridView unitTG, const HyperCubeArea& domain,
                                     const DataVector& normPoint, const size_t nOutputs) {
-  const TensorGrid& tg = tgData.tensorGrid;
+  const TensorGrid tg = unitTG.toTensorGrid();  // Nodes on the unit interval
   const size_t nDim = tg.nDim();
   const GPMI& nGPPerDim = tg.getGPCntPerDim();
   const DataVector& nodesPerDim = tg.getNodesPerDim();
@@ -204,12 +207,16 @@ std::vector<double> checkGlobalTensorGrids(const SparseGrid& sg, const DataVecto
   const VectorSourceFunc vectorFunc = recordingVectorFunc(nOutputs, vectorPoints);
   std::vector<double> scales(nOutputs, 0.0);
 
-  for (const TensorGridCTData& tgData : sg) {
+  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sg);
+
+  for (const auto& tgData : sg) {
+    const TensorGridView unitTG(tgData.mi, unitNodes);
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
-    tools::global_interpolation::processTensorGrid(vectorFunc, normPoint, tgData, genInstr, out);
+    tools::global_interpolation::processTensorGrid(vectorFunc, normPoint, tgData.tensorGrid, unitTG,
+                                                   genInstr, out);
     const std::vector<double> tgScales =
-        absLagrangeSums(tgData, genInstr.getDomain(), normPoint, nOutputs);
+        absLagrangeSums(unitTG, genInstr.getDomain(), normPoint, nOutputs);
 
     for (size_t k = 0; k < nOutputs; k++) {
       scalarPoints.clear();
@@ -217,8 +224,8 @@ std::vector<double> checkGlobalTensorGrids(const SparseGrid& sg, const DataVecto
         scalarPoints.push_back(x);
         return component(x, k);
       });
-      const double scalar =
-          tools::global_interpolation::processTensorGrid(fk, normPoint, tgData, genInstr);
+      const double scalar = tools::global_interpolation::processTensorGrid(
+          fk, normPoint, tgData.tensorGrid, unitTG, genInstr);
       BOOST_CHECK_SMALL(out[k] - scalar, ULP_TOL * EPS * tgScales[k] + 1e-300);
       BOOST_REQUIRE_EQUAL(vectorPoints.size(), scalarPoints.size());
       for (size_t i = 0; i < vectorPoints.size(); i++) {
@@ -244,10 +251,13 @@ std::vector<double> checkLinearTensorGrids(const SparseGrid& sg, const DataVecto
   const VectorSourceFunc vectorFunc = recordingVectorFunc(nOutputs, vectorPoints);
   std::vector<double> scales(nOutputs, 0.0);
 
-  for (const TensorGridCTData& tgData : sg) {
+  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sg);
+
+  for (const auto& tgData : sg) {
+    const TensorGridView unitTG(tgData.mi, unitNodes);
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
-    tools::lin_interpolation::processTensorGrid(vectorFunc, normPoint, tgData, genInstr,
+    tools::lin_interpolation::processTensorGrid(vectorFunc, normPoint, unitTG, genInstr,
                                                 vectorScratch, out);
 
     for (size_t k = 0; k < nOutputs; k++) {
@@ -256,10 +266,10 @@ std::vector<double> checkLinearTensorGrids(const SparseGrid& sg, const DataVecto
         scalarPoints.push_back(x);
         return component(x, k);
       });
-      const double scalar = tools::lin_interpolation::processTensorGrid(fk, normPoint, tgData,
+      const double scalar = tools::lin_interpolation::processTensorGrid(fk, normPoint, unitTG,
                                                                         genInstr, scalarScratch);
       const double tgScale = tools::lin_interpolation::processTensorGrid(
-          scalarFunc(k, true), normPoint, tgData, genInstr, scalarScratch);
+          scalarFunc(k, true), normPoint, unitTG, genInstr, scalarScratch);
       BOOST_CHECK_SMALL(out[k] - scalar, ULP_TOL * EPS * tgScale + 1e-300);
       BOOST_REQUIRE_EQUAL(vectorPoints.size(), scalarPoints.size());
       for (size_t i = 0; i < vectorPoints.size(); i++) {

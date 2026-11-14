@@ -8,15 +8,13 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
-#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/projected_trie_node.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/data_vector/normalization.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/projected_sub_trie_builder.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -43,7 +41,7 @@ namespace {
 template <typename ValueType>
 typename ValueType::Acc sumWithGlobalWeights(const GenericDSGOperatorContext& context,
                                              const ValueType values,
-                                             const TensorGridCTData& deltaTGData,
+                                             const TensorGridCTDataView& deltaTGData,
                                              DeltaWeightedSumScratch& scratch) {
   typename ValueType::Acc result = values.zeroAcc(DeltaWeightedSumScratch::TG_SUM_ACC);
 
@@ -59,13 +57,14 @@ typename ValueType::Acc sumWithGlobalWeights(const GenericDSGOperatorContext& co
 }  // namespace
 
 double processDeltaTensorGrid(const GenericDSGOperatorContext& context,
-                              const SourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
+                              const SourceFunc& sourceFunc, const TensorGridCTDataView& deltaTGData,
                               DeltaWeightedSumScratch& scratch) {
   return sumWithGlobalWeights(context, misc::ScalarValues(sourceFunc), deltaTGData, scratch);
 }
 
 void processDeltaTensorGrid(const GenericDSGOperatorContext& context,
-                            const VectorSourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
+                            const VectorSourceFunc& sourceFunc,
+                            const TensorGridCTDataView& deltaTGData,
                             DeltaWeightedSumScratch& scratch, const std::span<double> out) {
   assert(out.size() == sourceFunc.nOutputs());
   assert(scratch.valueBuffer.size() ==
@@ -75,7 +74,7 @@ void processDeltaTensorGrid(const GenericDSGOperatorContext& context,
   values.store(sumWithGlobalWeights(context, values, deltaTGData, scratch), out.data());
 }
 
-void compSubTrie(const GenericDSGOperatorContext& context, const LvlMI& deltaTGMI,
+void compSubTrie(const GenericDSGOperatorContext& context, const LvlMIView deltaTGMI,
                  DeltaWeightedSumScratch& scratch) {
   assert(deltaTGMI.size() == context.coeffTrie.nDim());
 
@@ -83,41 +82,39 @@ void compSubTrie(const GenericDSGOperatorContext& context, const LvlMI& deltaTGM
 }
 
 void prepareDeltaTensorGrid(const GenericDSGOperatorContext& context,
-                            const TensorGridCTData& deltaTGData, DeltaWeightedSumScratch& scratch) {
-  const TensorGrid& deltaTG = deltaTGData.tensorGrid;
+                            const TensorGridCTDataView& deltaTGData,
+                            DeltaWeightedSumScratch& scratch) {
+  const TensorGridView deltaTG = deltaTGData.tensorGrid;
   const size_t nDim = deltaTG.nDim();
-  const GPMI& nGPPerDim = deltaTG.getGPCntPerDim();
-  const base::DataVector& nodesPerDim = deltaTG.getNodesPerDim();
 
   assert(nDim >= 1);
-  assert(scratch.nodesPerDim.size() >= nodesPerDim.size());
 
   compSubTrie(context, deltaTGData.mi, scratch);
 
-  // Maps the nodes onto the domain once, instead of every grid point (with tools::mapToDomain,
-  // as the other operators)
-  size_t offset = 0;
+  // The nodes are read from the node table, which stores them on the domain
   size_t projDepth = 0;
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    const double lower = context.domain[dim].first;
-    const double width = context.domain[dim].second - context.domain[dim].first;
-    double* const nodes = scratch.nodesPerDim.data() + offset;
-
-    for (GPCntType nodeIdx = 0; nodeIdx < nGPPerDim[dim]; nodeIdx++) {
-      nodes[nodeIdx] = tools::mapToDomain(nodesPerDim[offset + nodeIdx], lower, width);
-    }
-
+    const double* const nodes = deltaTG.nodesInDim(dim);
     scratch.gp[dim] = nodes[0];
-    offset += nGPPerDim[dim];
 
     if (projDepth < scratch.projDims.size() && scratch.projDims[projDepth] == dim) {
       scratch.nodesOfProjDepth[projDepth] = nodes;
-      scratch.gpCntOfProjDepth[projDepth] = nGPPerDim[dim];
+      scratch.gpCntOfProjDepth[projDepth] = deltaTG.nGPInDim(dim);
       scratch.gpMI[projDepth] = 0;
       projDepth++;
     }
   }
+
+  // The row loop reads the nodes of the row dimension from a copy in the scratch: read from the
+  // node table was slower at the same instructions (lower IPC, also in the source function called
+  // from the loop). Copying the nodes of all projected dimensions gained nothing more.
+  const GPCntType nRowNodes = scratch.gpCntOfProjDepth[0];
+  if (scratch.rowNodes.size() < nRowNodes) {
+    scratch.rowNodes.resize(nRowNodes);
+  }
+  std::copy_n(scratch.nodesOfProjDepth[0], nRowNodes, scratch.rowNodes.data());
+  scratch.nodesOfProjDepth[0] = scratch.rowNodes.data();
 }
 
 void compRowWeights(misc::DeltaWeightedSumScratch& scratch, const GPCntType nGP0) {

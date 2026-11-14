@@ -25,10 +25,9 @@ namespace misc {
  * same context serves both value types of the kernels.
  */
 struct QuadratureContext {
-  const SparseGrid& sparseGrid;
+  const SparseGrid& sparseGrid;  ///< The grid (its node table holds the nodes on the domain).
 
-  const HyperCubeArea& domain;
-  const std::vector<NodeGenFunc*>& nodeGenFuncs;
+  const std::vector<NodeGenFunc*>& nodeGenFuncs;  ///< Per dimension (provide the quadrature rules).
 };
 
 }  // namespace misc

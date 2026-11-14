@@ -1,0 +1,8 @@
+sg d2 L20 b0 cc: grid 51.56 ms, MI set+coeffs 0.01 ms, node table 50.515 ms (4194323 nodes, 32.00 MiB)
+sg d2 L20 b0 equi: grid 16.74 ms, MI set+coeffs 0.01 ms, node table 9.308 ms (4194323 nodes, 32.00 MiB)
+sg d20 L5 b1 cc: grid 9.29 ms, MI set+coeffs 8.77 ms, node table 0.009 ms (130 nodes, 0.00 MiB)
+sg d15 L6 b1 equi: grid 6.88 ms, MI set+coeffs 6.42 ms, node table 0.005 ms (259 nodes, 0.00 MiB)
+dsg d20 L6 b1 equi: grid 3.56 ms, MI set+coeffs 1.79 ms, node table 0.005 ms (129 nodes, 0.00 MiB)
+dsg d15 L7 b1 equi: grid 1.95 ms, MI set+coeffs 0.85 ms, node table 0.005 ms (257 nodes, 0.00 MiB)
+dsg d10 L7 b0 equi: grid 16.98 ms, MI set+coeffs 0.09 ms, node table 0.006 ms (257 nodes, 0.00 MiB)
+dsg d3 L16 b0 equi: grid 6.00 ms, MI set+coeffs 0.02 ms, node table 6.001 ms (131073 nodes, 1.00 MiB)

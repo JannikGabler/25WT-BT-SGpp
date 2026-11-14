@@ -15,6 +15,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
@@ -32,8 +33,9 @@ namespace quadrature {
  * @brief Tensor-product quadrature on a single tensor grid.
  *
  * Computes the 1D quadrature weights of @p tg (@ref getWeights) and sums the weight times the
- * source function over the grid points (@c tools::weighted_sum::sumOverRows): the nodes are mapped
- * onto the domain once, the grid points are visited row by row, the dimensions with one node are
+ * source function over the grid points (@c tools::weighted_sum::sumOverRows): the nodes are read
+ * from the node table of the sparse grid (in domain coordinates), the grid points are visited row
+ * by row, the dimensions with one node are
  * not iterated (constant coordinate and weight factor), and a step to the next row updates only
  * the coordinates and the partial weight products of the dimensions that changed. The source
  * function is evaluated at the grid points in domain coordinates.
@@ -47,7 +49,7 @@ namespace quadrature {
  *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
  */
 double processTensorGrid(const misc::QuadratureContext& context, const SourceFunc& sourceFunc,
-                         const TensorGrid& tg, misc::QuadratureScratch& scratch);
+                         TensorGridView tg, misc::QuadratureScratch& scratch);
 
 /**
  * @brief @ref processTensorGrid for a vector-valued source function: the same row loop with m
@@ -60,8 +62,7 @@ double processTensorGrid(const misc::QuadratureContext& context, const SourceFun
  * @param out        Output: the m quadrature estimates on the unit hypercube (size m).
  */
 void processTensorGrid(const misc::QuadratureContext& context, const VectorSourceFunc& sourceFunc,
-                       const TensorGrid& tg, misc::QuadratureScratch& scratch,
-                       std::span<double> out);
+                       TensorGridView tg, misc::QuadratureScratch& scratch, std::span<double> out);
 
 /**
  * @brief Sets @p result to the sum over the tensor grids of @c context.sparseGrid of the
@@ -76,14 +77,14 @@ void combineTensorGrids(const misc::QuadratureContext& context, const VectorSour
                         const std::span<double> result);
 
 /**
- * @brief Prepares the row loop over @p tg: 1D quadrature weights (@ref getWeights), nodes mapped
- * onto the domain and iterated dimensions (@c tools::weighted_sum).
+ * @brief Prepares the row loop over @p tg: 1D quadrature weights (@ref getWeights) and iterated
+ * dimensions (@c tools::weighted_sum).
  *
  * @param context Read-only data of the quadrature call.
  * @param tg      Tensor grid (at least one dimension and one grid point).
  * @param scratch Per-thread scratch space.
  */
-void prepareTensorGrid(const misc::QuadratureContext& context, const TensorGrid& tg,
+void prepareTensorGrid(const misc::QuadratureContext& context, TensorGridView tg,
                        misc::QuadratureScratch& scratch);
 
 /**
@@ -95,7 +96,7 @@ void prepareTensorGrid(const misc::QuadratureContext& context, const TensorGrid&
  * @param tg      Tensor grid.
  * @param scratch Scratch space; @c rows.weights1D and @c quadRules are filled in.
  */
-void getWeights(const misc::QuadratureContext& context, const TensorGrid& tg,
+void getWeights(const misc::QuadratureContext& context, TensorGridView tg,
                 misc::QuadratureScratch& scratch);
 
 /**
@@ -105,14 +106,14 @@ void getWeights(const misc::QuadratureContext& context, const TensorGrid& tg,
  * @param nodeGenFuncs Node-generation function of every dimension.
  * @return The (non-owning) quadrature rule of every dimension.
  */
-std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
+std::vector<QuadRule*> getQuadRulesForTensorGrid(TensorGridView tg,
                                                  const std::vector<NodeGenFunc*>& nodeGenFuncs);
 
 /**
  * @brief @ref getQuadRulesForTensorGrid(const TensorGrid&, const std::vector<NodeGenFunc*>&)
  * writing into @p out (size: the dimension of @p tg).
  */
-void getQuadRulesForTensorGrid(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
+void getQuadRulesForTensorGrid(TensorGridView tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
                                std::vector<QuadRule*>& out);
 
 /**

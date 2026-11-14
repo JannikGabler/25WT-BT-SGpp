@@ -190,7 +190,7 @@ double roundOffScale(const SparseGrid& sg, const DataVector& point) {
   const SGGenInstr& genInstr = sg.getGenInstr();
   const DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
   double scale = 0.0;
-  for (const TensorGridCTData& tgData : sg) {
+  for (const auto& tgData : sg) {
     double product = 1.0;
     for (size_t j = 0; j < sg.nDim(); j++) {
       const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[j];
@@ -425,7 +425,7 @@ BOOST_AUTO_TEST_CASE(Index_Rows_Match_Quadrature_Layout) {
 
       BOOST_TEST_CONTEXT(nodes << " b" << boundary) {
         size_t nGridPoints = 0;
-        for (const TensorGridCTData& tgData : dsg) nGridPoints += tgData.tensorGrid.nGP();
+        for (const auto& tgData : dsg) nGridPoints += tgData.tensorGrid.nGP();
         BOOST_CHECK_EQUAL(index.nGridPoints(), nGridPoints);
         BOOST_CHECK_EQUAL(basisValues.size(), weights.size());
         for (size_t dim = 0; dim < 3; dim++) {

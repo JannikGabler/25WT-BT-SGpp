@@ -41,8 +41,10 @@
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
@@ -50,6 +52,7 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <string>
@@ -196,17 +199,17 @@ std::vector<size_t> checkedCorners(const size_t nCorners) {
 
 /// Scalar kernel: evaluated points (bitwise, in order), weights (bitwise) and value; returns
 /// the kernel's value and its round-off bound.
-std::pair<double, double> checkScalarKernel(const TensorGridCTData& tgData,
-                                            const SGGenInstr& genInstr, const DataVector& normPoint,
+std::pair<double, double> checkScalarKernel(const TensorGridView unitTG, const SGGenInstr& genInstr,
+                                            const DataVector& normPoint,
                                             const std::vector<RefCorner>& ref) {
-  misc::LinInterpScratch scratch(tgData.tensorGrid.nDim());
+  misc::LinInterpScratch scratch(unitTG.nDim());
   std::vector<DataVector> points;
   const SourceFunc recording([&points](const DataVector& x) {
     points.push_back(x);
     return testFunc(x);
   });
   const double value =
-      tools::lin_interpolation::processTensorGrid(recording, normPoint, tgData, genInstr, scratch);
+      tools::lin_interpolation::processTensorGrid(recording, normPoint, unitTG, genInstr, scratch);
 
   BOOST_REQUIRE_EQUAL(points.size(), ref.size());
   double expected = 0.0, scale = 0.0;
@@ -223,7 +226,7 @@ std::pair<double, double> checkScalarKernel(const TensorGridCTData& tgData,
     const SourceFunc indicator(
         [&count, corner](const DataVector&) { return (count++ == corner) ? 1.0 : 0.0; });
     BOOST_TEST_CONTEXT("corner " << corner) {
-      checkBitwise(tools::lin_interpolation::processTensorGrid(indicator, normPoint, tgData,
+      checkBitwise(tools::lin_interpolation::processTensorGrid(indicator, normPoint, unitTG,
                                                                genInstr, scratch),
                    ref[corner].weight);
     }
@@ -233,10 +236,10 @@ std::pair<double, double> checkScalarKernel(const TensorGridCTData& tgData,
 
 /// Vector kernel (m = 3): output k is the indicator of corner (k * nCorners) / 3; the outputs
 /// must equal those weights bitwise, the evaluated points those of the reference.
-void checkVectorKernel(const TensorGridCTData& tgData, const SGGenInstr& genInstr,
+void checkVectorKernel(const TensorGridView unitTG, const SGGenInstr& genInstr,
                        const DataVector& normPoint, const std::vector<RefCorner>& ref) {
   constexpr size_t N_OUTPUTS = 3;
-  misc::LinInterpScratch scratch(tgData.tensorGrid.nDim(), N_OUTPUTS);
+  misc::LinInterpScratch scratch(unitTG.nDim(), N_OUTPUTS);
   std::vector<DataVector> points;
   const size_t nCorners = ref.size();
   const VectorSourceFunc indicators(
@@ -247,7 +250,7 @@ void checkVectorKernel(const TensorGridCTData& tgData, const SGGenInstr& genInst
       },
       N_OUTPUTS);
   std::vector<double> out(N_OUTPUTS, std::numeric_limits<double>::quiet_NaN());
-  tools::lin_interpolation::processTensorGrid(indicators, normPoint, tgData, genInstr, scratch,
+  tools::lin_interpolation::processTensorGrid(indicators, normPoint, unitTG, genInstr, scratch,
                                               out);
 
   BOOST_REQUIRE_EQUAL(points.size(), nCorners);
@@ -264,12 +267,16 @@ void checkGrid(const SparseGrid& sg, const DataVector& point) {
   const DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
   double expected = 0.0, absSum = 0.0, tgBounds = 0.0;
 
-  for (const TensorGridCTData& tgData : sg) {
+  // The kernel works on the nodes on the unit interval (the grid's unit node table)
+  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sg);
+
+  for (const auto& tgData : sg) {
+    const TensorGridView unitTG(tgData.mi, unitNodes);
     const std::vector<RefCorner> ref =
-        referenceCorners(tgData.tensorGrid, normPoint, genInstr.getDomain());
+        referenceCorners(unitTG.toTensorGrid(), normPoint, genInstr.getDomain());
     BOOST_TEST_CONTEXT("mi " << tgData.mi.size() << "-dim, coefficient " << tgData.coefficient) {
-      const auto [tgValue, tgBound] = checkScalarKernel(tgData, genInstr, normPoint, ref);
-      checkVectorKernel(tgData, genInstr, normPoint, ref);
+      const auto [tgValue, tgBound] = checkScalarKernel(unitTG, genInstr, normPoint, ref);
+      checkVectorKernel(unitTG, genInstr, normPoint, ref);
       expected += tgData.coefficient * tgValue;
       absSum += std::abs(tgData.coefficient * tgValue);
       tgBounds += std::abs(tgData.coefficient) * tgBound;

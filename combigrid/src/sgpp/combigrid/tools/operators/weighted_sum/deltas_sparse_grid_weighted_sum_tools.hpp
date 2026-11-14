@@ -50,7 +50,7 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/projected_trie_node.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 
@@ -71,7 +71,7 @@ namespace dsg_weighted_sum {
  * @return Sum of the global weight times the function value over the grid points.
  */
 double processDeltaTensorGrid(const misc::GenericDSGOperatorContext& context,
-                              const SourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
+                              const SourceFunc& sourceFunc, const TensorGridCTDataView& deltaTGData,
                               misc::DeltaWeightedSumScratch& scratch);
 
 /**
@@ -85,7 +85,8 @@ double processDeltaTensorGrid(const misc::GenericDSGOperatorContext& context,
  * @param out         Output: the m sums of the delta tensor grid (size m).
  */
 void processDeltaTensorGrid(const misc::GenericDSGOperatorContext& context,
-                            const VectorSourceFunc& sourceFunc, const TensorGridCTData& deltaTGData,
+                            const VectorSourceFunc& sourceFunc,
+                            const TensorGridCTDataView& deltaTGData,
                             misc::DeltaWeightedSumScratch& scratch, std::span<double> out);
 
 /**
@@ -101,16 +102,16 @@ void processDeltaTensorGrid(const misc::GenericDSGOperatorContext& context,
  * The projected coefficients are sums of many products that cancel; they are accumulated in
  * double-double arithmetic (@c misc::DoubleDouble), so that they are correct to about one rounding.
  */
-void compSubTrie(const misc::GenericDSGOperatorContext& context, const LvlMI& deltaTGMI,
+void compSubTrie(const misc::GenericDSGOperatorContext& context, LvlMIView deltaTGMI,
                  misc::DeltaWeightedSumScratch& scratch);
 
 /**
  * @brief Prepares @p scratch for iterating over the grid points of @p deltaTGData: computes the
- * sub-trie (@ref compSubTrie), maps the nodes onto the domain and sets the current grid point to
- * the first one.
+ * sub-trie (@ref compSubTrie), sets the nodes of the projected dimensions (from the node table of
+ * the grid, in domain coordinates) and the current grid point to the first one.
  */
 void prepareDeltaTensorGrid(const misc::GenericDSGOperatorContext& context,
-                            const TensorGridCTData& deltaTGData,
+                            const TensorGridCTDataView& deltaTGData,
                             misc::DeltaWeightedSumScratch& scratch);
 
 /**
@@ -157,7 +158,7 @@ void compRowWeights(misc::DeltaWeightedSumScratch& scratch, GPCntType nGP0);
  */
 template <typename Func>
 [[gnu::noinline, gnu::aligned(64)]] void forEachGPWithGlobalWeight(
-    const misc::GenericDSGOperatorContext& context, const TensorGridCTData& deltaTGData,
+    const misc::GenericDSGOperatorContext& context, const TensorGridCTDataView& deltaTGData,
     misc::DeltaWeightedSumScratch& scratch, Func&& func) {
   if (deltaTGData.tensorGrid.nGP() == 0) {
     return;

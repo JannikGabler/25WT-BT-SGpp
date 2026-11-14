@@ -8,7 +8,6 @@
 #include <numeric>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>
@@ -22,32 +21,33 @@ namespace misc {
 namespace {
 
 /**
- * Copies the levels and coefficients of the tensor grids with a non-zero coefficient, in input
+ * Copies the levels and coefficients of the multi-indices with a non-zero coefficient, in input
  * order. The levels are stored column by column (@c lvls[dim * n + i] is the level of the i-th one
  * in dimension dim, n = @c coeffs.size()), so that partitioning by one dimension reads one
- * contiguous column instead of chasing a pointer per multi-index. @p maxLvls[dim] becomes the
- * maximum level in dimension dim.
+ * contiguous column instead of every nDim-th entry of the row-major input. @p maxLvls[dim] becomes
+ * the maximum level in dimension dim.
  */
-void copyNonZeroCoeffTGs(const std::span<const TensorGridCTData> tgData, const size_t nDim,
+void copyNonZeroCoeffTGs(const LvlMIVecView levels, const std::span<const CTCoeffType> coefficients,
                          std::vector<LvlType>& lvls, std::vector<double>& coeffs,
                          std::vector<LvlType>& maxLvls) {
-  const size_t n = static_cast<size_t>(std::ranges::count_if(
-      tgData, [](const TensorGridCTData& tg) { return tg.coefficient != 0; }));
+  const size_t nDim = levels.nDim();
+  const size_t n = static_cast<size_t>(
+      std::ranges::count_if(coefficients, [](const CTCoeffType c) { return c != 0; }));
+  const LvlType* const input = levels.data();
 
   lvls.resize(nDim * n);
   coeffs.reserve(n);
   maxLvls.assign(nDim, 0);
 
-  for (const TensorGridCTData& tg : tgData) {
-    assert(tg.mi.size() == nDim);
-
-    if (tg.coefficient != 0) {
+  for (size_t i = 0; i < coefficients.size(); i++) {
+    if (coefficients[i] != 0) {
       for (size_t dim = 0; dim < nDim; dim++) {
-        lvls[dim * n + coeffs.size()] = tg.mi[dim];
-        maxLvls[dim] = std::max(maxLvls[dim], tg.mi[dim]);
+        const LvlType lvl = input[i * nDim + dim];
+        lvls[dim * n + coeffs.size()] = lvl;
+        maxLvls[dim] = std::max(maxLvls[dim], lvl);
       }
 
-      coeffs.push_back(static_cast<double>(tg.coefficient));
+      coeffs.push_back(static_cast<double>(coefficients[i]));
     }
   }
 }
@@ -115,12 +115,15 @@ void compMaxSuffixLvlSums(FlatNestedVec<CTCoeffTrie::Node, 2>& nodes, const size
 
 }  // namespace
 
-CTCoeffTrie::CTCoeffTrie(const std::span<const TensorGridCTData> tgData, const size_t nDim)
-    : nDim_(nDim) {
+CTCoeffTrie::CTCoeffTrie(const LvlMIVecView levels, const std::span<const CTCoeffType> coefficients)
+    : nDim_(levels.nDim()) {
+  assert(levels.size() == coefficients.size());
+
+  const size_t nDim = nDim_;
   std::vector<LvlType> lvls;
   std::vector<double> coeffs;
   std::vector<LvlType> maxLvls;
-  copyNonZeroCoeffTGs(tgData, nDim, lvls, coeffs, maxLvls);
+  copyNonZeroCoeffTGs(levels, coefficients, lvls, coeffs, maxLvls);
   const size_t n = coeffs.size();
 
   // Builds the trie depth by depth like an MSD radix sort, which also sorts the multi-indices
@@ -135,8 +138,8 @@ CTCoeffTrie::CTCoeffTrie(const std::span<const TensorGridCTData> tgData, const s
 
   for (size_t depth = 0; depth < nDim; depth++) {
     nodes.appendSubVec(1);  // nodes[depth]
-    appendNodesOfDepth(depth, std::span<const LvlType>(lvls).subspan(depth * n, n),
-                       maxLvls[depth], nodes, order, rangeStarts);
+    appendNodesOfDepth(depth, std::span<const LvlType>(lvls).subspan(depth * n, n), maxLvls[depth],
+                       nodes, order, rangeStarts);
   }
 
   assert((nDim == 0 || nodes[nDim - 1].size() == n) &&

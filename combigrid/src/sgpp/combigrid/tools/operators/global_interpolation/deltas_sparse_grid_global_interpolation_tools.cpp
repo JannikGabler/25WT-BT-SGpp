@@ -129,10 +129,8 @@ double evaluateInterpolant(const DSGGlobalInterpIndex& index,
   assert(normPoint.size() == index.nDim());
 
   FlatNestedVec<double, 3> weights = index.weightLayout();
-  const GenericDSGOperatorContext context{.deltasSparseGrid = deltasSparseGrid,
-                                          .domain = deltasSparseGrid.getGenInstr().getDomain(),
-                                          .weights1D = weights,
-                                          .coeffTrie = index.coeffTrie()};
+  const GenericDSGOperatorContext context{
+      .deltasSparseGrid = deltasSparseGrid, .weights1D = weights, .coeffTrie = index.coeffTrie()};
   std::vector<double> tgSums(deltasSparseGrid.nTG());
 
   runPasses(index, deltasSparseGrid, normPoint, weights, 0, parallel,
@@ -153,10 +151,8 @@ void evaluateInterpolant(const DSGGlobalInterpIndex& index,
 
   const size_t nOutputs = result.size();
   FlatNestedVec<double, 3> weights = index.weightLayout();
-  const GenericDSGOperatorContext context{.deltasSparseGrid = deltasSparseGrid,
-                                          .domain = deltasSparseGrid.getGenInstr().getDomain(),
-                                          .weights1D = weights,
-                                          .coeffTrie = index.coeffTrie()};
+  const GenericDSGOperatorContext context{
+      .deltasSparseGrid = deltasSparseGrid, .weights1D = weights, .coeffTrie = index.coeffTrie()};
   std::vector<double> tgSums(deltasSparseGrid.nTG() * nOutputs);
 
   runPasses(index, deltasSparseGrid, normPoint, weights, nOutputs, parallel,

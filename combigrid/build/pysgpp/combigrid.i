@@ -175,14 +175,18 @@ namespace std {
 // (iteration is provided by __len__ / __getitem__, which raises IndexError so that
 // 'for tgData in grid' terminates) and the protected methods for manual assembly (a grid without
 // generation instruction or with unset size caches crashes the operators).
+//  - getTensorGrid(idx): the C++ method returns a TensorGridCTDataView into the grid's storage
+//    (levels, coefficients and node table; not wrapped); this one returns an owned copy
+//    (TensorGridCTData, nodes on the domain).
 //  - getTensorGrid(mi): the C++ overload returns a const_iterator, which cannot be used from
-//    Python; this one returns the matching TensorGridCTData, or None if the grid contains no
-//    tensor grid with this level multi-index.
-//  - getTensorGrids: the C++ method returns a std::span, for which SWIG has no typemap; a
-//    std::vector is returned as a tuple of owned copies (TensorGridCTDataVector).
+//    Python; this one returns an owned copy of the matching tensor grid, or None if the grid
+//    contains no tensor grid with this level multi-index.
+//  - getTensorGrids: returned as a tuple of owned copies (TensorGridCTDataVector).
+//  - getLevels: the level multi-indices of the tensor grids (an LvlMIVec in the grid).
+//  - getNodes(dim, lvl): copy of the node list of (dim, lvl) of the grid's node table (NodeTable,
+//    not wrapped), on the domain; nNodes(dim, lvl), maxLvl(dim): its size and the levels.
 //  - operator== compares grids of the same class only.
-// Keep-alive references: both getTensorGrid overloads and getGenInstr return a reference into the
-// grid (_owner). The grid holds a clone of the generation instruction; the clone of an
+// Keep-alive references: getLevels and getGenInstr return a reference into the grid (_owner). The grid holds a clone of the generation instruction; the clone of an
 // MIVecSGGenInstr references the caller's LvlMIVec, so the instruction's Python proxy (which keeps
 // that vector alive) is kept alive by the grid (_genInstr). Note: SWIG drops the const of the
 // reference getGenInstr returns, so setters called on the returned object modify the instruction
@@ -193,32 +197,50 @@ namespace std {
 %pythonappend sgpp::combigrid::Class::Class %{
   self._genInstr = genInstruction
 %}
-%pythonappend sgpp::combigrid::Class::getTensorGrid %{
-  if val is not None:
-    val._owner = self
+%pythonappend sgpp::combigrid::Class::getLevels %{
+  val._owner = self
 %}
 %pythonappend sgpp::combigrid::Class::getGenInstr %{
   val._owner = self
 %}
+%newobject sgpp::combigrid::Class::getTensorGrid(const sgpp::combigrid::LvlMI&) const;
 %warnfilter(SWIGWARN_TYPE_UNDEFINED_CLASS) sgpp::combigrid::Class;
 %extend sgpp::combigrid::Class {
   size_t nDim() const { return $self->nDim(); }
 
   size_t nTG() const { return $self->nTG(); }
 
-  const sgpp::combigrid::TensorGridCTData& getTensorGrid(size_t idx) const {
-    return $self->getTensorGrid(idx);
+  sgpp::combigrid::TensorGridCTData getTensorGrid(size_t idx) const {
+    return $self->getTensorGrid(idx).toTensorGridCTData();
   }
 
-  const sgpp::combigrid::TensorGridCTData* getTensorGrid(const sgpp::combigrid::LvlMI& mi) const {
+  sgpp::combigrid::TensorGridCTData* getTensorGrid(const sgpp::combigrid::LvlMI& mi) const {
     auto it = $self->getTensorGrid(mi);
-    return (it == $self->end()) ? nullptr : &(*it);
+    return (it == $self->end()) ? nullptr
+                                : new sgpp::combigrid::TensorGridCTData((*it).toTensorGridCTData());
   }
 
   std::vector<sgpp::combigrid::TensorGridCTData> getTensorGrids() const {
-    const auto tgs = $self->getTensorGrids();
-    return std::vector<sgpp::combigrid::TensorGridCTData>(tgs.begin(), tgs.end());
+    std::vector<sgpp::combigrid::TensorGridCTData> result;
+    result.reserve($self->nTG());
+    for (const auto& tg : *$self) result.push_back(tg.toTensorGridCTData());
+    return result;
   }
+
+  const sgpp::combigrid::LvlMIVec& getLevels() const { return $self->getLevels(); }
+
+  sgpp::base::DataVector getNodes(size_t dim, sgpp::combigrid::LvlType lvl) const {
+    const auto nodes = $self->getNodeTable().nodeSpan(dim, lvl);
+    sgpp::base::DataVector result(nodes.size());
+    std::copy(nodes.begin(), nodes.end(), result.begin());
+    return result;
+  }
+
+  size_t nNodes(size_t dim, sgpp::combigrid::LvlType lvl) const {
+    return $self->getNodeTable().nNodes(dim, lvl);
+  }
+
+  sgpp::combigrid::LvlType maxLvl(size_t dim) const { return $self->getNodeTable().maxLvl(dim); }
 
   size_t getMaxTGGPCnt() const { return $self->getMaxTGGPCnt(); }
 

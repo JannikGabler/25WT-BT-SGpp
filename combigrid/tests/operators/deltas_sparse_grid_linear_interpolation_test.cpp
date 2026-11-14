@@ -179,7 +179,7 @@ std::string describe(const Config& c, const size_t pointIdx) {
 /// Sum of |c_l| (scale of the round-off of a combination).
 double sumAbsCoeffs(const SparseGrid& sg) {
   double sum = 0.0;
-  for (const TensorGridCTData& tgData : sg) sum += std::abs(tgData.coefficient);
+  for (const auto& tgData : sg) sum += std::abs(tgData.coefficient);
   return sum;
 }
 
@@ -363,7 +363,7 @@ BOOST_AUTO_TEST_CASE(Index_Slots_Of_Doubling_Growth) {
 
     BOOST_CHECK_EQUAL(index.nLeaves(), dsg.nTG());
     size_t expectedSlots = 0;
-    for (const TensorGridCTData& tgData : dsg) {
+    for (const auto& tgData : dsg) {
       expectedSlots += size_t{1} << std::count(tgData.mi.begin(), tgData.mi.end(), 0u);
     }
     BOOST_CHECK_EQUAL(index.nSlots(), expectedSlots);

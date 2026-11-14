@@ -1,10 +1,14 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/extensive_sparse_grid_generation.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <sgpp/globaldef.hpp>
 #include <utility>

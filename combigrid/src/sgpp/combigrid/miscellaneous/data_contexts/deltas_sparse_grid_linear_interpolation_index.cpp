@@ -8,11 +8,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
-#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/miscellaneous/closure_trie/closure_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -48,83 +50,59 @@ uint8_t maxNewInOneGap(const std::vector<double>& known, const std::span<const d
 }
 
 /// Appends the nodes of dimension @p dim of @p tg to @p out, sorted ascending.
-void appendSortedNodesOfDim(const TensorGrid& tg, const size_t dim, std::vector<double>& out) {
-  const GPMI& gpCnts = tg.getGPCntPerDim();
-  size_t begin = 0;
-  for (size_t k = 0; k < dim; k++) {
-    begin += gpCnts[k];
-  }
-
-  const auto first = tg.getNodesPerDim().begin() + static_cast<std::ptrdiff_t>(begin);
+/// Appends the delta nodes of level @p lvl of dimension @p dim (normalized) to @p out, sorted.
+void appendSortedDeltaNodes(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl,
+                            std::vector<double>& out) {
+  const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
+  const bool withBoundary = (lvl == genInstr.getBoundaryLevelOffset());
   const size_t oldSize = out.size();
-  out.insert(out.end(), first, first + gpCnts[dim]);
-  const auto appended = out.begin() + static_cast<std::ptrdiff_t>(oldSize);
-  if (!std::is_sorted(appended, out.end())) {  // The built-in node families generate them sorted
-    std::sort(appended, out.end());
+  out.resize(oldSize + tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, withBoundary));
+
+  const std::span<double> appended = std::span<double>(out).subspan(oldSize);
+  genInstr.getNodeGenFuncForDim(dim)->genDeltaNodes(lvl, lvl2GPCntFunc, appended, withBoundary);
+  if (!std::ranges::is_sorted(appended)) {  // The built-in node families generate them sorted
+    std::ranges::sort(appended);
   }
 }
 
 }  // namespace
 
 DSGLinInterpIndex::DSGLinInterpIndex(const DeltasSparseGrid& deltasSparseGrid)
-    : tensorGrids(deltasSparseGrid.getTensorGrids()), trie_(tensorGrids, deltasSparseGrid.nDim()) {
-  collectDeltaNodes();
+    : levels_(deltasSparseGrid.getLevels().getView()),
+      coeffs_(deltasSparseGrid.getCoefficients()),
+      trie_(levels_) {
+  collectDeltaNodes(deltasSparseGrid);
   maxNewCoords_.assign(nRows(), 0);
   for (size_t dim = 0; dim < nDim(); dim++) {
     countNewCoords(dim);
   }
   computeSlotOffsets();
 
-  for (const TensorGridCTData& tgData : tensorGrids) {
-    if (tgData.coefficient != 0) {
-      ctTGs.push_back(&tgData);
+  for (size_t tgIdx = 0; tgIdx < coeffs_.size(); tgIdx++) {
+    if (coeffs_[tgIdx] != 0) {
+      ctTGs.push_back(tgIdx);
     }
   }
 }
 
-void DSGLinInterpIndex::collectDeltaNodes() {
-  const std::vector<const TensorGrid*> rowTGs = findRowTensorGrids();
-  size_t nNodes = 0;
-  for (size_t dim = 0; dim < nDim(); dim++) {
-    for (size_t r = rowOffset_[dim]; r < rowOffset_[dim + 1]; r++) {
-      nNodes += rowTGs[r]->getGPCntPerDim()[dim];
-    }
-  }
+/**
+ * The delta nodes are generated on the unit interval as for the deltas sparse grid (the corner
+ * search runs on the normalized query point; the corners are mapped onto the domain with
+ * tools::mapToDomain, as the node table of the grid).
+ */
+void DSGLinInterpIndex::collectDeltaNodes(const DeltasSparseGrid& deltasSparseGrid) {
+  const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
+  const NodeTable& nodeTable = deltasSparseGrid.getNodeTable();
 
-  nodes.reserve(nNodes);
+  rowOffset_.assign(1, 0);
   nodeOffset.assign(1, 0);
   for (size_t dim = 0; dim < nDim(); dim++) {
-    for (size_t r = rowOffset_[dim]; r < rowOffset_[dim + 1]; r++) {
-      appendSortedNodesOfDim(*rowTGs[r], dim, nodes);
+    rowOffset_.push_back(rowOffset_.back() + nodeTable.maxLvl(dim) + 1);
+    for (LvlType lvl = 0; lvl <= nodeTable.maxLvl(dim); lvl++) {
+      appendSortedDeltaNodes(genInstr, dim, lvl, nodes);
       nodeOffset.push_back(nodes.size());
     }
   }
-}
-
-std::vector<const TensorGrid*> DSGLinInterpIndex::findRowTensorGrids() {
-  const size_t nDim = this->nDim();
-  std::vector<LvlType> maxLvls(nDim, 0);
-  for (const TensorGridCTData& tgData : tensorGrids) {
-    for (size_t dim = 0; dim < nDim; dim++) {
-      maxLvls[dim] = std::max(maxLvls[dim], tgData.mi[dim]);
-    }
-  }
-
-  // The delta nodes of level lvl in dimension dim are those of the tensor grid lvl * e_dim
-  rowOffset_.assign(1, 0);
-  std::vector<const TensorGrid*> rowTGs;
-  LvlMI mi(nDim, 0);
-  for (size_t dim = 0; dim < nDim; dim++) {
-    rowOffset_.push_back(rowOffset_.back() + maxLvls[dim] + 1);
-    for (LvlType lvl = 0; lvl <= maxLvls[dim]; lvl++) {
-      mi[dim] = lvl;
-      const size_t leaf = trie_.findLeaf(mi);
-      assert(leaf != ClosureTrie::NOT_FOUND);
-      rowTGs.push_back(&tensorGrids[trie_.leafItem(leaf)].tensorGrid);
-    }
-    mi[dim] = 0;
-  }
-  return rowTGs;
 }
 
 void DSGLinInterpIndex::countNewCoords(const size_t dim) {
@@ -153,7 +131,7 @@ void DSGLinInterpIndex::computeSlotOffsets() {
   slotOffset_.reserve(nLeaves() + 1);
 
   for (size_t leaf = 0; leaf < nLeaves(); leaf++) {
-    const LvlMI& mi = leafMI(leaf);
+    const LvlMIView mi = leafMI(leaf);
     size_t blockSize = 1;
     for (size_t dim = 0; dim < nDim(); dim++) {
       blockSize *= maxNewCoords_[row(dim, mi[dim])];

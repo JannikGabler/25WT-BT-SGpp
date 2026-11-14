@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -7,13 +12,11 @@
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/extensive_sparse_grid_generation.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>
 #include <vector>
 
-using namespace sgpp::combigrid::tools::sparse_grid_generation;
 using namespace sgpp::combigrid::tools::extensive_sparse_grid_generation;
 
 namespace sgpp {

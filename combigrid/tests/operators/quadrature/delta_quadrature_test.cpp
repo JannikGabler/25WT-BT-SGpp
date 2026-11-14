@@ -48,6 +48,7 @@
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
@@ -312,11 +313,8 @@ struct DeltaQuadratureData {
   DeltaQuadratureData(const DeltasSparseGrid& deltasSG, const SourceFunc& sourceFunc)
       : sourceFunc(sourceFunc),
         weights1D(tools::dsg_quadrature::comp1DWeights(deltasSG)),
-        coeffTrie(deltasSG.getTensorGrids(), deltasSG.nDim()),
-        context{.deltasSparseGrid = deltasSG,
-                .domain = deltasSG.getGenInstr().getDomain(),
-                .weights1D = weights1D,
-                .coeffTrie = coeffTrie},
+        coeffTrie(deltasSG.getLevels().getView(), deltasSG.getCoefficients()),
+        context{.deltasSparseGrid = deltasSG, .weights1D = weights1D, .coeffTrie = coeffTrie},
         scratch(deltasSG.nDim(), deltasSG.getMaxTGSumOverGPCntsPerDim()) {}
 
   const SourceFunc& sourceFunc;
@@ -335,8 +333,8 @@ std::vector<MIWithCoeff> nonZeroCoeffMIs(const DeltasSparseGrid& deltasSG,
                                          const LvlMI& lowerBound) {
   std::vector<MIWithCoeff> result;
 
-  for (const TensorGridCTData& tg : deltasSG) {
-    if (tg.coefficient != 0 && tg.mi >= lowerBound) {
+  for (const auto& tg : deltasSG) {
+    if (tg.coefficient != 0 && tg.mi.toMI() >= lowerBound) {
       result.emplace_back(std::vector<LvlType>(tg.mi.begin(), tg.mi.end()), tg.coefficient);
     }
   }
@@ -467,7 +465,7 @@ std::vector<MIWithCoeff> subTrieLeaves(const DeltaQuadratureData& data, const Lv
  * expectedDeltaNodes, independently of comp1DWeights.
  */
 std::pair<std::vector<size_t>, std::vector<MIWithCoeff>> expectedProjectedSubTrie(
-    const DeltasSparseGrid& deltasSG, const TensorGridCTData& deltaTG) {
+    const DeltasSparseGrid& deltasSG, const TensorGridCTDataView& deltaTG) {
   const SGGenInstr& genInstr = deltasSG.getGenInstr();
   const size_t nDim = deltasSG.nDim();
   const LvlMI& m = deltaTG.mi;
@@ -514,7 +512,7 @@ std::pair<std::vector<size_t>, std::vector<MIWithCoeff>> expectedProjectedSubTri
  * to round-off) may be left out.
  */
 void checkProjectedSubTrie(const DeltasSparseGrid& deltasSG, DeltaQuadratureData& data,
-                           const TensorGridCTData& deltaTG) {
+                           const TensorGridCTDataView& deltaTG) {
   tools::dsg_weighted_sum::compSubTrie(data.context, deltaTG.mi, data.scratch);
 
   const auto [projDims, expectedLeaves] = expectedProjectedSubTrie(deltasSG, deltaTG);
@@ -550,17 +548,16 @@ std::vector<LvlMI> levelsOutside(const DeltasSparseGrid& deltasSG) {
   std::vector<LvlMI> result;
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    const TensorGridCTData* maxTG = &deltasSG.getTensorGrids()[0];
+    LvlMIView maxMI = deltasSG.getTensorGrid(0).mi;
 
-    for (const TensorGridCTData& tg : deltasSG) {
-      if (tg.mi[dim] > maxTG->mi[dim]) maxTG = &tg;
+    for (const auto& tg : deltasSG) {
+      if (tg.mi[dim] > maxMI[dim]) maxMI = tg.mi;
     }
 
-    LvlMI mi = maxTG->mi;
+    LvlMI mi = maxMI.toMI();
     mi[(dim + 1) % nDim]++;
 
-    if (std::ranges::none_of(deltasSG.getTensorGrids(),
-                             [&](const TensorGridCTData& tg) { return tg.mi == mi; })) {
+    if (deltasSG.getTensorGrid(mi) == deltasSG.end()) {
       result.push_back(mi);
     }
   }
@@ -576,7 +573,7 @@ void checkSubTries(const DeltasSparseGrid& deltasSG) {
   const SourceFunc sourceFunc = genConstantFunc(1.0);
   DeltaQuadratureData data(deltasSG, sourceFunc);
 
-  for (const TensorGridCTData& deltaTG : deltasSG) {
+  for (const auto& deltaTG : deltasSG) {
     BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaTG.mi)) {
       checkProjectedSubTrie(deltasSG, data, deltaTG);
     }
@@ -605,7 +602,7 @@ class BruteForceGlobalWeights {
   explicit BruteForceGlobalWeights(const SparseGrid& sg) {
     const std::vector<NodeGenFunc*>& nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs();
 
-    for (const TensorGridCTData& tg : sg) {
+    for (const auto& tg : sg) {
       const GPMI& gpCntPerDim = tg.tensorGrid.getGPCntPerDim();
       const DataVector& nodesPerDim = tg.tensorGrid.getNodesPerDim();
       TG& entry = tgs.emplace_back(TG{static_cast<double>(tg.coefficient), {}, {}});
@@ -1027,9 +1024,6 @@ namespace {
  * of the coefficients).
  */
 void checkGlobalWeightsOfDeltaTGs(const SGGenInstr& genInstr) {
-  const size_t nDim = genInstr.nDim();
-  const HyperCubeArea& domain = genInstr.getDomain();
-
   const SparseGrid sg(genInstr);
   const BruteForceGlobalWeights bruteForceGlobalWeight(sg);
   const DeltasSparseGrid deltasSG(genInstr);
@@ -1042,24 +1036,19 @@ void checkGlobalWeightsOfDeltaTGs(const SGGenInstr& genInstr) {
   size_t nChecked = 0;
   size_t nGP = 0;
 
-  for (const TensorGridCTData& deltaTG : deltasSG) {
+  for (const auto& deltaTG : deltasSG) {
     nGP += deltaTG.tensorGrid.nGP();
     tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
         data.context, deltaTG, data.scratch, [&](const DataVector& gp, const double globalWeight) {
-          // Back onto the unit domain, where the tensor grids of sg are
-          DataVector unitGP(nDim);
-          for (size_t dim = 0; dim < nDim; dim++) {
-            unitGP[dim] = (gp[dim] - domain[dim].first) / (domain[dim].second - domain[dim].first);
-          }
-
-          const std::pair<double, double> bruteForce = bruteForceGlobalWeight.withMagnitude(unitGP);
+          // The tensor grids of sg have the same nodes on the domain (bitwise)
+          const std::pair<double, double> bruteForce = bruteForceGlobalWeight.withMagnitude(gp);
           const double expected = bruteForce.first;
           const double magnitude = bruteForce.second;
 
           if (std::abs(globalWeight - expected) > EPS) {
             BOOST_ERROR("Delta tensor grid " << toString(deltaTG.mi) << ", grid point "
-                                             << unitGP.toString() << ": global weight "
-                                             << globalWeight << ", expected " << expected);
+                                             << gp.toString() << ": global weight " << globalWeight
+                                             << ", expected " << expected);
           }
 
           sumOfGlobalWeights += globalWeight;
@@ -1084,13 +1073,10 @@ BOOST_AUTO_TEST_SUITE(quadratureDelta_internals)
 
 BOOST_AUTO_TEST_CASE(Coefficient_Trie_Structure) {
   // Shuffled input with a zero coefficient, which has to be skipped
-  std::vector<TensorGridCTData> tgs;
-  tgs.push_back(TensorGridCTData{LvlMI{1, 0}, 1, TensorGrid()});
-  tgs.push_back(TensorGridCTData{LvlMI{2, 0}, 0, TensorGrid()});
-  tgs.push_back(TensorGridCTData{LvlMI{0, 0}, -1, TensorGrid()});
-  tgs.push_back(TensorGridCTData{LvlMI{0, 1}, 1, TensorGrid()});
+  const LvlMIVec mis(std::vector<LvlMI>{LvlMI{1, 0}, LvlMI{2, 0}, LvlMI{0, 0}, LvlMI{0, 1}});
+  const std::vector<CTCoeffType> coeffs{1, 0, -1, 1};
 
-  const misc::CTCoeffTrie trie(tgs, 2);
+  const misc::CTCoeffTrie trie(mis.getView(), coeffs);
 
   // Lexicographic order: (0, 0), (0, 1), (1, 0). Nodes: {lvl, maxSuffixLvlSum, childEnd}
   using Node = misc::CTCoeffTrie::Node;
@@ -1107,7 +1093,8 @@ BOOST_AUTO_TEST_CASE(Coefficient_Trie_Structure) {
   BOOST_CHECK_EQUAL(trie.childEnd(0, 1), size_t{3});
 
   // Only zero coefficients: empty trie
-  const misc::CTCoeffTrie emptyTrie{std::span<const TensorGridCTData>(tgs).subspan(1, 1), 2};
+  const misc::CTCoeffTrie emptyTrie(LvlMIVecView(mis.data() + 2, 2, 1),
+                                    std::span<const CTCoeffType>(coeffs).subspan(1, 1));
   BOOST_CHECK_EQUAL(emptyTrie.nLeaves(), size_t{0});
   BOOST_CHECK(emptyTrie.nodesOfDepth(0).empty());
   BOOST_CHECK(emptyTrie.nodesOfDepth(1).empty());
@@ -1121,7 +1108,7 @@ BOOST_AUTO_TEST_CASE(Coefficient_Trie_Of_Sparse_Grids) {
       for (LvlType maxLvl = 0; maxLvl <= 5; maxLvl++) {
         BOOST_TEST_CONTEXT("Complete, nDim " << nDim << ", max. level " << maxLvl) {
           const DeltasSparseGrid deltasSG{CompleteSGGenInstr(maxLvl, nDim)};
-          const misc::CTCoeffTrie trie(deltasSG.getTensorGrids(), nDim);
+          const misc::CTCoeffTrie trie(deltasSG.getLevels().getView(), deltasSG.getCoefficients());
 
           BOOST_CHECK(trieLeaves(trie) == nonZeroCoeffMIs(deltasSG, LvlMI(nDim, LvlType{0})));
         }
@@ -1138,7 +1125,7 @@ BOOST_AUTO_TEST_CASE(Coefficient_Trie_Of_Sparse_Grids) {
 
       BOOST_TEST_CONTEXT("MIVec, run " << run << ", nDim " << nDim) {
         const DeltasSparseGrid deltasSG{MIVecSGGenInstr(mis)};
-        const misc::CTCoeffTrie trie(deltasSG.getTensorGrids(), nDim);
+        const misc::CTCoeffTrie trie(deltasSG.getLevels().getView(), deltasSG.getCoefficients());
 
         BOOST_CHECK(trieLeaves(trie) == nonZeroCoeffMIs(deltasSG, LvlMI(nDim, LvlType{0})));
       }
@@ -1156,12 +1143,17 @@ BOOST_AUTO_TEST_CASE(Coefficient_Trie_Independent_Of_Input_Order) {
 
     for (const DeltasSparseGrid* const deltasSG : {&complete, &miVec}) {
       BOOST_TEST_CONTEXT((deltasSG == &complete ? "Complete" : "Anisotropic")) {
-        const std::span<const TensorGridCTData> tgs = deltasSG->getTensorGrids();
-        std::vector<TensorGridCTData> shuffled;
-        for (const size_t idx : randomPermutation(tgs.size())) shuffled.push_back(tgs[idx]);
+        const LvlMIVec& levels = deltasSG->getLevels();
+        const std::span<const CTCoeffType> coeffs = deltasSG->getCoefficients();
+        LvlMIVec shuffled(deltasSG->nDim(), 0);
+        std::vector<CTCoeffType> shuffledCoeffs;
+        for (const size_t idx : randomPermutation(coeffs.size())) {
+          shuffled.push_back(levels[idx]);
+          shuffledCoeffs.push_back(coeffs[idx]);
+        }
 
-        const misc::CTCoeffTrie trie(tgs, deltasSG->nDim());
-        const misc::CTCoeffTrie shuffledTrie(shuffled, deltasSG->nDim());
+        const misc::CTCoeffTrie trie(levels.getView(), coeffs);
+        const misc::CTCoeffTrie shuffledTrie(shuffled.getView(), shuffledCoeffs);
 
         for (size_t depth = 0; depth < trie.nDim(); depth++) {
           BOOST_CHECK(
@@ -1396,19 +1388,21 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
               double sumOfGlobalWeights = 0.0;
 
               for (const LvlMI& deltaMI : completeSGLevels(nDim, maxLvl)) {
-                const TensorGridCTData deltaTG = expectedDeltaTGData(deltaMI, genInstr);
+                const TensorGridCTData expectedTG = expectedDeltaTGData(deltaMI, genInstr);
+                const auto deltaTG = deltasSG.getTensorGrid(deltaMI);
+                BOOST_REQUIRE(deltaTG != deltasSG.end());
 
                 std::vector<std::pair<DataVector, double>> visited;
                 tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
-                    data.context, deltaTG, data.scratch,
+                    data.context, *deltaTG, data.scratch,
                     [&](const DataVector& gp, const double globalWeight) {
                       visited.emplace_back(gp, globalWeight);
                     });
 
-                BOOST_REQUIRE_EQUAL(visited.size(), deltaTG.tensorGrid.nGP());
+                BOOST_REQUIRE_EQUAL(visited.size(), expectedTG.tensorGrid.nGP());
                 size_t gpIdx = 0;
 
-                for (const auto& point : deltaTG.tensorGrid.gridPointsImmutable()) {
+                for (const auto& point : expectedTG.tensorGrid.gridPointsImmutable()) {
                   const auto& [gp, globalWeight] = visited[gpIdx++];
 
                   BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaMI) << ", grid point "
@@ -1418,7 +1412,7 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
                       BOOST_CHECK_SMALL(gp[dim] - (point.gp[dim] * width + domain[dim].first), EPS);
                     }
 
-                    BOOST_CHECK_SMALL(globalWeight - bruteForceGlobalWeight(point.gp), EPS);
+                    BOOST_CHECK_SMALL(globalWeight - bruteForceGlobalWeight(gp), EPS);
                   }
 
                   sumOfGlobalWeights += globalWeight;
@@ -1532,7 +1526,7 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Independent_Of_Visit_Order) {
           DeltaQuadratureData shared(deltasSG, sourceFunc);
 
           using Visited = std::vector<std::pair<std::vector<double>, double>>;
-          const auto visit = [&](const TensorGridCTData& deltaTG,
+          const auto visit = [&](const TensorGridCTDataView& deltaTG,
                                  misc::DeltaWeightedSumScratch& scratch) {
             Visited visited;
             tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
@@ -1544,7 +1538,7 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Independent_Of_Visit_Order) {
           };
 
           for (const size_t tgIdx : randomPermutation(deltasSG.nTG())) {
-            const TensorGridCTData& deltaTG = deltasSG.getTensorGrid(tgIdx);
+            const auto deltaTG = deltasSG.getTensorGrid(tgIdx);
             misc::DeltaWeightedSumScratch fresh(nDim, deltasSG.getMaxTGSumOverGPCntsPerDim());
 
             BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaTG.mi)) {
@@ -1585,8 +1579,10 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Reproduce_Quadrature) {
 
               double result = 0.0;
               for (const LvlMI& deltaMI : completeSGLevels(nDim, maxLvl)) {
-                result += tools::dsg_weighted_sum::processDeltaTensorGrid(
-                    data.context, sourceFunc, expectedDeltaTGData(deltaMI, genInstr), data.scratch);
+                const auto deltaTG = deltasSG.getTensorGrid(deltaMI);
+                BOOST_REQUIRE(deltaTG != deltasSG.end());
+                result += tools::dsg_weighted_sum::processDeltaTensorGrid(data.context, sourceFunc,
+                                                                          *deltaTG, data.scratch);
               }
 
               checkQuadResult(result * genInstr.getVolumeOfDomain(), quadrature(sourceFunc, sg));

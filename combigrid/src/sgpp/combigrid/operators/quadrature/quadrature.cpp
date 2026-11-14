@@ -13,7 +13,8 @@
 
 using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;
-using namespace sgpp::combigrid::tools::quadrature;
+using sgpp::combigrid::tools::quadrature::combineTensorGrids;
+using sgpp::combigrid::tools::quadrature::processTensorGrid;
 
 namespace sgpp {
 namespace combigrid {
@@ -23,7 +24,6 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   const size_t nDim = sparseGrid.nDim();
 
   const QuadratureContext context{.sparseGrid = sparseGrid,
-                                  .domain = genInstr.getDomain(),
                                   .nodeGenFuncs = genInstr.getNodeGenFuncs()};
 
   double result = 0;
@@ -33,7 +33,8 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
     QuadratureScratch scratch(nDim, sparseGrid.getMaxTGSumOverGPCntsPerDim());
 
 #pragma omp for schedule(guided) nowait
-    for (const TensorGridCTData& tgData : sparseGrid) {
+    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
+      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
       result +=
           tgData.coefficient * processTensorGrid(context, sourceFunc, tgData.tensorGrid, scratch);
     }
@@ -52,7 +53,6 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
 
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const QuadratureContext context{.sparseGrid = sparseGrid,
-                                  .domain = genInstr.getDomain(),
                                   .nodeGenFuncs = genInstr.getNodeGenFuncs()};
 
   combineTensorGrids(context, sourceFunc, result);

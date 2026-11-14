@@ -10,9 +10,9 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -23,7 +23,7 @@ namespace combigrid {
 namespace misc {
 
 DSGGlobalInterpIndex::DSGGlobalInterpIndex(const DeltasSparseGrid& deltasSparseGrid)
-    : coeffTrie_(deltasSparseGrid.getTensorGrids(), deltasSparseGrid.nDim()) {
+    : coeffTrie_(deltasSparseGrid.getLevels().getView(), deltasSparseGrid.getCoefficients()) {
   setRowOffsets(deltasSparseGrid);
 
   weightLayout_.reserveSubVecs(1, nDim());
@@ -37,31 +37,25 @@ DSGGlobalInterpIndex::DSGGlobalInterpIndex(const DeltasSparseGrid& deltasSparseG
     return rowNodes[a].size() > rowNodes[b].size();
   });
 
-  for (const TensorGridCTData& tgData : deltasSparseGrid) {
-    nGridPoints_ += tgData.tensorGrid.nGP();
+  std::vector<size_t> nGP(deltasSparseGrid.nTG());
+  for (size_t tgIdx = 0; tgIdx < nGP.size(); tgIdx++) {
+    nGP[tgIdx] = deltasSparseGrid.getTensorGrid(tgIdx).tensorGrid.nGP();
+    nGridPoints_ += nGP[tgIdx];
   }
 
   tgsBySize_.resize(deltasSparseGrid.nTG());
   std::iota(tgsBySize_.begin(), tgsBySize_.end(), size_t{0});
-  std::ranges::stable_sort(tgsBySize_, [&](const size_t a, const size_t b) {
-    return deltasSparseGrid.getTensorGrid(a).tensorGrid.nGP() >
-           deltasSparseGrid.getTensorGrid(b).tensorGrid.nGP();
-  });
+  std::ranges::stable_sort(tgsBySize_,
+                           [&](const size_t a, const size_t b) { return nGP[a] > nGP[b]; });
 }
 
 void DSGGlobalInterpIndex::setRowOffsets(const DeltasSparseGrid& deltasSparseGrid) {
-  const size_t nDim = deltasSparseGrid.nDim();
-  std::vector<LvlType> maxLvls(nDim, 0);
-
-  for (const TensorGridCTData& tgData : deltasSparseGrid) {
-    for (size_t dim = 0; dim < nDim; dim++) {
-      maxLvls[dim] = std::max(maxLvls[dim], tgData.mi[dim]);
-    }
-  }
+  // The maximum level per dimension is the one of the node table
+  const NodeTable& nodeTable = deltasSparseGrid.getNodeTable();
 
   rowOffset_.assign(1, 0);
-  for (size_t dim = 0; dim < nDim; dim++) {
-    rowOffset_.push_back(rowOffset_.back() + maxLvls[dim] + 1);
+  for (size_t dim = 0; dim < deltasSparseGrid.nDim(); dim++) {
+    rowOffset_.push_back(rowOffset_.back() + nodeTable.maxLvl(dim) + 1);
   }
 }
 

@@ -48,7 +48,7 @@ namespace dsg_lin_interpolation {
 
 /**
  * @brief Returns the index of the linear interpolation on @p deltasSparseGrid, built on the first
- * call (thread-safe) and kept in the grid's operator data (@c DeltasSparseGrid::getOperatorData).
+ * call (thread-safe) and kept in the grid's operator data (@c SparseGridBase::getOperatorData).
  * @throws std::invalid_argument if the grid has no dimensions.
  */
 const misc::DSGLinInterpIndex& getIndex(const DeltasSparseGrid& deltasSparseGrid);
@@ -106,7 +106,7 @@ std::pair<double, double> bracketOf(double below, double atOrAbove, double x);
  * @brief Sets @c scratch.cornerIds to the corner ids of the tensor grid of level @p mi.
  */
 void setCornerIds(const misc::DSGLinInterpIndex& index, const misc::DSGLinInterpQuery& query,
-                  const LvlMI& mi, misc::DSGLinInterpScratch& scratch);
+                  LvlMIView mi, misc::DSGLinInterpScratch& scratch);
 
 /**
  * @brief Pass 1: marks the slots of the corners of all combination tensor grids (work-shared

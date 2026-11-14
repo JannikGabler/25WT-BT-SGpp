@@ -12,16 +12,18 @@
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
@@ -38,9 +40,10 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
 
   const size_t nDim = sparseGrid.nDim();
 
+  // The cell is computed in normalized coordinates, with the nodes on the unit interval
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
-
+  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sparseGrid);
   double result = 0;
 
 #pragma omp parallel reduction(+ : result)
@@ -48,9 +51,11 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
     LinInterpScratch scratch(nDim);
 
 #pragma omp for schedule(static) nowait
-    for (const TensorGridCTData& tgData : sparseGrid) {
-      result += tgData.coefficient * tools::lin_interpolation::processTensorGrid(
-                                         sourceFunc, normPoint, tgData, genInstr, scratch);
+    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
+      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
+      result += tgData.coefficient *
+                tools::lin_interpolation::processTensorGrid(
+                    sourceFunc, normPoint, TensorGridView(tgData.mi, unitNodes), genInstr, scratch);
     }
   }
 
@@ -71,6 +76,7 @@ void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVecto
   const size_t nOutputs = result.size();
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
+  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sparseGrid);
 
   std::ranges::fill(result, 0.0);
 
@@ -81,9 +87,10 @@ void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVecto
     std::vector<double> threadResult(nOutputs, 0.0);
 
 #pragma omp for schedule(static) nowait
-    for (const TensorGridCTData& tgData : sparseGrid) {
-      tools::lin_interpolation::processTensorGrid(sourceFunc, normPoint, tgData, genInstr, scratch,
-                                                  tgResult);
+    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
+      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
+      tools::lin_interpolation::processTensorGrid(
+          sourceFunc, normPoint, TensorGridView(tgData.mi, unitNodes), genInstr, scratch, tgResult);
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgData.coefficient * tgResult[k];
       }

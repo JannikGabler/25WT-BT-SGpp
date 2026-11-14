@@ -1,0 +1,20 @@
+DIFF quad/sg/equi/b0/d5/L5/exp-shifted values
+DIFF quad/sg/equi/b0/d8/L3/sin-unit values
+DIFF quad/sg/equi/b1/d5/L5/exp-shifted values
+DIFF quad/sg/equi/b1/d5/L5/sin-unit values
+DIFF quad/sg/equi/b1/d8/L3/exp-shifted values
+DIFF quad/sg/equi/b1/d8/L3/sin-unit values
+DIFF quad/sg/cc/b0/d2/L8/sin-unit values
+DIFF quad/sg/cc/b0/d5/L5/sin-unit values
+DIFF quad/sg/cc/b0/d8/L3/exp-shifted values
+DIFF quad/sg/cc/b0/d8/L3/sin-unit values
+DIFF quad/sg/cc/b1/d2/L8/sin-unit values
+DIFF quad/sg/cc/b1/d5/L5/sin-unit values
+DIFF quad/sg/cc/b1/d8/L3/exp-shifted values
+DIFF quad/sg/cc/b1/d8/L3/sin-unit values
+DIFF quad/sg/cc/b0/d2/L10/uq-unit values
+DIFF quad/dsg/cc/b0/d2/L10/uq-unit values
+DIFF quad/sg/cc/b0/d5/L6/uq-unit values
+DIFF quad/dsg/cc/b0/d5/L6/uq-unit values
+132 cases; differing fields other than floats: 18; nodeChecksum differs in 106 cases, all of them on shifted domains: True
+largest relative difference of a value: 6.92e-14

@@ -9,10 +9,10 @@
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
@@ -42,14 +42,8 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
   const std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs =
       compNodeIdxLvlMapFuncs(deltasSparseGrid);
 
-  // Maximum level per dimension
-  LvlMI maxLvls(nDim, LvlType{0});
-
-  for (const TensorGridCTData& tgData : deltasSparseGrid) {
-    for (size_t dim = 0; dim < nDim; dim++) {
-      maxLvls[dim] = std::max(maxLvls[dim], tgData.mi[dim]);
-    }
-  }
+  // The maximum level per dimension is the one of the node table
+  const NodeTable& nodeTable = deltasSparseGrid.getNodeTable();
 
   FlatNestedVec<double, 3> weights;
   weights.reserveSubVecs(1, nDim);
@@ -61,7 +55,7 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
 
     weights.appendSubVec(1);  // weights[dim]
 
-    for (LvlType lvl = 0; lvl <= maxLvls[dim]; lvl++) {
+    for (LvlType lvl = 0; lvl <= nodeTable.maxLvl(dim); lvl++) {
       const GPCntType nNodes = lvl2GPCntFunc(lvl) + (lvl >= boundaryLvlOffset ? 2 : 0);
 
       sortedWeights.resize(nNodes);
@@ -114,8 +108,9 @@ void combineDeltaTensorGrids(const GenericDSGOperatorContext& context,
     // Dynamic scheduling as in the scalar operator (delta tensor grids differ in size by orders
     // of magnitude)
 #pragma omp for schedule(dynamic) nowait
-    for (const TensorGridCTData& tgData : deltasSparseGrid) {
-      processDeltaTensorGrid(context, sourceFunc, tgData, scratch, tgResult);
+    for (size_t tgIdx = 0; tgIdx < deltasSparseGrid.nTG(); tgIdx++) {
+      processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getTensorGrid(tgIdx), scratch,
+                             tgResult);
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgResult[k];
       }

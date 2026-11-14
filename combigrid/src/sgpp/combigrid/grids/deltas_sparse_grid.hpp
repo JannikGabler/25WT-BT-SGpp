@@ -12,7 +12,6 @@
 
 #include <memory>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
-#include <sgpp/combigrid/miscellaneous/operator_data_cache/operator_data_cache.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 
 namespace sgpp {
@@ -32,11 +31,13 @@ namespace combigrid {
  * corner) instead of once per tensor grid it belongs to. Their results equal those of the
  * @c SparseGrid operators up to round-off.
  *
- * Each @c TensorGridCTData holds the level multi-index, the CT coefficient of that multi-index
- * (0 for multi-indices of the closure that are not combined; unlike @c SparseGrid, such tensor
- * grids are kept) and the delta tensor grid. The generation instruction is copied (@c clone);
- * the copy of a @c MIVecSGGenInstr references the caller's @c LvlMIVec, which must outlive the
- * grid.
+ * Each tensor grid (a @c TensorGridCTDataView, see @c SparseGridBase) has the level multi-index,
+ * the CT coefficient of that multi-index (0 for multi-indices of the closure that are not
+ * combined; unlike @c SparseGrid, such tensor grids are kept) and the delta tensor grid. The node
+ * table holds the delta nodes of every (dimension, level), mapped onto the domain
+ * (@c tools::mapToDomain); for nested nodes, the rows of a dimension together are the nodes of its
+ * finest level, each stored once. The generation instruction is copied (@c clone); the copy of a
+ * @c MIVecSGGenInstr references the caller's @c LvlMIVec, which must outlive the grid.
  */
 class DeltasSparseGrid : public SparseGridBase {
  public:
@@ -61,12 +62,6 @@ class DeltasSparseGrid : public SparseGridBase {
   /// @brief Returns the grid's copy of the generation instruction.
   const SGGenInstr& getGenInstr() const noexcept;
 
-  /**
-   * @brief Returns the cache of query-independent data that operators build on their first call
-   * on this grid (e.g. the index of the linear interpolation); internal to the operators.
-   */
-  misc::OperatorDataCache& getOperatorData() const noexcept { return operatorData; }
-
   /// @}
 
  protected:
@@ -74,9 +69,6 @@ class DeltasSparseGrid : public SparseGridBase {
   /// @{
 
   const std::unique_ptr<SGGenInstr> genInstr;  ///< Generation instruction that produced this SG.
-
-  /// Lazily built operator data (see @ref getOperatorData): only by operators that need it.
-  mutable misc::OperatorDataCache operatorData;
 
   /// @}
 };

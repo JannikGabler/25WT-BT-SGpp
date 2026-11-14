@@ -12,7 +12,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -53,19 +52,18 @@ class ClosureTrie {
   static constexpr size_t NOT_FOUND = static_cast<size_t>(-1);
 
   /**
-   * @brief Builds the trie over the level multi-indices of @p tgData.
+   * @brief Builds the trie over the level multi-indices @p mis.
    *
-   * @param tgData Tensor grids whose level multi-indices form a downwards-closed set of pairwise
-   *               distinct multi-indices with @p nDim components (in any order; coefficients and
-   *               tensor grids are ignored).
-   * @param nDim   Number of dimensions d > 0.
+   * @param mis Downwards-closed set of pairwise distinct multi-indices with d > 0 components (in
+   *            any order; e.g. @c SparseGridBase::getLevels of a deltas sparse grid). The leaf
+   *            items are the indices into @p mis.
    * @throws std::invalid_argument if the multi-indices are not pairwise distinct or if the levels
    *         of the children of some prefix are not 0, 1, ..., n - 1 (which holds for every
    *         downwards-closed set; the check does not detect every set that is not downwards
    *         closed).
    * @throws std::length_error if the number of nodes does not fit into 32 bits.
    */
-  ClosureTrie(std::span<const TensorGridCTData> tgData, size_t nDim);
+  explicit ClosureTrie(LvlMIVecView mis);
 
   /// @brief Returns the number of dimensions d.
   size_t nDim() const noexcept { return nDim_; }
@@ -93,7 +91,7 @@ class ClosureTrie {
   const uint32_t* firstChild() const noexcept { return firstChild_.data(); }
 
   /**
-   * @brief Returns the index (in the @c tgData the trie was built from) of the multi-index of
+   * @brief Returns the index (in the multi-indices the trie was built from) of the multi-index of
    * leaf @p leaf.
    */
   size_t leafItem(const size_t leaf) const noexcept { return leafItems[leaf]; }
@@ -102,14 +100,13 @@ class ClosureTrie {
    * @brief Returns the leaf id of @p mi, or @ref NOT_FOUND if @p mi is not in the set.
    * @param mi Multi-index with d components.
    */
-  size_t findLeaf(const LvlMI& mi) const;
+  size_t findLeaf(LvlMIView mi) const;
 
  private:
   /// @brief Appends the children of the inner node @p node, whose multi-indices are
   /// @p order[begin, end) (sorted), to @p nextRanges; @p depth is the depth of @p node.
-  void addChildren(size_t node, size_t depth, const std::vector<size_t>& order,
-                   std::span<const TensorGridCTData> tgData, size_t begin, size_t end,
-                   std::vector<size_t>& nextRanges);
+  void addChildren(size_t node, size_t depth, const std::vector<size_t>& order, LvlMIVecView mis,
+                   size_t begin, size_t end, std::vector<size_t>& nextRanges);
 
   size_t nDim_;                       ///< Number of dimensions.
   std::vector<uint32_t> firstChild_;  ///< Per inner node: id of its first child.

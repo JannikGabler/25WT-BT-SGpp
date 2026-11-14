@@ -1,0 +1,53 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
+#include <algorithm>
+#include <bit>
+#include <cassert>
+#include <cstdint>
+#include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
+#include <utility>
+#include <vector>
+
+namespace sgpp {
+namespace combigrid {
+
+NodeTable::NodeTable(std::vector<size_t> firstRowOfDim, std::vector<LvlType> maxLvlOfDim,
+                     const size_t nRows)
+    : firstRowOfDim_(std::move(firstRowOfDim)), maxLvlOfDim_(std::move(maxLvlOfDim)), rows_(nRows) {
+  assert(firstRowOfDim_.size() == maxLvlOfDim_.size());
+  for (size_t dim = 0; dim < firstRowOfDim_.size(); dim++) {
+    assert(firstRowOfDim_[dim] + maxLvlOfDim_[dim] < nRows);
+  }
+}
+
+size_t NodeTable::nStoredNodes() const noexcept {
+  size_t result = 0;
+  for (const base::DataVector& row : rows_) {
+    result += row.size();
+  }
+  return result;
+}
+
+base::DataVector& NodeTable::rowNodes(const size_t row) noexcept {
+  assert(row < nRows());
+  return rows_[row];
+}
+
+bool NodeTable::operator==(const NodeTable& other) const {
+  // Bitwise comparison of the nodes (operator== of double would equate 0.0 and -0.0)
+  const auto bitwiseEqual = [](const double a, const double b) {
+    return std::bit_cast<uint64_t>(a) == std::bit_cast<uint64_t>(b);
+  };
+  return firstRowOfDim_ == other.firstRowOfDim_ && maxLvlOfDim_ == other.maxLvlOfDim_ &&
+         std::ranges::equal(rows_, other.rows_,
+                            [&](const base::DataVector& a, const base::DataVector& b) {
+                              return std::ranges::equal(a, b, bitwiseEqual);
+                            });
+}
+
+}  // namespace combigrid
+}  // namespace sgpp

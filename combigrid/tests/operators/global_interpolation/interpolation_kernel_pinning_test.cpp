@@ -36,15 +36,19 @@
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
+#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <span>
 #include <string>
 #include <vector>
@@ -172,10 +176,11 @@ double lagrangeBasis(const double* const nodes, const size_t n, const size_t j, 
 double scale(const SparseGrid& sg, const DataVector& point, const size_t k) {
   const HyperCubeArea& domain = sg.getGenInstr().getDomain();
   const DataVector normPoint = tools::normalizeDataVector(point, domain);
+  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sg);
   double result = 0.0;
 
-  for (const TensorGridCTData& tgData : sg) {
-    const TensorGrid& tg = tgData.tensorGrid;
+  for (const auto& tgData : sg) {
+    const TensorGrid tg = TensorGridView(tgData.mi, unitNodes).toTensorGrid();  // Unit nodes
     const GPMI& nGPPerDim = tg.getGPCntPerDim();
     const DataVector& nodesPerDim = tg.getNodesPerDim();
     DataVector gp(tg.nDim());
@@ -334,23 +339,27 @@ void checkResult(const SparseGrid& sg, const DataVector& point, const size_t k, 
   BOOST_TEST_CONTEXT("output " << k) { BOOST_CHECK_SMALL(result - golden, tol); }
 }
 
-/// The grid points of all tensor grids of @p sg, mapped onto the domain (in no particular order).
+/// The grid points of all tensor grids of @p sg (in no particular order): the unit nodes of the
+/// node-generation functions, mapped onto the domain with tools::mapToDomain.
 std::vector<DataVector> allGridPoints(const SparseGrid& sg) {
-  const HyperCubeArea& domain = sg.getGenInstr().getDomain();
+  const SGGenInstr& genInstr = sg.getGenInstr();
+  const HyperCubeArea& domain = genInstr.getDomain();
+  const size_t nDim = sg.nDim();
   std::vector<DataVector> result;
-  for (const TensorGridCTData& tgData : sg) {
-    const TensorGrid& tg = tgData.tensorGrid;
-    const GPMI& nGPPerDim = tg.getGPCntPerDim();
-    const DataVector& nodesPerDim = tg.getNodesPerDim();
-    for (size_t idx = 0; idx < tg.nGP(); idx++) {
-      DataVector gp(tg.nDim());
-      size_t rest = idx, offset = 0;
-      for (size_t dim = 0; dim < tg.nDim(); dim++) {
+  for (const auto& tgData : sg) {
+    std::vector<DataVector> nodes;
+    for (size_t dim = 0; dim < nDim; dim++) {
+      nodes.push_back(genInstr.getNodeGenFuncForDim(dim)->genNodes(
+          tgData.tensorGrid.nGPInDim(dim), tgData.mi[dim] >= genInstr.getBoundaryLevelOffset()));
+    }
+    for (size_t idx = 0; idx < tgData.tensorGrid.nGP(); idx++) {
+      DataVector gp(nDim);
+      size_t rest = idx;
+      for (size_t dim = 0; dim < nDim; dim++) {
         const double width = domain[dim].second - domain[dim].first;
-        gp[dim] = tools::mapToDomain(nodesPerDim[offset + rest % nGPPerDim[dim]], domain[dim].first,
-                                     width);
-        rest /= nGPPerDim[dim];
-        offset += nGPPerDim[dim];
+        gp[dim] =
+            tools::mapToDomain(nodes[dim][rest % nodes[dim].size()], domain[dim].first, width);
+        rest /= nodes[dim].size();
       }
       result.push_back(gp);
     }

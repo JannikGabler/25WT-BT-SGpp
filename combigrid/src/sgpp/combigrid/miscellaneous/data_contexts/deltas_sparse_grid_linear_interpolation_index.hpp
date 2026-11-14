@@ -12,9 +12,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/closure_trie/closure_trie.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -32,8 +30,9 @@ namespace misc {
  *
  * <b>Corner coordinates.</b> The tensor grid of level @f$\vec{\ell}@f$ has the nodes
  * @f$N_j(\ell_j) = \bigcup_{\lambda \leq \ell_j} D_j(\lambda)@f$ in dimension j, where
- * @f$D_j(\lambda)@f$ are the delta nodes of level @f$\lambda@f$ (nested nodes; the deltas sparse
- * grid holds them in its tensor grid of level @f$\lambda \vec{e}_j@f$). For a query coordinate
+ * @f$D_j(\lambda)@f$ are the delta nodes of level @f$\lambda@f$ (nested nodes; the index generates
+ * them on the unit interval, as the node-generation function of dimension j does for the deltas
+ * sparse grid before mapping them onto the domain). For a query coordinate
  * @f$x_j@f$, the bracketing coordinates of the levels @f$0, 1, \ldots@f$ form a chain: each one
  * appears first at some level @f$\lambda@f$, at most @ref maxNewCoords of them per level (2 at
  * level 0; at level @f$\lambda > 0@f$ the number of delta nodes in a gap of
@@ -80,7 +79,7 @@ class DSGLinInterpIndex {
   size_t nRows() const noexcept { return rowOffset_.back(); }
 
   /// @brief Returns the delta nodes of the (dimension, level) of row @p row, sorted ascending
-  /// (normalized; as in the deltas sparse grid).
+  /// (normalized: on the unit interval).
   std::span<const double> deltaNodes(const size_t row) const noexcept {
     return std::span<const double>(nodes).subspan(nodeOffset[row],
                                                   nodeOffset[row + 1] - nodeOffset[row]);
@@ -101,21 +100,22 @@ class DSGLinInterpIndex {
   size_t nLeaves() const noexcept { return trie_.nLeaves(); }
 
   /// @brief Returns the multi-index of leaf @p leaf.
-  const LvlMI& leafMI(const size_t leaf) const noexcept {
-    return tensorGrids[trie_.leafItem(leaf)].mi;
-  }
+  LvlMIView leafMI(const size_t leaf) const noexcept { return levels_[trie_.leafItem(leaf)]; }
 
-  /// @brief Returns the tensor grids of the deltas sparse grid with a non-zero combination
-  /// coefficient (the tensor grids of the combination technique), in the grid's order.
-  std::span<const TensorGridCTData* const> combinationTGs() const noexcept { return ctTGs; }
+  /// @brief Returns the indices of the tensor grids of the deltas sparse grid with a non-zero
+  /// combination coefficient (the tensor grids of the combination technique), in the grid's order.
+  std::span<const size_t> combinationTGs() const noexcept { return ctTGs; }
+
+  /// @brief Returns the level multi-index of the tensor grid @p tgIdx of the deltas sparse grid.
+  LvlMIView mi(const size_t tgIdx) const noexcept { return levels_[tgIdx]; }
+
+  /// @brief Returns the combination coefficient of the tensor grid @p tgIdx.
+  CTCoeffType coefficient(const size_t tgIdx) const noexcept { return coeffs_[tgIdx]; }
 
  private:
-  /// @brief Sets the rows and copies the sorted delta nodes of every (dimension, level).
-  void collectDeltaNodes();
-
-  /// @brief Sets the row offsets (the maximum levels) and returns, per row (dimension j, level
-  /// l), the tensor grid of level l e_j, whose nodes in dimension j are the delta nodes of l.
-  std::vector<const TensorGrid*> findRowTensorGrids();
+  /// @brief Sets the rows and generates the sorted (normalized) delta nodes of every (dimension,
+  /// level) of @p deltasSparseGrid.
+  void collectDeltaNodes(const DeltasSparseGrid& deltasSparseGrid);
 
   /// @brief Sets @ref maxNewCoords_ of the rows of dimension @p dim.
   void countNewCoords(size_t dim);
@@ -123,14 +123,15 @@ class DSGLinInterpIndex {
   /// @brief Sets the slot offsets of the leaves.
   void computeSlotOffsets();
 
-  std::span<const TensorGridCTData> tensorGrids;  ///< Tensor grids of the deltas sparse grid.
-  ClosureTrie trie_;                              ///< Trie over their multi-indices.
-  std::vector<size_t> rowOffset_;                 ///< Per dimension (+ end): first row.
-  std::vector<size_t> nodeOffset;                 ///< Per row (+ end): offset into nodes.
-  std::vector<double> nodes;                      ///< Sorted delta nodes, row after row.
-  std::vector<uint8_t> maxNewCoords_;             ///< Per row: see @ref maxNewCoords.
-  std::vector<size_t> slotOffset_;                ///< Per leaf (+ end): first slot.
-  std::vector<const TensorGridCTData*> ctTGs;     ///< See @ref combinationTGs.
+  LvlMIVecView levels_;                  ///< Level multi-indices of the deltas sparse grid.
+  std::span<const CTCoeffType> coeffs_;  ///< Their combination coefficients.
+  ClosureTrie trie_;                     ///< Trie over the multi-indices.
+  std::vector<size_t> rowOffset_;        ///< Per dimension (+ end): first row.
+  std::vector<size_t> nodeOffset;        ///< Per row (+ end): offset into nodes.
+  std::vector<double> nodes;             ///< Sorted delta nodes, row after row.
+  std::vector<uint8_t> maxNewCoords_;    ///< Per row: see @ref maxNewCoords.
+  std::vector<size_t> slotOffset_;       ///< Per leaf (+ end): first slot.
+  std::vector<size_t> ctTGs;             ///< See @ref combinationTGs.
 };
 
 }  // namespace misc

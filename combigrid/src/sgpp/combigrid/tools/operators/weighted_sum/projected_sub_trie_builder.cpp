@@ -28,7 +28,7 @@ namespace combigrid {
 namespace tools {
 
 ProjectedSubTrieBuilder::ProjectedSubTrieBuilder(const GenericDSGOperatorContext& context,
-                                                 const LvlMI& deltaTGMI,
+                                                 LvlMIView deltaTGMI,
                                                  DeltaWeightedSumScratch& scratch)
     : context(context), deltaTGMI(deltaTGMI), scratch(scratch) {}
 

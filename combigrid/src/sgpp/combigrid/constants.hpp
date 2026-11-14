@@ -131,6 +131,20 @@ constexpr size_t FSG_MIN_MI_PER_THREAD = 500;
 }  // namespace sg_gen_instr
 
 /**
+ * @brief Constants of the storage of the tensor grids of a sparse grid (@c SparseGridBase,
+ * @c NodeTable).
+ */
+namespace sparse_grid_storage {
+
+/// Minimum number of tensor grids for a parallel pass over their levels (the cached maxima of the
+/// grid-point counts).
+constexpr size_t MIN_TG_FOR_CONCURRENCY = 10000;
+/// Minimum number of nodes of a node table for generating its rows in parallel.
+constexpr size_t MIN_NODES_FOR_CONCURRENCY = 1 << 14;
+
+}  // namespace sparse_grid_storage
+
+/**
  * @brief Constants controlling combination-technique coefficient
  * computation.
  */

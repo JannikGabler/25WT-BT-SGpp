@@ -28,7 +28,7 @@ namespace tools {
 namespace quadrature {
 
 double processTensorGrid(const QuadratureContext& context, const SourceFunc& sourceFunc,
-                         const TensorGrid& tg, QuadratureScratch& scratch) {
+                         const TensorGridView tg, QuadratureScratch& scratch) {
   assert(tg.nDim() == context.sparseGrid.nDim());
 
   if (tg.nGP() == 0) {
@@ -41,7 +41,7 @@ double processTensorGrid(const QuadratureContext& context, const SourceFunc& sou
 }
 
 void processTensorGrid(const QuadratureContext& context, const VectorSourceFunc& sourceFunc,
-                       const TensorGrid& tg, QuadratureScratch& scratch,
+                       const TensorGridView tg, QuadratureScratch& scratch,
                        const std::span<double> out) {
   assert(tg.nDim() == context.sparseGrid.nDim());
   assert(out.size() == sourceFunc.nOutputs());
@@ -79,7 +79,8 @@ void combineTensorGrids(const QuadratureContext& context, const VectorSourceFunc
     std::vector<double> threadResult(nOutputs, 0.0);
 
 #pragma omp for schedule(guided) nowait
-    for (const TensorGridCTData& tgData : sparseGrid) {
+    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
+      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
       processTensorGrid(context, sourceFunc, tgData.tensorGrid, scratch, tgResult);
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgData.coefficient * tgResult[k];
@@ -94,33 +95,31 @@ void combineTensorGrids(const QuadratureContext& context, const VectorSourceFunc
 }
 
 /**
- * Prepares the row loop over @p tg (weighted_sum::sumOverRows): 1D quadrature weights, nodes on
- * the domain, iterated dimensions.
+ * Prepares the row loop over @p tg (weighted_sum::sumOverRows): 1D quadrature weights, iterated
+ * dimensions.
  */
-void prepareTensorGrid(const QuadratureContext& context, const TensorGrid& tg,
+void prepareTensorGrid(const QuadratureContext& context, const TensorGridView tg,
                        QuadratureScratch& scratch) {
   getWeights(context, tg, scratch);
-  weighted_sum::mapNodesOntoDomain(context.domain, tg, scratch.rows);
   weighted_sum::setUpIterDims(tg, scratch.rows);
 }
 
-void getWeights(const QuadratureContext& context, const TensorGrid& tg,
+void getWeights(const QuadratureContext& context, const TensorGridView tg,
                 QuadratureScratch& scratch) {
-  const GPMI& gpCntPerDim = tg.getGPCntPerDim();
   base::DataVector& weights1D = scratch.rows.weights1D;
-  weights1D.resize(gpCntPerDim.sumOfElems<size_t>());
+  weights1D.resize(tg.sumOfGPCntsPerDim());
   getQuadRulesForTensorGrid(tg, context.nodeGenFuncs, scratch.quadRules);
 
   size_t writeIdx = 0;
 
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
-    const GPCntType nNodes = gpCntPerDim[dim];
+    const GPCntType nNodes = tg.nGPInDim(dim);
     scratch.quadRules[dim]->genWeightsInplace(std::span(weights1D).subspan(writeIdx, nNodes));
     writeIdx += nNodes;
   }
 }
 
-std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
+std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGridView tg,
                                                  const std::vector<NodeGenFunc*>& nodeGenFuncs) {
   std::vector<QuadRule*> result(tg.nDim());
 
@@ -129,12 +128,15 @@ std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGrid& tg,
   return result;
 }
 
-void getQuadRulesForTensorGrid(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
+void getQuadRulesForTensorGrid(const TensorGridView tg,
+                               const std::vector<NodeGenFunc*>& nodeGenFuncs,
                                std::vector<QuadRule*>& out) {
   assert(tg.nDim() == nodeGenFuncs.size());
   assert(tg.nDim() == out.size());
 
-  getQuadRulesForAllDims(tg.getGPCntPerDim(), nodeGenFuncs, out);
+  for (size_t dim = 0; dim < tg.nDim(); dim++) {
+    out[dim] = nodeGenFuncs[dim]->getQuadRule(tg.nGPInDim(dim));
+  }
 }
 
 std::vector<QuadRule*> getQuadRulesForAllDims(const std::span<const GPCntType> gpCntPerDim,

@@ -27,9 +27,9 @@ namespace misc {
  *
  * The 1D weights @f$w_{k,i}@f$ are the quadrature weights for the quadrature
  * (@c misc::QuadratureScratch) and the 1D basis values at the query point for the global
- * interpolation (@c misc::GlobalInterpScratch). The scratch holds them, the nodes mapped onto the
- * domain, and the state of the row-wise iteration over the grid points. Its size does not depend
- * on the number of grid points.
+ * interpolation (@c misc::GlobalInterpScratch). The scratch holds them and the state of the
+ * row-wise iteration over the grid points; the nodes are read from the node table of the sparse
+ * grid (in domain coordinates). Its size does not depend on the number of grid points.
  *
  * The iteration runs over the "iterated dimensions": the row dimension (the first dimension with
  * more than one node, or the last dimension if there is none) followed by the other dimensions
@@ -59,7 +59,6 @@ struct WeightedSumScratch {
   WeightedSumScratch(const size_t nDim, const size_t maxTGSumOfGPCntsPerDim,
                      const size_t nOutputs = 0)
       : weights1D(maxTGSumOfGPCntsPerDim),
-        nodesPerDim(maxTGSumOfGPCntsPerDim),
         nIterDims(0),
         iterDims(nDim),
         nGPOfIterDim(nDim),
@@ -73,9 +72,6 @@ struct WeightedSumScratch {
   /// @brief Concatenated 1D weights, one per node (per-dimension blocks back-to-back, in the
   /// order of the nodes).
   base::DataVector weights1D;
-  /// @brief Node positions of the tensor grid, mapped onto the domain (per-dimension blocks
-  /// back-to-back).
-  base::DataVector nodesPerDim;
 
   /// @brief Number of iterated dimensions (at least 1).
   size_t nIterDims;
@@ -83,8 +79,8 @@ struct WeightedSumScratch {
   std::vector<size_t> iterDims;
   /// @brief @c nGPOfIterDim[j]: number of nodes of the @c j-th iterated dimension.
   GPMI nGPOfIterDim;
-  /// @brief @c nodesOfIterDim[j]: start of the nodes of the @c j-th iterated dimension in
-  /// @ref nodesPerDim.
+  /// @brief @c nodesOfIterDim[j]: start of the nodes of the @c j-th iterated dimension (in the
+  /// node table of the sparse grid).
   std::vector<const double*> nodesOfIterDim;
   /// @brief @c weightsOfIterDim[j]: start of the weights of the @c j-th iterated dimension in
   /// @ref weights1D.

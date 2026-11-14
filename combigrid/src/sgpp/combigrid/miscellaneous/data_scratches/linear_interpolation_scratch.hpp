@@ -50,8 +50,8 @@ struct LinInterpScratch {
    */
   explicit LinInterpScratch(const size_t nDim, const size_t nOutputs = 0)
       : curGridPoint(nDim),
-        neighborsPerDim(nDim),
         valueBuffer(VectorValues::bufferSize(nOutputs, N_ACCS)),
+        nDim_(nDim),
         tableDim_(std::min(nDim, constants::lin_interpolation::WEIGHT_TABLE_MAX_DIM)),
         cornerData((size_t{1} << tableDim_) + 5 * nDim - tableDim_) {}
 
@@ -69,20 +69,20 @@ struct LinInterpScratch {
   double* bracket() { return weightTable() + (size_t{1} << tableDim_); }
 
   /// @brief 1D weights of the lower / upper neighbor of dimension k at 2k / 2k + 1.
-  double* factors() { return bracket() + 2 * neighborsPerDim.size(); }
+  double* factors() { return bracket() + 2 * nDim_; }
 
   /// @brief 1D weights of dimensions @ref tableDim ... d - 1 of the current block of corners.
-  double* highFactors() { return factors() + 2 * neighborsPerDim.size(); }
+  double* highFactors() { return factors() + 2 * nDim_; }
 
   /// @brief Reusable buffer for the current corner grid-point coordinates (on the domain).
   base::DataVector curGridPoint;
-  /// @brief Per-dimension @c (lower, upper) neighbor pairs surrounding the query point.
-  std::vector<std::pair<double, double>> neighborsPerDim;
   /// @brief Buffer of the @c misc::VectorValues of a vector-valued source function (empty for a
   /// scalar one; accumulator slot @ref RESULT_ACC).
   std::vector<double> valueBuffer;
 
  private:
+  /// @brief Spatial dimension.
+  size_t nDim_;
   /// @brief Number of dimensions covered by the corner weight table.
   size_t tableDim_;
   /// @brief Corner data (see the class description).

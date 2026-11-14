@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file tensor_grid.hpp
  * @brief Anisotropic tensor-product grid used as a building block of the
@@ -23,7 +28,10 @@ namespace combigrid {
  * dimension. The total number of grid points is @f$\prod_k n_k@f$ and the
  * grid points themselves are the Cartesian product of the per-dimension
  * node sets. Tensor grids of this form are the elementary components of a
- * combination-technique sparse grid.
+ * combination-technique sparse grid. A sparse grid does not store @c TensorGrid
+ * objects (its tensor grids share the node lists of its @c NodeTable, see
+ * @c TensorGridView); @c TensorGridView::toTensorGrid copies one into a
+ * stand-alone @c TensorGrid.
  *
  * The dimensionality of a @c TensorGrid is fixed at construction time:
  * copy assignment is intentionally unavailable.
@@ -159,46 +167,6 @@ class TensorGrid {
   /*******
   Iterator
   *******/
-  // TODO: Delete
-  // /// @brief Read-only input iterator over the grid points, see @ref begin().
-  // using const_iterator = TensorGridConstIterator;
-  // /// @brief Same as @ref const_iterator: iterating a tensor grid never modifies it.
-  // using iterator = const_iterator;
-  // /// @brief Input iterator of the range returned by @ref mutableGridPoints().
-  // using mutable_iterator = TensorGridMutableIterator;
-
-  // TODO: Delete
-  /**
-   * @brief Returns an iterator to the first grid point.
-   *
-   * Makes the tensor grid a range of its grid points. Each one is yielded
-   * together with its multi-index as a @c TensorGridPoint, in the order of the
-   * linear grid-point index:
-   * @code
-   * // const GPMI& mi, const base::DataVector& gp
-   * for (const auto& [mi, gp] : tensorGrid) { ... }
-   * // point.mi, point.gp
-   * for (const TensorGridPoint& point : tensorGrid) { ... }
-   * @endcode
-   * The grid points are assembled on the fly in storage owned by the
-   * iterator. That storage is allocated here, once per loop; advancing does
-   * not allocate and only updates the entries that changed. Bind the element
-   * by reference: binding it by value copies both containers in every
-   * iteration.
-   *
-   * The element is read-only. Use @ref mutableGridPoints() if the loop body
-   * needs to modify the multi-index or the coordinates.
-   *
-   * The end is marked by a sentinel (see @ref end()), so the @c std::ranges
-   * algorithms apply, e.g. <tt>std::ranges::for_each(tensorGrid, f)</tt>.
-   */
-  // const_iterator begin() const { return const_iterator(nGPPerDim, nodesPerDim, nGP_); }
-  // /// @brief Returns the sentinel that marks the end of the grid points.
-  // std::default_sentinel_t end() const noexcept { return std::default_sentinel; }
-  // /// @copydoc begin()
-  // const_iterator cbegin() const { return begin(); }
-  // /// @copydoc end()
-  // std::default_sentinel_t cend() const noexcept { return end(); }
 
   /**
    * @brief Returns a range of the grid points whose elements may be modified.
@@ -230,25 +198,8 @@ class TensorGrid {
   }
 #endif
 
-  /*****
-  Setter
-  *****/
-  /*
-  May invoke an extension of the internal vector if there is no left over capacity.
-  */
-  // void setGridPoint(const size_t idx, const base::DataVector& gp);
-
-  // void setGridPoint(const GPMI& mi, const base::DataVector& gp);
-
-  //   bool containsABoundary();
-
-  /********
-  Operators
-  ********/
-  // base::DataVector operator[](size_t idx) const;
-
-  // double operator()(size_t idx, size_t dim) const;
-  // double& operator()(size_t idx, size_t dim);
+  /// @name Operators
+  /// @{
 
   /**
    * @brief Tests for grid equality.
@@ -260,9 +211,10 @@ class TensorGrid {
    */
   bool operator==(const TensorGrid& other) const;
 
-  /*****************
-  Utility operations
-  *****************/
+  /// @}
+
+  /// @name Utilities
+  /// @{
 
   /**
    * @brief Locates the per-dimension neighbors that bracket the query point.
@@ -296,12 +248,19 @@ class TensorGrid {
   std::vector<std::pair<double, double>> getNeighborsForLinInterpolation(
       const base::DataVector& point);
 
+  /// @}
+
  private:
+  /// @name Attributes
+  /// @{
+
   size_t nGP_;                   ///< Total number of grid points (product of @c nGPPerDim).
                                  ///< Not const so that the implicitly-declared copy
                                  ///< assignment operator is not deleted.
   GPMI nGPPerDim;                ///< Per-dimension grid-point counts. Same comment as @c nGP_.
   base::DataVector nodesPerDim;  ///< Flattened concatenation of per-dimension node lists.
+
+  /// @}
 };
 
 }  // namespace combigrid

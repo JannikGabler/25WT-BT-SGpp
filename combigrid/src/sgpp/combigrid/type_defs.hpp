@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file type_defs.hpp
  * @brief Central type aliases used across the @c combigrid module.
@@ -56,6 +61,11 @@ using LvlMIVec = MIVec<LvlType>;
  * multi-indices stored in an LvlMIVec (see @c MIVec::getView()).
  */
 using LvlMIVecView = MIVecView<LvlType>;
+
+/**
+ * @brief Read-only, non-owning view of one level multi-index (e.g. of an LvlMIVec).
+ */
+using LvlMIView = MIView<LvlType>;
 
 /**
  * @brief Hash-based lookup structure mapping level multi-indices to their

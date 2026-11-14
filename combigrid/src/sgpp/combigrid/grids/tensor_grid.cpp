@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <algorithm>
 #include <cassert>
 #include <sgpp/base/datatypes/DataMatrix.hpp>
@@ -31,8 +36,7 @@ TensorGrid::TensorGrid(GPMI&& nGPPerDim, base::DataVector&& nodesPerDim) noexcep
     : nGP_(nGPPerDim.productofElems<size_t>()),
       nGPPerDim(std::move(nGPPerDim)),
       nodesPerDim(std::move(nodesPerDim)) {
-  const size_t sum = this->nGPPerDim.sumOfElems<size_t>();  // TODO: Delete
-  assert(this->nodesPerDim.size() == sum);
+  assert(this->nodesPerDim.size() == this->nGPPerDim.sumOfElems<size_t>());
 }
 
 /*****
@@ -151,48 +155,9 @@ base::DataMatrix TensorGrid::getGridPoints() const {
   return result;
 }
 
-/*****
-Setter
-*****/
-
-// TODO: Delete
-// void TensorGrid::setGridPoint(const size_t idx, const base::DataVector& gp) {
-//   assert(idx < nGP_);
-//   assert(gp.size() == nDim());
-
-//   const size_t nDim = this->nDim();
-
-//   // for (size_t dim = 0; dim < nDim; dim++) {
-//   //   gridPoints[idx * nDim + dim] = gp[dim];
-//   // }
-//   std::copy_n(gp.begin(), nDim, gridPoints.begin() + idx * nDim);
-// }
-
-// void TensorGrid::setGridPoint(const GPMI& mi, const base::DataVector& gp) {
-//   assert(mi.nDim() == nDim());
-
-//   setGridPoint(mi.toLinearIndex(nGPPerDim), gp);
-// }
-
 /********
 Operators
 ********/
-
-// base::DataVector TensorGrid::operator[](const size_t idx) const { return getGridPoint(idx); }
-
-// double TensorGrid::operator()(const size_t idx, const size_t dim) const {
-//   assert(idx < nGP_);
-//   assert(dim < nDim());
-
-//   return gridPoints[idx * nDim() + dim];
-// }
-
-// double& TensorGrid::operator()(const size_t idx, const size_t dim) {
-//   assert(idx < nGP_);
-//   assert(dim < nDim());
-
-//   return gridPoints[idx * nDim() + dim];
-// }
 
 bool TensorGrid::operator==(const TensorGrid& other) const {
   return nGP() == other.nGP() && nGPPerDim == other.nGPPerDim &&
