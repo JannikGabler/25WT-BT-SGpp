@@ -16,6 +16,7 @@
 #include <boost/test/unit_test_suite.hpp>
 
 #include <omp.h>
+#include <algorithm>
 #include <cmath>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
@@ -233,6 +234,102 @@ BOOST_AUTO_TEST_CASE(gen_weights_inplace_matches_gen_weights) {
     clenshawCurtisQuadRule->genWeightsInplace(out);
     for (size_t i = 0; i < nNodes; ++i) {
       BOOST_CHECK_EQUAL(out[i], weights[i]);
+    }
+  }
+}
+
+namespace {
+
+/**
+ * Clenshaw-Curtis weights on [0, 1] from the closed form (Waldvogel, 2006) in long double:
+ * w_k = c_k / m * (1 - sum_{j=1}^{m/2} b_j / (4 j^2 - 1) * cos(2 pi j k / m)) on [-1, 1] with
+ * m = nNodes - 1, c_0 = c_m = 1, else 2, b_{m/2} = 1 (even m), else 2; the cosine argument is
+ * reduced exactly (jk mod m). O(nNodes^2).
+ */
+std::vector<long double> ccWeightsLongDouble(const size_t nNodes) {
+  const size_t m = nNodes - 1;
+  const long double pi = 3.141592653589793238462643383279502884L;
+  std::vector<long double> wcc(nNodes);
+  for (size_t k = 0; k <= m; k++) {
+    long double s = 0.0L;
+    for (size_t j = 1; j <= m / 2; j++) {
+      const long double bj = (2 * j == m) ? 1.0L : 2.0L;
+      const long double jl = static_cast<long double>(j);
+      const long double angle = 2.0L * pi * static_cast<long double>((j * k) % m) / m;
+      s += bj / (4.0L * jl * jl - 1.0L) * std::cos(angle);
+    }
+    const long double ck = (k == 0 || k == m) ? 1.0L : 2.0L;
+    wcc[k] = ck / static_cast<long double>(m) * (1.0L - s);
+  }
+  std::vector<long double> w01(nNodes);
+  for (size_t i = 0; i <= m; i++) {
+    w01[i] = 0.5L * wcc[m - i];
+  }
+  return w01;
+}
+
+/**
+ * Checks @p weights (nNodes = m + 1 Clenshaw-Curtis weights on [0, 1]) for symmetry, sum 1 and
+ * exactness on the Chebyshev polynomials T_p(2x - 1) for the degrees in @p degrees (all
+ * <= m): at the node x_i = (1 - cos(pi i / m)) / 2, T_p(2 x_i - 1) = (-1)^p cos(pi p i / m), and
+ * the integral over [0, 1] is 1 / (1 - p^2) for even p, else 0. Tolerances relative to the
+ * weight scale 1 / m.
+ */
+void checkLargeRule(const DataVector& weights, const std::vector<size_t>& degrees) {
+  const size_t m = weights.size() - 1;
+  const double md = static_cast<double>(m);
+  const double eps = 2.220446049250313e-16;
+
+  double sum = 0.0;
+  for (size_t i = 0; i <= m; i++) {
+    sum += weights[i];
+    BOOST_CHECK_MESSAGE(std::abs(weights[i] - weights[m - i]) <= 4 * eps / md,
+                        "m = " << m << ", i = " << i);
+  }
+  BOOST_CHECK_SMALL(sum - 1.0, 1e-13);
+
+  for (const size_t p : degrees) {
+    BOOST_REQUIRE(p <= m);
+    double integral = 0.0;
+    for (size_t i = 0; i <= m; i++) {
+      const double angle = M_PI * static_cast<double>((p * i) % (2 * m)) / md;
+      integral += weights[i] * ((p % 2 == 0) ? 1.0 : -1.0) * std::cos(angle);
+    }
+    const double pd = static_cast<double>(p);
+    const double exact = (p % 2 == 0) ? 1.0 / (1.0 - pd * pd) : 0.0;
+    BOOST_CHECK_MESSAGE(std::abs(integral - exact) <= 1e-13,
+                        "m = " << m << ", p = " << p << ": " << integral << " != " << exact);
+  }
+}
+
+}  // namespace
+
+BOOST_AUTO_TEST_CASE(weights_match_long_double_closed_form) {
+  // Small and odd / even m, the doubling sizes 2^k + 1 and their neighbors; the error bound is a
+  // few units of the weight scale 1 / m (the FFT sums O(m) terms of size <= 1)
+  const double eps = 2.220446049250313e-16;
+  for (const GPCntType nNodes :
+       {2u,  3u,  4u,  5u,   6u,   7u,   8u,   9u,   10u,  16u,   17u,   18u,   32u,  33u,
+        34u, 64u, 65u, 100u, 127u, 128u, 129u, 257u, 513u, 1023u, 1024u, 1025u, 2049u}) {
+    const DataVector weights = clenshawCurtisQuadRule->genWeights(nNodes);
+    const std::vector<long double> reference = ccWeightsLongDouble(nNodes);
+    const double scale = 1.0 / static_cast<double>(nNodes - 1);
+    double maxErr = 0.0;
+    for (size_t i = 0; i < nNodes; i++) {
+      maxErr = std::max(maxErr, static_cast<double>(std::abs(weights[i] - reference[i])));
+    }
+    BOOST_CHECK_MESSAGE(maxErr <= 8 * eps * scale, "nNodes = " << nNodes << ": max error "
+                                                               << maxErr / (eps * scale)
+                                                               << " eps / m");
+  }
+}
+
+BOOST_AUTO_TEST_CASE(large_rules_are_symmetric_and_exact_on_chebyshev_polynomials) {
+  for (const GPCntType nNodes : {4096u, 4097u, 4098u, 32769u, 131073u}) {
+    const size_t m = nNodes - 1;
+    std::vector<size_t> degrees = {0, 1, 2, 3, 4, 5, 10, 11, 100, 101, m / 2, m - 2, m - 1, m};
+    BOOST_TEST_CONTEXT("nNodes = " << nNodes) {
+      checkLargeRule(clenshawCurtisQuadRule->genWeights(nNodes), degrees);
     }
   }
 }

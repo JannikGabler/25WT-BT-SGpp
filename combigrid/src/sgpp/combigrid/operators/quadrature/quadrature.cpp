@@ -33,8 +33,9 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
 #pragma omp parallel reduction(+ : result)
   {
     QuadratureScratch scratch(nDim);
+    weightTable.computeAllRows();  // Nowait operation: Threads can immediately continue
 
-#pragma omp for schedule(guided) nowait
+#pragma omp for schedule(dynamic) nowait
     for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
       const TensorGridCTDataView tgData = sparseGrid.getDomainTensorGrid(tgIdx);
       result +=

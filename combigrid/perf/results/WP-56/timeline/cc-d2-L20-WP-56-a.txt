@@ -1,0 +1,24 @@
+case quad/sg/cc-uq/b0/d2/L20 snapshot WP-56-a: 47305 samples, 31 threads, 4000 Hz, bins 5.0 ms
+pool-work windows (s from first sample): [0.028, 1.185]
+analysed window (last operator call): [0.585, 1.190] = 605.0 ms
+
+thread  timeline (one char per bin; F fft, I integrand, S combigrid, G gomp, B openblas, K kernel, o other, . none)   busy ms by class
+ 156277 ........KKKKKKFFFFGGG.GGG.KKKKFFKKFFFFFFFFFIIIIIIIIIIIIIIIIIIFKKKKFFFFFFKKKKFFFFFFFFFFFFFFFFFFSFKKIIIIIIIIIIIIIIIIIIIIIII  F200 I174 K91 S49 G22 o2 | idle≈50
+ 156293 ........GGG.KFGG......GGG..................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG.............  I256 S56 G43 F5 K2 o1 | idle≈230
+ 156295 ........GGG.GGG.......GGG......IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG........................................  I201 G42 S36 K1 F0 | idle≈310
+ 156294 ........GGG.KFFGGG....GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...............................................  I196 G42 S28 F10 K4 o0 | idle≈305
+ 156299 ........GGG.KKKFFFFFFFGGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...........................................  I208 S34 F33 G32 K15 o2 | idle≈265
+ 156297 ........GGG.GGG.......KGGGSIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...........................................  I204 G42 S34 K7 | idle≈295
+ 156296 ........GGG.GGG.......KGGGIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG............................................  I207 G42 S32 K6 F1 o1 | idle≈300
+ 156301 ........GGG.GGG.......GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG............................................  I206 G42 S32 K0 | idle≈305
+ 156298 ........GGG.GGG.......GGG.FIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...........................................  I204 G43 S38 K3 F1 | idle≈300
+ 156300 IIIIGGG.GGG.GGG.......GGG.FIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG................................  I278 G52 S40 K1 F0 | idle≈210
+ 156302 ........GGG.GGG.......KKGGGKFFFIIIIIIIIIIIIIIKFFKFFFFIIIIIIIIIIIIIII.............................IIIIIIIIIIIIIIIIIIIIIIIG  I225 F40 G36 S36 K26 o1 | idle≈225
+ 156304 IIIIIIIIGGG.GGG.......GGG..................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG...........................  I221 S58 G42 K6 | idle≈265
+ 156303 ........GGG.GGG.......KKKKSFIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...........................................  I210 S32 G31 K19 F2 o2 | idle≈295
+ 156305 ........GGG.GGG.......GGG.KFIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG.......................................  I226 G42 S30 F4 K3 o0 | idle≈280
+ 156306 ........GGG.FGG.......GGG..IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG.........................................  I213 G40 S33 K8 F2 o0 | idle≈295
+ 156307 ........GGG.GGG.......GGG.KIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG..........................................  I213 G43 S34 F2 K2 | idle≈295
+
+all threads in window: I 3443 ms, G 638 ms, S 603 ms, F 303 ms, K 195 ms, o 9 ms
+thread-time capacity 16 x 605 ms = 9680 ms; sampled busy 5192 ms

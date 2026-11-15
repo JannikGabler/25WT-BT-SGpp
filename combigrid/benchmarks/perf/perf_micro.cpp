@@ -1224,6 +1224,8 @@ int main(int argc, char** argv) {
   addCCWeights(suite, 33);
   addCCWeights(suite, 1025);
   addCCWeights(suite, 32769);
+  addCCWeights(suite, 131073);   // 2^17 + 1
+  addCCWeights(suite, 1048577);  // 2^20 + 1 (level 19 with boundary)
 
   // Deltas sparse grid quadrature
   addProcessDeltaTG(suite, "equi", 0, 5, 12);

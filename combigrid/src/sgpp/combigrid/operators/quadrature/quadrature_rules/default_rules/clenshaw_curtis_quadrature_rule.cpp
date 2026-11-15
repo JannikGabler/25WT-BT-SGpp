@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -27,51 +32,51 @@ namespace quadrature_rules {
 namespace {
 
 /**
- * Fills @p b (length 2m) with the symmetric extension of the coefficient vector A[0..m] of
- * Waldvogel's method (A[2j] = b_j / (4j^2 - 1) for j = 1, ..., m/2, all other entries 0):
- * b[i] = A[i] for i <= m and b[i] = A[2m - i] for m < i < 2m. Returns A_N = A[m] for even m,
+ * Fills @p c (length m) with the even entries c[j] = A[2j] of the length-2m input of
+ * Waldvogel's method (its odd entries are 0): c[0] = 0 and c[j] = c[m - j] = b_j / (4j^2 - 1) for
+ * j = 1, ..., m/2 with b_j = 1 for j = m/2 (even m), else 2. Returns A_N = c[m/2] for even m,
  * else 0.
  */
-double buildSymmetricInput(const size_t m, std::vector<double>& b) {
-  b.assign(2 * m, 0.0);
+double buildEvenInput(const std::span<double> c) {
+  const size_t m = c.size();
+  c[0] = 0.0;
 
   for (size_t j = 1; j <= m / 2; ++j) {
     const double bj = ((m % 2 == 0) && (j == m / 2)) ? 1.0 : 2.0;
     const double denom = 4.0 * static_cast<double>(j) * static_cast<double>(j) - 1.0;
     const double factor = bj / denom;
 
-    b[2 * j] = factor;
-    if (2 * j < m) {
-      b[2 * m - 2 * j] = factor;
-    }
+    c[j] = factor;
+    c[m - j] = factor;  // The same entry for j = m/2 (even m)
   }
 
-  return (m % 2 == 0) ? b[m] : 0.0;
+  return (m % 2 == 0) ? c[m / 2] : 0.0;
 }
 
 /**
- * Writes the real parts of the bins 0, ..., out.size() - 1 of the unnormalized forward discrete
- * Fourier transform of the real vector @p b (out.size() = b.size() / 2 + 1) to @p out.
+ * Writes the bins 0, ..., c.size() / 2 of the unnormalized forward discrete Fourier transform of
+ * the real vector @p c to @p spectrum (spectrum.size() = c.size() / 2 + 1).
  */
-void forwardDFTRealParts(const std::vector<double>& b, const std::span<double> out) {
-  assert(out.size() == b.size() / 2 + 1);
+void forwardRealDFT(const std::span<const double> c, std::vector<std::complex<double>>& spectrum) {
+  assert(spectrum.size() == c.size() / 2 + 1);
+
+  if (c.size() == 1) {  // The identity (Eigen's kissfft fails for length 1)
+    spectrum[0] = c[0];
+    return;
+  }
 
 #if defined(USE_EIGEN)
-  // Only the first half of the spectrum (b is real): Eigen computes it as for the full spectrum
-  // and skips the reflection into the second half
+  // Only the first half of the spectrum (c is real): for lengths divisible by 4, Eigen computes it
+  // by a complex transform of half the length
   Eigen::FFT<double> fft;
   fft.SetFlag(Eigen::FFT<double>::HalfSpectrum);
-  std::vector<std::complex<double>> B;
-  fft.fwd(B, b);
+  fft.fwd(spectrum.data(), c.data(), static_cast<Eigen::Index>(c.size()));
 #elif defined(USE_ARMADILLO)
-  arma::vec br(b.size());
-  std::ranges::copy(b, br.begin());
-  const arma::cx_vec B = arma::fft(br);
+  arma::vec input(c.size());
+  std::ranges::copy(c, input.begin());
+  const arma::cx_vec full = arma::fft(input);
+  std::copy_n(full.begin(), spectrum.size(), spectrum.begin());
 #endif
-
-  for (size_t i = 0; i < out.size(); i++) {
-    out[i] = B[i].real();
-  }
 }
 
 }  // namespace
@@ -106,20 +111,15 @@ void ClenshawCurtisQuadRule::genWeightsInplace(const std::span<double> out) cons
 #endif
 }
 
-/**
- * TODO: Document (update)
- * Naive approach(runtime complexity in O(n ^ 2)).* Only intended as a fallback.
- */
 base::DataVector ClenshawCurtisQuadRule::genWeightsNaive(const size_t nNodes) const {
   base::DataVector weights(nNodes);
   genWeightsNaiveInplace(weights);
   return weights;
 }
 
-// TODO: Decompose functionality into smaller functions(?)
 /**
- * TODO: Document (update)
- * Naive approach(runtime complexity in O(n ^ 2)).* Only intended as a fallback.
+ * The sums s_k of Waldvogel's method (see genWeightsFFTInplace) evaluated directly, the cosines
+ * by the Chebyshev recurrence: O(n^2), only intended as a fallback without an FFT backend.
  */
 void ClenshawCurtisQuadRule::genWeightsNaiveInplace(const std::span<double> out) const {
   assert(out.size() >= 2);
@@ -178,36 +178,34 @@ base::DataVector ClenshawCurtisQuadRule::genWeightsFFT(const size_t nNodes) cons
 #ifdef SGPP_COMBIGRID_HAVE_FFT
 
 /**
- * TODO: Document (update)
- * Waldvogel method using the Fourier transform. The steps run in separate loops over the output (s,
- * the weights on [-1, 1], the weights on [0, 1]), so that every value is rounded as in a
- * computation with an array per step.
+ * Waldvogel's method: the weights on [-1, 1] are w_k = c_k / m * (1 - s_k) with c_0 = c_m = 1,
+ * else 2, and s_k = sum_{j=1..m/2} b_j / (4j^2 - 1) * cos(2 pi j k / m). Waldvogel computes s_k
+ * from the real parts of the FFT of a length-2m vector A whose odd entries are 0; its even
+ * entries c[j] = A[2j] give the same bins by a real FFT of length m:
+ * Re DFT_2m(A)[k] = DFT_m(c)[k] = sum_j c[j] cos(2 pi j k / m), which is real and symmetric
+ * (DFT_m(c)[m - k] = DFT_m(c)[k]), and s_k = (DFT_m(c)[k] + (-1)^k A_N) / 2 (the sum counts the
+ * j = m/2 term of even m twice, s_k once). Hence only the bins k <= m/2 are computed and every
+ * weight is written together with its mirror image: the weights are symmetric bitwise, so the
+ * weights on [0, 1], w01[i] = w[m - i] / 2, need no reversal. The input is built in @p out
+ * itself.
  */
 void ClenshawCurtisQuadRule::genWeightsFFTInplace(const std::span<double> out) const {
   assert(out.size() >= 2);
 
   const size_t m = out.size() - 1;
-  std::vector<double> b;
-  const double A_N = buildSymmetricInput(m, b);
+  const double A_N = buildEvenInput(out.first(m));
 
-  // Recover s[k] = sum_{j=1..Jmax} factor_j * cos(2*pi*j*k/N)
-  // Using relation: Re(B[k]) = A0 + (-1)^k AN + 2 * sum_{m=1..N-1} A[m] cos(pi*m*k/N)
-  // Here A0 = 0 and only even m=2j contribute. The sum in Re(B[k]) excludes the j = N/2 term
-  // (even N), which s[k] contains once, so s[k] = (Re(B[k]) + (-1)^k * A_N)/2
-  forwardDFTRealParts(b, out);
-  for (size_t i = 0; i <= m; i++) {
-    const double sign = (i % 2 == 0) ? 1.0 : -1.0;  // (-1)^k
-    out[i] = 0.5 * (out[i] + sign * A_N);
-  }
+  std::vector<std::complex<double>> spectrum(m / 2 + 1);
+  forwardRealDFT(out.first(m), spectrum);
 
-  for (size_t i = 0; i <= m; i++) {  // Weights on [-1, 1]
-    const double ck = (i == 0 || i == m) ? 1.0 : 2.0;
-    out[i] = ck / static_cast<double>(m) * (1.0 - out[i]);
-  }
-
-  std::ranges::reverse(out);  // Weights on [0, 1]: w01[i] = 0.5 * wcc[m - i]
-  for (double& weight : out) {
-    weight *= 0.5;
+  const double mDouble = static_cast<double>(m);
+  for (size_t k = 0; k <= m / 2; k++) {
+    const double sign = (k % 2 == 0) ? 1.0 : -1.0;  // (-1)^k, equal to (-1)^(m-k) if A_N != 0
+    const double s = 0.5 * (spectrum[k].real() + sign * A_N);
+    const double ck = (k == 0) ? 1.0 : 2.0;  // c_k = c_{m-k}; k = m/2 < m as m >= 1
+    const double weight = 0.5 * (ck / mDouble * (1.0 - s));
+    out[k] = weight;
+    out[m - k] = weight;
   }
 }
 

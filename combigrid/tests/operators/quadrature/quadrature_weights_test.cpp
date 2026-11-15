@@ -189,8 +189,9 @@ const std::vector<GPCntType> CC_PIN_NODE_COUNTS = {2,  3,   4,   5,   6,   9,   
                                                    65, 100, 129, 257, 513, 1025, 4097, 32769};
 
 /// Hash of the Clenshaw-Curtis weights for CC_PIN_NODE_COUNTS (genWeights and
-/// genWeightsInplace; recorded with the debug build).
-constexpr uint64_t CC_PIN_HASH_DEBUG = 0xd91eb5c907cf0c7dULL;
+/// genWeightsInplace; recorded with the debug build and Eigen's FFT, weights by a real FFT of
+/// length n - 1).
+constexpr uint64_t CC_PIN_HASH_DEBUG = 0x60ec02f99a7622e3ULL;
 
 uint64_t hashCCWeights() {
   const QuadRule* const rule = getClenshawCurtisQuadRule();
@@ -283,16 +284,44 @@ BOOST_AUTO_TEST_CASE(Weight_Table_Is_Thread_Count_Independent) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(Eager_Fill_Equals_Lazy_Fill) {
+  // computeAllRows outside a parallel region and from teams of 2 and 16 threads gives bitwise the
+  // weights computed on first use; mixed rules, rows shared by dimensions and rows of their own
+  for (const std::string nodes : {"cc", "mixed"}) {
+    const WeightConfig config{nodes, false, 1, true, 3, true};
+    const LvlMIVec miVec(std::vector<LvlMI>{LvlMI{12, 1, 1}, LvlMI{1, 11, 1}, LvlMI{1, 1, 10}});
+    const std::unique_ptr<SGGenInstr> genInstr = makeGenInstr(config, miVec);
+    const SparseGrid sg(*genInstr);
+
+    const misc::QuadWeightTable lazyTable(sg);
+    const std::vector<double> expected = allWeights(sg, lazyTable);
+
+    for (const int nThreads : {0, 2, 16}) {
+      BOOST_TEST_CONTEXT(nodes << ", " << nThreads << " threads") {
+        const misc::QuadWeightTable eagerTable(sg);
+        if (nThreads == 0) {
+          eagerTable.computeAllRows();
+        } else {
+#pragma omp parallel num_threads(nThreads)
+          eagerTable.computeAllRows();
+        }
+        BOOST_CHECK(bitwiseEqual(allWeights(sg, eagerTable), expected));
+      }
+    }
+  }
+}
+
 BOOST_AUTO_TEST_CASE(Clenshaw_Curtis_Weights_Bitwise) {
   // The weights of the debug build (no contraction of multiply-adds, no link-time optimization)
-  // are pinned bitwise; the optimized build is checked by genWeightsInplace == genWeights only.
+  // with Eigen's FFT are pinned bitwise; the optimized build and the Armadillo backend (other
+  // round-off) are checked by genWeightsInplace == genWeights only.
   const uint64_t h = hashCCWeights();
   const char* const print = std::getenv("SGPP_PRINT_GOLDEN");
   if (print != nullptr && std::string(print) == "1") {
     std::printf("Clenshaw-Curtis weights hash: 0x%016llxULL\n", static_cast<unsigned long long>(h));
     return;
   }
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(USE_EIGEN)
   BOOST_CHECK_EQUAL(h, CC_PIN_HASH_DEBUG);
 #endif
 }

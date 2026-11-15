@@ -1,0 +1,39 @@
+case quad/sg/cc-uq/b0/d2/L20 snapshot WP-56-after: 46915 samples, 31 threads, 4000 Hz, bins 5.0 ms
+pool-work windows (s from first sample): [0.021, 0.987]
+analysed window (last operator call): [0.018, 0.987] = 968.9 ms
+
+thread  timeline (one char per bin; F fft, I integrand, S combigrid, G gomp, B openblas, K kernel, o other, . none)   busy ms by class
+ 265360 F.GGGGG.......GGGGGGG............IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG.........................KKKGGG.........GGG.KKKFKFFFFSIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...  I424 S74 G64 K36 F29 | idle≈290
+ 265362 BBBBBBBBBBBBBBBBBBBBBBBBB.........................................................................................................................................................................  B96 K1 | idle≈845
+ 265363 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B100 K0 | idle≈840
+ 265364 BBBBBBBBBBBBBBBBBBBBBBBBB.........................................................................................................................................................................  B94 K0 | idle≈845
+ 265365 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B100 K1 | idle≈840
+ 265366 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B100 | idle≈840
+ 265367 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B101 K2 | idle≈840
+ 265368 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B95 K0 | idle≈840
+ 265369 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B94 K0 | idle≈840
+ 265370 BBBBBBBBBBBBBBBBBBBBBBBBB.........................................................................................................................................................................  B99 | idle≈845
+ 265371 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B96 K1 | idle≈840
+ 265373 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B97 K1 | idle≈840
+ 265372 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B79 K1 | idle≈840
+ 265374 BBBBBBBBBBBBBBBBBBBBBBBBBK........................................................................................................................................................................  B80 K1 | idle≈840
+ 265375 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B96 K1 | idle≈840
+ 265376 BBBBBBBBBBBBBBBBBBBBBBBBBB........................................................................................................................................................................  B95 K2 | idle≈840
+ 265379 FGGGGG........GGGGGGG.........................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG.......GGGKKKKFFFFFFFFGGG.KKKKFKKKKKKFFFFFKKKFFFFFFFFFFFFFFFFFFFSKFIIIIIIIIIIIIIIIIIIIIIGGG........  I274 F168 K80 S74 G66 o2 | idle≈245
+ 265378 KKKKFFFFFFFFFFGGGGGGG...SIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG.............GGGFFFFFGGG....GGG.KFFIIIIIIIIIIIII....IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...............  I450 S88 G68 F50 K19 o2 | idle≈200
+ 265377 .KKFFFFFGGGG..GGGG.GGK.KKKKFKKKKFFFFFKKKKFFFFFFFFFFFFFFFFFFFFSKFKIIIIIIIIIIIIIIIIIIIGGG...............GGGGGG.........GGG.FIIIIIIIIIIIII......IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG.......  I320 F144 G76 S66 K64 o2 | idle≈215
+ 265380 .KFGGGGG......KKKKSG.....IIIIIIIIIIIII..........................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGGGGG.........KKKKSIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG......................  I398 S84 G46 K32 F3 o2 | idle≈345
+ 265386 KGGGGG........GGGGGGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG..........................GGGGGG.........KGGGKKKFFIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG....  I476 S81 G76 F14 K11 o0 | idle≈240
+ 265383 K.GGGGG.......GGGGGGKK.KKKKKKFFFKKFFFFFFFFFFFKIIIIIIIIIIIIIIIIIIIIIIIIIGG.............................GGGGGG.........GGG.....................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...  I291 G76 F72 S68 K38 o1 | idle≈355
+ 265384 KGGGGG........GGGGGGGKF.FIIIIIIIIIIIII........IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG.................GGGFGGG........GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG......................  I424 G76 S59 K6 F6 o0 | idle≈325
+ 265381 KFFFGGGG.......KKGGG......IIIIIIIIIIIIII......IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG......GGGGGG.........GGG......IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG.........................  I421 S78 G70 K9 F5 o1 | idle≈325
+ 265382 ..GGGGG.......GGGGGGK..KFFFIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...........GGGGGG.........GGG..........IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG  I524 S80 G76 K12 F6 | idle≈205
+ 265385 GGGGG..........GGGGGK..KFIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG.............................GGGFGG.........GGG.F.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG..  I472 S87 G75 K3 F2 o0 | idle≈270
+ 265390 KKKKFFFFFFFFFFGGG..GGKFKKKFFKFFFFIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG.............................GGGKFFFGG......GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG....................  I367 F80 S75 G65 K45 o2 | idle≈290
+ 265387 KGGGGG........GGGGGGGKIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG.........................GGGGGG.........KGGGIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG..................  I442 G76 S71 K7 F1 o0 | idle≈300
+ 265389 KGGGGG........GGGGGGG.KIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG............................GGGGGG.........GGG.KFIIIIIIIIIIIII.........................SIIIIIIIIISIIIIIIIIIIIIIIIIIIIIII  I378 S79 G66 F4 K4 | idle≈360
+ 265391 KGGGGG........KKKKKSK.KKFKFFKIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG................GGGKFGGG.......KGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG..................  I453 S78 G65 K36 F19 o2 | idle≈255
+ 265388 KGGGG.........KGGGGG........IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG......GGGGGG.........KKGGKKKKKKFFFKFFFFFFFFFFSIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG..............  I432 G74 S72 F64 K44 o1 | idle≈230
+
+all threads in window: I 6547 ms, B 1420 ms, S 1215 ms, G 1116 ms, F 668 ms, K 459 ms, o 16 ms
+thread-time capacity 16 x 969 ms = 15502 ms; sampled busy 11441 ms

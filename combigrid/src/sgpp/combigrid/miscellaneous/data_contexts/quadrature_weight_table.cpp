@@ -3,14 +3,17 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <functional>
 #include <mutex>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -21,9 +24,29 @@ namespace misc {
 QuadWeightTable::QuadWeightTable(const SparseGrid& sparseGrid)
     : genInstr_(sparseGrid.getGenInstr()),
       unitNodeTable_(sparseGrid.getUnitNodeTable()),
+      rowsBySize_(unitNodeTable_.nRows()),
       rows_(unitNodeTable_.nRows()),
       published_(unitNodeTable_.nRows()),
-      onceFlags_(unitNodeTable_.nRows()) {}
+      onceFlags_(unitNodeTable_.nRows()) {
+  // Every row belongs to at least one (dimension, level) pair; dimensions sharing rows overwrite
+  // each other's entries with equivalent ones
+  for (size_t dim = 0; dim < unitNodeTable_.nDim(); dim++) {
+    for (LvlType lvl = 0; lvl <= unitNodeTable_.maxLvl(dim); lvl++) {
+      rowsBySize_[unitNodeTable_.row(dim, lvl)] = {dim, lvl};
+    }
+  }
+
+  std::ranges::stable_sort(rowsBySize_, std::ranges::greater{}, [this](const auto& dimLvl) {
+    return unitNodeTable_.nNodes(dimLvl.first, dimLvl.second);
+  });
+}
+
+void QuadWeightTable::computeAllRows() const {
+#pragma omp for schedule(dynamic, 1) nowait
+  for (size_t i = 0; i < rowsBySize_.size(); i++) {
+    weights(rowsBySize_[i].first, rowsBySize_[i].second);
+  }
+}
 
 const double* QuadWeightTable::weights(const size_t dim, const LvlType lvl) const {
   const double* const published =

@@ -1,3 +1,8 @@
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 /**
  * @file clenshaw_curtis_quadrature_rule.hpp
  * @brief 1D Clenshaw-Curtis quadrature rule on Chebyshev-Lobatto nodes.
@@ -51,14 +56,16 @@ class ClenshawCurtisQuadRule : public QuadRule {
   base::DataVector genWeightsNaive(const size_t nNodes) const;
 
   /**
-   * TODO: Document
+   * @brief @ref genWeightsNaive "genWeightsNaive(out.size())" writing into @p out.
+   * @param out Output: the weights (at least 2).
    */
   void genWeightsNaiveInplace(const std::span<double> out) const;
 
   /**
    * @brief Waldvogel's FFT-based weight formula (requires Eigen or Armadillo).
    *
-   * Faster (@f$O(n \log n)@f$) than @ref genWeightsNaive for large @p nNodes.
+   * Faster (@f$O(n \log n)@f$) than @ref genWeightsNaive for large @p nNodes: one real FFT of
+   * length @p nNodes - 1.
    * If both are set, Eigen's FFT is used (measured 1.2-3.7x faster than Armadillo's).
    *
    * @param nNodes Number of 1D nodes (@c >= 2).

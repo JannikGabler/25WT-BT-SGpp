@@ -51,11 +51,11 @@ miscellaneous/         (namespace misc)
                          operators)
   data_contexts/         read-only data of one operator call (QuadratureContext with the
                          QuadWeightTable of the call: SG 1D quadrature weights per unit-node-table
-                         row, computed on first use by the thread that needs it (std::call_once),
-                         shared by all threads; GenericDSGOperatorContext;
-                         DSGLinInterpIndex (per grid) and DSGLinInterpQuery (per call) of the DSG
-                         linear interpolation; DSGGlobalInterpIndex (per grid) of the DSG global
-                         interpolation)
+                         row, computed once (std::call_once) on first use or eagerly by all
+                         threads (computeAllRows, largest row first), shared by all threads;
+                         GenericDSGOperatorContext; DSGLinInterpIndex (per grid) and
+                         DSGLinInterpQuery (per call) of the DSG linear interpolation;
+                         DSGGlobalInterpIndex (per grid) of the DSG global interpolation)
   data_scratches/        per-thread scratch: WeightedSumScratch (SG weighted sum; points to the 1D
                          weights per dimension; wrapped by QuadratureScratch (weights in the
                          QuadWeightTable) and GlobalInterpScratch (basis values + 1D nodes)),
@@ -306,7 +306,10 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `tools::global_interpolation::processTensorGrid`,
   `tools::lin_interpolation::processTensorGrid`; scalar and vector overloads around one template
   kernel each); generation and CT coefficients are parallel above the thresholds in
-  `constants.hpp`.
+  `constants.hpp`. SG quadrature: each thread first takes weight-table rows
+  (`QuadWeightTable::computeAllRows`, largest first, `omp for schedule(dynamic, 1) nowait`), then
+  tensor grids (`schedule(dynamic)`); a tensor grid whose row is still being computed waits for
+  it in `call_once`.
 - `tools::computeCTCoeffs(miVec)`: CT coefficients of a downwards-closed MI set.
 
 ## Design rationale (thesis §5)
@@ -332,8 +335,9 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   space; the generic formula (equidistant, Chebyshev 1st kind) recomputes them in O(n²) per
   `basisValues` / 1D call (not cached); Chebyshev 2nd kind uses closed-form weights.
 - **Quadrature rules** per dimension by node type and parity: equidistant odd → composite Simpson,
-  even → trapezoidal; Chebyshev 2nd kind → Clenshaw-Curtis (Waldvogel FFT with `USE_EIGEN` /
-  `USE_ARMADILLO`, else O(n²)). Result × |Ω|.
+  even → trapezoidal; Chebyshev 2nd kind → Clenshaw-Curtis (Waldvogel's method as one real FFT
+  of length n − 1 with `USE_EIGEN` / `USE_ARMADILLO`, else O(n²); the bitwise pins of the weights
+  are recorded with Eigen). Result × |Ω|.
 
 ## Vocabulary
 

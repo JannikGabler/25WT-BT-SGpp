@@ -561,32 +561,32 @@ const std::vector<Golden> GOLDEN = {
     {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
      {}},
     // cc b0 unit d2 complete sg
-    {0x9d010fbe67489a4dULL, 0x3b52ae4d5171ee86ULL, 0x2e19eda5bf11c0bbULL,
+    {0x9d010fbe67489a4dULL, 0xe06b093bb1809a7fULL, 0x783464774aa4bd50ULL,
      {1.1500903199498445, 1.1470180434016573,
       1.0298374180359597, 1.0298374180359597}},
     // cc b0 unit d2 complete dsg
-    {0x2eec48ffc577e5ffULL, 0x0fae0b489f6225bcULL, 0x376745beb5eb05fbULL,
+    {0x2eec48ffc577e5ffULL, 0xb0ba003717f94a45ULL, 0x772cbfc7736c61c4ULL,
      {}},
     // cc b0 unit d2 mivec sg
-    {0x9f3c6a1927ee9c79ULL, 0xec356b31b54ec9a6ULL, 0xe404bdd127d70c29ULL,
+    {0x9f3c6a1927ee9c79ULL, 0x7a9c96c128a24c7fULL, 0xe404bdd127d70c29ULL,
      {1.150091322503229, 1.1418167302960542,
       1.0298374180359597, 1.0298374180359597}},
     // cc b0 unit d2 mivec dsg
-    {0xa897683a0ed18479ULL, 0x34e24491de57ea61ULL, 0x96f8890d68b25d89ULL,
+    {0xa897683a0ed18479ULL, 0x46305410f5a825fdULL, 0x96f8890d68b25d89ULL,
      {}},
     // cc b0 unit d3 complete sg
-    {0x201f33f14bfc21b5ULL, 0x5af32a34f5d4801dULL, 0xe829d252d1ab6d7dULL,
+    {0x201f33f14bfc21b5ULL, 0x5af32a34f5d4801dULL, 0xb97696746a1951a3ULL,
      {1.1604884614682927, 1.1558698687084865,
       0.95468808971871366, 0.95468808971871366}},
     // cc b0 unit d3 complete dsg
-    {0x206fdd1e0327d863ULL, 0x7c39701446de687cULL, 0x47d531c63d4c02e5ULL,
+    {0x206fdd1e0327d863ULL, 0xa98f2b1ac98e235bULL, 0x47d531c63d4c02e5ULL,
      {}},
     // cc b0 unit d3 mivec sg
     {0x548b0ef43bd6343aULL, 0xb1bac389b509503bULL, 0x3545dec4f13bb201ULL,
      {1.1603669983519631, 1.1391269180106591,
       0.95468808971871344, 0.95468808971871344}},
     // cc b0 unit d3 mivec dsg
-    {0xabca040d5a02fb35ULL, 0xae716427f7727f88ULL, 0x7dafc03e581ca63cULL,
+    {0xabca040d5a02fb35ULL, 0xe08289cbd3c0626fULL, 0xe0c04d2b0066825aULL,
      {}},
     // cc b0 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
@@ -607,24 +607,24 @@ const std::vector<Golden> GOLDEN = {
      {0.67393388238651486, 0.67065602980665839,
       0.49546931803228644, 0.49546931803228644}},
     // cc b0 shifted d2 complete dsg
-    {0x5f1d8d943782b771ULL, 0xac370cb82cec0d8aULL, 0x5a2a52a4a84d92f0ULL,
+    {0x5f1d8d943782b771ULL, 0xd07072331749ffd9ULL, 0x48d2b6646eb2c60cULL,
      {}},
     // cc b0 shifted d2 mivec sg
-    {0x63e1fdd9693d45ddULL, 0xd467d797c62a4f85ULL, 0x861595faadef4d0bULL,
+    {0x63e1fdd9693d45ddULL, 0x991c55f523de19f1ULL, 0x861595faadef4d0bULL,
      {0.67391814141716921, 0.66374218920400074,
       0.49546931803228644, 0.49546931803228644}},
     // cc b0 shifted d2 mivec dsg
-    {0xd2081aaa4184a37cULL, 0x603f5b5d3e454267ULL, 0x35b9bc389743a900ULL,
+    {0xd2081aaa4184a37cULL, 0x8df544615fa927e9ULL, 0x35b9bc389743a900ULL,
      {}},
     // cc b0 shifted d3 complete sg
-    {0xbed033c1203ac5a5ULL, 0x612744e75ff198d4ULL, 0x9ade04fd9831c3a7ULL,
+    {0xbed033c1203ac5a5ULL, 0x612744e75ff198d4ULL, 0x6f35ce0fe492bb36ULL,
      {0.71522836154106928, 0.71075500963000537,
       0.52592771607034816, 0.52592771607034816}},
     // cc b0 shifted d3 complete dsg
-    {0x1ddc13baf4268d31ULL, 0xd93985a08d2cc872ULL, 0x2a000c47fb490f52ULL,
+    {0x1ddc13baf4268d31ULL, 0xe47769d2281bcf74ULL, 0x134848da790ac350ULL,
      {}},
     // cc b0 shifted d3 mivec sg
-    {0x5dee7e735b2c912eULL, 0xe3a3fae26d5d1feaULL, 0x98e7f5fb46729244ULL,
+    {0x5dee7e735b2c912eULL, 0xe3a3fae26d5d1feaULL, 0x44a3b5de8602ab81ULL,
      {0.71503863916511101, 0.6954296517702856,
       0.52592771607034816, 0.52592771607034816}},
     // cc b0 shifted d3 mivec dsg
@@ -645,25 +645,25 @@ const std::vector<Golden> GOLDEN = {
     {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x54f07dceeb360dfbULL,
      {}},
     // cc b1 unit d2 complete sg
-    {0x3d3fd10ad83042ceULL, 0x1a86518b5bbdb796ULL, 0x3fa00ebca01bb972ULL,
+    {0x3d3fd10ad83042ceULL, 0x83196fd29b41c718ULL, 0xccca82630c69bc89ULL,
      {1.1500903314663915, 1.1470180434016573,
       1.0298374180359597, 1.0298374180359597}},
     // cc b1 unit d2 complete dsg
-    {0x488b7e9d15db965fULL, 0xf3334d41acfcd516ULL, 0xcddac19f2204a693ULL,
+    {0x488b7e9d15db965fULL, 0xce464d34cda20929ULL, 0xdda49a9143fe2e86ULL,
      {}},
     // cc b1 unit d2 mivec sg
-    {0x4af6615774763b0aULL, 0xa8a9b39f85028677ULL, 0x5e4c9b1a57937658ULL,
+    {0x4af6615774763b0aULL, 0x7e6e6beeeabfaf3fULL, 0xbb377f6154bdb098ULL,
      {1.1501101580658555, 1.1418167302960542,
       1.0298374180359597, 1.0298374180359597}},
     // cc b1 unit d2 mivec dsg
-    {0x769f853f8cb5b128ULL, 0x2730e6ec7c1c700bULL, 0x1f252096d9951b5aULL,
+    {0x769f853f8cb5b128ULL, 0x5343b634e140606eULL, 0x4ce9b4cc5e277191ULL,
      {}},
     // cc b1 unit d3 complete sg
-    {0xfd9d76637d8d412eULL, 0x684116983ca525f1ULL, 0x963f9eab278d8864ULL,
+    {0xfd9d76637d8d412eULL, 0x10397a803ca657ffULL, 0x0f1db468bdc4a8cfULL,
      {1.1604870782126682, 1.1558698687084865,
       0.954688089718712, 0.95468808971871366}},
     // cc b1 unit d3 complete dsg
-    {0x5db31bef03ecefd4ULL, 0xac0b3fea84966360ULL, 0x7c23e5d744d52149ULL,
+    {0x5db31bef03ecefd4ULL, 0x818e3a4bf26d0d00ULL, 0x7c23e5d744d52149ULL,
      {}},
     // cc b1 unit d3 mivec sg
     {0x1554f05f813f684aULL, 0x93e614a5bca880adULL, 0x93e614a5bca880adULL,
@@ -691,28 +691,28 @@ const std::vector<Golden> GOLDEN = {
      {0.67393369415312476, 0.67065602980665839,
       0.49546931803228622, 0.49546931803228644}},
     // cc b1 shifted d2 complete dsg
-    {0x3f52096b52ea05c8ULL, 0xf1a9ff6098bdf54fULL, 0xcdd2a38fbc177b88ULL,
+    {0x3f52096b52ea05c8ULL, 0x48564aefc0a8668aULL, 0x0225abd19a110710ULL,
      {}},
     // cc b1 shifted d2 mivec sg
     {0xe65d0f6a45625107ULL, 0x17ec4339afe39663ULL, 0xe112ddf5761d2e75ULL,
      {0.67383964452083167, 0.66374218920400074,
       0.49546931803228644, 0.49546931803228644}},
     // cc b1 shifted d2 mivec dsg
-    {0xb7317ae7773aaa8bULL, 0xe6b43afa49095156ULL, 0x9ba49be07d72225eULL,
+    {0xb7317ae7773aaa8bULL, 0x840b297193bca1c2ULL, 0x0a3ed766c54325c4ULL,
      {}},
     // cc b1 shifted d3 complete sg
-    {0x0b550aa95fc7e0d9ULL, 0xe13c7424d4489a4cULL, 0x0f5a61f1e20f29d1ULL,
+    {0x0b550aa95fc7e0d9ULL, 0xf7d407fcc62ac658ULL, 0x0c5404cfef6f5741ULL,
      {0.71526058587368524, 0.71075500963000537,
       0.52592771607034949, 0.52592771607034816}},
     // cc b1 shifted d3 complete dsg
-    {0xb6f79f93656eb93fULL, 0xbbb7f40c69eb06e5ULL, 0xbb29e46c1236cca4ULL,
+    {0xb6f79f93656eb93fULL, 0x1342f04104ec8ed3ULL, 0x05a601367edf11a8ULL,
      {}},
     // cc b1 shifted d3 mivec sg
-    {0x921b9eabc0f7b45aULL, 0x9cde8588cc7fd697ULL, 0x230c1d343eee1214ULL,
+    {0x921b9eabc0f7b45aULL, 0x416910009f63f02bULL, 0xf69e1b7e07ad1698ULL,
      {0.71366905948285908, 0.6954296517702856,
       0.52592771607034816, 0.52592771607034816}},
     // cc b1 shifted d3 mivec dsg
-    {0xdcd3a96b59722185ULL, 0x284cefc4733b190dULL, 0x89f49a8629c9b040ULL,
+    {0xdcd3a96b59722185ULL, 0x284cefc4733b190dULL, 0xe0ea58177791761fULL,
      {}},
     // cc b2 unit d1 complete sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
@@ -729,32 +729,32 @@ const std::vector<Golden> GOLDEN = {
     {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
      {}},
     // cc b2 unit d2 complete sg
-    {0x760412d7815a2f61ULL, 0x2d161ef725f9d305ULL, 0x5229b4a95ed9fec3ULL,
+    {0x760412d7815a2f61ULL, 0x5093bd5915c5a83bULL, 0x5229b4a95ed9fec3ULL,
      {1.1500898051200037, 1.1470180434016573,
       1.0298374180359597, 1.0298374180359597}},
     // cc b2 unit d2 complete dsg
-    {0xd75186c0808726ceULL, 0xc93a99ef221cc755ULL, 0xf97887cfe4bd1f71ULL,
+    {0xd75186c0808726ceULL, 0xc93a99ef221cc755ULL, 0xa99464ad6ef54e98ULL,
      {}},
     // cc b2 unit d2 mivec sg
-    {0x93317ada7476f764ULL, 0x8eee035ab1f8a79dULL, 0xb942eeae1ecd3ddfULL,
+    {0x93317ada7476f764ULL, 0xcdf625e067e9b700ULL, 0xe3c0d2e75ea07eabULL,
      {1.1502545625484306, 1.1418167302960542,
       1.0298374180359597, 1.0298374180359597}},
     // cc b2 unit d2 mivec dsg
-    {0x8a752f10bc7763c9ULL, 0x0686ac53bfbb9b51ULL, 0xaf09b7511a7d37c1ULL,
+    {0x8a752f10bc7763c9ULL, 0x0686ac53bfbb9b51ULL, 0xa29b06ca85daac16ULL,
      {}},
     // cc b2 unit d3 complete sg
-    {0x60d28cb7d799916aULL, 0xcf1a8d5bfea03421ULL, 0xcd311e9841c3ef59ULL,
+    {0x60d28cb7d799916aULL, 0x4355910a08ecc161ULL, 0x61eca01a229c4f28ULL,
      {1.1604787353407866, 1.1558698687084865,
       0.95444336081090331, 0.95468808971871366}},
     // cc b2 unit d3 complete dsg
-    {0x86d80cfcca5e114eULL, 0xfccf13c2d43da80eULL, 0x2bfdfcacc8c66d8fULL,
+    {0x86d80cfcca5e114eULL, 0xabb4a8b323e72771ULL, 0xe99c6a895c32d853ULL,
      {}},
     // cc b2 unit d3 mivec sg
     {0x124f83a77d07a334ULL, 0xffa437ef1a9576e8ULL, 0xffa437ef1a9576e8ULL,
      {1.1592475905941071, 1.1391269180106591,
       0.96277751266224232, 0.95468808971871344}},
     // cc b2 unit d3 mivec dsg
-    {0xfd372b805f5f2d08ULL, 0xd443d4f3ad5b84faULL, 0xaff5845aebb68922ULL,
+    {0xfd372b805f5f2d08ULL, 0xe8735a101f35ce38ULL, 0xaff5845aebb68922ULL,
      {}},
     // cc b2 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
@@ -771,7 +771,7 @@ const std::vector<Golden> GOLDEN = {
     {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x144c6acd38b81f49ULL,
      {}},
     // cc b2 shifted d2 complete sg
-    {0xc1ecde5c66e32176ULL, 0x54feeea487500560ULL, 0xdd11543011ca8a95ULL,
+    {0xc1ecde5c66e32176ULL, 0xb8a639b74422f82bULL, 0xda12fb21326d43afULL,
      {0.67393912927963362, 0.67065602980665839,
       0.49546931803228633, 0.49546931803228644}},
     // cc b2 shifted d2 complete dsg
@@ -785,18 +785,18 @@ const std::vector<Golden> GOLDEN = {
     {0x8a4734825bba3825ULL, 0x350ba65287602505ULL, 0xa09a45381550ba10ULL,
      {}},
     // cc b2 shifted d3 complete sg
-    {0xefe37f732e094f60ULL, 0x521e7e61a7335160ULL, 0x521e7e61a7335160ULL,
+    {0xefe37f732e094f60ULL, 0x521e7e61a7335160ULL, 0xdd1dee8c5c060b4eULL,
      {0.71548083999029233, 0.71075500963000537,
       0.51000964823268347, 0.52592771607034816}},
     // cc b2 shifted d3 complete dsg
-    {0xd3b6bdff9287a248ULL, 0xc402c000be96efdfULL, 0x3989c35144e2c7a0ULL,
+    {0xd3b6bdff9287a248ULL, 0x36ae0db47fca409bULL, 0xfe97c01e05164926ULL,
      {}},
     // cc b2 shifted d3 mivec sg
-    {0xd798996a3fc28f32ULL, 0xfc2fddeb619d3147ULL, 0xdeb3bf1392ea57baULL,
+    {0xd798996a3fc28f32ULL, 0x0cedeee1b73e8859ULL, 0x301fc116ccf54bfaULL,
      {0.70678666515411692, 0.6954296517702856,
       0.70176768667511746, 0.52592771607034816}},
     // cc b2 shifted d3 mivec dsg
-    {0x3a33f9a47400a863ULL, 0x830a9d8d3900e102ULL, 0x48e32737a708842cULL,
+    {0x3a33f9a47400a863ULL, 0xc60c1846205a720cULL, 0xbba7f0a2eecac1ceULL,
      {}},
     // cheb1 b0 unit d1 complete sg
     {0x5aaa6d3d9eb1d110ULL, 0x13198a2e03707344ULL, 0x13198a2e03707344ULL,
@@ -957,32 +957,32 @@ const std::vector<Golden> GOLDEN = {
     {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
      {}},
     // mixed b0 unit d2 complete sg
-    {0xcd36a50d7dfb0553ULL, 0x71f99e4f1c41578aULL, 0x300e02b14c4b5dcdULL,
+    {0xcd36a50d7dfb0553ULL, 0xbd76ae8a2f28747eULL, 0x300e02b14c4b5dcdULL,
      {1.150090320421703, 1.1489753355339904,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b0 unit d2 complete dsg
     {0xfff322bf55265554ULL, 0x422d7aad507e0055ULL, 0x8745635e6e40bf97ULL,
      {}},
     // mixed b0 unit d2 mivec sg
-    {0x04b860bd31412163ULL, 0x51028c87b640f150ULL, 0x616665efff4320d4ULL,
+    {0x04b860bd31412163ULL, 0x3d2d32e582e92ef7ULL, 0x616665efff4320d4ULL,
      {1.1500908511307606, 1.1454669248287423,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b0 unit d2 mivec dsg
     {0x537f796ceb1cba93ULL, 0xba71815cc4398fc8ULL, 0x1df3e028d3681898ULL,
      {}},
     // mixed b0 unit d3 complete sg
-    {0x347b38fba0a7474dULL, 0x6cb63cf3a7d592dbULL, 0xe27e4c8d7829cb1dULL,
+    {0x347b38fba0a7474dULL, 0x6cb63cf3a7d592dbULL, 0x5bf2daaa7a83803dULL,
      {1.1604884575510701, 1.157789049079307,
       0.95468808971871366, 0.95468808971871366}},
     // mixed b0 unit d3 complete dsg
-    {0x3553b8e11604802dULL, 0xcbcda9fb6c9e4caeULL, 0x1eda4be353c582abULL,
+    {0x3553b8e11604802dULL, 0x273b444242c3b8c2ULL, 0x76814b40c9022cd2ULL,
      {}},
     // mixed b0 unit d3 mivec sg
-    {0x167e3e227b4a8074ULL, 0x54ac2006c61beb2dULL, 0xe9e0726879da09fcULL,
+    {0x167e3e227b4a8074ULL, 0x54ac2006c61beb2dULL, 0x9b7ded4fc54cad55ULL,
      {1.1604274703387298, 1.1440079535505325,
       0.95468808971871344, 0.95468808971871344}},
     // mixed b0 unit d3 mivec dsg
-    {0x278f20c92ed8614dULL, 0x87b45f8f1ce90733ULL, 0x2018720c6891163cULL,
+    {0x278f20c92ed8614dULL, 0x9a60f7e826b06093ULL, 0x3ad7b28b508fc06cULL,
      {}},
     // mixed b0 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
@@ -999,32 +999,32 @@ const std::vector<Golden> GOLDEN = {
     {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x2ac4483f14c68fe9ULL,
      {}},
     // mixed b0 shifted d2 complete sg
-    {0x66325f1f0fe8f011ULL, 0xe272bedb94de4b8fULL, 0x78df0beeceae4e4eULL,
+    {0x66325f1f0fe8f011ULL, 0xb4fbf1621fb75c5cULL, 0x78df0beeceae4e4eULL,
      {0.67393386024894686, 0.67340037493408622,
       0.49546931803228644, 0.49546931803228644}},
     // mixed b0 shifted d2 complete dsg
-    {0xf6fd92eb3983c7d6ULL, 0xe671208c3f27e685ULL, 0xe844ed88c1c1b8daULL,
+    {0xf6fd92eb3983c7d6ULL, 0xddb64ca0c5c890cfULL, 0xc20e7963eb53ba67ULL,
      {}},
     // mixed b0 shifted d2 mivec sg
-    {0xcda2464a5881649cULL, 0x913cd62a0d1fdb63ULL, 0xdde5480f68ddb7fcULL,
+    {0xcda2464a5881649cULL, 0xb599cac930032728ULL, 0xdde5480f68ddb7fcULL,
      {0.67392573071468287, 0.66854757719633096,
       0.49546931803228644, 0.49546931803228644}},
     // mixed b0 shifted d2 mivec dsg
-    {0xf784d4a6402b8d54ULL, 0x8c7d4ef2cbcdffe6ULL, 0xa8a2fc28dda241e0ULL,
+    {0xf784d4a6402b8d54ULL, 0x0092ce82c8c7cfa9ULL, 0xa8a2fc28dda241e0ULL,
      {}},
     // mixed b0 shifted d3 complete sg
     {0x8702f390b38fb2b6ULL, 0x354213665b6c36c0ULL, 0x4fc52f34b257ee93ULL,
      {0.71522817016060736, 0.71306255993787171,
       0.52592771607034816, 0.52592771607034816}},
     // mixed b0 shifted d3 complete dsg
-    {0xa932708715b42dcbULL, 0x22f71a509c125fbdULL, 0x2321a0612e02c11bULL,
+    {0xa932708715b42dcbULL, 0xb6647102791a6cebULL, 0x2321a0612e02c11bULL,
      {}},
     // mixed b0 shifted d3 mivec sg
-    {0x0fe3e6b6192a99ecULL, 0xab0d6661a0a5624aULL, 0x054ffb6089ccc68cULL,
+    {0x0fe3e6b6192a99ecULL, 0xab0d6661a0a5624aULL, 0x424711642f32e94dULL,
      {0.71499663754317111, 0.6996905779964131,
       0.52592771607034816, 0.52592771607034816}},
     // mixed b0 shifted d3 mivec dsg
-    {0x0e8385e42f872ae7ULL, 0xa744e36cebd92273ULL, 0x48a3a20a985fbf11ULL,
+    {0x0e8385e42f872ae7ULL, 0x59288450eb43ec32ULL, 0x48a3a20a985fbf11ULL,
      {}},
     // mixed b1 unit d1 complete sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
@@ -1041,32 +1041,32 @@ const std::vector<Golden> GOLDEN = {
     {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x54f07dceeb360dfbULL,
      {}},
     // mixed b1 unit d2 complete sg
-    {0x403d0bdbf4b46bc8ULL, 0x1b46ce008e904bd1ULL, 0x52cf75aef16e11a8ULL,
+    {0x403d0bdbf4b46bc8ULL, 0x223ef652490bdbd3ULL, 0x52cf75aef16e11a8ULL,
      {1.1500903218809946, 1.1489753355339904,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b1 unit d2 complete dsg
-    {0x813f8d9728bebfc9ULL, 0x2d4a967e761d936aULL, 0x9505438bd2f31df3ULL,
+    {0x813f8d9728bebfc9ULL, 0x2d4a967e761d936aULL, 0x5805d7fbdd2142d2ULL,
      {}},
     // mixed b1 unit d2 mivec sg
-    {0xd42ab4e12f992762ULL, 0x1324d73fcb2e81a0ULL, 0xedec5f25aeb416b9ULL,
+    {0xd42ab4e12f992762ULL, 0x48a5c9aee5f2a739ULL, 0xedec5f25aeb416b9ULL,
      {1.1501002633369988, 1.1454669248287423,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b1 unit d2 mivec dsg
     {0x7556ba69a47ad95aULL, 0xe424477db6753bc7ULL, 0x6db2c9b3770e2212ULL,
      {}},
     // mixed b1 unit d3 complete sg
-    {0xde45d8c69382fd65ULL, 0xb8ac5426b70e4fedULL, 0x6468ddd5a6bdda33ULL,
+    {0xde45d8c69382fd65ULL, 0xb8ac5426b70e4fedULL, 0x1f494e6d628a1d6fULL,
      {1.1604877016966493, 1.157789049079307,
       0.954688089718712, 0.95468808971871366}},
     // mixed b1 unit d3 complete dsg
     {0x90e87576739eaf69ULL, 0xc749501ba555d73eULL, 0x9abac689f2c7324bULL,
      {}},
     // mixed b1 unit d3 mivec sg
-    {0x1b210470a900b723ULL, 0xe32a16e12d3a3420ULL, 0x8b1a5ede15f37f4dULL,
+    {0x1b210470a900b723ULL, 0xe32a16e12d3a3420ULL, 0x564fc723085ab47cULL,
      {1.1604131501948538, 1.1440079535505325,
       0.95468808971871344, 0.95468808971871344}},
     // mixed b1 unit d3 mivec dsg
-    {0xb96f6912a48ad4a1ULL, 0x27ece4f015df7fafULL, 0x3f21de752978b732ULL,
+    {0xb96f6912a48ad4a1ULL, 0xe00009452a227742ULL, 0x4fd123c9568ff415ULL,
      {}},
     // mixed b1 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
@@ -1083,32 +1083,32 @@ const std::vector<Golden> GOLDEN = {
     {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0xb482ed03592d7341ULL,
      {}},
     // mixed b1 shifted d2 complete sg
-    {0x9d45b20cde766793ULL, 0xbc4a02382b5b6ad0ULL, 0x1e2acfde4a5670f8ULL,
+    {0x9d45b20cde766793ULL, 0x1c8a7bbe4ae0aeceULL, 0x1e2acfde4a5670f8ULL,
      {0.67393382769912435, 0.67340037493408622,
       0.49546931803228622, 0.49546931803228644}},
     // mixed b1 shifted d2 complete dsg
-    {0x8cf365cd599e322cULL, 0x5dd2af9bd7d42ad9ULL, 0xad6c2733dd026378ULL,
+    {0x8cf365cd599e322cULL, 0x5dd2af9bd7d42ad9ULL, 0xcfab1785a63a3785ULL,
      {}},
     // mixed b1 shifted d2 mivec sg
-    {0x292aca0f04e1147cULL, 0x7a80eacd60903f56ULL, 0xfdf4fb302f6f8631ULL,
+    {0x292aca0f04e1147cULL, 0x23144fbdc7317cdaULL, 0xfdf4fb302f6f8631ULL,
      {0.67388572068250896, 0.66854757719633096,
       0.49546931803228644, 0.49546931803228644}},
     // mixed b1 shifted d2 mivec dsg
-    {0xcdfa65d5adab6e57ULL, 0x47fb10647e78fac0ULL, 0x3007197b385efc38ULL,
+    {0xcdfa65d5adab6e57ULL, 0x56f8aecde7948655ULL, 0xcb592adfd011efc7ULL,
      {}},
     // mixed b1 shifted d3 complete sg
-    {0x27ca3178ab4934cbULL, 0x854ae21360af6c75ULL, 0xd31a5f954021bdc5ULL,
+    {0x27ca3178ab4934cbULL, 0x854ae21360af6c75ULL, 0xcdd868da4dfe9252ULL,
      {0.71525146367106396, 0.71306255993787171,
       0.52592771607034949, 0.52592771607034816}},
     // mixed b1 shifted d3 complete dsg
-    {0x001907e5821214bcULL, 0x98b8bff1bb64c4daULL, 0x6dc05d279ddbaf50ULL,
+    {0x001907e5821214bcULL, 0x7256277d469726b5ULL, 0xcdf6797a11a49d02ULL,
      {}},
     // mixed b1 shifted d3 mivec sg
-    {0xa7372ce2f77ba23fULL, 0x3ccb83c69b4f10b5ULL, 0xa344915318c3dc64ULL,
+    {0xa7372ce2f77ba23fULL, 0xd88ea81140a86858ULL, 0x127b8df3e6d26839ULL,
      {0.71362704931017873, 0.6996905779964131,
       0.52592771607034816, 0.52592771607034816}},
     // mixed b1 shifted d3 mivec dsg
-    {0x8e55c4816ed90a03ULL, 0x61b5fef93bff638aULL, 0x3b17be3b050f12cdULL,
+    {0x8e55c4816ed90a03ULL, 0xe49a8efed6398033ULL, 0x3b17be3b050f12cdULL,
      {}},
     // mixed b2 unit d1 complete sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
@@ -1136,21 +1136,21 @@ const std::vector<Golden> GOLDEN = {
      {1.1501732809443705, 1.1454669248287423,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b2 unit d2 mivec dsg
-    {0x697c541e70e5f286ULL, 0x4561bea3ee2eecedULL, 0x3febb85aa94eb527ULL,
+    {0x697c541e70e5f286ULL, 0x7e3d2336e342e9f1ULL, 0x657745c1473fb3c5ULL,
      {}},
     // mixed b2 unit d3 complete sg
-    {0x551a9919ed90f1b9ULL, 0xc6f809209f95b573ULL, 0xd8adabf5c19859fbULL,
+    {0x551a9919ed90f1b9ULL, 0x362b6e2bef33873dULL, 0x36639e53d37a2ea3ULL,
      {1.1604830185611257, 1.157789049079307,
       0.95444336081090331, 0.95468808971871366}},
     // mixed b2 unit d3 complete dsg
-    {0xa2ae7c09b2977b41ULL, 0xb95e210dfe914006ULL, 0xc649646fa19b05c6ULL,
+    {0xa2ae7c09b2977b41ULL, 0xb95e210dfe914006ULL, 0xb1fc278cf0f8be70ULL,
      {}},
     // mixed b2 unit d3 mivec sg
     {0x81c7242a4b087887ULL, 0x9df9690425899b88ULL, 0x0fdf4538911930aaULL,
      {1.1597417873945934, 1.1440079535505325,
       0.96277751266224232, 0.95468808971871344}},
     // mixed b2 unit d3 mivec dsg
-    {0xf576814aeab01b13ULL, 0x5964c01d0d0b9969ULL, 0xead08e58c5365841ULL,
+    {0xf576814aeab01b13ULL, 0x4b3c272795178c5bULL, 0xead08e58c5365841ULL,
      {}},
     // mixed b2 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
@@ -1178,17 +1178,17 @@ const std::vector<Golden> GOLDEN = {
      {0.67367142063303331, 0.66854757719633096,
       0.49546931803228644, 0.49546931803228644}},
     // mixed b2 shifted d2 mivec dsg
-    {0xe13c162d2e523a2eULL, 0xb28462af4a60c08aULL, 0xb90ef543eb47e8faULL,
+    {0xe13c162d2e523a2eULL, 0x1a5895dcb7b9d0e5ULL, 0xb90ef543eb47e8faULL,
      {}},
     // mixed b2 shifted d3 complete sg
-    {0x743ca6789f440d54ULL, 0x5fa75c85ac51956fULL, 0xb1742fb4d009e314ULL,
+    {0x743ca6789f440d54ULL, 0x5fa75c85ac51956fULL, 0xc4f45416ab4a16a3ULL,
      {0.71544037633020041, 0.71306255993787171,
       0.51000964823268347, 0.52592771607034816}},
     // mixed b2 shifted d3 complete dsg
-    {0x800041d692117e6eULL, 0xf8ff1fb122fc8ec6ULL, 0x8e29c77baf33d821ULL,
+    {0x800041d692117e6eULL, 0x091a9e29110b559fULL, 0x65e2ef6eac7e2c57ULL,
      {}},
     // mixed b2 shifted d3 mivec sg
-    {0x5246006331942dc7ULL, 0x6980a6e6d06422a8ULL, 0x661ae9cecfa98b59ULL,
+    {0x5246006331942dc7ULL, 0xa8f6652f3e801bfcULL, 0xabc341827dda58d5ULL,
      {0.70655809347438647, 0.6996905779964131,
       0.70176768667511746, 0.52592771607034816}},
     // mixed b2 shifted d3 mivec dsg

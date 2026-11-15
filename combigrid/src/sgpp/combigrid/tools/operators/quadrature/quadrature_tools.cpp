@@ -73,8 +73,10 @@ void combineTensorGrids(const QuadratureContext& context, const VectorSourceFunc
     QuadratureScratch scratch(sparseGrid.nDim(), nOutputs);
     std::vector<double> tgResult(nOutputs);
     std::vector<double> threadResult(nOutputs, 0.0);
+    context.weightTable.computeAllRows();  // As in the scalar operator
 
-#pragma omp for schedule(guided) nowait
+    // Dynamic scheduling as in the scalar operator
+#pragma omp for schedule(dynamic) nowait
     for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
       const TensorGridCTDataView tgData = sparseGrid.getDomainTensorGrid(tgIdx);
       processTensorGrid(context, sourceFunc, tgData.tensorGrid, scratch, tgResult);
