@@ -1,0 +1,62 @@
+samples: 52442
+
+## per dso
+ 37.75 %  libsgppcombigrid.so
+ 30.11 %  perf_e2e
+ 24.63 %  libm.so.6
+  3.00 %  libopenblasp-r0.3.32.so
+  2.13 %  libgomp.so.1.0.0
+  1.45 %  [unknown]
+  0.93 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 27.87 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 22.51 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  [libsgppcombigrid.so]
+ 16.47 %  __ieee754_exp_fma  [libm.so.6]
+ 12.85 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  [libsgppcombigrid.so]
+  7.42 %  exp@@GLIBC_2.29  [libm.so.6]
+  3.00 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.12 %  [unknown]  [libgomp.so.1.0.0]
+  1.45 %  [unknown]  [[unknown]]
+  1.20 %  exp@plt  [perf_e2e]
+  1.03 %  std::_Function_handler<double   [perf_e2e]
+  0.95 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  [libsgppcombigrid.so]
+  0.91 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.74 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.29 %  sgpp::combigrid::TensorGridView::nGP  [libsgppcombigrid.so]
+  0.23 %  memset@plt  [libsgppcombigrid.so]
+  0.21 %  sgpp::combigrid::misc::CTCoeffTrie::CTCoeffTrie  [libsgppcombigrid.so]
+  0.16 %  sgpp::combigrid::tools::dsg_weighted_sum::prepareDeltaTensorGrid  [libsgppcombigrid.so]
+  0.14 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::childBlock  [libsgppcombigrid.so]
+  0.13 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock  [libsgppcombigrid.so]
+  0.08 %  sgpp::combigrid::SparseGridBase::computeMetaValues  [libsgppcombigrid.so]
+  0.04 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::blockWidth  [libsgppcombigrid.so]
+  0.04 %  id::MI<unsigned int> sgpp::combigrid::tools::computeComponentWiseMaxParallel<unsigned int>  [libsgppcombigrid.so]
+  0.03 %  sgpp::combigrid::tools::complete_sg_gen::addBarPosAsMI  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::tools::complete_sg_gen::populateMIVecSerial  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::quadrature  [libsgppcombigrid.so]
+  0.01 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren  [libsgppcombigrid.so]
+  0.01 %  unsigned long   [perf_e2e]
+  0.01 %  GOMP_loop_ull_nonmonotonic_dynamic_next  [libgomp.so.1.0.0]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  memmove@plt  [libsgppcombigrid.so]
+  0.00 %  _mid_memalign  [libc.so.6]
+  0.00 %  GOMP_loop_ull_nonmonotonic_dynamic_next@plt  [libsgppcombigrid.so]
+  0.00 %  operator new  [libsgppbase.so]
+
+## per symbol / innermost helper (combigrid + base only)
+ 11.07 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren
+  6.25 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::compRowWeights
+  5.99 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::
+  4.85 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::updateCoeffSums
+  4.08 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.05 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.41 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren
+  0.29 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::evaluate
+  0.27 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  <=  stedVecView<sgpp::combigrid::misc::CTCoeffTrie::Node const, 2ul, unsigned long>::makeChild
+  0.27 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  <=  sgpp::combigrid::misc::FlatNestedVecView<double const, 3ul, unsigned long>::makeChild
+  0.23 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  <=  sgpp::combigrid::misc::DoubleDouble::operator*

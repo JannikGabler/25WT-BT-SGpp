@@ -1,0 +1,53 @@
+samples: 16938
+
+## per dso
+ 33.50 %  libm.so.6
+ 22.92 %  perf_e2e
+ 16.09 %  libsgppcombigrid.so
+ 11.02 %  libgomp.so.1.0.0
+  9.02 %  libopenblasp-r0.3.32.so
+  7.20 %  [unknown]
+  0.24 %  libc.so.6
+  0.02 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 19.40 %  sgpp::combigrid::perf::uqIntegrand  [perf_e2e]
+ 16.57 %  __ieee754_exp_fma  [libm.so.6]
+ 12.22 %  exp@@GLIBC_2.29  [libm.so.6]
+ 11.02 %  [unknown]  [libgomp.so.1.0.0]
+  9.02 %  [unknown]  [libopenblasp-r0.3.32.so]
+  8.94 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  7.20 %  [unknown]  [[unknown]]
+  3.13 %  Eigen::internal::kiss_cpx_fft<double>::bfly4  [libsgppcombigrid.so]
+  2.35 %  void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >  [libsgppcombigrid.so]
+  2.09 %  exp@plt  [perf_e2e]
+  1.61 %  __sincos_fma  [libm.so.6]
+  1.43 %  std::_Function_handler<double   [perf_e2e]
+  1.35 %  __cos_fma  [libm.so.6]
+  1.34 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.69 %  sgpp::combigrid::quadrature_rules::  [libsgppcombigrid.so]
+  0.41 %  __cexp  [libm.so.6]
+  0.32 %  sgpp::combigrid::quadrature_rules::ClenshawCurtisQuadRule::genWeightsFFTInplace  [libsgppcombigrid.so]
+  0.22 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.19 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.14 %  std::vector<std::complex<double>, std::allocator<std::complex<double> > >::resize  [libsgppcombigrid.so]
+  0.14 %  Eigen::internal::kissfft_impl<double>::get_plan  [libsgppcombigrid.so]
+  0.11 %  sgpp::combigrid::tools::node_table_generation::mapOntoDomain  [libsgppcombigrid.so]
+  0.04 %  cos@plt  [libsgppcombigrid.so]
+  0.02 %  cexp@plt  [libsgppcombigrid.so]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  sincos@plt  [libsgppcombigrid.so]
+  0.01 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.01 %  sysmalloc_mmap  [libc.so.6]
+  0.01 %  __set_vma_name  [libc.so.6]
+  0.01 %  __sincos_ifunc@plt  [libm.so.6]
+  0.01 %  _int_free_maybe_trim  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  5.62 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  3.13 %  Eigen::internal::kiss_cpx_fft<double>::bfly4  <=  Eigen::internal::kiss_cpx_fft<double>::bfly4
+  2.21 %  void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >  <=  void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >
+  2.20 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  0.96 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.21 %  sgpp::combigrid::quadrature_rules::  <=  Eigen::internal::kiss_cpx_fft<double>::bfly4
+  0.20 %  sgpp::combigrid::quadrature_rules::  <=  forwardDFTRealParts

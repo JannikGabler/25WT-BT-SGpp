@@ -1,0 +1,60 @@
+samples: 33351
+
+## per dso
+ 41.59 %  libsgppcombigrid.so
+ 30.61 %  libm.so.6
+ 15.77 %  libgomp.so.1.0.0
+  6.78 %  perf_e2e
+  3.05 %  libopenblasp-r0.3.32.so
+  2.10 %  [unknown]
+  0.09 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.01 %  libsgppbase.so
+
+## per symbol
+ 30.61 %  __cos_fma  [libm.so.6]
+ 19.34 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+ 17.03 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  [libsgppcombigrid.so]
+ 15.77 %  [unknown]  [libgomp.so.1.0.0]
+  5.72 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  4.01 %  mbigrid::tools::dsg_lin_interpolation::evaluateMarked<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  3.05 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.10 %  [unknown]  [[unknown]]
+  1.19 %  sgpp::combigrid::tools::dsg_lin_interpolation::  [libsgppcombigrid.so]
+  0.95 %  cos@plt  [perf_e2e]
+  0.10 %  std::_Function_handler<double   [perf_e2e]
+  0.04 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.01 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  0.01 %  _int_free_maybe_trim  [libc.so.6]
+  0.01 %  _mid_memalign  [libc.so.6]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  _int_free_merge_chunk  [libc.so.6]
+  0.01 %  _int_memalign  [libc.so.6]
+  0.01 %  operator new  [libsgppbase.so]
+  0.01 %  sgpp::combigrid::tools::dsg_lin_interpolation::prepareDimension  [libsgppcombigrid.so]
+  0.00 %  unlink_chunk.isra.0  [libc.so.6]
+  0.00 %  memset@plt  [libsgppcombigrid.so]
+  0.00 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.00 %  snprintf  [libc.so.6]
+  0.00 %  GOMP_loop_ull_nonmonotonic_dynamic_next  [libgomp.so.1.0.0]
+  0.00 %    [perf_e2e]
+  0.00 %  sgpp::combigrid::tools::dsg_lin_interpolation::lowerBoundFrom  [libsgppcombigrid.so]
+  0.00 %  __posix_memalign  [libc.so.6]
+  0.00 %  sgpp::combigrid::misc::ClosureTrie::ClosureTrie  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+ 13.52 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  combigrid::tools::dsg_lin_interpolation::sumTGCorners<sgpp::combigrid::misc::ScalarValues>
+ 11.98 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  forEachCornerSlot<sgpp::combigrid::tools::dsg_lin_interpolation::markCorners
+  3.30 %  mbigrid::tools::dsg_lin_interpolation::evaluateMarked<sgpp::combigrid::misc::ScalarValues>  <=  ombigrid::tools::dsg_lin_interpolation::evaluateBlock<sgpp::combigrid::misc::ScalarValues>
+  1.67 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  sgpp::combigrid::misc::DSGLinInterpQuery::idShift
+  1.57 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  1.53 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::DSGLinInterpQuery::idShift
+  1.26 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  sgpp::combigrid::misc::DSGLinInterpQuery::idLvl
+  1.21 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::DSGLinInterpQuery::idLvl
+  1.19 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  _ZSt11countr_zeroITkSt18__unsigned_integermEiT_
+  1.13 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  _ZSt11countr_zeroITkSt18__unsigned_integermEiT_
+  0.88 %  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners  <=  sgpp::combigrid::tools::dsg_lin_interpolation::markCorners
+  0.72 %  sgpp::combigrid::tools::dsg_lin_interpolation::  <=  sgpp::combigrid::tools::lin_interpolation::fillWeightTable
+  0.54 %  mbigrid::tools::dsg_lin_interpolation::evaluateMarked<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.37 %  sgpp::combigrid::tools::dsg_lin_interpolation::  <=  sgpp::combigrid::tools::dsg_lin_interpolation::
+  0.30 %  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>  <=  ombigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>

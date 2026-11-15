@@ -1,0 +1,10 @@
+profile of `^interp/dsg/cc/b0/d7/L4/p16$` (e2e, 16 threads, self time)
+    63.49%  perf_e2e  libm.so.6                [.] __cos_fma
+    13.15%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+    10.70%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::{anon}::sumWithGlobalWeights<sgpp::combigrid::misc::ScalarValues>
+     3.91%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     1.94%  perf_e2e  perf_e2e                 [.] cos@plt
+     0.88%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     0.61%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+
+samples per process: 1 warm-up + 8

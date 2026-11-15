@@ -1,0 +1,43 @@
+samples: 59415
+
+## per dso
+ 68.94 %  libm.so.6
+ 15.39 %  perf_e2e
+  7.17 %  libsgppcombigrid.so
+  5.40 %  libgomp.so.1.0.0
+  1.69 %  libopenblasp-r0.3.32.so
+  1.39 %  [unknown]
+  0.02 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 68.94 %  __cos_fma  [libm.so.6]
+ 12.76 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  6.58 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  5.40 %  [unknown]  [libgomp.so.1.0.0]
+  2.14 %  cos@plt  [perf_e2e]
+  1.69 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.39 %  [unknown]  [[unknown]]
+  0.56 %  sgpp::combigrid::tools::lin_interpolation::prepareCorners  [libsgppcombigrid.so]
+  0.49 %  std::_Function_handler<double   [perf_e2e]
+  0.02 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  _int_free_maybe_trim  [libc.so.6]
+  0.00 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.00 %  __posix_memalign  [libc.so.6]
+  0.00 %  pthread_create@GLIBC_2.2.5  [libc.so.6]
+  0.00 %  arena_get2  [libc.so.6]
+  0.00 %  _int_malloc  [libc.so.6]
+  0.00 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.00 %  _int_memalign  [libc.so.6]
+  0.00 %  sgpp::combigrid::SparseGridBase::computeMetaValues  [libsgppcombigrid.so]
+  0.00 %  __lll_lock_wake_private  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  2.42 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+  1.85 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.80 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::lin_interpolation::moveToCorner
+  0.33 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.28 %  sgpp::combigrid::tools::lin_interpolation::prepareCorners  <=  sgpp::combigrid::tools::lin_interpolation::fillWeightTable

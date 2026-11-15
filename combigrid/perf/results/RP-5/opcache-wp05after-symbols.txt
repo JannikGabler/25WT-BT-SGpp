@@ -1,0 +1,7 @@
+op-cache misses by symbol, WP-05-after (quad/dsg/cc-uq/b0/d10/L7, 16 t, 1 warm-up + 1 sample, sampled every 20000 misses; recorded like opcache_stat.py --record)
+    31.10%  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::(anonymous namespace)::sumWithGlobalWeights<
+    29.13%  perf_e2e                 [.] sgpp::combigrid::perf::uqIntegrand(sgpp::base::DataVector const&)
+    20.26%  libm.so.6                [.] __ieee754_exp_fma
+     8.24%  libm.so.6                [.] exp@@GLIBC_2.29
+     2.53%  perf_e2e                 [.] std::_Function_handler<double (sgpp::base::DataVector const&), double (*)(sgpp::base::DataVector const&)>::_M_invoke(std::_Any_data const&, sgpp::base::DataVec
+     1.06%  [unknown]                [k] 0xffffffffb48076a3

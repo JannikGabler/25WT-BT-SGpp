@@ -1,0 +1,34 @@
+samples: 89996
+
+## per dso
+ 73.80 %  libm.so.6
+ 14.32 %  perf_e2e
+  6.22 %  libsgppcombigrid.so
+  3.19 %  libgomp.so.1.0.0
+  1.31 %  [unknown]
+  1.17 %  libopenblasp-r0.3.32.so
+  0.00 %  ld-linux-x86-64.so.2
+  0.00 %  libc.so.6
+
+## per symbol
+ 73.80 %  __cos_fma  [libm.so.6]
+ 11.61 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  5.98 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  3.19 %  [unknown]  [libgomp.so.1.0.0]
+  2.36 %  cos@plt  [perf_e2e]
+  1.31 %  [unknown]  [[unknown]]
+  1.17 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.34 %  std::_Function_handler<double   [perf_e2e]
+  0.23 %  sgpp::combigrid::tools::lin_interpolation::prepareCorners  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.00 %  __nptl_free_stacks  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  2.17 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+  1.92 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::lin_interpolation::moveToCorner
+  1.50 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.27 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled

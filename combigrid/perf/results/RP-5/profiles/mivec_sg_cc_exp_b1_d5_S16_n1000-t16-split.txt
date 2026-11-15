@@ -1,0 +1,41 @@
+samples: 35838
+
+## per dso
+ 44.14 %  libm.so.6
+ 34.53 %  perf_e2e
+ 13.83 %  libsgppcombigrid.so
+  3.38 %  libgomp.so.1.0.0
+  2.90 %  libopenblasp-r0.3.32.so
+  1.19 %  [unknown]
+  0.01 %  ld-linux-x86-64.so.2
+  0.01 %  libc.so.6
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 26.79 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 21.87 %  __ieee754_exp_fma  [libm.so.6]
+ 19.97 %  exp@@GLIBC_2.29  [libm.so.6]
+ 13.81 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  5.18 %  exp@plt  [perf_e2e]
+  3.38 %  [unknown]  [libgomp.so.1.0.0]
+  2.90 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.56 %  std::_Function_handler<double   [perf_e2e]
+  2.30 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  1.19 %  [unknown]  [[unknown]]
+  0.01 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.01 %  _int_malloc  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::computeCTCoeffs  [libsgppcombigrid.so]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  check_match  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::tools::node_table_generation::genUnitNodeTable  [libsgppcombigrid.so]
+  0.00 %  __cexp  [libm.so.6]
+  0.00 %    [perf_e2e]
+  0.00 %  _mid_memalign  [libc.so.6]
+  0.00 %  sgpp::combigrid::MIVec<unsigned int>::lookup  [libsgppcombigrid.so]
+  0.00 %  posix_memalign@plt  [libsgppbase.so]
+  0.00 %  pthread_cond_signal@@GLIBC_2.3.2  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  8.86 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  3.20 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  1.57 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled

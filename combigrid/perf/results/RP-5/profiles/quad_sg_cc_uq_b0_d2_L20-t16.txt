@@ -1,0 +1,23 @@
+profile of `^quad/sg/cc-uq/b0/d2/L20$` (e2e, 16 threads, self time)
+    19.51%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::uqIntegrand
+    16.65%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+    12.27%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     9.00%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+     7.69%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     3.87%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     3.14%  perf_e2e  libsgppcombigrid.so      [.] Eigen::internal::kiss_cpx_fft<double>::bfly4
+     2.68%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     2.35%  perf_e2e  libsgppcombigrid.so      [.] void Eigen::internal::kiss_cpx_fft<double>::work<std::complex<double> >
+     2.11%  perf_e2e  perf_e2e                 [.] exp@plt
+     1.61%  perf_e2e  libm.so.6                [.] __sincos_fma
+     1.44%  perf_e2e  perf_e2e                 [.] std::_Function_handler<double 
+     1.40%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     1.36%  perf_e2e  libm.so.6                [.] __cos_fma
+     1.35%  perf_e2e  libm.so.6                [.] __exp_finite@GLIBC_2.15@plt
+     1.29%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     0.89%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a86
+     0.74%  perf_e2e  [unknown]                [k] 0xffffffffb44011b2
+     0.69%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::quadrature_rules::{anon}::forwardDFTRealParts
+     0.51%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a82
+
+samples per process: 1 warm-up + 2

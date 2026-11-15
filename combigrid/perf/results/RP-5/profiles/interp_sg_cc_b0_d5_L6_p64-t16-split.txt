@@ -1,0 +1,41 @@
+samples: 56481
+
+## per dso
+ 67.44 %  libm.so.6
+ 19.83 %  perf_e2e
+  5.84 %  libsgppcombigrid.so
+  4.13 %  libgomp.so.1.0.0
+  1.76 %  libopenblasp-r0.3.32.so
+  0.98 %  [unknown]
+  0.02 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 67.44 %  __cos_fma  [libm.so.6]
+ 17.08 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  5.74 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  4.13 %  [unknown]  [libgomp.so.1.0.0]
+  2.26 %  cos@plt  [perf_e2e]
+  1.76 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.98 %  [unknown]  [[unknown]]
+  0.49 %  std::_Function_handler<double   [perf_e2e]
+  0.03 %  sgpp::combigrid::InterpolationMethod::hasTrivialBasisValues  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::basisValues  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::interpolate  [libsgppcombigrid.so]
+  0.01 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::weighted_sum::setUpIterDims  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::global_interpolation::fillBasisValues  [libsgppcombigrid.so]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::node_gen_funcs::SecondTypeChebyshevNodeGenFunc::getInterpolationMethod  [libsgppcombigrid.so]
+  0.00 %  mmap64  [ld-linux-x86-64.so.2]
+  0.00 %  _int_free_chunk  [libc.so.6]
+  0.00 %  memset@plt  [libsgppcombigrid.so]
+  0.00 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  2.68 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  1.81 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.47 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.46 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::weighted_sum::updateWeightProducts
+  0.32 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::evaluate

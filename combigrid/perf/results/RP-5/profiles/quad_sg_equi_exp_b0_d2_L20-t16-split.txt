@@ -1,0 +1,38 @@
+samples: 18804
+
+## per dso
+ 41.10 %  libm.so.6
+ 24.77 %  perf_e2e
+ 12.58 %  libsgppcombigrid.so
+ 11.59 %  libgomp.so.1.0.0
+  6.48 %  libopenblasp-r0.3.32.so
+  3.19 %  [unknown]
+  0.27 %  libc.so.6
+  0.02 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 19.59 %  __ieee754_exp_fma  [libm.so.6]
+ 19.27 %  exp@@GLIBC_2.29  [libm.so.6]
+ 16.81 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 12.32 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+ 11.59 %  [unknown]  [libgomp.so.1.0.0]
+  6.48 %  [unknown]  [libopenblasp-r0.3.32.so]
+  5.44 %  exp@plt  [perf_e2e]
+  3.19 %  [unknown]  [[unknown]]
+  2.51 %  std::_Function_handler<double   [perf_e2e]
+  2.24 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.26 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.14 %  sgpp::combigrid::tools::node_table_generation::mapOntoDomain  [libsgppcombigrid.so]
+  0.06 %  sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc::genNodesWithoutBoundary  [libsgppcombigrid.so]
+  0.06 %  sgpp::combigrid::quadrature_rules::SimpsonQuadRule::genWeightsInplace  [libsgppcombigrid.so]
+  0.02 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  strcmp  [ld-linux-x86-64.so.2]
+  0.01 %  sgpp::combigrid::perf::Suite::main  [perf_e2e]
+  0.01 %  _int_malloc  [libc.so.6]
+  0.01 %  _mid_memalign  [libc.so.6]
+  0.01 %  sgpp::combigrid::quadrature  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  7.24 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  3.27 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  1.47 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled

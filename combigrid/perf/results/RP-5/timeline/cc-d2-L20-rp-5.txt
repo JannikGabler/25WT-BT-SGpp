@@ -1,0 +1,31 @@
+case quad/sg/cc-uq/b0/d2/L20 snapshot rp-5: 50064 samples, 31 threads, 4000 Hz, bins 5.0 ms
+pool-work windows (s from first sample): [0.031, 1.648]
+analysed window (last operator call): [0.840, 1.660] = 820.0 ms
+
+thread  timeline (one char per bin; F fft, I integrand, S combigrid, G gomp, B openblas, K kernel, o other, . none)   busy ms by class
+ 127620 ..KKKGGG.......GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...........................................................................................KKK  I208 S32 G32 K22 F0 | idle≈505
+ 127621 ...................................................................................................................................................................K  K0 | idle≈815
+ 127622 ...................................................................................................................................................................K  K0 | idle≈815
+ 127623 ...................................................................................................................................................................K  K0 | idle≈815
+ 127624 ...................................................................................................................................................................K  K0 | idle≈815
+ 127628 ...................................................................................................................................................................o  o0 | idle≈815
+ 127631 ...................................................................................................................................................................K  K0 | idle≈815
+ 127632 ...................................................................................................................................................................K  K0 | idle≈815
+ 127637 ..GGGFFGG......KGGGIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG...........................................................................................GGG  I210 G49 S33 K8 F5 o0 | idle≈495
+ 127636 ..GGGGGG.......GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...........................................................................................GGG  I208 G49 S33 K2 F0 | idle≈505
+ 127638 ..GGGFGG.......GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG...........................................................................................GGG  I205 G50 S36 F2 K2 | idle≈505
+ 127640 ..GGGGGG.......KGG................................................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG..................................GGG  I235 S56 G48 K6 | idle≈455
+ 127642 ..GGGGGG.......GGG.KKKKKKKKKKKKFFFFFFKKKFFFFFFFFFFFFFFFFFFFFFFFFFFIIIIIIIIIIIIIIIIII....................................................IIIIIIIIIIIIIIIIIIIIIIIIIIGG  I176 F160 K76 G38 S38 o1 | idle≈310
+ 127644 ..GGGKKKFFFFFFFKKGGIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG..........................................................................................GGG  I211 S40 G38 F33 K25 o2 | idle≈460
+ 127641 ..GGGGGG.......GGG.KKKFKFFFFFIIIIIIIIIIIIIIKKFFFKKFFFFFFFFFFFFFFIIIIIIIIIIIIIIIGGG...............................................................................GGG  I122 F113 K50 G48 S18 o3 | idle≈445
+ 127639 ..GGGGGG.......KKKSS..............................................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG........................................GGG  I204 S58 G39 K16 o1 | idle≈475
+ 127643 ..GGGGGG.......GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIKKKKKKKKKKKFKKKKKKKKFFFFFFFFFKKKKKFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFKKFKIIIIIIIIIIIIIIIIIIIIIIGG.GGG  F259 I252 K133 G50 S42 o4 | idle≈55
+ 127645 G.GGGGGG.......GGG.IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG.........................................................................................GGG  I199 G53 S31 K21 F0 | idle≈490
+ 127647 IIGGGGGG.......GGG...IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG.............................................................................................GGG  I200 G50 S30 K1 | idle≈515
+ 127646 ..GGGGGG.......GGG.FIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGG.........................................................................................GGG  I213 G48 S33 F3 K3 o0 | idle≈495
+ 127648 ..GGGGGG.......GGG..........IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG....................................................................................GGG  I194 G50 S36 K0 | idle≈515
+ 127649 ..GGGKFFGGG....GGG.KKFFFIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII..........IIIIIIIIIIIIIIIIIIIIIIIIIIIIIGG................................................................GGG  I257 G50 S45 F24 K14 o0 | idle≈405
+ 127650 ..GGGKKFFFFGGG.GGG.KFIIIIIIIIIIIIIIIIIIIIIIIIII.................IIIIIIIIIIIIIIIIIIIIIIIIIIGGG....................................................................GGG  I218 G50 S40 F26 K13 o1 | idle≈445
+
+all threads in window: I 3310 ms, G 743 ms, F 627 ms, S 602 ms, K 394 ms, o 14 ms
+thread-time capacity 16 x 820 ms = 13120 ms; sampled busy 5690 ms

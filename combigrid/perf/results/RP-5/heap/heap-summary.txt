@@ -1,0 +1,70 @@
+# heaptrack (rp-5, 16 t, --warmups 0 --samples 1, memory-capped), condensed by heap_summary.py.
+# Caveat: under LTO identical std::vector constructors are folded; frames shown as
+# `SGGenInstr::SGGenInstr` are such folded vector allocations inside the operators (CC FFT
+# temporaries, weight rows, sub-tries); see ANALYSIS.md "Re-profiling RP-5" for the composition.
+# Per-site peaks are not simultaneous (heaptrack note), the "peak heap memory consumption" line is.
+== quad_dsg_cc_uq_b0_d10_L7
+   9.25M    1613 calls  sgpp::combigrid::MI<> sgpp::combigrid::tools::computeComponentWiseMaxParallel<>(sgpp::combigrid::MIVec<> const&)
+   3.87M     455 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+   1.96M    1415 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+ 857.07K     418 calls  ?
+  73.73K       1 calls  sgpp::base::DataVector::DataVector(unsigned long, double)
+  21.12K      32 calls  sgpp::base::DataVector::DataVector(unsigned long, double)
+  12.00K      30 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+   6.14K       7 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+calls to allocation functions: 4547 (618/s)
+peak heap memory consumption: 16.07M
+peak RSS (including heaptrack overhead): 35.14M
+total memory leaked: 25.82K
+== quad_dsg_equi_exp_b0_d3_L16
+  10.74M     361 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+   8.39M      32 calls  sgpp::base::DataVector::DataVector(unsigned long, double)
+   1.05M      17 calls  sgpp::combigrid::tools::node_table_generation::mapOntoDomain(sgpp::combigrid::SGGenInstr const&, sgpp::combigrid::NodeTable const&) [clone ._omp_fn.0]
+   1.05M      17 calls  sgpp::combigrid::tools::node_table_generation::genUnitNodeTable(sgpp::combigrid::SGGenInstr const&, sgpp::combigrid::MIVec<> const&, bool) [clone ._om
+ 217.54K     392 calls  sgpp::combigrid::misc::DeltaWeightedSumScratch::DeltaWeightedSumScratch(unsigned long, unsigned long, unsigned long)
+ 204.10K     134 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+  73.73K       1 calls  ?
+  15.91K      41 calls  ?
+calls to allocation functions: 1434 (7547/s)
+peak heap memory consumption: 21.78M
+peak RSS (including heaptrack overhead): 38.55M
+total memory leaked: 25.82K
+== quad_dsg_equi_exp_b1_d20_L6
+  37.76M      58 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+  25.17M      95 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+   8.22M     667 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+  73.73K       1 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+  12.00K      30 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+   6.14K       7 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+   5.46K      14 calls  ?
+   3.07K       7 calls  ?
+calls to allocation functions: 1739 (1331/s)
+peak heap memory consumption: 71.25M
+peak RSS (including heaptrack overhead): 79.69M
+total memory leaked: 25.82K
+== quad_sg_cc_uq_b0_d2_L20
+  62.91M      77 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+  58.72M     117 calls  sgpp::combigrid::SGGenInstr::SGGenInstr(unsigned long)
+  33.55M      21 calls  sgpp::combigrid::tools::node_table_generation::mapOntoDomain(sgpp::combigrid::SGGenInstr const&, sgpp::combigrid::NodeTable const&) [clone ._omp_fn.0]
+  33.55M      21 calls  sgpp::combigrid::tools::node_table_generation::mapOntoDomain(sgpp::combigrid::SGGenInstr const&, sgpp::combigrid::NodeTable const&) [clone ._omp_fn.0]
+  33.55M      21 calls  sgpp::combigrid::tools::node_table_generation::genUnitNodeTable(sgpp::combigrid::SGGenInstr const&, sgpp::combigrid::MIVec<> const&, bool) [clone ._om
+  73.73K       1 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+  12.00K      30 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+   6.14K       7 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+calls to allocation functions: 946 (1092/s)
+peak heap memory consumption: 222.41M
+peak RSS (including heaptrack overhead): 241.18M
+total memory leaked: 25.82K
+== quad_sg_equi_exp_b0_d2_L20
+  33.55M      21 calls  sgpp::combigrid::tools::node_table_generation::mapOntoDomain(sgpp::combigrid::SGGenInstr const&, sgpp::combigrid::NodeTable const&) [clone ._omp_fn.0]
+  33.55M      21 calls  sgpp::combigrid::tools::node_table_generation::mapOntoDomain(sgpp::combigrid::SGGenInstr const&, sgpp::combigrid::NodeTable const&) [clone ._omp_fn.0]
+  33.55M      21 calls  sgpp::combigrid::tools::node_table_generation::genUnitNodeTable(sgpp::combigrid::SGGenInstr const&, sgpp::combigrid::MIVec<> const&, bool) [clone ._om
+  73.73K       1 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+  12.00K      30 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+   6.14K       7 calls  sgpp::combigrid::perf::Suite::Case& std::vector<>::emplace_back<>(sgpp::combigrid::perf::Suite::Case&&)
+   5.46K      14 calls  sgpp::base::GridTypeParser::{lambda()#1}::operator()() const [clone .isra.0]
+   2.02K      28 calls  sgpp::base::GridTypeParser::{lambda()#1}::operator()() const [clone .isra.0]
+calls to allocation functions: 671 (1465/s)
+peak heap memory consumption: 100.78M
+peak RSS (including heaptrack overhead): 118.87M
+total memory leaked: 25.82K

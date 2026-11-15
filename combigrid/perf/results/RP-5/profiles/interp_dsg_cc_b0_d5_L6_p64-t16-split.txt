@@ -1,0 +1,63 @@
+samples: 27536
+
+## per dso
+ 56.62 %  libm.so.6
+ 17.28 %  libsgppcombigrid.so
+ 15.07 %  perf_e2e
+  4.97 %  libgomp.so.1.0.0
+  3.79 %  libopenblasp-r0.3.32.so
+  1.34 %  [unknown]
+  0.90 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.01 %  libsgppbase.so
+
+## per symbol
+ 56.62 %  __cos_fma  [libm.so.6]
+ 14.10 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  [libsgppcombigrid.so]
+ 12.85 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  4.97 %  [unknown]  [libgomp.so.1.0.0]
+  3.79 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.80 %  cos@plt  [perf_e2e]
+  1.38 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  [libsgppcombigrid.so]
+  1.34 %  [unknown]  [[unknown]]
+  0.72 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.48 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  [libsgppcombigrid.so]
+  0.42 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock  [libsgppcombigrid.so]
+  0.42 %  std::_Function_handler<double   [perf_e2e]
+  0.31 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren  [libsgppcombigrid.so]
+  0.17 %  memset@plt  [libsgppcombigrid.so]
+  0.13 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::childBlock  [libsgppcombigrid.so]
+  0.08 %  sgpp::combigrid::TensorGridView::nGP  [libsgppcombigrid.so]
+  0.08 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::blockWidth  [libsgppcombigrid.so]
+  0.06 %  _mid_memalign  [libc.so.6]
+  0.05 %  sgpp::combigrid::tools::dsg_weighted_sum::prepareDeltaTensorGrid  [libsgppcombigrid.so]
+  0.03 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.03 %  void sgpp::combigrid::tools::dsg_global_interpolation::  [libsgppcombigrid.so]
+  0.02 %  _int_malloc  [libc.so.6]
+  0.02 %  sgpp::combigrid::tools::dsg_global_interpolation::fillBasisValuesOfRow  [libsgppcombigrid.so]
+  0.02 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.02 %  _int_free_merge_chunk  [libc.so.6]
+  0.01 %  __posix_memalign  [libc.so.6]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  operator new  [libsgppbase.so]
+  0.01 %  sgpp::combigrid::tools::dsg_global_interpolation::evaluateInterpolant  [libsgppcombigrid.so]
+  0.01 %  _int_free_maybe_trim  [libc.so.6]
+  0.01 %  unlink_chunk.isra.0  [libc.so.6]
+  0.01 %  std::vector<double, std::allocator<double> >::resize  [libsgppcombigrid.so]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::InterpolationMethod::hasTrivialBasisValues  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::basisValues  [libsgppcombigrid.so]
+  0.00 %  operator delete  [libsgppbase.so]
+  0.00 %  _int_free_chunk  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  5.18 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::updateCoeffSums
+  3.47 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::compRowWeights
+  3.20 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::
+  1.62 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.77 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren
+  0.50 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.38 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren
+  0.37 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren
+  0.23 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock
+  0.23 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren

@@ -1,0 +1,14 @@
+profile of `^interplin/dsg/equi/b1/d10/L5/p32$` (e2e, 16 threads, self time)
+    38.12%  perf_e2e  libm.so.6                [.] __cos_fma
+    20.74%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::dsg_lin_interpolation::gatherCorners<sgpp::combigrid::misc::ScalarValues>
+    17.56%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::dsg_lin_interpolation::markCorners
+     6.01%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     4.13%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::dsg_lin_interpolation::evaluateMarked<sgpp::combigrid::misc::ScalarValues>
+     3.06%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     2.48%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     2.07%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     1.28%  perf_e2e  perf_e2e                 [.] cos@plt
+     1.01%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     0.69%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::dsg_lin_interpolation::{anon}::prepareTG
+
+samples per process: 1 warm-up + 4

@@ -1,0 +1,63 @@
+samples: 24116
+
+## per dso
+ 39.58 %  libgomp.so.1.0.0
+ 27.24 %  libm.so.6
+ 12.97 %  libsgppcombigrid.so
+ 12.48 %  perf_e2e
+  4.14 %  libopenblasp-r0.3.32.so
+  1.87 %  libc.so.6
+  1.30 %  [unknown]
+  0.41 %  libsgppbase.so
+  0.02 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 39.55 %  [unknown]  [libgomp.so.1.0.0]
+ 27.24 %  __cos_fma  [libm.so.6]
+ 10.75 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+ 10.54 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  [libsgppcombigrid.so]
+  4.14 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.30 %  [unknown]  [[unknown]]
+  1.28 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  1.11 %  cos@plt  [perf_e2e]
+  0.63 %  sgpp::combigrid::global_interpolation::OptBarycentricFormula::basisValues  [libsgppcombigrid.so]
+  0.62 %  std::_Function_handler<double   [perf_e2e]
+  0.56 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  [libsgppcombigrid.so]
+  0.42 %  sgpp::combigrid::tools::dsg_global_interpolation::fillBasisValuesOfRow  [libsgppcombigrid.so]
+  0.38 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.37 %  sgpp::combigrid::InterpolationMethod::hasTrivialBasisValues  [libsgppcombigrid.so]
+  0.32 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.10 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock  [libsgppcombigrid.so]
+  0.09 %  _mid_memalign  [libc.so.6]
+  0.07 %  memset@plt  [libsgppcombigrid.so]
+  0.05 %  void sgpp::combigrid::tools::dsg_global_interpolation::  [libsgppcombigrid.so]
+  0.05 %  __posix_memalign  [libc.so.6]
+  0.05 %  sgpp::combigrid::tools::dsg_weighted_sum::prepareDeltaTensorGrid  [libsgppcombigrid.so]
+  0.04 %  _int_malloc  [libc.so.6]
+  0.03 %  cfree@GLIBC_2.2.5  [libc.so.6]
+  0.03 %  operator new  [libsgppbase.so]
+  0.02 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::blockWidth  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::TensorGridView::nGP  [libsgppcombigrid.so]
+  0.02 %  GOMP_loop_ull_nonmonotonic_dynamic_start  [libgomp.so.1.0.0]
+  0.02 %  sgpp::combigrid::misc::DSGGlobalInterpIndex::addRowsOfDim  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::childBlock  [libsgppcombigrid.so]
+  0.02 %  _int_free_merge_chunk  [libc.so.6]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  _int_free_maybe_trim  [libc.so.6]
+  0.01 %  sgpp::combigrid::misc::DeltaWeightedSumScratch::~DeltaWeightedSumScratch  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::misc::DeltaWeightedSumScratch::DeltaWeightedSumScratch  [libsgppcombigrid.so]
+  0.01 %  std::vector<double, std::allocator<double> >::vector  [libsgppcombigrid.so]
+  0.01 %  free@plt  [libsgppbase.so]
+  0.01 %  sgpp::combigrid::tools::dsg_global_interpolation::evaluateInterpolant  [libsgppcombigrid.so]
+  0.01 %  _int_free_chunk  [libc.so.6]
+  0.01 %  unlink_chunk.isra.0  [libc.so.6]
+  0.01 %  GOMP_loop_ull_nonmonotonic_dynamic_next@plt  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  2.83 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::compRowWeights
+  2.29 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::SourceFunc::evaluate
+  2.28 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::updateCoeffSums
+  2.23 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::
+  0.73 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.37 %  sgpp::base::DataVector::DataVector  <=  double* std::uninitialized_fill_n<double*, unsigned long, double>
+  0.21 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  <=  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren
