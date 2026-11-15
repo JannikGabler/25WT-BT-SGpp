@@ -1,0 +1,11 @@
+perf stat, quad/dsg/cc-uq/b0/d10/L7, 16 threads, 1 sample, 0 warm-ups, snapshots WP-05-before / -after
+(OMP_PROC_BIND=close OMP_PLACES=threads), two runs each:
+
+            total    cycles      instructions  branch-misses  ic_stall_any  op_cache_miss
+before #1   6.966s   220.57e9    493.13e9      93.3e6         149.7e9       0.163e9
+after  #1   7.127s   226.15e9    493.14e9      91.1e6         149.4e9       1.900e9
+before #2   6.975s   220.43e9    493.15e9      92.9e6         149.5e9       0.167e9
+after  #2   7.218s   228.20e9    493.22e9      89.0e6         151.6e9       1.872e9
+
+Same instructions, 11x op-cache misses: code placement of the (unchanged) DSG kernel after the
+LTO re-link, not additional work. quad/dsg/equi-exp/b0/d10/L7 (same kernel) is neutral (0.999).

@@ -4,17 +4,18 @@
 #include <complex>
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.hpp>
+#include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <span>
 #include <vector>
 
 // Select the FFT backend from the SCons flags. Eigen is preferred if both are enabled, as its FFT
 // is 1.2-3.7x faster than Armadillo's for the transform lengths used here.
 #if defined(USE_EIGEN)
-#define HAVE_EIGEN_FFT 1
 #include <eigen3/unsupported/Eigen/FFT>
 #elif defined(USE_ARMADILLO)
-#define HAVE_ARMADILLO 1
 #include <armadillo>
 #endif
 
@@ -22,7 +23,60 @@ namespace sgpp {
 namespace combigrid {
 namespace quadrature_rules {
 
-// TODO: Optimize
+#ifdef SGPP_COMBIGRID_HAVE_FFT
+namespace {
+
+/**
+ * Fills @p b (length 2m) with the symmetric extension of the coefficient vector A[0..m] of
+ * Waldvogel's method (A[2j] = b_j / (4j^2 - 1) for j = 1, ..., m/2, all other entries 0):
+ * b[i] = A[i] for i <= m and b[i] = A[2m - i] for m < i < 2m. Returns A_N = A[m] for even m,
+ * else 0.
+ */
+double buildSymmetricInput(const size_t m, std::vector<double>& b) {
+  b.assign(2 * m, 0.0);
+
+  for (size_t j = 1; j <= m / 2; ++j) {
+    const double bj = ((m % 2 == 0) && (j == m / 2)) ? 1.0 : 2.0;
+    const double denom = 4.0 * static_cast<double>(j) * static_cast<double>(j) - 1.0;
+    const double factor = bj / denom;
+
+    b[2 * j] = factor;
+    if (2 * j < m) {
+      b[2 * m - 2 * j] = factor;
+    }
+  }
+
+  return (m % 2 == 0) ? b[m] : 0.0;
+}
+
+/**
+ * Writes the real parts of the bins 0, ..., out.size() - 1 of the unnormalized forward discrete
+ * Fourier transform of the real vector @p b (out.size() = b.size() / 2 + 1) to @p out.
+ */
+void forwardDFTRealParts(const std::vector<double>& b, const std::span<double> out) {
+  assert(out.size() == b.size() / 2 + 1);
+
+#if defined(USE_EIGEN)
+  // Only the first half of the spectrum (b is real): Eigen computes it as for the full spectrum
+  // and skips the reflection into the second half
+  Eigen::FFT<double> fft;
+  fft.SetFlag(Eigen::FFT<double>::HalfSpectrum);
+  std::vector<std::complex<double>> B;
+  fft.fwd(B, b);
+#elif defined(USE_ARMADILLO)
+  arma::vec br(b.size());
+  std::ranges::copy(b, br.begin());
+  const arma::cx_vec B = arma::fft(br);
+#endif
+
+  for (size_t i = 0; i < out.size(); i++) {
+    out[i] = B[i].real();
+  }
+}
+
+}  // namespace
+#endif  // SGPP_COMBIGRID_HAVE_FFT
+
 base::DataVector ClenshawCurtisQuadRule::genWeights(const GPCntType nNodes) const {
   if (nNodes == 0) {
     return base::DataVector();
@@ -37,24 +91,44 @@ base::DataVector ClenshawCurtisQuadRule::genWeights(const GPCntType nNodes) cons
 #endif
 }
 
-// TODO: Optimize
 void ClenshawCurtisQuadRule::genWeightsInplace(const std::span<double> out) const {
-  const GPCntType nNodes = static_cast<GPCntType>(out.size());
+  if (out.empty()) {
+    return;
+  } else if (out.size() == 1) {
+    out[0] = 1.0;
+    return;
+  }
 
-  const base::DataVector weights = genWeights(nNodes);
-  std::ranges::copy(weights, out.begin());
+#ifdef SGPP_COMBIGRID_HAVE_FFT
+  genWeightsFFTInplace(out);
+#else
+  genWeightsNaiveInplace(out);
+#endif
 }
 
-/*
-Naive approach (runtime complexity in O(n^2)).
-Only intended as a fallback.
-*/
+/**
+ * TODO: Document (update)
+ * Naive approach(runtime complexity in O(n ^ 2)).* Only intended as a fallback.
+ */
 base::DataVector ClenshawCurtisQuadRule::genWeightsNaive(const size_t nNodes) const {
-  assert(nNodes >= 2);
+  base::DataVector weights(nNodes);
+  genWeightsNaiveInplace(weights);
+  return weights;
+}
 
+// TODO: Decompose functionality into smaller functions(?)
+/**
+ * TODO: Document (update)
+ * Naive approach(runtime complexity in O(n ^ 2)).* Only intended as a fallback.
+ */
+void ClenshawCurtisQuadRule::genWeightsNaiveInplace(const std::span<double> out) const {
+  assert(out.size() >= 2);
+
+  std::fill(out.begin(), out.end(), 0.0);
+
+  const size_t nNodes = out.size();
   const size_t m = nNodes - 1;
   const size_t mHalf = m / 2;
-  std::vector<double> s(nNodes, 0.0);
 
   for (size_t i = 1; i <= mHalf; i++) {
     const double bj = ((m % 2 == 0) && (i == m / 2)) ? 1.0 : 2.0;
@@ -65,14 +139,14 @@ base::DataVector ClenshawCurtisQuadRule::genWeightsNaive(const size_t nNodes) co
     double c_km1 = cos_phi;
     double c_km2 = 1.0;
 
-    s[0] += factor * c_km2;
+    out[0] += factor * c_km2;
 
     if (mHalf >= 1) {
-      s[1] += factor * c_km1;
+      out[1] += factor * c_km1;
 
       for (size_t j = 2; j <= mHalf; j++) {
         double c_k = 2.0 * cos_phi * c_km1 - c_km2;
-        s[j] += factor * c_k;
+        out[j] += factor * c_k;
         c_km2 = c_km1;
         c_km1 = c_k;
       }
@@ -81,108 +155,68 @@ base::DataVector ClenshawCurtisQuadRule::genWeightsNaive(const size_t nNodes) co
 
   // Mirror values
   for (size_t i = 0; i <= mHalf; i++) {
-    s[m - i] = s[i];
+    out[m - i] = out[i];
   }
 
-  // Maps weights
-  std::vector<double> wcc(nNodes);
-  for (size_t k = 0; k <= m; ++k) {
-    double ck = (k == 0 || k == m) ? 1.0 : 2.0;
-    wcc[k] = ck / static_cast<double>(m) * (1.0 - s[k]);
+  for (size_t k = 0; k <= m; ++k) {  // Weights on [-1, 1]
+    const double ck = (k == 0 || k == m) ? 1.0 : 2.0;
+    out[k] = ck / static_cast<double>(m) * (1.0 - out[k]);
   }
 
-  base::DataVector w01(nNodes);  // Weights for [0, 1]
-  for (size_t i = 0; i <= m; ++i) {
-    w01[i] = 0.5 * wcc[m - i];
+  std::ranges::reverse(out);  // Weights on [0, 1]: w01[i] = 0.5 * wcc[m - i]
+  for (double& weight : out) {
+    weight *= 0.5;
   }
-  return w01;
+}
+
+base::DataVector ClenshawCurtisQuadRule::genWeightsFFT(const size_t nNodes) const {
+  base::DataVector weights(nNodes);
+  genWeightsFFTInplace(weights);
+  return weights;
 }
 
 #ifdef SGPP_COMBIGRID_HAVE_FFT
 
-/*
-Waldvogel method using the Inverse Fourier Transformation
-*/
-base::DataVector ClenshawCurtisQuadRule::genWeightsFFT(const size_t nNodes) const {
-  assert(nNodes >= 2);
+/**
+ * TODO: Document (update)
+ * Waldvogel method using the Fourier transform. The steps run in separate loops over the output (s,
+ * the weights on [-1, 1], the weights on [0, 1]), so that every value is rounded as in a
+ * computation with an array per step.
+ */
+void ClenshawCurtisQuadRule::genWeightsFFTInplace(const std::span<double> out) const {
+  assert(out.size() >= 2);
 
-  const size_t m = nNodes - 1;
-  const size_t Jmax = m / 2;
-
-  // Build A[0..N] with nonzeros only at even indices A[2j] = factor_j
-  std::vector<double> A(nNodes, 0.0);
-  for (size_t j = 1; j <= Jmax; ++j) {
-    const double bj = ((m % 2 == 0) && (j == m / 2)) ? 1.0 : 2.0;
-    const double denom = 4.0 * static_cast<double>(j) * static_cast<double>(j) - 1.0;
-    const double factor = bj / denom;
-    const size_t idx = 2 * j;
-
-    if (idx <= m) {
-      A[idx] = factor;
-    }
-  }
-
-  const double A_N = (m % 2 == 0) ? A[m] : 0.0;
-
-  // Build symmetric real vector b of length 2N: b[0..N] = A[0..N], b[N+1..2N-1] = A[2N-m]
-  std::vector<double> b(2 * m);
-
-  for (size_t i = 0; i <= m; i++) {
-    b[i] = A[i];
-  }
-  for (size_t i = m + 1; i < b.size(); i++) {
-    b[i] = A[2 * m - i];
-  }
-
-  // Compute unnormalized forward FFT of b (length 2N)
-  std::vector<std::complex<double>> B;
-  B.resize(b.size());
-
-#if defined(HAVE_EIGEN_FFT)
-  {
-    Eigen::FFT<double> fft;
-    // Eigen::FFT::fwd(out, in) computes the discrete Fourier transform (unnormalized)
-    // out is vector<complex>, in is vector<double>
-    fft.fwd(B, b);
-  }
-#elif defined(HAVE_ARMADILLO)
-  {
-    arma::vec br(b.size());
-
-    for (size_t i = 0; i < b.size(); ++i) {
-      br(i) = b[i];
-    }
-
-    arma::cx_vec BB = arma::fft(br);  // unnormalized forward FFT
-
-    for (size_t i = 0; i < b.size(); ++i) {
-      B[i] = std::complex<double>(BB(i).real(), BB(i).imag());
-    }
-  }
-#endif
+  const size_t m = out.size() - 1;
+  std::vector<double> b;
+  const double A_N = buildSymmetricInput(m, b);
 
   // Recover s[k] = sum_{j=1..Jmax} factor_j * cos(2*pi*j*k/N)
   // Using relation: Re(B[k]) = A0 + (-1)^k AN + 2 * sum_{m=1..N-1} A[m] cos(pi*m*k/N)
   // Here A0 = 0 and only even m=2j contribute. The sum in Re(B[k]) excludes the j = N/2 term
   // (even N), which s[k] contains once, so s[k] = (Re(B[k]) + (-1)^k * A_N)/2
-  std::vector<double> s(nNodes);
+  forwardDFTRealParts(b, out);
   for (size_t i = 0; i <= m; i++) {
-    const double ReBk = B[i].real();
     const double sign = (i % 2 == 0) ? 1.0 : -1.0;  // (-1)^k
-    s[i] = 0.5 * (ReBk + sign * A_N);
+    out[i] = 0.5 * (out[i] + sign * A_N);
   }
 
-  std::vector<double> wcc(nNodes);  // weights on [-1,1]
-  for (size_t i = 0; i <= m; i++) {
-    double ck = (i == 0 || i == m) ? 1.0 : 2.0;
-    wcc[i] = ck / static_cast<double>(m) * (1.0 - s[i]);
+  for (size_t i = 0; i <= m; i++) {  // Weights on [-1, 1]
+    const double ck = (i == 0 || i == m) ? 1.0 : 2.0;
+    out[i] = ck / static_cast<double>(m) * (1.0 - out[i]);
   }
 
-  base::DataVector w01(nNodes);  // weights on [0, 1]
-  for (size_t i = 0; i <= m; ++i) {
-    w01[i] = 0.5 * wcc[m - i];
+  std::ranges::reverse(out);  // Weights on [0, 1]: w01[i] = 0.5 * wcc[m - i]
+  for (double& weight : out) {
+    weight *= 0.5;
   }
-  return w01;
+}
+
+#else
+
+void ClenshawCurtisQuadRule::genWeightsFFTInplace(const std::span<double> out) const {
+  throw base::dependency_exception(
+      "FFT backend (EIGEN or ARMADILLO) is required but not available. Please make sure SG++ is "
+      "built including EIGEN or ARMADILLO.");
 }
 
 #endif  // SGPP_COMBIGRID_HAVE_FFT

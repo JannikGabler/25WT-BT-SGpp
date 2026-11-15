@@ -37,6 +37,7 @@
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
@@ -173,6 +174,22 @@ double sumOfGridPoints(const Grid& grid) {
 Complete sparse grid quadrature
 *******************************************************************************/
 
+/// WP-05: the whole quadrature() call (1D weights of all tensor grids and the weighted sums), one
+/// thread (perf::expSum).
+void addQuadOperator(Suite& suite, const std::string& nodes, const LvlType boundary,
+                     const size_t nDim, const LvlType maxLvl) {
+  suite.addMicro("micro/quad/operator/" + cfg(nodes, boundary, nDim, maxLvl), [=](MicroRun& run) {
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
+    const SparseGrid sg(genInstr);
+    const SourceFunc sourceFunc(perf::expSum);
+
+    run.setItems(sumOfGridPoints(sg));
+    run.setCounter("nTG", static_cast<double>(sg.nTG()));
+    run.measure([&]() { doNotOptimize(cg::quadrature(sourceFunc, sg)); });
+  });
+}
+
 /// tools::quadrature::processTensorGrid on the largest tensor grid (perf::expSum).
 void addProcessTG(Suite& suite, const std::string& nodes, const LvlType boundary, const size_t nDim,
                   const LvlType maxLvl) {
@@ -181,9 +198,9 @@ void addProcessTG(Suite& suite, const std::string& nodes, const LvlType boundary
     perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
     const SparseGrid sg(genInstr);
     const SourceFunc sourceFunc(perf::expSum);
-    const cg::misc::QuadratureContext context{.sparseGrid = sg,
-                                              .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
-    cg::misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
+    const cg::misc::QuadWeightTable weightTable(sg);
+    const cg::misc::QuadratureContext context{.sparseGrid = sg, .weightTable = weightTable};
+    cg::misc::QuadratureScratch scratch(nDim);
     const cg::TensorGridView tg = largestDomainTensorGrid(sg).tensorGrid;
 
     run.setItems(static_cast<double>(tg.nGP()));
@@ -203,9 +220,9 @@ void addProcessAllTGs(Suite& suite, const std::string& nodes, const LvlType boun
         perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
         const SparseGrid sg(genInstr);
         const SourceFunc sourceFunc(perf::expSum);
-        const cg::misc::QuadratureContext context{
-            .sparseGrid = sg, .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
-        cg::misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
+        const cg::misc::QuadWeightTable weightTable(sg);
+        const cg::misc::QuadratureContext context{.sparseGrid = sg, .weightTable = weightTable};
+        cg::misc::QuadratureScratch scratch(nDim);
         size_t nGP = 0;
         for (const auto& tgData : sg.domainTensorGrids()) nGP += tgData.tensorGrid.nGP();
 
@@ -229,16 +246,18 @@ struct VectorQuadSetup {
       : genInstr(maxLvl, nDim) {
     perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
     sg.emplace(genInstr);
+    weightTable.emplace(*sg);
     tgs = selectTGs(*sg, allTGs);
     for (const auto& tgData : tgs) nGP += static_cast<double>(tgData.tensorGrid.nGP());
   }
 
   cg::misc::QuadratureContext context() const {
-    return {.sparseGrid = *sg, .nodeGenFuncs = sg->getGenInstr().getNodeGenFuncs()};
+    return {.sparseGrid = *sg, .weightTable = *weightTable};
   }
 
   CompleteSGGenInstr genInstr;
   std::optional<SparseGrid> sg;
+  std::optional<cg::misc::QuadWeightTable> weightTable;
   std::vector<TensorGridCTDataView> tgs;  ///< The largest tensor grid or all of them.
   double nGP = 0.0;
 };
@@ -258,7 +277,7 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
   suite.addMicro(kernel + "_scalar_x_m/" + name, [=](MicroRun& run) {
     const VectorQuadSetup s(nodes, boundary, nDim, maxLvl, allTGs);
     const cg::misc::QuadratureContext context = s.context();
-    cg::misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
+    cg::misc::QuadratureScratch scratch(nDim);
     std::vector<SourceFunc> funcs;
     for (size_t k = 0; k < m; k++) {
       funcs.emplace_back([k](const DataVector& x) { return expSumK(x, k); });
@@ -280,7 +299,7 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
   suite.addMicro(kernel + "_vec/" + name, [=](MicroRun& run) {
     const VectorQuadSetup s(nodes, boundary, nDim, maxLvl, allTGs);
     const cg::misc::QuadratureContext context = s.context();
-    cg::misc::QuadratureScratch scratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim(), m);
+    cg::misc::QuadratureScratch scratch(nDim, m);
     const cg::VectorSourceFunc f(
         [](const DataVector& x, std::span<double> out) {
           for (size_t k = 0; k < out.size(); k++) out[k] = expSumK(x, k);
@@ -293,7 +312,7 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
     for (const auto& tgData : s.tgs) {
       cg::tools::quadrature::processTensorGrid(context, f, tgData.tensorGrid, scratch, tgResult);
       vecPerTG.insert(vecPerTG.end(), tgResult.begin(), tgResult.end());
-      cg::misc::QuadratureScratch scalarScratch(nDim, s.sg->getMaxTGSumOverGPCntsPerDim());
+      cg::misc::QuadratureScratch scalarScratch(nDim);
       for (size_t k = 0; k < m; k++) {
         const SourceFunc fk([k](const DataVector& x) { return expSumK(x, k); });
         scalarPerTG.push_back(cg::tools::quadrature::processTensorGrid(
@@ -1194,6 +1213,10 @@ int main(int argc, char** argv) {
   addProcessTG(suite, "cc", 0, 10, 4);
   addProcessAllTGs(suite, "equi", 1, 20, 4);
   addProcessAllTGs(suite, "cc", 1, 10, 5);  // WP-01: many short rows (levels 0 have 1 node)
+  addQuadOperator(suite, "cc", 0, 2, 16);
+  addQuadOperator(suite, "equi", 0, 2, 16);
+  addQuadOperator(suite, "cc", 1, 10, 5);
+  addQuadOperator(suite, "equi", 1, 20, 4);
   addSolQuadTG(suite, "equi", 0, 5, 10);
   addSolQuadTG(suite, "equi", 0, 10, 4);
   addIterateTG(suite, 10, 4);

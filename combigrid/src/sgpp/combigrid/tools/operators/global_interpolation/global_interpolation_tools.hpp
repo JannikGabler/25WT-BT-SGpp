@@ -135,7 +135,8 @@ void prepareTensorGrid(const base::DataVector& normPoint, const TensorGridView& 
 
 /**
  * @brief Writes the 1D basis values of every dimension of @p unitTG at @p normPoint to
- * @c scratch.rows.weights1D (per-dimension blocks back-to-back, in the order of the nodes).
+ * @c scratch.basisValues (per-dimension blocks back-to-back, in the order of the nodes) and points
+ * @c scratch.rows.weightsOfDim to the blocks.
  *
  * @param normPoint Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param unitTG    Tensor grid with its nodes on the unit interval.

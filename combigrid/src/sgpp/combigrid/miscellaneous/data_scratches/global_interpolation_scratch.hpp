@@ -11,6 +11,7 @@
 #pragma once
 
 #include <cstddef>
+#include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
 #include <vector>
 
@@ -27,8 +28,8 @@ namespace misc {
  * @f$\sum_p \prod_k L_{k,p_k}(x_k) f(p)@f$ with the 1D basis values @f$L_{k,i}(x_k)@f$ of the
  * interpolation method of dimension k: the weighted sum over the grid points
  * (@c tools::weighted_sum::sumOverRows) with the basis values as 1D weights. @ref rows is its
- * scratch (the basis values in @c weights1D); its size does not depend on the number of grid
- * points.
+ * scratch (pointing to the basis values in @ref basisValues); its size does not depend on the
+ * number of grid points.
  */
 struct GlobalInterpScratch {
   /**
@@ -41,9 +42,12 @@ struct GlobalInterpScratch {
    */
   GlobalInterpScratch(const size_t nDim, const size_t maxTGSumOfGPCntsPerDim,
                       const size_t nOutputs = 0)
-      : rows(nDim, maxTGSumOfGPCntsPerDim, nOutputs) {}
+      : basisValues(maxTGSumOfGPCntsPerDim), rows(nDim, nOutputs) {}
 
-  /// @brief Scratch of the row loop: basis values (in @c weights1D), mapped nodes, iteration.
+  /// @brief Concatenated 1D basis values, one per node (per-dimension blocks back-to-back, in the
+  /// order of the nodes).
+  base::DataVector basisValues;
+  /// @brief Scratch of the row loop: basis values (pointers into @ref basisValues), iteration.
   WeightedSumScratch rows;
   /// @brief The (normalized) nodes of one dimension, as the interpolation methods take them.
   std::vector<double> nodes1D;

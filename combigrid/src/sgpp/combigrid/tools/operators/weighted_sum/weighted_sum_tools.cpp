@@ -21,25 +21,23 @@ namespace weighted_sum {
 
 /**
  * Determines the iterated dimensions of @p tg (see WeightedSumScratch) with their nodes (from the
- * node table, in domain coordinates) and weights (written to scratch.weights1D by the caller), all
- * at node index 0, the first grid point and the weight products of the first grid point.
+ * node table, in domain coordinates) and weights (scratch.weightsOfDim, set by the caller), all at
+ * node index 0, the first grid point and the weight products of the first grid point.
  */
 void setUpIterDims(const TensorGridView tg, WeightedSumScratch& scratch) {
   const size_t nDim = tg.nDim();
   const size_t rowDim = findRowDim(tg);
 
   assert(nDim >= 1);
-  assert(scratch.weights1D.size() == tg.sumOfGPCntsPerDim());
+  assert(scratch.weightsOfDim.size() == nDim);
 
   size_t nIterDims = 1;
   double constWeight = 1.0;  // Product of the weights of the dimensions that are not iterated
-  size_t offset = 0;
 
   for (size_t dim = 0; dim < nDim; dim++) {
     const GPCntType nNodes = tg.nGPInDim(dim);
     const double* const nodes = tg.nodesInDim(dim);
-    const double* const weights = scratch.weights1D.data() + offset;
-    offset += nNodes;
+    const double* const weights = scratch.weightsOfDim[dim];
     scratch.gp[dim] = nodes[0];
 
     if (dim != rowDim && nNodes == 1) {

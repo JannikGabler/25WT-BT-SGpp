@@ -3,15 +3,12 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 #include <cassert>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -73,8 +70,7 @@ void combineTensorGrids(const QuadratureContext& context, const VectorSourceFunc
 
 #pragma omp parallel
   {
-    QuadratureScratch scratch(sparseGrid.nDim(), sparseGrid.getMaxTGSumOverGPCntsPerDim(),
-                              nOutputs);
+    QuadratureScratch scratch(sparseGrid.nDim(), nOutputs);
     std::vector<double> tgResult(nOutputs);
     std::vector<double> threadResult(nOutputs, 0.0);
 
@@ -106,58 +102,11 @@ void prepareTensorGrid(const QuadratureContext& context, const TensorGridView tg
 
 void getWeights(const QuadratureContext& context, const TensorGridView tg,
                 QuadratureScratch& scratch) {
-  base::DataVector& weights1D = scratch.rows.weights1D;
-  weights1D.resize(tg.sumOfGPCntsPerDim());
-  getQuadRulesForTensorGrid(tg, context.nodeGenFuncs, scratch.quadRules);
-
-  size_t writeIdx = 0;
+  const LvlMIView lvls = tg.getLevels();
+  const double** const weightsOfDim = scratch.rows.weightsOfDim.data();
 
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
-    const GPCntType nNodes = tg.nGPInDim(dim);
-    scratch.quadRules[dim]->genWeightsInplace(std::span(weights1D).subspan(writeIdx, nNodes));
-    writeIdx += nNodes;
-  }
-}
-
-std::vector<QuadRule*> getQuadRulesForTensorGrid(const TensorGridView tg,
-                                                 const std::vector<NodeGenFunc*>& nodeGenFuncs) {
-  std::vector<QuadRule*> result(tg.nDim());
-
-  getQuadRulesForTensorGrid(tg, nodeGenFuncs, result);
-
-  return result;
-}
-
-void getQuadRulesForTensorGrid(const TensorGridView tg,
-                               const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                               std::vector<QuadRule*>& out) {
-  assert(tg.nDim() == nodeGenFuncs.size());
-  assert(tg.nDim() == out.size());
-
-  for (size_t dim = 0; dim < tg.nDim(); dim++) {
-    out[dim] = nodeGenFuncs[dim]->getQuadRule(tg.nGPInDim(dim));
-  }
-}
-
-std::vector<QuadRule*> getQuadRulesForAllDims(const std::span<const GPCntType> gpCntPerDim,
-                                              const std::vector<NodeGenFunc*>& nodeGenFuncs) {
-  std::vector<QuadRule*> result(gpCntPerDim.size());
-
-  getQuadRulesForAllDims(gpCntPerDim, nodeGenFuncs, result);
-
-  return result;
-}
-
-void getQuadRulesForAllDims(const std::span<const GPCntType> gpCntPerDim,
-                            const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                            std::vector<QuadRule*>& out) {
-  assert(gpCntPerDim.size() == nodeGenFuncs.size());
-  assert(gpCntPerDim.size() == out.size());
-
-  const size_t nDim = gpCntPerDim.size();
-
-  for (size_t dim = 0; dim < nDim; dim++) {
-    out[dim] = nodeGenFuncs[dim]->getQuadRule(gpCntPerDim[dim]);
+    weightsOfDim[dim] = context.weightTable.weights(dim, lvls[dim]);
   }
 }
 

@@ -11,17 +11,13 @@
  */
 #pragma once
 
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
-#include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/type_defs.hpp>
 #include <span>
-#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -32,7 +28,7 @@ namespace quadrature {
 /**
  * @brief Tensor-product quadrature on a single tensor grid.
  *
- * Computes the 1D quadrature weights of @p tg (@ref getWeights) and sums the weight times the
+ * Looks up the 1D quadrature weights of @p tg (@ref getWeights) and sums the weight times the
  * source function over the grid points (@c tools::weighted_sum::sumOverRows): the nodes are read
  * from the node table of the sparse grid (in domain coordinates), the grid points are visited row
  * by row, the dimensions with one node are
@@ -40,8 +36,7 @@ namespace quadrature {
  * the coordinates and the partial weight products of the dimensions that changed. The source
  * function is evaluated at the grid points in domain coordinates.
  *
- * @param context    Read-only data of the quadrature call (domain and per-dimension
- *                   node-generation functions, which provide the quadrature rules).
+ * @param context    Read-only data of the quadrature call (grid and weight table).
  * @param sourceFunc Source function.
  * @param tg         Tensor grid (at least one dimension).
  * @param scratch    Per-thread scratch space; reused across calls.
@@ -88,51 +83,15 @@ void prepareTensorGrid(const misc::QuadratureContext& context, TensorGridView tg
                        misc::QuadratureScratch& scratch);
 
 /**
- * @brief Writes the 1D quadrature weights of every dimension of @p tg to
- * @c scratch.rows.weights1D (per-dimension blocks back-to-back, in the order of the nodes).
+ * @brief Points @c scratch.rows.weightsOfDim to the 1D quadrature weights of every dimension of
+ * @p tg in the weight table of the quadrature call (computing them there on first use).
  *
- * @param context Read-only data of the quadrature call (the node-generation function of every
- *                dimension provides the quadrature rule).
+ * @param context Read-only data of the quadrature call (the weight table).
  * @param tg      Tensor grid.
- * @param scratch Scratch space; @c rows.weights1D and @c quadRules are filled in.
+ * @param scratch Scratch space; @c rows.weightsOfDim is filled in.
  */
 void getWeights(const misc::QuadratureContext& context, TensorGridView tg,
                 misc::QuadratureScratch& scratch);
-
-/**
- * @brief Returns the quadrature rule of every dimension of @p tg (for its number of nodes).
- *
- * @param tg           Tensor grid.
- * @param nodeGenFuncs Node-generation function of every dimension.
- * @return The (non-owning) quadrature rule of every dimension.
- */
-std::vector<QuadRule*> getQuadRulesForTensorGrid(TensorGridView tg,
-                                                 const std::vector<NodeGenFunc*>& nodeGenFuncs);
-
-/**
- * @brief @ref getQuadRulesForTensorGrid(const TensorGrid&, const std::vector<NodeGenFunc*>&)
- * writing into @p out (size: the dimension of @p tg).
- */
-void getQuadRulesForTensorGrid(TensorGridView tg, const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                               std::vector<QuadRule*>& out);
-
-/**
- * @brief Returns the quadrature rule of every dimension for @p gpCntPerDim nodes.
- *
- * @param gpCntPerDim  Number of nodes of every dimension.
- * @param nodeGenFuncs Node-generation function of every dimension.
- * @return The (non-owning) quadrature rule of every dimension.
- */
-std::vector<QuadRule*> getQuadRulesForAllDims(std::span<const GPCntType> gpCntPerDim,
-                                              const std::vector<NodeGenFunc*>& nodeGenFuncs);
-
-/**
- * @brief @ref getQuadRulesForAllDims(std::span<const GPCntType>, const std::vector<NodeGenFunc*>&)
- * writing into @p out (size: the number of dimensions).
- */
-void getQuadRulesForAllDims(std::span<const GPCntType> gpCntPerDim,
-                            const std::vector<NodeGenFunc*>& nodeGenFuncs,
-                            std::vector<QuadRule*>& out);
 
 }  // namespace quadrature
 }  // namespace tools

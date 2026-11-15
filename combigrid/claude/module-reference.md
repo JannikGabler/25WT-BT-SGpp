@@ -49,12 +49,16 @@ miscellaneous/         (namespace misc)
   closure_trie/          ClosureTrie: trie over a downwards-closed MI set, MI -> dense rank by one
                          lookup per dimension (DSG linear interpolation; reusable for other DSG
                          operators)
-  data_contexts/         read-only data of one operator call (QuadratureContext, GenericDSGOperatorContext;
+  data_contexts/         read-only data of one operator call (QuadratureContext with the
+                         QuadWeightTable of the call: SG 1D quadrature weights per unit-node-table
+                         row, computed on first use by the thread that needs it (std::call_once),
+                         shared by all threads; GenericDSGOperatorContext;
                          DSGLinInterpIndex (per grid) and DSGLinInterpQuery (per call) of the DSG
                          linear interpolation; DSGGlobalInterpIndex (per grid) of the DSG global
                          interpolation)
-  data_scratches/        per-thread scratch: WeightedSumScratch (SG weighted sum; wrapped by
-                         QuadratureScratch + quadrature rules and GlobalInterpScratch + 1D nodes),
+  data_scratches/        per-thread scratch: WeightedSumScratch (SG weighted sum; points to the 1D
+                         weights per dimension; wrapped by QuadratureScratch (weights in the
+                         QuadWeightTable) and GlobalInterpScratch (basis values + 1D nodes)),
                          DeltaWeightedSumScratch (DSG weighted sum: quadrature and global
                          interpolation; its projected sub-trie of ProjectedTrieNode), linear
                          interpolation, DSG linear interpolation

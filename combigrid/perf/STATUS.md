@@ -1,8 +1,8 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-18 (2026-11-15; accepted, commit pending) ·
-Next free WP number: 56 ·
-Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13 (RP-0 = setup)
+Last processed: WP-05 (2026-11-15; accepted, commit pending) ·
+Next free WP number: 58 ·
+Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13, RP-5 issued 11-15 (RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC 15.2,
   16 threads (`OMP_PROC_BIND=close`, `OMP_PLACES=threads`), **CPU boost off** (2.0 GHz), profile
@@ -73,44 +73,48 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13 (RP-0 = setup)
 | – | WP-52 | Shared weighted-sum kernels (SG + DSG, quadrature + global interpolation): `tools/operators/weighted_sum/`, `WeightedSumScratch`, `DeltaWeightedSumScratch`, `ProjectedTrieNode`, `DoubleDouble` (owner 11-13; refactoring) | accepted (11-13, 6ac45a05d) | e2e 0.999x, memory 0.998, refcheck identical, 1 t byte-identical; `interp/sg/cc/b0/d10/L2/p8` 0.990x (placement of `sumOverRows` → RP-4 check) | [WP-52](summaries/WP-52-weighted-sum-kernels.md) |
 | – | RP-4 | Re-profiling after WP-08 / WP-06 / WP-52 (+ DSG interpolation groups; `sumOverRows` alignment check) | accepted (11-13, cf698f31d) | **rp-4 1.933x** (69.89 → 36.16 s; d ≥ 7 1.97x; since rp-3 1.063x), 0 SLOWER; quad/sg 2.41x, quad/dsg 1.50x, interp/sg 1.56x, interplin/sg 1.41x, mivec 6.97x; memory 1.014; interp/interplin at the integrand floor; alignment 0.994x → no WP | [RP-4](summaries/RP-4-reprofiling.md) |
 | – | WP-53 | Benchmark integrands: pin code placement + baseline re-measurement | dropped (owner 11-13, option A, before its session) | partial fix (start offset only; library placement ±3–4 % stays), < 0.5 % of the suite, high cost → caveat + hybrid-snapshot check | |
-| – | WP-18 | Tensor-grid storage: `NodeTable`s (unit + domain) + SoA + views; explicit `getDomainTensorGrid` / `getUnitTensorGrid` accessors, no default iteration (owner 11-14/15); protected `perf_e2e` / `perf_reference` patched by the owner | accepted (11-15; commit pending) | e2e 1.005x; **memory geomean 0.810** (27 MEM−: sg equi d2 L20 620 → 346 MiB, sg cc d2 1066 → 873, dsg b1 d20 218 → 83, d15 153 → 52; 1 MEM+ interplin/dsg b1 d2 +0.9 MiB); generation d20 dsg 61.0 → 11.5 ms (sg equi d2 L20 30.5 → 36.5 ms); refcheck = before | [WP-18](summaries/WP-18-tensor-grid-storage.md) |
-| 1 | WP-05 | SG quadrature at low d: CC 1D weights once per (rule, #nodes) per call in a shared weight table, no per-thread `weights1D` zero fill (≈ 0.31 + 0.1–0.2 s; sg equi d2 346 MiB ≈ 268 `weights1D`, cc d2 + ≈ 361 MB FFT temporaries) | in progress (prompt 11-15) | | |
+| – | WP-18 | Tensor-grid storage: `NodeTable`s (unit + domain) + SoA + views; explicit `getDomainTensorGrid` / `getUnitTensorGrid` accessors, no default iteration (owner 11-14/15); protected `perf_e2e` / `perf_reference` patched by the owner | accepted (11-15, 14cf31e23) | e2e 1.005x; **memory geomean 0.810** (27 MEM−: sg equi d2 L20 620 → 346 MiB, sg cc d2 1066 → 873, dsg b1 d20 218 → 83, d15 153 → 52; 1 MEM+ interplin/dsg b1 d2 +0.9 MiB); generation d20 dsg 61.0 → 11.5 ms (sg equi d2 L20 30.5 → 36.5 ms); refcheck = before | [WP-18](summaries/WP-18-tensor-grid-storage.md) |
+| – | WP-05 | SG quadrature at low d: shared lazily filled weight table (`misc::QuadWeightTable`, `call_once` per unit-table row), CC rule in place (fewer FFT temporaries), no per-thread `weights1D` | accepted (11-15; commit pending) | `quad/sg/cc-uq/b0/d2/L20` 1.555x (−460 ms), cc d3 L14 1.113x; e2e 1.010x (−368 ms); **memory 0.938** (sg cc d2 862 → 310 MiB, equi d2 342 → 110, cc d3 34 → 17); refcheck = before; dsg cc d10 L7 0.978 (placement → RP-5) | [WP-05](summaries/WP-05-cc-weight-table.md) |
+| 1 | RP-5 | Re-profiling after WP-18 / WP-05 (+ sg cc d2 critical path, dsg cc d10 placement check) | in progress (prompt 11-15) | | |
 | 2 | WP-49 | DSG linear interpolation: global slot weights (0.15–0.25 s) + serial d2 call (≈ 0.07 s, RP-4) | ready | | |
 | 3 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (0.1–0.2 s) | ready | | |
-| 4 | WP-19 | SG quadrature: load balancing at low d (0.1–0.2 s) | ready (after WP-05) | | |
-| 5 | WP-51 | DSG row loop at low d: split large delta TGs (≤ 0.04 s) | ready (low; measure first) | | |
-| 6 | WP-09 | Multi-point interpolation API (proposal: gains vs. complexity) | ready | | |
-| 7 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
-| 8 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
-| 9 | WP-31 | MI-set: O(n·d) `isMIVecDownwardsClosed` (dead helpers → hygiene backlog) | ready (low) | | |
-| 10 | WP-48 | Operator drivers: `std::fma`-pinned CT combination + small-call gate (interplin/sg d2 ≈ 20 ms) | ready (low) | | |
-| 11 | WP-35 | Fragile tests (time-seeded tolerance; FMA-dependent cache precondition) + audit (test-only) | ready (low; may move up) | | |
-| 12 | WP-54 | TODO inventory of combigrid (categorized; measurement) | ready (low; owner 11-15) | | |
-| 13 | WP-55 | Code-hygiene exploration: verify the backlog (PLAN.md end), find unrecorded problems, propose clean-up WPs (measurement) | ready (low; after WP-54) | | |
+| 4 | WP-19 | SG quadrature: load balancing at low d (0.1–0.2 s) | ready (re-size in RP-5) | | |
+| 5 | WP-56 | SG quadrature: CC weights of the largest rows off the critical path (DCT-I / parallel FFT / overlap; cc d2 L20: 356 of 707 ms) | ready (size in RP-5; may merge with WP-19) | | |
+| 6 | WP-51 | DSG row loop at low d: split large delta TGs (≤ 0.04 s) | ready (low; measure first) | | |
+| 7 | WP-57 | Per-thread scratch without zero-filled max-TG buffers (`DeltaWeightedSumScratch::rowWeights`, `GlobalInterpScratch::basisValues`) | ready (low; memory) | | |
+| 8 | WP-09 | Multi-point interpolation API (proposal: gains vs. complexity) | ready | | |
+| 9 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) | | |
+| 10 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) | | |
+| 11 | WP-31 | MI-set: O(n·d) `isMIVecDownwardsClosed` (dead helpers → hygiene backlog) | ready (low) | | |
+| 12 | WP-48 | Operator drivers: `std::fma`-pinned CT combination + small-call gate (interplin/sg d2 ≈ 20 ms) | ready (low) | | |
+| 13 | WP-35 | Fragile tests (time-seeded tolerance; FMA-dependent cache precondition) + audit (test-only) | ready (low; may move up) | | |
+| 14 | WP-54 | TODO inventory of combigrid (categorized; measurement) | ready (low; owner 11-15) | | |
+| 15 | WP-55 | Code-hygiene exploration: verify the backlog (PLAN.md end), find unrecorded problems, propose clean-up WPs (measurement) | ready (low; after WP-54) | | |
 | – | WP-38 | Code hygiene: banner checker + leftovers | dropped (owner 11-15): merged into the code-hygiene backlog | | |
-| 14 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
-| 15 | WP-30 | Vector-valued: small-m optimizations | planned | | |
-| 16 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
-| 17 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it) | | |
-| 18 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late, owner 11-03) | | |
-| 19 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late, owner 11-03) | | |
-| 20 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights` (RP-4: 0.2–0.3 s at b0 d7/d10) | planned (owner places it) | | |
-| 21 | WP-07 | Generic barycentric weights cache (RP-4: ≈ 0.003 s judged → demoted; may merge into WP-09) | ready (low) | | |
+| 16 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision | | |
+| 17 | WP-30 | Vector-valued: small-m optimizations | planned | | |
+| 18 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) | | |
+| 19 | WP-39 | Disk tier: append-only log write path + parallel load (from WP-28) | planned (owner places it) | | |
+| 20 | WP-41 | Adaptive caching: disk rule weighted by active threads (from WP-27) | planned (late, owner 11-03) | | |
+| 21 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions (from WP-27) | planned (late, owner 11-03) | | |
+| 22 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights` (RP-4: 0.2–0.3 s at b0 d7/d10) | planned (owner places it) | | |
+| 23 | WP-07 | Generic barycentric weights cache (RP-4: ≈ 0.003 s judged → demoted; may merge into WP-09) | ready (low) | | |
 | last | WP-43 | Final clean-up: phase references out of code docs + phase leftovers | ready (always last, owner 11-03) | | |
 
 ## Next action
 
-**WP-18 accepted** (11-15; checkpoint 5447e3c58); the owner commits it ("Accept WP-18: …": code,
-summary, `results/WP-18/`, re-protected files, STATUS/PLAN) — tree clean before WP-05. **WP-05 in
-progress** (prompt 11-15): CC weights in a shared table + no per-thread `weights1D` zero fill.
-Code-hygiene findings now go to the **Code-hygiene backlog** (end of PLAN.md; owner 11-15) →
-WP-54 (TODO inventory) → WP-55 (exploration) → master plans the clean-up WPs. Next master start:
-process the WP-05 summary; then WP-49 (re-profiling counter 1 → RP-5 after the next accepted
-optimization).
+**WP-05 accepted** (11-15); the owner commits it ("Accept WP-05: …": code, summary,
+`results/WP-05/`, STATUS/PLAN) — tree clean before RP-5. **RP-5 in progress** (prompt 11-15;
+counter 2: WP-18 + WP-05): cumulative progress + memory, sg cc d2 critical path (WP-56 vs. WP-19),
+dsg cc d10 placement check, re-rank. Next master start: process the RP-5 summary, then the
+top-ranked WP (today WP-49). Hygiene findings → **Code-hygiene backlog** (end of PLAN.md) → WP-54
+→ WP-55 → clean-up WPs.
 
 ## Open decisions for the owner
 
 - WP-09 (after its summary): adopt the proposed interface or not.
+- CC weights with `-ffp-contract=off` (pragma / per-TU flag; WP-05): bitwise build-independent
+  weights (-O0 … LTO), changes today's optimized weights by ≤ 6.7e-16/m — owner 11-15: **not now**.
 - Placement of WP-54 / WP-55 (hygiene; placed low at the former WP-38 rank; may move up).
 - WP-33 (after WP-32): drop / restrict / align large allocations only / keep base's `operator new`
   (WP-23: memory −5 %, dsg b1 −23 MiB, generation 1.1–1.4x; datadriven relies on it).
@@ -183,6 +187,8 @@ optimization).
 - RP-4 `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows` (both instantiations to offset 0):
   e2e `^(interp|quad)/sg/` 0.994x (5 quad/sg SLOWER 0.983–0.995; interp/sg cc d10 L2 0.997 noise),
   micro 1.000x, op-cache misses ±(2–21) % → the WP-52 −1 % was not recoverable this way.
+- WP-05 eager weight table (all rows by an `omp for` + barrier before the TG loop): the largest CC
+  row (2^21+1) is one 356–455 ms FFT → 15 threads idle; lazy `call_once` rows instead (not built).
 - WP-23 dropping base's `operator new` before aligning per-thread data (0.982x, interplin d8
   +20–45 % false sharing).
 - WP-24 one path scalar = m = 1 (SG 1.28–1.48x / DSG 1.14–1.27x slower); compile-time m (≤ 5 %);
@@ -208,8 +214,9 @@ optimization).
 
 ## Re-profiling
 
-Last: RP-4 (2026-11-13; rp-4 = 6ac45a05d; accepted). Accepted optimizations since: **1** (WP-18:
-memory 0.810, e2e 1.005x, no group ≥ 1.3x; generation-phase shift only in ms). Rules:
+Last: RP-4 (2026-11-13; rp-4 = 6ac45a05d; accepted). Accepted optimizations since: **2** (WP-18:
+memory 0.810, e2e 1.005x; WP-05: cc d2 L20 1.555x, e2e 1.010x, memory 0.938) → **RP-5 issued 11-15**.
+Rules:
 features / refactorings / measurement WPs count only if a group changes ≥ 1.3x or a
 hot-spot ranking shifts. Before RP-4: RP-3 (10-30) → WP-08, WP-06 counted; WP-47 / WP-45 / WP-50 /
 WP-52 not. The `interp/dsg`, `interplin/dsg` cases exist from WP-45-after / WP-47-after on (no
@@ -217,14 +224,11 @@ baseline values; RP-4 reports them absolutely).
 
 ## Log
 
-- 2026-11-15 WP-18 summary processed: **accepted** by the owner (commit pending; checkpoint
-  5447e3c58; RP-4 committed cf698f31d). Memory geomean 0.810, e2e 1.005x, refcheck = before;
-  owner's in-session choices: two eager node tables (11-14), explicit domain / unit accessors, no
-  default iteration (11-15), protected-files patch applied. Owner: hygiene / clean-up findings →
-  **Code-hygiene backlog** (PLAN.md end; + owner's 4 items: lint warnings, TODOs, Doxygen style,
-  helper placement) → new WP-54 (TODO inventory) → WP-55 (exploration) → clean-up WPs planned by
-  the master; WP-38 dropped (merged), WP-31 narrowed to O(n·d). WP-05 re-sized (weights only) →
-  **WP-05 prompt issued.**
+- 2026-11-15 WP-05 summary processed: **accepted** by the owner (commit pending; WP-18 committed
+  14cf31e23). cc d2 L20 1.555x, e2e 1.010x, memory 0.938, refcheck = before; dsg cc d10 0.978
+  placement → RP-5 question. Owner: `-ffp-contract=off` for the CC rule **not now** (open
+  decision). New WP-56 (largest-row FFT critical path), WP-57 (zero-filled per-thread buffers);
+  hygiene backlog G. Counter 2 → **RP-5 prompt issued.**
 - Test failures: once-seen (WP-02; 0/150 reruns); time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (seed 1793379453): WP-29a 2 of 16, WP-28 1 of ≈ 15 (0 / 300 alone), WP-47 1, WP-45 0; new in WP-47:
   `equidistant_nodes/linear_func_unit_cube_1D` once (5/5 reruns pass) → WP-35; WP-52: 2 of ≈ 50 runs
@@ -265,3 +269,6 @@ baseline values; RP-4 reports them absolutely).
   on-node → NaN, owner option A; RP-4 due); owner's refactoring WP-52 issued before RP-4. WP-52 accepted (6ac45a05d; refactoring: e2e 0.999x;
   `sumOverRows` placement → RP-4); RP-4 issued. RP-4 accepted (cf698f31d: 1.933x; WP-53 dropped,
   owner option A); WP-05 prompt withdrawn (owner: WP-18 first); WP-18 issued; checkpoint 5447e3c58.
+  11-15 WP-18 accepted (14cf31e23; memory 0.810; owner: two eager node tables, explicit domain /
+  unit accessors, protected-files patch; hygiene → Code-hygiene backlog → WP-54 / WP-55, WP-38
+  dropped, WP-31 narrowed); WP-05 issued.

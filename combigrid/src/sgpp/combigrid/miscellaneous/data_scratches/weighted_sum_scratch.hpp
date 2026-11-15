@@ -25,11 +25,12 @@ namespace misc {
  * @brief Pre-allocated workspace of the weighted sum @f$\sum_p \prod_k w_{k,p_k} f(p)@f$ over the
  * grid points p of one tensor grid (see @c tools::weighted_sum::sumOverRows).
  *
- * The 1D weights @f$w_{k,i}@f$ are the quadrature weights for the quadrature
- * (@c misc::QuadratureScratch) and the 1D basis values at the query point for the global
- * interpolation (@c misc::GlobalInterpScratch). The scratch holds them and the state of the
- * row-wise iteration over the grid points; the nodes are read from the node table of the sparse
- * grid (in domain coordinates). Its size does not depend on the number of grid points.
+ * The 1D weights @f$w_{k,i}@f$ are the quadrature weights for the quadrature (in the weight table
+ * of the quadrature call, @c misc::QuadWeightTable) and the 1D basis values at the query point for
+ * the global interpolation (in @c misc::GlobalInterpScratch). The scratch points to them
+ * (@ref weightsOfDim) and holds the state of the row-wise iteration over the grid points; the
+ * nodes are read from the node table of the sparse grid (in domain coordinates). Its size does
+ * not depend on the number of grid points.
  *
  * The iteration runs over the "iterated dimensions": the row dimension (the first dimension with
  * more than one node, or the last dimension if there is none) followed by the other dimensions
@@ -50,15 +51,12 @@ struct WeightedSumScratch {
 
   /**
    * @brief Allocates the buffers.
-   * @param nDim                   Spatial dimension.
-   * @param maxTGSumOfGPCntsPerDim Upper bound on @f$\sum_k n_k@f$ across the tensor grids that
-   *                               will be processed; sized once to avoid reallocations.
-   * @param nOutputs               Number of outputs m of a vector-valued source function, 0 for
-   *                               a scalar source function (no @ref valueBuffer).
+   * @param nDim     Spatial dimension.
+   * @param nOutputs Number of outputs m of a vector-valued source function, 0 for a scalar
+   *                 source function (no @ref valueBuffer).
    */
-  WeightedSumScratch(const size_t nDim, const size_t maxTGSumOfGPCntsPerDim,
-                     const size_t nOutputs = 0)
-      : weights1D(maxTGSumOfGPCntsPerDim),
+  explicit WeightedSumScratch(const size_t nDim, const size_t nOutputs = 0)
+      : weightsOfDim(nDim),
         nIterDims(0),
         iterDims(nDim),
         nGPOfIterDim(nDim),
@@ -69,9 +67,10 @@ struct WeightedSumScratch {
         weightProducts(nDim + 1),
         valueBuffer(misc::VectorValues::bufferSize(nOutputs, N_ACCS)) {}
 
-  /// @brief Concatenated 1D weights, one per node (per-dimension blocks back-to-back, in the
-  /// order of the nodes).
-  base::DataVector weights1D;
+  /// @brief @c weightsOfDim[k]: start of the 1D weights of dimension @c k of the current tensor
+  /// grid, one per node (in the order of the nodes); set by the caller before
+  /// @c tools::weighted_sum::setUpIterDims.
+  std::vector<const double*> weightsOfDim;
 
   /// @brief Number of iterated dimensions (at least 1).
   size_t nIterDims;
@@ -82,8 +81,8 @@ struct WeightedSumScratch {
   /// @brief @c nodesOfIterDim[j]: start of the nodes of the @c j-th iterated dimension (in the
   /// node table of the sparse grid).
   std::vector<const double*> nodesOfIterDim;
-  /// @brief @c weightsOfIterDim[j]: start of the weights of the @c j-th iterated dimension in
-  /// @ref weights1D.
+  /// @brief @c weightsOfIterDim[j]: start of the weights of the @c j-th iterated dimension (see
+  /// @ref weightsOfDim).
   std::vector<const double*> weightsOfIterDim;
 
   /// @brief Current grid point (in domain coordinates, indexed by dimension).

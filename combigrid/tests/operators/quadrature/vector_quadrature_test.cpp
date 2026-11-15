@@ -40,6 +40,7 @@
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
@@ -120,10 +121,10 @@ void configure(SGGenInstr& genInstr, const std::string& nodes, const Lvl2GPCntFu
  * grid.
  */
 std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs) {
-  const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
-  misc::QuadratureScratch scalarScratch(sg.nDim(), sg.getMaxTGSumOverGPCntsPerDim());
-  misc::QuadratureScratch vectorScratch(sg.nDim(), sg.getMaxTGSumOverGPCntsPerDim(), nOutputs);
+  const misc::QuadWeightTable weightTable(sg);
+  const misc::QuadratureContext context{.sparseGrid = sg, .weightTable = weightTable};
+  misc::QuadratureScratch scalarScratch(sg.nDim());
+  misc::QuadratureScratch vectorScratch(sg.nDim(), nOutputs);
 
   std::vector<DataVector> vectorPoints, scalarPoints;
   const VectorSourceFunc vectorFunc(
@@ -256,9 +257,9 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
         for (double& value : out) value = 1.0;
       },
       3);
-  const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
-  misc::QuadratureScratch scratch(3, sg.getMaxTGSumOverGPCntsPerDim(), 3);
+  const misc::QuadWeightTable weightTable(sg);
+  const misc::QuadratureContext context{.sparseGrid = sg, .weightTable = weightTable};
+  misc::QuadratureScratch scratch(3, 3);
 
   const NodeTable table = tableWithEmptyLists();
   for (const LvlMI& lvls : {LvlMI{0, 0, 0}, LvlMI{1, 1, 0}, LvlMI{0, 1, 1}}) {

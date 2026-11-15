@@ -122,7 +122,7 @@ void fillBasisValues(const base::DataVector& normPoint, const TensorGridView& un
                      const SGGenInstr& genInstr, GlobalInterpScratch& scratch) {
   assert(normPoint.size() >= unitTG.nDim());
 
-  base::DataVector& basisValues = scratch.rows.weights1D;
+  base::DataVector& basisValues = scratch.basisValues;
   basisValues.resize(unitTG.sumOfGPCntsPerDim());
   size_t offset = 0;
 
@@ -136,6 +136,7 @@ void fillBasisValues(const base::DataVector& normPoint, const TensorGridView& un
     scratch.nodes1D.assign(nodes, nodes + nNodes);
     method->basisValues(normPoint[dim], scratch.nodes1D,
                         std::span<double>(basisValues.data() + offset, nNodes));
+    scratch.rows.weightsOfDim[dim] = basisValues.data() + offset;
     offset += nNodes;
   }
 }

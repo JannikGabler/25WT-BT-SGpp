@@ -6,6 +6,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
@@ -13,6 +14,7 @@
 
 using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;
+using sgpp::combigrid::misc::QuadWeightTable;
 using sgpp::combigrid::tools::quadrature::combineTensorGrids;
 using sgpp::combigrid::tools::quadrature::processTensorGrid;
 
@@ -23,14 +25,14 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const size_t nDim = sparseGrid.nDim();
 
-  const QuadratureContext context{.sparseGrid = sparseGrid,
-                                  .nodeGenFuncs = genInstr.getNodeGenFuncs()};
+  const QuadWeightTable weightTable(sparseGrid);
+  const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = weightTable};
 
   double result = 0;
 
 #pragma omp parallel reduction(+ : result)
   {
-    QuadratureScratch scratch(nDim, sparseGrid.getMaxTGSumOverGPCntsPerDim());
+    QuadratureScratch scratch(nDim);
 
 #pragma omp for schedule(guided) nowait
     for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
@@ -52,8 +54,8 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
   }
 
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const QuadratureContext context{.sparseGrid = sparseGrid,
-                                  .nodeGenFuncs = genInstr.getNodeGenFuncs()};
+  const QuadWeightTable weightTable(sparseGrid);
+  const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = weightTable};
 
   combineTensorGrids(context, sourceFunc, result);
 

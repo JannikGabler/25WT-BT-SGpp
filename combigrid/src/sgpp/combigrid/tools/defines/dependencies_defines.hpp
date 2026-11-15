@@ -3,6 +3,8 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
+// TODO: Update documentation of the complete file
+
 /**
  * @file dependencies_defines.hpp
  * @brief The one place that detects the optional libraries of the @c combigrid module.
@@ -76,4 +78,10 @@
 #else
 #define SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE_EXCEPTION \
   "Flag 'SGPP_COMBIGRID_DISABLE_LMDB_STORE' is set."
+#endif
+
+// An FFT backend is available if Eigen or Armadillo is enabled via the SCons flags USE_EIGEN /
+// USE_ARMADILLO
+#if defined(USE_EIGEN) || defined(USE_ARMADILLO)
+#define SGPP_COMBIGRID_HAVE_FFT 1
 #endif

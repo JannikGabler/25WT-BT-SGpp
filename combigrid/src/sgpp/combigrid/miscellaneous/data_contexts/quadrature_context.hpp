@@ -9,9 +9,9 @@
 #pragma once
 
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -27,7 +27,8 @@ namespace misc {
 struct QuadratureContext {
   const SparseGrid& sparseGrid;  ///< The grid (its node table holds the nodes on the domain).
 
-  const std::vector<NodeGenFunc*>& nodeGenFuncs;  ///< Per dimension (provide the quadrature rules).
+  /// The 1D quadrature weights of the grid, shared by all threads (computed on first use).
+  const QuadWeightTable& weightTable;
 };
 
 }  // namespace misc

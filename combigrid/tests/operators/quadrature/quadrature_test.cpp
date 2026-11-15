@@ -29,6 +29,7 @@
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -1114,9 +1115,9 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
   });
   const SourceFunc sourceFunc(gaussianFunc);
 
-  const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
-  misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
+  const misc::QuadWeightTable weightTable(sg);
+  const misc::QuadratureContext context{.sparseGrid = sg, .weightTable = weightTable};
+  misc::QuadratureScratch scratch(nDim);
 
   double expectedTotal = 0.0;
   double absTotal = 0.0;
@@ -1232,9 +1233,9 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
     nEvaluations++;
     return 1.0;
   });
-  const misc::QuadratureContext context{.sparseGrid = sg,
-                                        .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
-  misc::QuadratureScratch scratch(3, sg.getMaxTGSumOverGPCntsPerDim());
+  const misc::QuadWeightTable weightTable(sg);
+  const misc::QuadratureContext context{.sparseGrid = sg, .weightTable = weightTable};
+  misc::QuadratureScratch scratch(3);
 
   const NodeTable table = tableWithEmptyLists();
   for (const LvlMI& lvls : {LvlMI{0, 0, 0}, LvlMI{1, 1, 0}, LvlMI{0, 1, 1}}) {

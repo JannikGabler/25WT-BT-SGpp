@@ -11,10 +11,10 @@
  * On a tensor grid, both operators compute @f$\sum_p \prod_k w_{k,p_k} f(p)@f$: the quadrature
  * with the 1D quadrature weights as @f$w_{k,i}@f$ (@c tools::quadrature::processTensorGrid), the
  * global interpolation with the 1D basis values at the query point
- * (@c tools::global_interpolation::processTensorGrid). The caller writes the 1D weights to
- * @c misc::WeightedSumScratch::weights1D, then prepares the row loop (@ref setUpIterDims) and runs
- * it (@ref sumOverRows). The nodes are read from the node table of the sparse grid, which stores
- * them in domain coordinates.
+ * (@c tools::global_interpolation::processTensorGrid). The caller points
+ * @c misc::WeightedSumScratch::weightsOfDim to the 1D weights, then prepares the row loop (@ref
+ * setUpIterDims) and runs it (@ref sumOverRows). The nodes are read from the node table of the
+ * sparse grid, which stores them in domain coordinates.
  */
 #pragma once
 
@@ -31,8 +31,8 @@ namespace weighted_sum {
 
 /**
  * @brief Sets up the iterated dimensions of the row loop (@ref sumOverRows) over @p tg, using
- * its nodes (in domain coordinates, from the node table of the sparse grid) and the weights in
- * @c scratch.weights1D (one per node, per-dimension blocks back-to-back), and moves
+ * its nodes (in domain coordinates, from the node table of the sparse grid) and the weights that
+ * @c scratch.weightsOfDim points to (one per node, per dimension), and moves
  * @c scratch.gp to the first grid point.
  *
  * @param tg      Tensor grid (at least one dimension).

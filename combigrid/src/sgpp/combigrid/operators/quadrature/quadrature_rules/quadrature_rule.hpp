@@ -56,6 +56,7 @@ class QuadRule {
   uint64_t id() const { return id_; }
 
  private:
+  // TODO: Is the id still necessary?
   const uint64_t id_;  ///< Unique identifier (used for deduplication).
 };
 

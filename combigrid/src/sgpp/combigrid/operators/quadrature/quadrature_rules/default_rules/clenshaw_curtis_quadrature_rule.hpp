@@ -10,12 +10,7 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-
-// An FFT backend for ClenshawCurtisQuadRule::genWeightsFFT is available if Eigen or Armadillo is
-// enabled via the SCons flags USE_EIGEN / USE_ARMADILLO
-#if defined(USE_EIGEN) || defined(USE_ARMADILLO)
-#define SGPP_COMBIGRID_HAVE_FFT 1
-#endif
+#include <span>
 
 namespace sgpp {
 namespace combigrid {
@@ -47,27 +42,35 @@ class ClenshawCurtisQuadRule : public QuadRule {
    * @brief Naive @f$O(n^2)@f$ weight computation.
    *
    * Used by @ref genWeights when neither Eigen nor Armadillo is enabled
-   * (SCons flags @c USE_EIGEN / @c USE_ARMADILLO). Public to allow cross-checking against @ref genWeightsFFT.
+   * (SCons flags @c USE_EIGEN / @c USE_ARMADILLO). Public to allow cross-checking against
+   * @ref genWeightsFFT.
    *
    * @param nNodes Number of 1D nodes (@c >= 2).
    * @return Newly allocated weight vector.
    */
   base::DataVector genWeightsNaive(const size_t nNodes) const;
 
-#ifdef SGPP_COMBIGRID_HAVE_FFT
+  /**
+   * TODO: Document
+   */
+  void genWeightsNaiveInplace(const std::span<double> out) const;
+
   /**
    * @brief Waldvogel's FFT-based weight formula (requires Eigen or Armadillo).
    *
-   * Faster (@f$O(n \log n)@f$) than @ref genWeightsNaive for large
-   * @p nNodes. Only declared if @c SGPP_COMBIGRID_HAVE_FFT is defined, i.e. if
-   * SG++ is built with @c USE_EIGEN=1 or @c USE_ARMADILLO=1. If both are set,
-   * Eigen's FFT is used (measured 1.2-3.7x faster than Armadillo's).
+   * Faster (@f$O(n \log n)@f$) than @ref genWeightsNaive for large @p nNodes.
+   * If both are set, Eigen's FFT is used (measured 1.2-3.7x faster than Armadillo's).
    *
    * @param nNodes Number of 1D nodes (@c >= 2).
    * @return Newly allocated weight vector.
    */
   base::DataVector genWeightsFFT(const size_t nNodes) const;
-#endif
+
+  /**
+   * @brief @ref genWeightsFFT "genWeightsFFT(out.size())" writing into @p out.
+   * @param out Output: the weights (at least 2).
+   */
+  void genWeightsFFTInplace(std::span<double> out) const;
 };
 
 }  // namespace quadrature_rules
