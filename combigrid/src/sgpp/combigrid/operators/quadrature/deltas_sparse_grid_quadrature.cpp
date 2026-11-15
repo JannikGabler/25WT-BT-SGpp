@@ -56,8 +56,8 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
     // Processing them largest-first gave no further gain.
 #pragma omp for schedule(dynamic) nowait
     for (size_t tgIdx = 0; tgIdx < deltasSparseGrid.nTG(); tgIdx++) {
-      result += processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getTensorGrid(tgIdx),
-                                       scratch);
+      result += processDeltaTensorGrid(context, sourceFunc,
+                                       deltasSparseGrid.getDomainTensorGrid(tgIdx), scratch);
     }
   }
 

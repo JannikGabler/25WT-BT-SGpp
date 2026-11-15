@@ -15,18 +15,33 @@
 namespace sgpp {
 namespace combigrid {
 
-SparseGridBase::const_iterator SparseGridBase::getTensorGrid(const LvlMIView& mi) const noexcept {
-  return std::find_if(begin(), end(),
-                      [&mi](const TensorGridCTDataView& data) { return data.mi == mi; });
+SparseGridBase::const_iterator SparseGridBase::getDomainTensorGrid(
+    const LvlMIView& mi) const noexcept {
+  return findTensorGrid(domainTensorGrids(), mi);
 }
 
+SparseGridBase::const_iterator SparseGridBase::getUnitTensorGrid(
+    const LvlMIView& mi) const noexcept {
+  return findTensorGrid(unitTensorGrids(), mi);
+}
+
+SparseGridBase::const_iterator SparseGridBase::findTensorGrid(const TensorGridRange range,
+                                                              const LvlMIView& mi) noexcept {
+  return std::ranges::find_if(range,
+                              [&mi](const TensorGridCTDataView& data) { return data.mi == mi; });
+}
+
+// TODO: Maybe change logic to only compare the nDim, nTG, levels, coefficients, node gen funcs,
+// lvl2GPCnt funcs, and domain bounds. The node tables are derived from these values and do not need
+// to be compared.
 bool SparseGridBase::operator==(const SparseGridBase& other) const {
   if (nDim() != other.nDim() || nTG() != other.nTG()) {
     return false;
   }
 
-  for (const TensorGridCTDataView data : *this) {
-    if (std::find(other.begin(), other.end(), data) == other.end()) {
+  const TensorGridRange otherTGs = other.domainTensorGrids();
+  for (const TensorGridCTDataView data : domainTensorGrids()) {
+    if (std::ranges::find(otherTGs, data) == otherTGs.end()) {
       return false;
     }
   }
@@ -37,13 +52,15 @@ bool SparseGridBase::operator==(const SparseGridBase& other) const {
 SparseGridBase::SparseGridBase(const size_t nDim) : nDim_(nDim), levels_(nDim, 0) {}
 
 void SparseGridBase::setStorage(LvlMIVec levels, std::vector<CTCoeffType> coefficients,
-                                NodeTable nodeTable) {
-  assert(levels.nDim() == nDim_ && nodeTable.nDim() == nDim_);
+                                NodeTable domainNodeTable, NodeTable unitNodeTable) {
+  assert(levels.nDim() == nDim_ && domainNodeTable.nDim() == nDim_ &&
+         unitNodeTable.nDim() == nDim_);
   assert(levels.size() == coefficients.size());
 
   levels_ = std::move(levels);
   coefficients_ = std::move(coefficients);
-  nodeTable_ = std::move(nodeTable);
+  domainNodeTable_ = std::move(domainNodeTable);
+  unitNodeTable_ = std::move(unitNodeTable);
   computeMetaValues();
 }
 
@@ -55,7 +72,7 @@ void SparseGridBase::computeMetaValues() {
   const size_t nDim = nDim_;
   const size_t nTG = this->nTG();
   const LvlType* const lvls = levels_.data();
-  const NodeTable& table = nodeTable_;
+  const NodeTable& table = domainNodeTable_;
   size_t maxGPCnt = 0;
   size_t maxSum = 0;
   const bool parallel = nTG >= constants::sparse_grid_storage::MIN_TG_FOR_CONCURRENCY;

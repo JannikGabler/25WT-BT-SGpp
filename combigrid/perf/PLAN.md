@@ -46,7 +46,10 @@ operators) keeps it in mind and must not block it: refinement grows the MI set s
 (new tensor grids, changed CT coefficients, incremental closure), reuses function values of
 earlier steps (operator- and step-independent cache keys), and needs per-tensor-grid or
 per-MI contributions for error indicators. Note helpful or blocking design choices in the
-summary; no extra implementation for it. The master copies this note into the prompts of such
+summary; no extra implementation for it. Storage since WP-18: `NodeTable` rows are independent
+`DataVector`s (adding levels appends rows), but views hold raw row pointers → growth needs stable
+/ reserved row storage and an incremental storage update; DSG operator data needs invalidation
+(`results/WP-18/design-and-obsolete-code.md`). The master copies this note into the prompts of such
 WPs.
 **Python venv** (owner 2026-10-30): every work session (all WPs and RP-k) runs all Python through
 the repo's virtual environment `.venv/` (Python 3.14 with NumPy, SciPy, SymPy, mpmath): activate it
@@ -138,19 +141,21 @@ At RP-3 (rp-3 = 0c6ecfc4b, total 38.45 s; baseline → rp-3 1.818x, d ≥ 7 1.87
 | – | WP-52 | Shared weighted-sum kernels: operator-neutral names / place for the SG + DSG kernels used by quadrature and global interpolation (owner 2026-11-13; refactoring) | accepted (2026-11-13) | measured: e2e `^(quad/\|interp/)` 0.999x (`interp/sg/cc/b0/d10/L2/p8` 0.990x, placement: `sumOverRows` at line offset 48, op-cache misses +20 %), memory 0.998, refcheck identical (known WARN), 1 t output byte-identical |
 | – | RP-4 | Re-profiling after WP-08 / WP-06 (+ cumulative memory; size the new `interp/dsg`, `interplin/dsg` groups; re-rank; `sumOverRows` alignment check) | accepted (2026-11-13) | measured: baseline → rp-4 e2e 69.89 → 36.16 s (1.933x; d ≥ 7 1.97x; since rp-3 1.063x), 0 SLOWER; full suite incl. DSG interpolation 38.17 s; memory geomean 1.014; interp/sg + interplin/sg at the integrand floor; `sumOverRows` alignment 0.994x → no WP; benchmark-binary placement ±2–6 % on `exp` → WP-53 |
 | – | WP-53 | Benchmark integrands: pin their code placement (`perf_problems.hpp`, protected → patch) + baseline re-measurement (from RP-4; owner 2026-11-13) | dropped (owner 2026-11-13, option A: partial fix — start offset only, library-side placement ±3–4 % stays — at the cost of a long session, protected-file churn and a re-anchored baseline) | – (caveat + hybrid-snapshot check instead: PLAN header "Code placement") |
-| 1 | WP-18 | Tensor-grid storage: shared 1D node arrays + struct of arrays (from D-5 and WP-22; memory; proposal for the owner) | in progress (prompt 2026-11-13; owner: before WP-05, mapped nodes only, nodes + SoA together, protected benchmarks: session proposes) | runtime ≈ 0.03–0.07 s + node generation; memory dsg b1 d20 −96…−114 MB, d15 −68…−78 MB, sg d2 −101 MB, sg b1 d20 −25 MB; interface; + per-thread mapped-node scratch (sg d2 ≈ 268 MiB, ≈ 0.2 s zero fill) |
-| 2 | WP-05 | SG quadrature at low d: CC 1D weights once per (rule, #nodes) per call + shared weight table / fewer FFT temporaries (nodes → WP-18; owner 2026-11-13) | ready (after WP-18) | ≈ 0.31 s CC weights + `weights1D` zero fill (d ≤ 3); memory ≈ 361 MB FFT temporaries + ≈ 268 MiB `weights1D` scratch at sg d2 |
-| 3 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | ready (+ serial d2 call, RP-4) | RP-4: 0.15–0.25 s (gather + mark 0.40 s: d10 0.16, d8 0.15, d5 0.08 s) + serial d2 ≈ 0.07 s (0.184 vs. SG 0.111 s) |
-| 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
-| 5 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | RP-4: 0.1–0.2 s (d2; 1 → 16 t cc 3.95x, equi 5.26x) |
-| 6 | WP-51 | DSG row loop at low d: split the rows of large delta TGs across threads + largest-first delta-TG order for the DSG quadrature (from WP-45) | ready (low; measure first) | RP-4: ≤ 0.02–0.04 s (dsg equi d3 6.4x, interp/dsg cc d2 6.5x at 16 t) |
-| 7 | WP-09 | Multi-point interpolation API (proposal; owner 2026-11-11: acceptance depends on gains and complexity) | ready (proposal) | judged 0; new-API callers cc 6.3–10.6x (+ dedup 7.6–12.9x), generic 19.5–58.8x with WP-07 |
-| 8 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
-| 9 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
-| 10 | WP-31 | MI-set cleanups after WP-03: `isMIVecDownwardsClosed` in O(n·d), dead closure helpers (from WP-03) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups; less code |
-| 11 | WP-48 | Operator drivers: `std::fma`-pinned CT combination (`result += c·v`; results independent of LTO inlining) + small-call work gate (interplin d2, region-bound) (from WP-08) | ready (low) | e2e ≈ 0.02 s (interplin d2 libgomp 71 %); deterministic results across builds |
-| 12 | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D`, FMA-dependent `shared_cache_and_concurrent_operator_calls` + audit (test-only; from WP-29a, owner's PGO build) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
-| 13 | WP-38 | Code hygiene: copyright-banner check never checks C++ + combigrid leftovers (from WP-29d) | ready (low; checker fix may hit other modules → BLOCKED with options) | e2e nil; banner / TODO / warning cleanups |
+| – | WP-18 | Tensor-grid storage: `NodeTable`s (unit + domain, one row per (dim, level)) + struct of arrays + views / explicit domain / unit accessors (from D-5 and WP-22; memory; proposal) | accepted (2026-11-15; commit pending) | measured: e2e 38.519 → 38.338 s (1.005x); memory geomean **0.810** (27 MEM−: sg equi d2 L20 620 → 346 MiB, sg cc d2 1066 → 873, dsg b1 d20 218 → 83, d15 153 → 52); generation d20 dsg 61.0 → 11.5 ms, sg b1 d20 19.5 → 8.6 ms (sg equi d2 L20 30.5 → 36.5 ms); refcheck = before; protected `perf_e2e.cpp` / `perf_reference.cpp` patched by the owner |
+| 1 | WP-05 | SG quadrature at low d: CC 1D weights once per (rule, #nodes) per call in a weight table shared by all threads, fewer FFT temporaries, no per-thread `weights1D` zero fill (nodes done in WP-18; owner 2026-11-13) | in progress (prompt 2026-11-15) | ≈ 0.31 s CC weights + ≈ 0.1–0.2 s `weights1D` zero fill / page faults (d ≤ 3); memory sg equi d2 346 MiB (≈ 268 MiB = 16 × 16.8 MiB `weights1D`), sg cc d2 873 MiB (+ ≈ 361 MB FFT temporaries) |
+| 2 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | ready (+ serial d2 call, RP-4) | RP-4: 0.15–0.25 s (gather + mark 0.40 s: d10 0.16, d8 0.15, d5 0.08 s) + serial d2 ≈ 0.07 s (0.184 vs. SG 0.111 s) |
+| 3 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | 0.1–0.2 s (b1 d15/d20; builder ≈ 0.31 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
+| 4 | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | ready (after WP-05) | RP-4: 0.1–0.2 s (d2; 1 → 16 t cc 3.95x, equi 5.26x) |
+| 5 | WP-51 | DSG row loop at low d: split the rows of large delta TGs across threads + largest-first delta-TG order for the DSG quadrature (from WP-45) | ready (low; measure first) | RP-4: ≤ 0.02–0.04 s (dsg equi d3 6.4x, interp/dsg cc d2 6.5x at 16 t) |
+| 6 | WP-09 | Multi-point interpolation API (proposal; owner 2026-11-11: acceptance depends on gains and complexity) | ready (proposal) | judged 0; new-API callers cc 6.3–10.6x (+ dedup 7.6–12.9x), generic 19.5–58.8x with WP-07 |
+| 7 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
+| 8 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
+| 9 | WP-31 | MI-set: `isMIVecDownwardsClosed` in O(n·d) (from WP-03; dead helpers → code-hygiene backlog) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups |
+| 10 | WP-48 | Operator drivers: `std::fma`-pinned CT combination (`result += c·v`; results independent of LTO inlining) + small-call work gate (interplin d2, region-bound) (from WP-08) | ready (low) | e2e ≈ 0.02 s (interplin d2 libgomp 71 %); deterministic results across builds |
+| 11 | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D`, FMA-dependent `shared_cache_and_concurrent_operator_calls` + audit (test-only; from WP-29a, owner's PGO build) | ready (low; the owner may move it up) | e2e nil; fewer spurious failures in every session's repeated test runs (WP-29a: 2 of 16) |
+| 12 | WP-54 | TODO inventory of combigrid (all `TODO` / `FIXME` comments, categorized; measurement, no code change) (owner 2026-11-15) | ready (low; before WP-55) | e2e nil; input for WP-55 and the clean-up plan |
+| 13 | WP-55 | Code-hygiene exploration: verify the code-hygiene backlog, find unrecorded problems, propose clean-up WPs (owner 2026-11-15; measurement, no code change) | ready (low; after WP-54) | e2e nil; the master then plans the clean-up WPs |
+| – | WP-38 | Code hygiene: copyright-banner check + combigrid leftovers (from WP-29d) | dropped (owner 2026-11-15): merged into the code-hygiene backlog (→ WP-55 + clean-up WPs) | – |
 | 14 | WP-37 | pysgpp `DataVector`: `__iter__` / bounds-checked `__getitem__` (base bindings; from WP-29d) | needs decision (functional change in base's Python API; owner places it) | e2e nil; `list(dv)` / `sum(dv)` / `for x in dv` segfault today |
 | 15 | WP-30 | Vector-valued source functions: specific optimizations (later) | planned (after WP-29) | – |
 | 16 | WP-34 | Python source functions: GIL contention under the operators' OpenMP loops (from WP-25) | planned (owner places it; mechanism needs decision; batch option (b) gone with WP-17) | Python callers only: 16-thread evaluation 24–30 µs vs. 0.66–5.3 µs at 1 thread (36x; WP-17: 25.1 vs. 0.78 µs ≈ 32x); not in the judged suite |
@@ -265,6 +270,14 @@ WP-05 is rank 1.
 Owner 2026-11-13 (after WP-05's first prompt, before its session ran): grid-side mapped 1D node
 buffer (WP-18) would make WP-05's node part redundant → **WP-18 first** (mapped nodes only, nodes +
 SoA together, protected benchmarks: session proposes); WP-05 narrowed to the weights, rank 2.
+After WP-18 (accepted 2026-11-15; memory: geomean 0.810, e2e 1.005x, no group ≥ 1.3x, generation
+only ms): counts as the 1st accepted optimization since RP-4 → no re-profiling yet. WP-05 rank 1
+(weights only; re-sized in its entry). Owner 2026-11-15: code-hygiene / clean-up findings are no
+longer fixed piecemeal; they are collected in the section **Code-hygiene backlog** (end of this
+file). WP-54 (TODO inventory) → WP-55 (exploration: verify the backlog, find unrecorded problems)
+→ the master plans the clean-up WPs from WP-55's summary. WP-38 dropped (merged into the backlog);
+WP-31 keeps only the O(n·d) test. WP-54 / WP-55 placed after the runtime WPs at the former WP-38
+rank (low; the owner may move them up); WP-43 stays last.
 
 ---
 
@@ -554,7 +567,19 @@ SoA together, protected benchmarks: session proposes); WP-05 narrowed to the wei
   once per (rule, #nodes) per `quadrature()` call in a table shared by all threads (`weights1D` →
   pointer; domain-width scaling per call), fewer `genWeightsFFT` temporaries; DSG `comp1DWeights`
   as the model. Expected ≈ 0.31 s + the `weights1D` zero fill (d ≤ 3); memory ≈ 361 MB + ≈ 268 MiB at
-  sg d2. Re-size from the WP-18 summary. **Status**: ready (rank 2, after WP-18).
+  sg d2. Re-size from the WP-18 summary.
+- **From WP-18** (accepted 2026-11-15): nodes are read from the grid's `NodeTable` (domain) — no
+  `mapNodesOntoDomain`, no `nodesPerDim` scratch any more; weights are computed on the unit table
+  (`getUnitNodeTable()`, rows shared by dimensions with equal `NodeGenFunc*` + `Lvl2GPCntFunc`;
+  row = `firstRowOfDim[dim] + lvl`, `maxLvl` from the table). Peaks now: sg equi d2 L20 346 MiB
+  (mostly 16 × 16.8 MiB per-thread `weights1D`), sg cc d2 L20 873 MiB (+ CC FFT temporaries ≈
+  361 MB); WP-18 took ≈ 0.09–0.1 s of the d2 zero fill (nodes half). Key the shared weight table by
+  (quadrature rule, unit-table row) or (rule, #nodes); scale by the domain width per dimension.
+  Generate rows in parallel, each by the thread that fills it (WP-18: a flat buffer zero-filled
+  serially cost 27 → 81 ms at d2 L20). Re-sized expectation: ≈ 0.31 s CC weights + ≈ 0.1–0.2 s
+  `weights1D` zero fill / page faults (d ≤ 3); memory up to −268 MiB (equi d2) / −(268 + 361)
+  (cc d2). Check `DeltaWeightedSumScratch` for remaining zero-filled per-thread buffers.
+- **Status**: in progress (prompt 2026-11-15; rank 1).
 
 ## WP-06 — Global interpolation: operator overhead
 - **Location**: `operators/global_interpolation/global_interpolation.cpp`.
@@ -1222,7 +1247,22 @@ SoA together, protected benchmarks: session proposes); WP-05 narrowed to the wei
 - **Added scope from RP-4 / WP-05**: sg d2 L20 per-thread `nodesPerDim` ≈ 268 MiB (16 × 16.8 MiB) +
   ≈ half of the kernel zero fill / page faults (0.33 s cc + 0.09 s equi) → ≈ 0.2 s; dsg b0 d3
   per-thread node scratch.
-- **Status**: in progress (prompt 2026-11-13; rank 1).
+- **From WP-18 summary** (accepted 2026-11-15; owner's in-session choices: both tables eager
+  (11-14), explicit domain / unit accessors without default iteration (11-15); owner applied
+  `results/WP-18/protected-files.patch`): `SparseGridBase` holds `levels_`, `coefficients_`,
+  `NodeTable` domain + unit (row = `firstRowOfDim[dim] + lvl`; equal-generator dimensions share
+  rows), `OperatorDataCache`; views `TensorGridView`, `TensorGridCTDataView`, proxy iterator; SG
+  quadrature / global interp read domain nodes, weights / basis values / cells stay on the unit
+  table; DSG kernel copies only the row dimension's nodes (`rowNodes`). e2e 1.005x (sg equi d2 L20
+  1.227x, cc d2 1.096x, dsg b1 d20 1.067x; dsg b0 d10 0.986, b0 d7 0.985 = placement), memory
+  geomean 0.810 (27 MEM−, 1 MEM+ interplin/dsg b1 d2 +0.9 MiB), generation high d 5–18x faster,
+  sg equi d2 L20 generation 30.5 → 36.5 ms (second table). Lazy vs. eager unit table: totals
+  within noise. Follow-ups: WP-05 (weights keyed by table row or (rule, n); `weights1D` zero fill
+  left: sg d2 L20 346 MiB ≈ 16 × 16.8 MiB); dead code + `DSGGlobalInterpIndex` regenerating
+  regular nodes → code-hygiene backlog; not planned (special case / small gain): aliasing domain
+  rows to unit rows on [0,1], unit + domain row generation in one parallel region (d2 L20
+  +8–20 ms, +32 MiB; small interp cases +0.1 ms fork/join); adaptive-CT storage note → header.
+- **Status**: accepted (2026-11-15; commit pending).
 
 ## WP-19 — SG quadrature: load balancing at low d
 - **Source**: RP-1 summary (NEW-C).
@@ -2121,6 +2161,8 @@ SoA together, protected benchmarks: session proposes); WP-05 narrowed to the wei
 - **From WP-29b** (small cleanups, add here): `operators/quadrature/quadrature.cpp` (SG) has a
   `using namespace` (cpplint `build/namespaces` once touched); `tensor_grid.cpp:34` unused variable
   `sum` (warning in normal builds).
+- **Owner 2026-11-15**: the dead helpers and the WP-29b cleanups moved to the code-hygiene
+  backlog; WP-31 keeps only the O(n·d) `isMIVecDownwardsClosed` (+ its pinning test / micro).
 
 ## WP-32 — Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23)
 - **Source**: WP-23 summary (follow-up); owner 2026-10-29: plan it, then decide on base's
@@ -2668,6 +2710,46 @@ SoA together, protected benchmarks: session proposes); WP-05 narrowed to the wei
   far), < 0.5 % of the suite, and costs a long session + protected-file churn + a re-anchored baseline.
   Instead: caveat in the header, hybrid-snapshot check when a cross-snapshot ratio matters.
 
+## WP-54 — TODO inventory of combigrid (owner 2026-11-15; measurement, no code change)
+- **Source**: owner 2026-11-15 (code-hygiene backlog, item A2): many `TODO`s remain in the code,
+  not all about hygiene → an overview first, before the hygiene exploration WP-55.
+- **Scope**: every `TODO` / `FIXME` / `XXX` / `HACK` (any spelling, incl. `TODO(user)`) in
+  `combigrid/` (`src/`, `tests/`, `benchmarks/` incl. protected files (report only), `examples/`,
+  `build/pysgpp/*.i`, SConscripts). Per item: file:line, text, still valid (check the code),
+  category (documentation / dead code / style-hygiene / missing functionality or feature /
+  correctness or bug risk / performance / tests / build), proposed target (code-hygiene backlog,
+  an existing WP, a new WP, owner decision, delete as obsolete), effort (S/M/L).
+- **Deliverables**: `results/WP-54/todo-inventory.md` (table grouped by category, counts) + a
+  machine-readable `todo-inventory.csv`; the summary lists the counts, the non-hygiene items
+  (features, correctness, performance) and the items needing an owner decision.
+- **Rules**: no source change (measurement-only: no pinning tests, snapshots or A/Bs; say so in
+  the summary). **Dependencies**: none. **Status**: ready (low; before WP-55).
+
+## WP-55 — Code-hygiene exploration (owner 2026-11-15; measurement, no code change)
+- **Source**: owner 2026-11-15: collect all hygiene / clean-up findings (backlog below), then one
+  explorative WP verifies them and finds unrecorded problems; afterwards the master plans the
+  clean-up WPs from its summary.
+- **Scope**: (1) **verify** every item of the code-hygiene backlog (still present, exact locations,
+  effort, risk, public API / Python / protected-file impact, `.text` impact expected); (2) **find
+  unrecorded problems** in `combigrid/`: compiler warnings of full debug + normal builds (GCC;
+  optionally Clang `-Wall -Wextra`), the full cpplint output (counts per category; which are
+  config / false positives), clang-format drift, Doxygen style deviations (section banners, `//`
+  docs on public API, missing `@file` / `@brief` / `@param`; Doxygen warnings if available), the
+  CLAUDE.md §5 conventions (banners, absolute includes, namespaces, no `using namespace` in
+  headers, naming, one type per file, methods > 30 lines, declaration / definition split,
+  TU-local helper placement), dead code (unreferenced functions / headers, commented-out code,
+  stale `%ignore`s), umbrella header vs. public API, stale docs (`combigrid/claude/*.md`,
+  CLAUDE.md: report only), and the follow-ups of all summaries in `perf/summaries/` not yet in
+  the backlog; (3) the WP-54 TODO items of the hygiene categories.
+- **Deliverables**: `results/WP-55/hygiene-inventory.md` (item, location, category, verified,
+  effort, risk, needs owner decision?) and in the summary a **proposed split into clean-up WPs**
+  (scope, order, size, risk, `.text`-identical or not, which need an owner decision: public API
+  removals, cpplint configuration vs. fixes, the banner checker vs. other modules, the helper
+  placement convention, `explicit` constructors already agreed 2026-11-12).
+- **Rules**: no source change (measurement-only; say so in the summary); WP-43's phase-reference
+  scope stays with WP-43 (always last) — list overlaps (phase leftovers) and propose where they go.
+- **Dependencies**: WP-54 (summary written). **Status**: ready (low; after WP-54).
+
 ## WP-37 — pysgpp `DataVector`: iteration / bounds-checked indexing (from WP-29d; needs decision)
 - **Source**: WP-29d summary (follow-ups).
 - **Finding**: in Python, base's `DataVector` has an unchecked `__getitem__` and no `__iter__`, so
@@ -2717,7 +2799,8 @@ SoA together, protected benchmarks: session proposes); WP-05 narrowed to the wei
   documentation and banner fixes; the `TODO: Delete` only if the code is dead.
 - **Expected gain**: e2e nil; `.text` should stay byte-identical (check as WP-29d did; then a
   filtered A/A suffices). **Risk**: low. **Functional change**: none intended (build tooling
-  behavior → BLOCKED if it affects other modules). **Dependencies**: none. Status: ready (low).
+  behavior → BLOCKED if it affects other modules). **Dependencies**: none.
+- **Status**: dropped (owner 2026-11-15): all items moved to the code-hygiene backlog (end of file).
 
 ## WP-12 — Toolchain re-measurement after WP-02/WP-03 (optional)
 - **Source**: WP-11 summary: the Clang vs. GCC picture may change once WP-02 (DSG sub-tries, where
@@ -2785,3 +2868,62 @@ SoA together, protected benchmarks: session proposes); WP-05 narrowed to the wei
   −64 MiB (dsg b1 d20), −101 MiB (sg d2/L20), −17 MiB (sg b1 d20); 230 k fewer allocations.
   Cost: public `TensorGrid` storage.
 - **Decision (2026-10-28)**: included as candidate WP-18; adoption decided after its results.
+
+## Code-hygiene backlog (owner 2026-11-15; input of WP-55, then clean-up WPs)
+Every reported, not yet completed hygiene / clean-up finding goes here (the master appends new ones
+from summaries; WP-55 verifies them; no piecemeal fixes before the clean-up WPs). Source in brackets.
+- **A. Owner 2026-11-15**
+  1. Lint warnings of a full combigrid build: cpplint (WP-40: 1289 pre-existing messages, mostly
+     `build/include_order` of `<sgpp/...>`, missing banners in the node getters → fix vs. filter
+     in the cpplint config) and compiler warnings (e.g. `-Wunused-variable` `sum`
+     `grids/tensor_grid.cpp:34` under NDEBUG [WP-29b, WP-08]).
+  2. Many `TODO`s, not all about hygiene → overview first (WP-54).
+  3. Inconsistent documentation style (e.g. section banners `/******** Helpers ********/`) →
+     one Doxygen style (CLAUDE.md §5).
+  4. TU-local internal helpers placed inconsistently: older code declares them in headers in an
+     internal namespace, newer code keeps them in anonymous namespaces of the `.cpp` → one
+     convention.
+- **B. From WP-38** (dropped 2026-11-15; WP-29d / WP-40 / WP-08 / WP-50)
+  1. `tools/check_copyright_banners.py`: `processFilePy(path) or processFile(path)` — `processFilePy`
+     returns `True` for non-`.py` files, so C++ banners are never checked; CLAUDE.md §5 claims the
+     build fails otherwise. A fixed checker may fail other modules (options: fix all / restrict to
+     combigrid / leave it → owner).
+  2. Missing banners: `tools/operators/global_interpolation/interpolation_methods/default_methods/
+     barycentric_formula.{hpp,cpp}`, node getters (cpplint).
+  3. `TODO: Document` blocks in `tools/operators/quadrature/{quadrature_tools,
+     deltas_sparse_grid_quadrature_tools}.hpp` (partly done in WP-52: verify).
+  4. Commented-out `SourceFuncHook` lines in `functions/source_functions/source_function.cpp`
+     (owner's code: remove only if dead).
+  5. Public `operators/linear_interpolation/linear_interpolation.hpp` includes the internal
+     `linear_interpolation_scratch.hpp` (→ `constants.hpp`) without using it (check Python build).
+  6. `explicit` converting constructors `SparseGrid(const SGGenInstr&)`,
+     `DeltasSparseGrid(const SGGenInstr&)` (owner-agreed C++ API change 2026-11-12; protected
+     benchmarks only if they compile unchanged, else BLOCKED; SWIG unaffected).
+  7. cpplint false positive on the structured binding in `grids/deltas_sparse_grid.cpp:28`
+     (`// NOLINT(...)` or config).
+  8. `perf/README.md` pitfall (phase docs): reading a snapshot's files before `ab e2e` raises that
+     side's peak RSS by ≈ 0.8 MiB (fault-around) → evict with `posix_fadvise(DONTNEED)` or compare
+     `.text` afterwards (only if README is not protected).
+- **C. From WP-31 / WP-29b**: dead `tools/multiindex_bounding_box_generation.hpp`,
+  `tools/multiindex_domination.hpp` (`miVecDominatesMI`, "TODO Remove"; still included by
+  `tests/multiindex_vector/multiindex_vector_component_wise_max_test.cpp`; check umbrella / SWIG);
+  file-scope `using namespace` in `operators/quadrature/quadrature.cpp` (cpplint `build/namespaces`).
+- **D. From WP-18** (`results/WP-18/design-and-obsolete-code.md`, ranked)
+  1. Fully commented-out `tools/sparse_grid_generation/sparse_grid_generation_node_lookup.{hpp,cpp}`
+     + `SGGenNodeLookup` alias (`type_defs.hpp`) + `constants::sg_gen_node_lookup` → delete.
+  2. `grids/extensive_sparse_grid.{hpp,cpp}` + commented-out `operators/quadrature/fast_quadrature.*`
+     (written against the removed TG-vector storage; `DeltasSparseGrid` keeps coefficient-0 TGs) →
+     delete (public? → owner).
+  3. `tools::quadrature::getQuadRulesForAllDims` (both overloads; no caller) → delete.
+  4. Public `TensorGrid::getNeighborsForLinInterpolation` (no operator uses it; one test) → delete
+     or keep as stand-alone API (owner).
+  5. `DSGGlobalInterpIndex` still generates the regular SG nodes of every level (could read the
+     unit table; runtime ≈ 0).
+  6. Consider later: view-based grid-point iterator for `TensorGridView` (iterate a sparse grid's
+     tensor grids without `toTensorGrid()` copies).
+- **E. Owner files / docs outdated** (report to the owner; STATUS): CLAUDE.md §5 banner claim (B1);
+  ANALYSIS.md WP-29c symbol names; SG++ install docs (optional Boost ≥ 1.81 / xxHash ≥ 0.8, LMDB, CI
+  `liblmdb-dev`).
+- **F. Overlap with WP-43** (stays last): phase references in code docs; its "phase leftovers"
+  (commented-out code, stale TODOs, dead prototype code) may move into the clean-up WPs (WP-55
+  proposes).

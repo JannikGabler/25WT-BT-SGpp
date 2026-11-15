@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(Tensor_Grids_Of_A_Sparse_Grid) {
   const SparseGrid sg(genInstr);
   BOOST_REQUIRE_GT(sg.nTG(), 0u);
 
-  for (const auto& tgData : sg) {
+  for (const auto& tgData : sg.domainTensorGrids()) {
     const TensorGrid tg = tgData.tensorGrid.toTensorGrid();
     BOOST_TEST_CONTEXT(describe(tg)) {
       const sgpp::base::DataMatrix expected = tg.getGridPoints();

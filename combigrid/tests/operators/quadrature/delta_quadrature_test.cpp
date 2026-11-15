@@ -333,7 +333,7 @@ std::vector<MIWithCoeff> nonZeroCoeffMIs(const DeltasSparseGrid& deltasSG,
                                          const LvlMI& lowerBound) {
   std::vector<MIWithCoeff> result;
 
-  for (const auto& tg : deltasSG) {
+  for (const auto& tg : deltasSG.domainTensorGrids()) {
     if (tg.coefficient != 0 && tg.mi.toMI() >= lowerBound) {
       result.emplace_back(std::vector<LvlType>(tg.mi.begin(), tg.mi.end()), tg.coefficient);
     }
@@ -548,16 +548,16 @@ std::vector<LvlMI> levelsOutside(const DeltasSparseGrid& deltasSG) {
   std::vector<LvlMI> result;
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    LvlMIView maxMI = deltasSG.getTensorGrid(0).mi;
+    LvlMIView maxMI = deltasSG.getDomainTensorGrid(0).mi;
 
-    for (const auto& tg : deltasSG) {
+    for (const auto& tg : deltasSG.domainTensorGrids()) {
       if (tg.mi[dim] > maxMI[dim]) maxMI = tg.mi;
     }
 
     LvlMI mi = maxMI.toMI();
     mi[(dim + 1) % nDim]++;
 
-    if (deltasSG.getTensorGrid(mi) == deltasSG.end()) {
+    if (deltasSG.getDomainTensorGrid(mi) == deltasSG.domainTensorGrids().end()) {
       result.push_back(mi);
     }
   }
@@ -573,7 +573,7 @@ void checkSubTries(const DeltasSparseGrid& deltasSG) {
   const SourceFunc sourceFunc = genConstantFunc(1.0);
   DeltaQuadratureData data(deltasSG, sourceFunc);
 
-  for (const auto& deltaTG : deltasSG) {
+  for (const auto& deltaTG : deltasSG.domainTensorGrids()) {
     BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaTG.mi)) {
       checkProjectedSubTrie(deltasSG, data, deltaTG);
     }
@@ -602,7 +602,7 @@ class BruteForceGlobalWeights {
   explicit BruteForceGlobalWeights(const SparseGrid& sg) {
     const std::vector<NodeGenFunc*>& nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs();
 
-    for (const auto& tg : sg) {
+    for (const auto& tg : sg.domainTensorGrids()) {
       const GPMI& gpCntPerDim = tg.tensorGrid.getGPCntPerDim();
       const DataVector& nodesPerDim = tg.tensorGrid.getNodesPerDim();
       TG& entry = tgs.emplace_back(TG{static_cast<double>(tg.coefficient), {}, {}});
@@ -1036,7 +1036,7 @@ void checkGlobalWeightsOfDeltaTGs(const SGGenInstr& genInstr) {
   size_t nChecked = 0;
   size_t nGP = 0;
 
-  for (const auto& deltaTG : deltasSG) {
+  for (const auto& deltaTG : deltasSG.domainTensorGrids()) {
     nGP += deltaTG.tensorGrid.nGP();
     tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
         data.context, deltaTG, data.scratch, [&](const DataVector& gp, const double globalWeight) {
@@ -1389,8 +1389,8 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
 
               for (const LvlMI& deltaMI : completeSGLevels(nDim, maxLvl)) {
                 const TensorGridCTData expectedTG = expectedDeltaTGData(deltaMI, genInstr);
-                const auto deltaTG = deltasSG.getTensorGrid(deltaMI);
-                BOOST_REQUIRE(deltaTG != deltasSG.end());
+                const auto deltaTG = deltasSG.getDomainTensorGrid(deltaMI);
+                BOOST_REQUIRE(deltaTG != deltasSG.domainTensorGrids().end());
 
                 std::vector<std::pair<DataVector, double>> visited;
                 tools::dsg_weighted_sum::forEachGPWithGlobalWeight(
@@ -1538,7 +1538,7 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Independent_Of_Visit_Order) {
           };
 
           for (const size_t tgIdx : randomPermutation(deltasSG.nTG())) {
-            const auto deltaTG = deltasSG.getTensorGrid(tgIdx);
+            const auto deltaTG = deltasSG.getDomainTensorGrid(tgIdx);
             misc::DeltaWeightedSumScratch fresh(nDim, deltasSG.getMaxTGSumOverGPCntsPerDim());
 
             BOOST_TEST_CONTEXT("Delta tensor grid " << toString(deltaTG.mi)) {
@@ -1579,8 +1579,8 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Reproduce_Quadrature) {
 
               double result = 0.0;
               for (const LvlMI& deltaMI : completeSGLevels(nDim, maxLvl)) {
-                const auto deltaTG = deltasSG.getTensorGrid(deltaMI);
-                BOOST_REQUIRE(deltaTG != deltasSG.end());
+                const auto deltaTG = deltasSG.getDomainTensorGrid(deltaMI);
+                BOOST_REQUIRE(deltaTG != deltasSG.domainTensorGrids().end());
                 result += tools::dsg_weighted_sum::processDeltaTensorGrid(data.context, sourceFunc,
                                                                           *deltaTG, data.scratch);
               }

@@ -21,7 +21,6 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -83,7 +82,6 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
 void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
                         const SparseGrid& sparseGrid, const std::span<double> result) {
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const NodeTable& unitNodes = node_table_generation::getUnitNodeTable(sparseGrid);
   const size_t nOutputs = result.size();
 
   std::ranges::fill(result, 0.0);
@@ -97,9 +95,10 @@ void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVect
 
 #pragma omp for schedule(guided) nowait
     for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
+      const TensorGridCTDataView tgData = sparseGrid.getDomainTensorGrid(tgIdx);
       processTensorGrid(sourceFunc, normPoint, tgData.tensorGrid,
-                        TensorGridView(tgData.mi, unitNodes), genInstr, scratch, tgResult);
+                        sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid, genInstr, scratch,
+                        tgResult);
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgData.coefficient * tgResult[k];
       }

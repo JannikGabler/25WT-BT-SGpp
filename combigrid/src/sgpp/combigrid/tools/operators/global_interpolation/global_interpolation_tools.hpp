@@ -17,10 +17,9 @@
  * (basis value 1) skipped, scratch reused across tensor grids. For m outputs, the same operations
  * are performed per output.
  *
- * The basis values are computed in normalized coordinates: the query point on @f$[0,1]^d@f$ and the
- * nodes on the unit interval (@c misc::UnitNodeTable, see
- * @c tools::node_table_generation::getUnitNodeTable); the source function is evaluated at the
- * nodes of the grid's node table (on the domain).
+ * The basis values are computed on @f$[0,1]^d@f$, from the normalized query point and the unit
+ * nodes (@c SparseGridBase::getUnitNodeTable); the source function is evaluated at the domain
+ * nodes (@c SparseGridBase::getDomainNodeTable).
  */
 #pragma once
 

@@ -20,6 +20,7 @@
 
 namespace sgpp {
 namespace combigrid {
+
 namespace misc {
 
 DSGGlobalInterpIndex::DSGGlobalInterpIndex(const DeltasSparseGrid& deltasSparseGrid)
@@ -39,7 +40,7 @@ DSGGlobalInterpIndex::DSGGlobalInterpIndex(const DeltasSparseGrid& deltasSparseG
 
   std::vector<size_t> nGP(deltasSparseGrid.nTG());
   for (size_t tgIdx = 0; tgIdx < nGP.size(); tgIdx++) {
-    nGP[tgIdx] = deltasSparseGrid.getTensorGrid(tgIdx).tensorGrid.nGP();
+    nGP[tgIdx] = deltasSparseGrid.getDomainTensorGrid(tgIdx).tensorGrid.nGP();
     nGridPoints_ += nGP[tgIdx];
   }
 
@@ -51,7 +52,7 @@ DSGGlobalInterpIndex::DSGGlobalInterpIndex(const DeltasSparseGrid& deltasSparseG
 
 void DSGGlobalInterpIndex::setRowOffsets(const DeltasSparseGrid& deltasSparseGrid) {
   // The maximum level per dimension is the one of the node table
-  const NodeTable& nodeTable = deltasSparseGrid.getNodeTable();
+  const NodeTable& nodeTable = deltasSparseGrid.getDomainNodeTable();
 
   rowOffset_.assign(1, 0);
   for (size_t dim = 0; dim < deltasSparseGrid.nDim(); dim++) {
@@ -99,5 +100,6 @@ void DSGGlobalInterpIndex::addRowsOfDim(const DeltasSparseGrid& deltasSparseGrid
 }
 
 }  // namespace misc
+
 }  // namespace combigrid
 }  // namespace sgpp

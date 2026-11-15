@@ -23,7 +23,6 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
@@ -43,7 +42,6 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
   // The cell is computed in normalized coordinates, with the nodes on the unit interval
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
-  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sparseGrid);
   double result = 0;
 
 #pragma omp parallel reduction(+ : result)
@@ -52,10 +50,10 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
 
 #pragma omp for schedule(static) nowait
     for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
-      result += tgData.coefficient *
-                tools::lin_interpolation::processTensorGrid(
-                    sourceFunc, normPoint, TensorGridView(tgData.mi, unitNodes), genInstr, scratch);
+      const TensorGridCTDataView tgData = sparseGrid.getUnitTensorGrid(tgIdx);
+      result +=
+          tgData.coefficient * tools::lin_interpolation::processTensorGrid(
+                                   sourceFunc, normPoint, tgData.tensorGrid, genInstr, scratch);
     }
   }
 
@@ -76,7 +74,6 @@ void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVecto
   const size_t nOutputs = result.size();
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
-  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sparseGrid);
 
   std::ranges::fill(result, 0.0);
 
@@ -88,9 +85,9 @@ void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVecto
 
 #pragma omp for schedule(static) nowait
     for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
-      tools::lin_interpolation::processTensorGrid(
-          sourceFunc, normPoint, TensorGridView(tgData.mi, unitNodes), genInstr, scratch, tgResult);
+      const TensorGridCTDataView tgData = sparseGrid.getUnitTensorGrid(tgIdx);
+      tools::lin_interpolation::processTensorGrid(sourceFunc, normPoint, tgData.tensorGrid,
+                                                  genInstr, scratch, tgResult);
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgData.coefficient * tgResult[k];
       }

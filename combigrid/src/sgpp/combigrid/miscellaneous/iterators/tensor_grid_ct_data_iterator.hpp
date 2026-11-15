@@ -25,10 +25,12 @@ namespace misc {
 
 /**
  * @brief Random-access proxy iterator over the tensor grids of a @c SparseGrid or
- * @c DeltasSparseGrid (see @c SparseGridBase::begin).
+ * @c DeltasSparseGrid, with the nodes of one of its node tables (see
+ * @c SparseGridBase::domainTensorGrids and @c SparseGridBase::unitTensorGrids).
  *
  * Dereferencing returns a @c TensorGridCTDataView by value, which refers to the storage of the
- * grid: bind it by value or by const reference (<tt>for (const auto& tgData : grid)</tt>). The
+ * grid: bind it by value or by const reference
+ * (<tt>for (const auto& tgData : grid.domainTensorGrids())</tt>). The
  * iterator satisfies @c std::random_access_iterator (its reference type is the view itself, so it
  * is a C++17 input iterator only).
  */
@@ -47,7 +49,7 @@ class TensorGridCTDataIterator {
    * @brief Constructs an iterator to the tensor grid @p idx.
    * @param lvls   Levels of all tensor grids (row-major, @c nDim per tensor grid).
    * @param coeffs Coefficients of all tensor grids.
-   * @param table  Node table of the grid.
+   * @param table  Node table of the grid (domain or unit nodes).
    * @param idx    Index of the tensor grid.
    */
   TensorGridCTDataIterator(const LvlType* lvls, const CTCoeffType* coeffs, const NodeTable* table,
@@ -114,7 +116,7 @@ class TensorGridCTDataIterator {
   }
   /// @}
 
-  /// @name Comparison (iterators of the same grid)
+  /// @name Comparison (iterators of the same range of the same grid)
   /// @{
   friend bool operator==(const TensorGridCTDataIterator& a,
                          const TensorGridCTDataIterator& b) noexcept {

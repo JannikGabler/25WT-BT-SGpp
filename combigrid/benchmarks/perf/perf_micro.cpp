@@ -59,7 +59,6 @@
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <string>
@@ -99,23 +98,31 @@ std::string cfg(const std::string& nodes, const LvlType boundary, const size_t n
          std::to_string(maxLvl);
 }
 
-/// The tensor grid with the most grid points (views into the grid).
+/// Index of the tensor grid with the most grid points.
 template <typename Grid>
-TensorGridCTDataView largestTensorGrid(const Grid& grid) {
+size_t largestTGIdx(const Grid& grid) {
   size_t largest = 0;
   for (size_t tg = 1; tg < grid.nTG(); tg++) {
-    if (grid.getTensorGrid(tg).tensorGrid.nGP() > grid.getTensorGrid(largest).tensorGrid.nGP()) {
+    if (grid.getDomainTensorGrid(tg).tensorGrid.nGP() >
+        grid.getDomainTensorGrid(largest).tensorGrid.nGP()) {
       largest = tg;
     }
   }
-  return grid.getTensorGrid(largest);
+  return largest;
+}
+
+/// The tensor grid with the most grid points, with its domain nodes (view into the grid).
+template <typename Grid>
+TensorGridCTDataView largestDomainTensorGrid(const Grid& grid) {
+  return grid.getDomainTensorGrid(largestTGIdx(grid));
 }
 
 /// Tensor grids processed by a quadrature case: the largest one, or all (allTGs).
 template <typename Grid>
 std::vector<TensorGridCTDataView> selectTGs(const Grid& grid, const bool allTGs) {
-  if (!allTGs) return {largestTensorGrid(grid)};
-  return std::vector<TensorGridCTDataView>(grid.begin(), grid.end());
+  if (!allTGs) return {largestDomainTensorGrid(grid)};
+  const auto tgs = grid.domainTensorGrids();
+  return std::vector<TensorGridCTDataView>(tgs.begin(), tgs.end());
 }
 
 /// Output k of the vector integrands: exp(1/2 sum_i s_k x_i) with s_k = 1 + k/64 (output 0 is
@@ -157,7 +164,8 @@ void compareResults(MicroRun& run, const std::string& name, const std::vector<do
 template <typename Grid>
 double sumOfGridPoints(const Grid& grid) {
   double sum = 0.0;
-  for (const auto& tgData : grid) sum += static_cast<double>(tgData.tensorGrid.nGP());
+  for (const auto& tgData : grid.domainTensorGrids())
+    sum += static_cast<double>(tgData.tensorGrid.nGP());
   return sum;
 }
 
@@ -176,7 +184,7 @@ void addProcessTG(Suite& suite, const std::string& nodes, const LvlType boundary
     const cg::misc::QuadratureContext context{.sparseGrid = sg,
                                               .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
     cg::misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
-    const cg::TensorGridView tg = largestTensorGrid(sg).tensorGrid;
+    const cg::TensorGridView tg = largestDomainTensorGrid(sg).tensorGrid;
 
     run.setItems(static_cast<double>(tg.nGP()));
     run.measure([&]() {
@@ -199,13 +207,13 @@ void addProcessAllTGs(Suite& suite, const std::string& nodes, const LvlType boun
             .sparseGrid = sg, .nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs()};
         cg::misc::QuadratureScratch scratch(nDim, sg.getMaxTGSumOverGPCntsPerDim());
         size_t nGP = 0;
-        for (const auto& tgData : sg) nGP += tgData.tensorGrid.nGP();
+        for (const auto& tgData : sg.domainTensorGrids()) nGP += tgData.tensorGrid.nGP();
 
         run.setItems(static_cast<double>(nGP));
         run.setCounter("nTG", static_cast<double>(sg.nTG()));
         run.measure([&]() {
           double sum = 0.0;
-          for (const auto& tgData : sg) {
+          for (const auto& tgData : sg.domainTensorGrids()) {
             sum += tgData.coefficient * cg::tools::quadrature::processTensorGrid(
                                             context, sourceFunc, tgData.tensorGrid, scratch);
           }
@@ -319,7 +327,7 @@ void addSolQuadTG(Suite& suite, const std::string& nodes, const LvlType boundary
     perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
     const SparseGrid sg(genInstr);
     const SourceFunc sourceFunc(perf::expSum);
-    const TensorGrid tg = sol::unitTGData(genInstr, largestTensorGrid(sg)).tensorGrid;
+    const TensorGrid tg = sg.getUnitTensorGrid(largestTGIdx(sg)).tensorGrid.toTensorGrid();
     const HyperCubeArea& domain = sg.getGenInstr().getDomain();
     const cg::GPMI& nPerDim = tg.getGPCntPerDim();
 
@@ -375,7 +383,7 @@ void addIterateTG(Suite& suite, const size_t nDim, const LvlType maxLvl) {
     CompleteSGGenInstr genInstr(maxLvl, nDim);
     perf::configure(genInstr, "equi", 0, perf::unitDomain(nDim));
     const SparseGrid sg(genInstr);
-    const TensorGrid tg = largestTensorGrid(sg).tensorGrid.toTensorGrid();
+    const TensorGrid tg = largestDomainTensorGrid(sg).tensorGrid.toTensorGrid();
 
     run.setItems(static_cast<double>(tg.nGP()));
     run.measure([&]() {
@@ -440,7 +448,7 @@ void addProcessDeltaTG(Suite& suite, const std::string& nodes, const LvlType bou
         const cg::misc::GenericDSGOperatorContext context{
             .deltasSparseGrid = dsg, .weights1D = weights1D, .coeffTrie = coeffTrie};
         cg::misc::DeltaWeightedSumScratch scratch(nDim, dsg.getMaxTGSumOverGPCntsPerDim());
-        const TensorGridCTDataView tgData = largestTensorGrid(dsg);
+        const TensorGridCTDataView tgData = largestDomainTensorGrid(dsg);
 
         run.setItems(static_cast<double>(tgData.tensorGrid.nGP()));
         run.measure([&]() {
@@ -490,7 +498,8 @@ void addSubTries(Suite& suite, const std::string& nodes, const LvlType boundary,
         run.measure([&]() {
           size_t nNodes = 0;
           for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
-            cg::tools::dsg_weighted_sum::compSubTrie(context, dsg.getTensorGrid(tg).mi, scratch);
+            cg::tools::dsg_weighted_sum::compSubTrie(context, dsg.getDomainTensorGrid(tg).mi,
+                                                     scratch);
             nNodes += scratch.trieNodes[0].size();
           }
           doNotOptimize(nNodes);
@@ -524,14 +533,14 @@ void addProcessDeltaTGs(Suite& suite, const std::string& nodes, const LvlType bo
 
         size_t nGP = 0;
         for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
-          nGP += dsg.getTensorGrid(tg).tensorGrid.nGP();
+          nGP += dsg.getDomainTensorGrid(tg).tensorGrid.nGP();
         }
         run.setItems(static_cast<double>(nGP));
         run.measure([&]() {
           double result = 0.0;
           for (size_t tg = 0; tg < dsg.nTG(); tg += stride) {
             result += cg::tools::dsg_weighted_sum::processDeltaTensorGrid(
-                context, sourceFunc, dsg.getTensorGrid(tg), scratch);
+                context, sourceFunc, dsg.getDomainTensorGrid(tg), scratch);
           }
           doNotOptimize(result);
         });
@@ -549,9 +558,10 @@ struct VectorDeltaQuadSetup {
     weights1D.emplace(cg::tools::dsg_quadrature::comp1DWeights(*dsg));
     coeffTrie.emplace(dsg->getLevels().getView(), dsg->getCoefficients());
     if (stride == 0) {
-      tgs.push_back(largestTensorGrid(*dsg));
+      tgs.push_back(largestDomainTensorGrid(*dsg));
     } else {
-      for (size_t tg = 0; tg < dsg->nTG(); tg += stride) tgs.push_back(dsg->getTensorGrid(tg));
+      for (size_t tg = 0; tg < dsg->nTG(); tg += stride)
+        tgs.push_back(dsg->getDomainTensorGrid(tg));
     }
     for (const auto& tgData : tgs) nGP += static_cast<double>(tgData.tensorGrid.nGP());
   }
@@ -659,9 +669,8 @@ void addInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, cons
     const SourceFunc sourceFunc(perf::cosProd);
     const DataVector point = perf::randomPoints(domain, 1, 99)[0];
     const DataVector normPoint = cg::tools::normalizeDataVector(point, domain);
-    const TensorGridCTDataView tgData = largestTensorGrid(sg);
-    const cg::TensorGridView unitTG(tgData.mi,
-                                    cg::tools::node_table_generation::getUnitNodeTable(sg));
+    const TensorGridCTDataView tgData = largestDomainTensorGrid(sg);
+    const cg::TensorGridView unitTG = sg.getUnitTensorGrid(largestTGIdx(sg)).tensorGrid;
 
     run.setItems(static_cast<double>(tgData.tensorGrid.nGP()));
     run.measure([&]() {
@@ -720,8 +729,7 @@ void addLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl) {
     const SourceFunc sourceFunc(perf::cosProd);
     const DataVector point = perf::randomPoints(domain, 1, 98)[0];
     const DataVector normPoint = cg::tools::normalizeDataVector(point, domain);
-    const cg::TensorGridView unitTG(largestTensorGrid(sg).mi,
-                                    cg::tools::node_table_generation::getUnitNodeTable(sg));
+    const cg::TensorGridView unitTG = sg.getUnitTensorGrid(largestTGIdx(sg)).tensorGrid;
     cg::misc::LinInterpScratch scratch(nDim);
 
     run.setItems(std::pow(2.0, static_cast<double>(nDim)));
@@ -769,7 +777,7 @@ void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, c
     const SourceFunc sourceFunc(perf::cosProd);
     const DataVector point = perf::randomPoints(domain, 1, 99)[0];
     const DataVector normPoint = cg::tools::normalizeDataVector(point, domain);
-    const TensorGrid tg = sol::unitTGData(genInstr, largestTensorGrid(sg)).tensorGrid;
+    const TensorGrid tg = sg.getUnitTensorGrid(largestTGIdx(sg)).tensorGrid.toTensorGrid();
     sol::NodesPerDim unit, mapped;
     sol::tgNodes(tg, domain, unit, mapped);
     std::vector<const cg::InterpolationMethod*> methods;
@@ -839,7 +847,7 @@ void addSolLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl,
     const SourceFunc sourceFunc(perf::cosProd);
     const DataVector point = perf::randomPoints(domain, 1, 98)[0];
     const DataVector normPoint = cg::tools::normalizeDataVector(point, domain);
-    const TensorGrid tg = sol::unitTGData(genInstr, largestTensorGrid(sg)).tensorGrid;
+    const TensorGrid tg = sg.getUnitTensorGrid(largestTGIdx(sg)).tensorGrid.toTensorGrid();
     sol::LinScratch scratch(nDim);
 
     run.setItems(std::pow(2.0, static_cast<double>(nDim)));
@@ -955,9 +963,8 @@ struct VectorInterpSetup {
     sg.emplace(genInstr);
     const DataVector point = perf::randomPoints(domain, 1, seed)[0];
     normPoint = cg::tools::normalizeDataVector(point, domain);
-    const TensorGridCTDataView largest = largestTensorGrid(*sg);
-    tg.emplace(largest.tensorGrid);
-    unitTG.emplace(largest.mi, cg::tools::node_table_generation::getUnitNodeTable(*sg));
+    tg.emplace(largestDomainTensorGrid(*sg).tensorGrid);
+    unitTG.emplace(sg->getUnitTensorGrid(largestTGIdx(*sg)).tensorGrid);
   }
 
   HyperCubeArea domain;

@@ -236,6 +236,12 @@ ExpectedSG genExpectedMIVecSG(const std::vector<LvlMI>& inputMIs, const SGGenIns
   return expected;
 }
 
+/// The tensor grids of @p expected: itself (an ExpectedSG) or the domain tensor grids of a grid.
+const ExpectedSG& tensorGridsOf(const ExpectedSG& expected) { return expected; }
+SparseGridBase::TensorGridRange tensorGridsOf(const SparseGridBase& expected) {
+  return expected.domainTensorGrids();
+}
+
 /**
  * Checks that @p result contains exactly the tensor grids of @p expected (an ExpectedSG or another
  * sparse grid; in any order). Every mismatching tensor grid is reported separately before the
@@ -246,11 +252,11 @@ void checkSG(const SparseGridBase& result, const Expected& expected) {
   BOOST_CHECK_EQUAL(result.nDim(), expected.nDim());
   BOOST_CHECK_EQUAL(result.nTG(), expected.nTG());
 
-  for (const auto& expectedTGData : expected) {
+  for (const auto& expectedTGData : tensorGridsOf(expected)) {
     BOOST_TEST_CONTEXT("Tensor grid " << toString(expectedTGData.mi)) {
-      const auto iter = result.getTensorGrid(expectedTGData.mi);
+      const auto iter = result.getDomainTensorGrid(expectedTGData.mi);
 
-      if (iter == result.end()) {
+      if (iter == result.domainTensorGrids().end()) {
         BOOST_ERROR("Tensor grid is missing");
       } else {
         BOOST_CHECK_EQUAL(iter->coefficient, expectedTGData.coefficient);
@@ -269,7 +275,7 @@ void checkMetaValues(const SparseGridBase& sg) {
   size_t maxTGGPCnt = 0;
   size_t maxTGSumOverGPCntsPerDim = 0;
 
-  for (const auto& tg : sg) {
+  for (const auto& tg : sg.domainTensorGrids()) {
     maxTGGPCnt = std::max(maxTGGPCnt, tg.tensorGrid.getGPCntPerDim().productofElems<size_t>());
     maxTGSumOverGPCntsPerDim =
         std::max(maxTGSumOverGPCntsPerDim, tg.tensorGrid.getGPCntPerDim().sumOfElems<size_t>());
@@ -283,7 +289,7 @@ void checkMetaValues(const SparseGridBase& sg) {
 CTCoeffType sumOfCoeffs(const SparseGridBase& sg) {
   CTCoeffType sum = 0;
 
-  for (const auto& tg : sg) {
+  for (const auto& tg : sg.domainTensorGrids()) {
     sum += tg.coefficient;
   }
 
@@ -469,7 +475,7 @@ BOOST_AUTO_TEST_CASE(Omits_Zero_Coefficients) {
   // In 3D only the 6 + 10 + 15 multi-indices with 2 <= |l|_1 <= 4 have a non-zero coefficient
   BOOST_CHECK_EQUAL(result.nTG(), size_t{31});
 
-  for (const auto& tg : result) {
+  for (const auto& tg : result.domainTensorGrids()) {
     BOOST_TEST_CONTEXT("Tensor grid " << toString(tg.mi)) {
       BOOST_CHECK_NE(tg.coefficient, 0);
       BOOST_CHECK_GE(tg.mi.sumOfElems(), maxLvl - 2);
@@ -477,11 +483,11 @@ BOOST_AUTO_TEST_CASE(Omits_Zero_Coefficients) {
     }
   }
 
-  BOOST_CHECK(result.getTensorGrid(LvlMI{0, 0, 0}) == result.end());
-  BOOST_CHECK(result.getTensorGrid(LvlMI{1, 0, 0}) == result.end());
-  BOOST_CHECK(result.getTensorGrid(LvlMI{0, 0, 5}) == result.end());
-  BOOST_CHECK(result.getTensorGrid(LvlMI{1, 1, 0}) != result.end());
-  BOOST_CHECK(result.getTensorGrid(LvlMI{0, 0, 4}) != result.end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{0, 0, 0}) == result.domainTensorGrids().end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{1, 0, 0}) == result.domainTensorGrids().end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{0, 0, 5}) == result.domainTensorGrids().end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{1, 1, 0}) != result.domainTensorGrids().end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{0, 0, 4}) != result.domainTensorGrids().end());
 }
 
 BOOST_AUTO_TEST_CASE(Boundary_Level_Offset) {
@@ -502,7 +508,7 @@ BOOST_AUTO_TEST_CASE(Boundary_Level_Offset) {
 
       // Dimension k contains the boundary nodes 0 and 1 (as first and last node) iff
       // l_k >= boundary level offset
-      for (const auto& tg : result) {
+      for (const auto& tg : result.domainTensorGrids()) {
         const GPMI& gpCntPerDim = tg.tensorGrid.getGPCntPerDim();
         const sgpp::base::DataVector& nodesPerDim = tg.tensorGrid.getNodesPerDim();
         size_t firstNodeIdx = 0;
@@ -542,8 +548,8 @@ BOOST_AUTO_TEST_CASE(Nodes_Mapped_Onto_Domain) {
 
   BOOST_REQUIRE_EQUAL(scaledSG.nTG(), unitSG.nTG());
   for (size_t tg = 0; tg < unitSG.nTG(); tg++) {
-    const TensorGridCTDataView unitTG = unitSG.getTensorGrid(tg);
-    const TensorGridCTDataView scaledTG = scaledSG.getTensorGrid(tg);
+    const TensorGridCTDataView unitTG = unitSG.getDomainTensorGrid(tg);
+    const TensorGridCTDataView scaledTG = scaledSG.getDomainTensorGrid(tg);
     BOOST_CHECK(scaledTG.mi == unitTG.mi);
     BOOST_CHECK_EQUAL(scaledTG.coefficient, unitTG.coefficient);
     for (size_t dim = 0; dim < 2; dim++) {
@@ -737,10 +743,10 @@ BOOST_AUTO_TEST_CASE(Consistent_With_Gen_Instr) {
 
           for (size_t miIdx = 0; miIdx < miVec.nMI(); miIdx++) {
             const LvlMI mi = miVec[miIdx];
-            const auto iter = result.getTensorGrid(mi);
+            const auto iter = result.getDomainTensorGrid(mi);
 
             BOOST_TEST_CONTEXT("Tensor grid " << toString(mi)) {
-              BOOST_REQUIRE(iter != result.end());
+              BOOST_REQUIRE(iter != result.domainTensorGrids().end());
               BOOST_CHECK_EQUAL(iter->coefficient, coeffs[miIdx]);
               BOOST_CHECK(toTG(iter->tensorGrid) == expectedTG(mi, *genInstr));
             }

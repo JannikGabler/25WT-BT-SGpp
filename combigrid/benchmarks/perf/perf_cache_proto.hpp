@@ -609,13 +609,13 @@ inline std::vector<double> distinctGridPoints(const size_t nDim, const size_t n)
     configure(genInstr, "equi", 1, unitDomain(nDim));
     const DeltasSparseGrid grid(genInstr);
     size_t total = 0;
-    for (const auto& tgData : grid) total += tgData.tensorGrid.nGP();
+    for (const auto& tgData : grid.domainTensorGrids()) total += tgData.tensorGrid.nGP();
     if (total < n) continue;
 
     std::vector<double> points;
     points.reserve(n * nDim);
     base::DataVector gp(nDim);
-    for (const auto& tgData : grid) {
+    for (const auto& tgData : grid.domainTensorGrids()) {
       for (size_t i = 0; i < tgData.tensorGrid.nGP() && points.size() < n * nDim; i++) {
         tgData.tensorGrid.getGridPoint(i, gp);
         points.insert(points.end(), gp.begin(), gp.end());

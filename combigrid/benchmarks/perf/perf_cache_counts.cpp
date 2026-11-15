@@ -98,7 +98,7 @@ size_t intersectionSize(const HashSet& a, const HashSet& b) {
 template <typename Grid>
 size_t sumOfGridPoints(const Grid& grid) {
   size_t sum = 0;
-  for (const auto& tgData : grid) sum += tgData.tensorGrid.nGP();
+  for (const auto& tgData : grid.domainTensorGrids()) sum += tgData.tensorGrid.nGP();
   return sum;
 }
 

@@ -48,7 +48,6 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <span>
 #include <string>
 #include <vector>
@@ -176,11 +175,10 @@ double lagrangeBasis(const double* const nodes, const size_t n, const size_t j, 
 double scale(const SparseGrid& sg, const DataVector& point, const size_t k) {
   const HyperCubeArea& domain = sg.getGenInstr().getDomain();
   const DataVector normPoint = tools::normalizeDataVector(point, domain);
-  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sg);
   double result = 0.0;
 
-  for (const auto& tgData : sg) {
-    const TensorGrid tg = TensorGridView(tgData.mi, unitNodes).toTensorGrid();  // Unit nodes
+  for (const auto& tgData : sg.unitTensorGrids()) {
+    const TensorGrid tg = tgData.tensorGrid.toTensorGrid();
     const GPMI& nGPPerDim = tg.getGPCntPerDim();
     const DataVector& nodesPerDim = tg.getNodesPerDim();
     DataVector gp(tg.nDim());
@@ -346,7 +344,7 @@ std::vector<DataVector> allGridPoints(const SparseGrid& sg) {
   const HyperCubeArea& domain = genInstr.getDomain();
   const size_t nDim = sg.nDim();
   std::vector<DataVector> result;
-  for (const auto& tgData : sg) {
+  for (const auto& tgData : sg.domainTensorGrids()) {
     std::vector<DataVector> nodes;
     for (size_t dim = 0; dim < nDim; dim++) {
       nodes.push_back(genInstr.getNodeGenFuncForDim(dim)->genNodes(

@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstddef>
+#include <ranges>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/iterators/tensor_grid_ct_data_iterator.hpp>
@@ -30,19 +31,28 @@ namespace combigrid {
  * - the level multi-indices of all tensor grids, contiguously (@ref getLevels, an @c LvlMIVec
  *   taken over from the generation of the multi-index set);
  * - the combination coefficients in one array (@ref getCoefficients);
- * - the 1D node lists once per (dimension, level), already mapped onto the domain
- *   (@ref getNodeTable, see @c NodeTable): the nodes of tensor grid @f$\vec{\ell}@f$ in dimension
- *   @f$k@f$ are the list of @f$(k, \ell_k)@f$, the number of grid points per dimension follows
- *   from it.
+ * - the 1D node lists once per (dimension, level) (see @c NodeTable), in domain coordinates
+ *   (@ref getDomainNodeTable) and on the unit interval (@ref getUnitNodeTable): the nodes of tensor
+ * grid
+ *   @f$\vec{\ell}@f$ in dimension @f$k@f$ are the list of @f$(k, \ell_k)@f$, the number of grid
+ *   points per dimension follows from it. The source function is evaluated at the domain
+ *   coordinates; the operators compute their weights (quadrature weights, basis values, the
+ *   interpolation cell) on @f$[0,1]^d@f$, from the unit nodes.
  *
  * Tensor grid @c i is accessed as a @c TensorGridCTDataView (level multi-index, coefficient,
- * @c TensorGridView), by index (@ref getTensorGrid) or by iterating the grid
- * (<tt>for (const auto& tgData : grid)</tt>). The views refer to the storage of the grid.
+ * @c TensorGridView), with its nodes either in domain coordinates or on the unit interval: every
+ * accessor names the coordinates it uses, there is no default. By index
+ * (@ref getDomainTensorGrid(size_t) const "getDomainTensorGrid(i)",
+ * @ref getUnitTensorGrid(size_t) const "getUnitTensorGrid(i)"), by level multi-index, or by
+ * iterating one of the two ranges (<tt>for (const auto& tgData : grid.domainTensorGrids())</tt>,
+ * @ref unitTensorGrids). Both variants of a tensor grid have the same level multi-index,
+ * coefficient and grid-point counts. The views refer to the storage of the grid.
  */
 class SparseGridBase {
  public:
   using const_iterator = misc::TensorGridCTDataIterator;  ///< Iterator over the tensor grids.
-  using iterator = const_iterator;                        ///< The tensor grids are read-only.
+  /// Range of the tensor grids (random access: @c begin, @c end, @c size, @c operator[]).
+  using TensorGridRange = std::ranges::subrange<const_iterator>;
 
   /// @name Getters
   /// @{
@@ -55,18 +65,45 @@ class SparseGridBase {
 
   /**
    * @brief Returns the @p idx -th tensor grid (with its level multi-index and combination
-   * coefficient), as a view into the grid.
+   * coefficient) with its nodes in domain coordinates, as a view into the grid.
    */
-  TensorGridCTDataView getTensorGrid(size_t idx) const noexcept { return begin()[idx]; }
+  TensorGridCTDataView getDomainTensorGrid(size_t idx) const noexcept {
+    return domainTensorGrids()[static_cast<std::ptrdiff_t>(idx)];
+  }
 
   /**
-   * @brief Returns an iterator to the tensor grid with level multi-index @p mi.
+   * @brief Returns the @p idx -th tensor grid (with its level multi-index and combination
+   * coefficient) with its nodes on the unit interval, as a view into the grid.
+   */
+  TensorGridCTDataView getUnitTensorGrid(size_t idx) const noexcept {
+    return unitTensorGrids()[static_cast<std::ptrdiff_t>(idx)];
+  }
+
+  /**
+   * @brief Returns an iterator into @ref domainTensorGrids to the tensor grid with level
+   * multi-index @p mi.
    *
    * @param mi Level multi-index to search for.
-   * @return Iterator to the matching tensor grid, or @c end() if not found.
+   * @return Iterator to the matching tensor grid, or <tt>domainTensorGrids().end()</tt>.
    * @note Linear search (@c O(nTG)); avoid in hot loops.
    */
-  const_iterator getTensorGrid(const LvlMIView& mi) const noexcept;
+  const_iterator getDomainTensorGrid(const LvlMIView& mi) const noexcept;
+
+  /**
+   * @brief Returns an iterator into @ref unitTensorGrids to the tensor grid with level
+   * multi-index @p mi.
+   *
+   * @param mi Level multi-index to search for.
+   * @return Iterator to the matching tensor grid, or <tt>unitTensorGrids().end()</tt>.
+   * @note Linear search (@c O(nTG)); avoid in hot loops.
+   */
+  const_iterator getUnitTensorGrid(const LvlMIView& mi) const noexcept;
+
+  /// @brief Returns the tensor grids with their nodes in domain coordinates, in their order.
+  TensorGridRange domainTensorGrids() const noexcept { return tensorGrids(domainNodeTable_); }
+
+  /// @brief Returns the tensor grids with their nodes on the unit interval, in their order.
+  TensorGridRange unitTensorGrids() const noexcept { return tensorGrids(unitNodeTable_); }
 
   /// @brief Returns the level multi-indices of the tensor grids, in the order of the tensor grids.
   const LvlMIVec& getLevels() const noexcept { return levels_; }
@@ -75,7 +112,10 @@ class SparseGridBase {
   std::span<const CTCoeffType> getCoefficients() const noexcept { return coefficients_; }
 
   /// @brief Returns the 1D node lists per (dimension, level), in domain coordinates.
-  const NodeTable& getNodeTable() const noexcept { return nodeTable_; }
+  const NodeTable& getDomainNodeTable() const noexcept { return domainNodeTable_; }
+
+  /// @brief Returns the 1D node lists per (dimension, level), on the unit interval.
+  const NodeTable& getUnitNodeTable() const noexcept { return unitNodeTable_; }
 
   /// @brief Returns the maximum number of grid points of a tensor grid.
   size_t getMaxTGGPCnt() const noexcept { return maxTGGPCnt_; }
@@ -86,22 +126,10 @@ class SparseGridBase {
 
   /**
    * @brief Returns the cache of query-independent data that operators build on their first call
-   * on this grid (e.g. the index of the linear interpolation on a deltas sparse grid, the node
-   * table on the unit interval); internal to the operators.
+   * on this grid (e.g. the index of the linear interpolation on a deltas sparse grid); internal
+   * to the operators.
    */
   misc::OperatorDataCache& getOperatorData() const noexcept { return operatorData; }
-
-  /// @}
-
-  /// @name Iterators
-  /// @{
-
-  const_iterator begin() const noexcept {
-    return const_iterator(levels_.data(), coefficients_.data(), &nodeTable_, 0);
-  }
-  const_iterator end() const noexcept { return begin() + static_cast<std::ptrdiff_t>(nTG()); }
-  const_iterator cbegin() const noexcept { return begin(); }
-  const_iterator cend() const noexcept { return end(); }
 
   /// @}
 
@@ -113,7 +141,7 @@ class SparseGridBase {
    *
    * Two sparse grids are considered equal if they have the same dimension, the same number of
    * tensor grids, and every tensor grid of @c *this (level multi-index, coefficient, counts and
-   * nodes) is also present in @p other.
+   * domain nodes) is also present in @p other.
    *
    * @param other Sparse grid to compare against.
    * @return @c true if equal.
@@ -141,22 +169,34 @@ class SparseGridBase {
   /**
    * @brief Takes over the storage of the tensor grids and computes the cached maxima.
    *
-   * @param levels       Level multi-indices of the tensor grids (moved in by the caller).
-   * @param coefficients Their combination coefficients.
-   * @param nodeTable    Node lists of all (dimension, level) of @p levels.
+   * @param levels          Level multi-indices of the tensor grids (moved in by the caller).
+   * @param coefficients    Their combination coefficients.
+   * @param domainNodeTable Node lists of all (dimension, level) of @p levels, on the domain.
+   * @param unitNodeTable   The same node lists on the unit interval.
    */
-  void setStorage(LvlMIVec levels, std::vector<CTCoeffType> coefficients, NodeTable nodeTable);
+  void setStorage(LvlMIVec levels, std::vector<CTCoeffType> coefficients, NodeTable domainNodeTable,
+                  NodeTable unitNodeTable);
 
   /// @}
 
  private:
+  /// @brief Returns the tensor grids with the nodes of @p table (one of the two node tables).
+  TensorGridRange tensorGrids(const NodeTable& table) const noexcept {
+    const const_iterator first(levels_.data(), coefficients_.data(), &table, 0);
+    return {first, first + static_cast<std::ptrdiff_t>(nTG())};
+  }
+
+  /// @brief Returns the iterator to the tensor grid with level multi-index @p mi in @p range.
+  static const_iterator findTensorGrid(TensorGridRange range, const LvlMIView& mi) noexcept;
+
   /// @brief Computes @ref getMaxTGGPCnt and @ref getMaxTGSumOverGPCntsPerDim.
   void computeMetaValues();
 
   const size_t nDim_;                      ///< Spatial dimensionality (fixed at construction).
   LvlMIVec levels_;                        ///< Level multi-indices of the tensor grids.
   std::vector<CTCoeffType> coefficients_;  ///< Combination coefficients of the tensor grids.
-  NodeTable nodeTable_;                    ///< Node lists per (dimension, level).
+  NodeTable domainNodeTable_;              ///< Node lists per (dimension, level), on the domain.
+  NodeTable unitNodeTable_;                ///< The same on the unit interval.
 
   size_t maxTGGPCnt_ = 0;                ///< See @ref getMaxTGGPCnt.
   size_t maxTGSumOverGPCntsPerDim_ = 0;  ///< See @ref getMaxTGSumOverGPCntsPerDim.

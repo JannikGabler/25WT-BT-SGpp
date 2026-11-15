@@ -136,7 +136,7 @@ double evaluateInterpolant(const DSGGlobalInterpIndex& index,
   runPasses(index, deltasSparseGrid, normPoint, weights, 0, parallel,
             [&](const size_t tgIdx, DeltaWeightedSumScratch& scratch) {
               tgSums[tgIdx] = processDeltaTensorGrid(
-                  context, sourceFunc, deltasSparseGrid.getTensorGrid(tgIdx), scratch);
+                  context, sourceFunc, deltasSparseGrid.getDomainTensorGrid(tgIdx), scratch);
             });
 
   return std::accumulate(tgSums.begin(), tgSums.end(), 0.0);
@@ -157,8 +157,8 @@ void evaluateInterpolant(const DSGGlobalInterpIndex& index,
 
   runPasses(index, deltasSparseGrid, normPoint, weights, nOutputs, parallel,
             [&](const size_t tgIdx, DeltaWeightedSumScratch& scratch) {
-              processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getTensorGrid(tgIdx),
-                                     scratch,
+              processDeltaTensorGrid(context, sourceFunc,
+                                     deltasSparseGrid.getDomainTensorGrid(tgIdx), scratch,
                                      std::span<double>(tgSums.data() + tgIdx * nOutputs, nOutputs));
             });
 

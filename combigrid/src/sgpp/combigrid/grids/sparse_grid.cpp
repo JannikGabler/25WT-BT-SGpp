@@ -20,9 +20,12 @@ namespace combigrid {
 SparseGrid::SparseGrid(const SGGenInstr& genInstr)
     : SparseGridBase(genInstr.nDim()), genInstr(genInstr.clone()) {
   std::pair<LvlMIVec, std::vector<CTCoeffType>> mis = genInstr.genReducedMIVecWithCoeffs();
-  NodeTable nodeTable = tools::node_table_generation::genNodeTable(genInstr, mis.first, false);
+  NodeTable unitNodeTable =
+      tools::node_table_generation::genUnitNodeTable(genInstr, mis.first, false);
+  NodeTable domainNodeTable = tools::node_table_generation::mapOntoDomain(genInstr, unitNodeTable);
 
-  setStorage(std::move(mis.first), std::move(mis.second), std::move(nodeTable));
+  setStorage(std::move(mis.first), std::move(mis.second), std::move(domainNodeTable),
+             std::move(unitNodeTable));
 }
 
 /// @}

@@ -52,7 +52,6 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <string>
@@ -267,11 +266,9 @@ void checkGrid(const SparseGrid& sg, const DataVector& point) {
   const DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
   double expected = 0.0, absSum = 0.0, tgBounds = 0.0;
 
-  // The kernel works on the nodes on the unit interval (the grid's unit node table)
-  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sg);
-
-  for (const auto& tgData : sg) {
-    const TensorGridView unitTG(tgData.mi, unitNodes);
+  // The kernel works on the nodes on the unit interval
+  for (const auto& tgData : sg.unitTensorGrids()) {
+    const TensorGridView unitTG = tgData.tensorGrid;
     const std::vector<RefCorner> ref =
         referenceCorners(unitTG.toTensorGrid(), normPoint, genInstr.getDomain());
     BOOST_TEST_CONTEXT("mi " << tgData.mi.size() << "-dim, coefficient " << tgData.coefficient) {

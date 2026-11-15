@@ -26,10 +26,11 @@ functions/
 grids/
   tensor_grid            stand-alone anisotropic tensor grid (per-dim node lists)
   tensor_grid_view       TensorGridView: a tensor grid of a sparse grid (levels + shared node table)
-  node_table             NodeTable: 1D node lists once per (dim, level), on the domain; dims with
-                         the same nodes / counts / interval share rows (WP-18)
-  sparse_grid_base       common base, struct of arrays: levels (LvlMIVec), coefficients, NodeTable,
-                         cached maxima, OperatorDataCache; proxy iterator (not SWIG-wrapped)
+  node_table             NodeTable: 1D node lists once per (dim, level); dims with the same nodes /
+                         counts (and, on the domain, interval) share rows (WP-18)
+  sparse_grid_base       common base, struct of arrays: levels (LvlMIVec), coefficients, two
+                         NodeTables (domain, unit), cached maxima, OperatorDataCache; proxy
+                         iterator (not SWIG-wrapped)
   sparse_grid            CT sparse grid (+ optional shared SGGenInstr)
   deltas_sparse_grid     delta representation for the DSG quadrature, global and linear interpolation
                          (every grid point in exactly one delta tensor grid; public, Python-bound
@@ -37,13 +38,13 @@ grids/
   extensive_sparse_grid  commented out
 miscellaneous/         (namespace misc)
   tensor_grid/           TensorGridCTData {mi, coefficient, tensorGrid} (owning copy) and
-                         TensorGridCTDataView (what indexing / iterating a grid yields)
+                         TensorGridCTDataView (what the domain / unit accessors and ranges of a grid yield)
   iterators/             tensor_grid_ct_data_iterator: random-access proxy iterator of the grids
   ct_coefficient_trie/   CTCoeffTrie: prefix tree over the tensor grids' level MIs (DSG quadrature
                          and global interpolation)
   operator_data_cache/   OperatorDataCache: thread-safe, type-keyed store of lazily built
                          query-independent operator data of a grid (SparseGridBase::
-                         getOperatorData; e.g. the UnitNodeTable of the SG interpolations, e.g. DSGLinInterpIndex, DSGGlobalInterpIndex), so the
+                         getOperatorData; e.g. DSGLinInterpIndex, DSGGlobalInterpIndex), so the
                          grid's header names no operator type
   closure_trie/          ClosureTrie: trie over a downwards-closed MI set, MI -> dense rank by one
                          lookup per dimension (DSG linear interpolation; reusable for other DSG
@@ -140,11 +141,17 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 - `SparseGrid` ([grids/sparse_grid.hpp](../src/sgpp/combigrid/grids/sparse_grid.hpp)): top-level
   container, constructible from an `SGGenInstr` (copied). Storage in `SparseGridBase` (WP-18):
   `getLevels()` (the `LvlMIVec` of the reduced MI set, taken over from the generation),
-  `getCoefficients()`, `getNodeTable()` (`NodeTable`: per (dim, level) one node list on the domain,
-  `nodes(dim, lvl)` / `nNodes(dim, lvl)`; SG: regular nodes, DSG: delta nodes; lists shared by
-  dims with equal node family, count function and interval). `getTensorGrid(i)` / iteration yield
-  `TensorGridCTDataView`s (views; `toTensorGridCTData()` copies); kernels take `TensorGridView`
-  (`nGPInDim(dim)`, `nodesInDim(dim)` pointers into the table). Grids are not copyable.
+  `getCoefficients()`, `getDomainNodeTable()` / `getUnitNodeTable()` (`NodeTable`: per (dim, level) one
+  node list on the domain / on [0,1], same levels and counts, `nodes(dim, lvl)` /
+  `nNodes(dim, lvl)`; SG: regular nodes, DSG: delta nodes; lists shared by dims with equal node
+  family and count function, on the domain also equal interval; both built eagerly at
+  construction, the domain table as `mapToDomain` copy of the unit one). Every tensor-grid accessor
+  names its coordinates, there is no default iteration: `getDomainTensorGrid(i | mi)` /
+  `getUnitTensorGrid(i | mi)` (by mi: iterator into the matching range), ranges
+  `domainTensorGrids()` / `unitTensorGrids()` (`TensorGridRange` = `std::ranges::subrange` of the
+  proxy iterator: range-for, `size`, `[]`); they yield `TensorGridCTDataView`s
+  (`toTensorGridCTData()` copies); kernels take `TensorGridView` (`nGPInDim(dim)`,
+  `nodesInDim(dim)` pointers into a table). Grids are not copyable.
 - `DeltasSparseGrid` ([grids/deltas_sparse_grid.hpp](../src/sgpp/combigrid/grids/deltas_sparse_grid.hpp)):
   constructed from an `SGGenInstr`; `quadrature(const SourceFunc&, const DeltasSparseGrid&)`
   ([deltas_sparse_grid_quadrature.hpp](../src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp))
@@ -301,9 +308,9 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 ## Design rationale (thesis §5)
 
 - **Two domains**: weights and interpolation math live on [0,1]^d. The user domain Ω = ∏[a_k, b_k]
-  enters (1) in the stored nodes (since WP-18 the `NodeTable` holds `tools::mapToDomain(u, a_k,
-  b_k−a_k)` = `std::fma` of the unit nodes, bitwise the evaluated points; the SG interpolations
-  keep a `UnitNodeTable` as operator data, the DSG indices their own unit nodes) and (2) as the
+  enters (1) in the domain node table (since WP-18 `getDomainNodeTable()` holds `tools::mapToDomain(u,
+  a_k, b_k−a_k)` = `std::fma` of the unit nodes of `getUnitNodeTable()`, bitwise the evaluated
+  points; weights, basis values and interpolation cells are computed from the unit table) and (2) as the
   factor |Ω| of quadrature results. `SourceFunc` + `SGGenInstr::setDomain()` handle it.
 - **Node generation**: `NodeGenFunc` receives the number of *inner* nodes; `SGGenInstr` appends
   boundary nodes per `boundaryLevelOffset`. Level → count (`Lvl2GPCntFunc`) and node positions are

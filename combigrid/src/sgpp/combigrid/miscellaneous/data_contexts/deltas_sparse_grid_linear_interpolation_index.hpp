@@ -30,9 +30,8 @@ namespace misc {
  *
  * <b>Corner coordinates.</b> The tensor grid of level @f$\vec{\ell}@f$ has the nodes
  * @f$N_j(\ell_j) = \bigcup_{\lambda \leq \ell_j} D_j(\lambda)@f$ in dimension j, where
- * @f$D_j(\lambda)@f$ are the delta nodes of level @f$\lambda@f$ (nested nodes; the index generates
- * them on the unit interval, as the node-generation function of dimension j does for the deltas
- * sparse grid before mapping them onto the domain). For a query coordinate
+ * @f$D_j(\lambda)@f$ are the delta nodes of level @f$\lambda@f$ (nested nodes; the index takes
+ * them from the unit node table of the grid). For a query coordinate
  * @f$x_j@f$, the bracketing coordinates of the levels @f$0, 1, \ldots@f$ form a chain: each one
  * appears first at some level @f$\lambda@f$, at most @ref maxNewCoords of them per level (2 at
  * level 0; at level @f$\lambda > 0@f$ the number of delta nodes in a gap of
@@ -78,8 +77,8 @@ class DSGLinInterpIndex {
   /// @brief Returns the number of rows (sum of maxLvl(j) + 1 over the dimensions).
   size_t nRows() const noexcept { return rowOffset_.back(); }
 
-  /// @brief Returns the delta nodes of the (dimension, level) of row @p row, sorted ascending
-  /// (normalized: on the unit interval).
+  /// @brief Returns the delta nodes of the (dimension, level) of row @p row on the unit interval,
+  /// sorted ascending.
   std::span<const double> deltaNodes(const size_t row) const noexcept {
     return std::span<const double>(nodes).subspan(nodeOffset[row],
                                                   nodeOffset[row + 1] - nodeOffset[row]);
@@ -113,8 +112,8 @@ class DSGLinInterpIndex {
   CTCoeffType coefficient(const size_t tgIdx) const noexcept { return coeffs_[tgIdx]; }
 
  private:
-  /// @brief Sets the rows and generates the sorted (normalized) delta nodes of every (dimension,
-  /// level) of @p deltasSparseGrid.
+  /// @brief Sets the rows and copies the sorted unit delta nodes of every (dimension, level) of
+  /// @p deltasSparseGrid.
   void collectDeltaNodes(const DeltasSparseGrid& deltasSparseGrid);
 
   /// @brief Sets @ref maxNewCoords_ of the rows of dimension @p dim.

@@ -143,7 +143,7 @@ struct Problem {
   SourceFunc func{perf::cosProd};
   std::vector<DataVector> points;
   std::vector<DataVector> normPoints;
-  std::vector<TensorGridCTData> ownedTGs;  ///< Copies with unit nodes (sol::unitTGData).
+  std::vector<TensorGridCTData> ownedTGs;  ///< Copies with unit nodes.
   std::vector<const TensorGridCTData*> tgs;
   std::vector<sol::NodesPerDim> mapped;  ///< Per TG: nodes on the domain (tools::mapToDomain).
   std::vector<sol::NodesPerDim> unit;    ///< Per TG: normalized nodes (as stored in the TG).
@@ -159,7 +159,8 @@ struct Problem {
     for (const DataVector& x : points) {
       normPoints.push_back(cg::tools::normalizeDataVector(x, domain));
     }
-    for (const auto& tgData : *grid) ownedTGs.push_back(sol::unitTGData(genInstr, tgData));
+    for (const auto& tgData : grid->unitTensorGrids())
+      ownedTGs.push_back(tgData.toTensorGridCTData());
     for (const TensorGridCTData& tgData : ownedTGs) {
       tgs.push_back(&tgData);
       addNodes(tgData.tensorGrid);

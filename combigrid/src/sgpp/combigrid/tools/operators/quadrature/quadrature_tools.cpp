@@ -80,7 +80,7 @@ void combineTensorGrids(const QuadratureContext& context, const VectorSourceFunc
 
 #pragma omp for schedule(guided) nowait
     for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
+      const TensorGridCTDataView tgData = sparseGrid.getDomainTensorGrid(tgIdx);
       processTensorGrid(context, sourceFunc, tgData.tensorGrid, scratch, tgResult);
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgData.coefficient * tgResult[k];

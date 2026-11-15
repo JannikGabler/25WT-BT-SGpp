@@ -34,9 +34,9 @@ namespace combigrid {
  * Each tensor grid (a @c TensorGridCTDataView, see @c SparseGridBase) has the level multi-index,
  * the CT coefficient of that multi-index (0 for multi-indices of the closure that are not
  * combined; unlike @c SparseGrid, such tensor grids are kept) and the delta tensor grid. The node
- * table holds the delta nodes of every (dimension, level), mapped onto the domain
- * (@c tools::mapToDomain); for nested nodes, the rows of a dimension together are the nodes of its
- * finest level, each stored once. The generation instruction is copied (@c clone); the copy of a
+ * tables hold the delta nodes of every (dimension, level), on the unit interval and on the
+ * domain; for nested nodes, the rows of a dimension together are the nodes of its finest level,
+ * each stored once. The generation instruction is copied (@c clone); the copy of a
  * @c MIVecSGGenInstr references the caller's @c LvlMIVec, which must outlive the grid.
  */
 class DeltasSparseGrid : public SparseGridBase {

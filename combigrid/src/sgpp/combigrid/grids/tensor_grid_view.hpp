@@ -30,7 +30,10 @@ namespace combigrid {
  * share. The view refers to both; it is valid as long as the sparse grid exists and is cheap to
  * copy (pass it by value).
  *
- * The nodes are in domain coordinates (see @c NodeTable). Grid points are indexed as in
+ * The nodes are those of the table: in domain coordinates (@c SparseGridBase::getDomainNodeTable,
+ * @c SparseGridBase::getDomainTensorGrid) or on the unit interval
+ * (@c SparseGridBase::getUnitNodeTable, @c SparseGridBase::getUnitTensorGrid). Grid points are
+ * indexed as in
  * @c TensorGrid (linear index, first dimension fastest). @ref toTensorGrid copies the tensor grid
  * into a stand-alone @c TensorGrid (e.g. for its grid-point iterators).
  */
@@ -63,11 +66,10 @@ class TensorGridView {
     return static_cast<GPCntType>(rows_[row(dim)].size());
   }
 
-  /// @brief Returns the first node of dimension @p dim (@ref nGPInDim "nGPInDim(dim)" nodes, in
-  /// domain coordinates).
+  /// @brief Returns the first node of dimension @p dim (@ref nGPInDim "nGPInDim(dim)" nodes).
   const double* nodesInDim(const size_t dim) const noexcept { return rows_[row(dim)].data(); }
 
-  /// @brief Returns the nodes of dimension @p dim (in domain coordinates).
+  /// @brief Returns the nodes of dimension @p dim.
   std::span<const double> nodeSpanInDim(const size_t dim) const noexcept {
     return {nodesInDim(dim), nGPInDim(dim)};
   }
@@ -87,7 +89,7 @@ class TensorGridView {
 
   /**
    * @brief Returns the node positions concatenated across dimensions (as
-   * @c TensorGrid::getNodesPerDim), in domain coordinates.
+   * @c TensorGrid::getNodesPerDim).
    * @note Copies the nodes; in loops, use @ref nodesInDim.
    */
   base::DataVector getNodesPerDim() const;

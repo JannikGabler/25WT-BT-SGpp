@@ -36,8 +36,10 @@ modules are irrelevant.
 
 Pipeline: a generation instruction (`CompleteSGGenInstr(maxLvl, nDim)` or `MIVecSGGenInstr(miVec)`
 for custom / adaptive MI sets) → `SparseGrid` (struct of arrays in `SparseGridBase`: levels
-`LvlMIVec`, coefficients, `NodeTable` = 1D node lists once per (dim, level), on the domain; tensor
-grid i is a view `TensorGridCTDataView {mi, coefficient, tensorGrid}`, `toTensorGridCTData()` copies)
+`LvlMIVec`, coefficients, two `NodeTable`s = 1D node lists once per (dim, level), on the domain and on
+[0,1]; tensor grid i is a view `TensorGridCTDataView {mi, coefficient, tensorGrid}` with domain or unit
+nodes: `getDomainTensorGrid(i)` / `getUnitTensorGrid(i)`, ranges `domainTensorGrids()` /
+`unitTensorGrids()`, no default iteration; `toTensorGridCTData()` copies)
 → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid`
 (nested nodes only; Python-bound with its operators since WP-50) + its `quadrature` overload
 evaluates every grid point once; its `interpolateLinear` overloads (WP-47) every distinct corner
@@ -46,9 +48,9 @@ once per call, weighted with global weights from the 1D basis values
 (`InterpolationMethod::basisValues`) through the weighted-sum kernel it shares with the DSG
 quadrature (`tools::dsg_weighted_sum`; thread-count independent). User functions are wrapped in
 `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators on both grid types, also in Python);
-weights live on [0,1]^d; the grids store their nodes mapped onto the `setDomain()` domain with
-`tools::mapToDomain` = `std::fma` (all operators evaluate these bitwise identical points; the SG
-interpolations keep a unit-node table as operator data for their normalized-coordinate math). Optional caching (WP-26): `CachedSourceFunc`
+weights, basis values and interpolation cells live on [0,1]^d (`getUnitNodeTable()`); the source
+function is evaluated at the domain nodes (`getDomainNodeTable()`: the unit nodes mapped onto the
+`setDomain()` domain with `tools::mapToDomain` = `std::fma`, bitwise the points of all operators). Optional caching (WP-26): `CachedSourceFunc`
 / `CachedVectorSourceFunc` (a `SourceFunc` / `VectorSourceFunc` whose callable looks every point up
 in a shared `SourceFuncCache`; `SourceFuncCacheConfig{.memoryLimit, .nShards, .policy, .file,
 .storageSpaceLimit}`, `statistics()`, `flush()`, `clear(deletePersistentFile)`; Python too); always

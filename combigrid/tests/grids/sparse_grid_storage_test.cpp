@@ -7,12 +7,12 @@
  * @file sparse_grid_storage_test.cpp
  * @brief Boost.Test cases for the storage of the tensor grids shared by @c SparseGrid and
  * @c DeltasSparseGrid (@c SparseGridBase): the struct of arrays (levels, coefficients), the node
- * table (@c NodeTable: one node list per distinct (dimension, level), mapped onto the domain,
- * shared by the dimensions with the same nodes), the views (@c TensorGridView,
+ * tables (@c NodeTable: one node list per distinct (dimension, level), on the unit interval and on
+ * the domain, shared by the dimensions with the same nodes), the views (@c TensorGridView,
  * @c TensorGridCTDataView), the iterator, the cached maxima and the equality.
  *
- * The expected node lists are generated from the node-generation functions and mapped with
- * @c tools::mapToDomain, independently of the generation code of the grids, and compared
+ * The expected node lists are generated from the node-generation functions (and mapped with
+ * @c tools::mapToDomain), independently of the generation code of the grids, and compared
  * bitwise.
  */
 
@@ -55,38 +55,40 @@ bool bitwiseEqual(const double a, const double b) {
   return std::bit_cast<uint64_t>(a) == std::bit_cast<uint64_t>(b);
 }
 
-/// Expected nodes of (dimension @p dim, level @p lvl) on the domain: the regular nodes (sparse
-/// grid) or the delta nodes (deltas sparse grid) of the node-generation function, mapped with
-/// tools::mapToDomain.
+/// Expected nodes of (dimension @p dim, level @p lvl): the regular nodes (sparse grid) or the
+/// delta nodes (deltas sparse grid) of the node-generation function, on the unit interval or
+/// mapped onto the domain with tools::mapToDomain (@p onDomain).
 DataVector expectedNodes(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl,
-                         const bool deltaNodes) {
+                         const bool deltaNodes, const bool onDomain) {
   const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
   const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
   const LvlType offset = genInstr.getBoundaryLevelOffset();
   DataVector nodes = deltaNodes ? nodeGenFunc->genDeltaNodes(lvl, lvl2GPCntFunc, lvl == offset)
                                 : nodeGenFunc->genNodes(
                                       lvl2GPCntFunc(lvl) + (lvl >= offset ? 2 : 0), lvl >= offset);
-  const auto [lower, upper] = genInstr.getDomainForDim(dim);
-  for (double& node : nodes) node = tools::mapToDomain(node, lower, upper - lower);
+  if (onDomain) {
+    const auto [lower, upper] = genInstr.getDomainForDim(dim);
+    for (double& node : nodes) node = tools::mapToDomain(node, lower, upper - lower);
+  }
   return nodes;
 }
 
-/// Checks the node table of @p grid: every (dimension, level up to the maximum level of the
-/// levels of the grid) has the expected nodes, bitwise; returns the number of distinct lists.
+/// Checks @p table, one of the node tables of @p grid: every (dimension, level up to the maximum
+/// level of the levels of the grid) has the expected nodes, bitwise.
 template <typename Grid>
-void checkNodeTable(const Grid& grid, const bool deltaNodes) {
+void checkNodeTable(const Grid& grid, const NodeTable& table, const bool deltaNodes,
+                    const bool onDomain) {
   const SGGenInstr& genInstr = grid.getGenInstr();
-  const NodeTable& table = grid.getNodeTable();
   BOOST_REQUIRE_EQUAL(table.nDim(), grid.nDim());
 
   for (size_t dim = 0; dim < grid.nDim(); dim++) {
     LvlType maxLvl = 0;
-    for (const auto& tg : grid) maxLvl = std::max(maxLvl, tg.mi[dim]);
+    for (const auto& tg : grid.domainTensorGrids()) maxLvl = std::max(maxLvl, tg.mi[dim]);
     BOOST_CHECK_EQUAL(table.maxLvl(dim), maxLvl);
 
     for (LvlType lvl = 0; lvl <= table.maxLvl(dim); lvl++) {
       BOOST_TEST_CONTEXT("dim " << dim << " lvl " << lvl) {
-        const DataVector expected = expectedNodes(genInstr, dim, lvl, deltaNodes);
+        const DataVector expected = expectedNodes(genInstr, dim, lvl, deltaNodes, onDomain);
         BOOST_REQUIRE_EQUAL(table.nNodes(dim, lvl), expected.size());
         for (size_t i = 0; i < expected.size(); i++) {
           BOOST_CHECK(bitwiseEqual(table.nodes(dim, lvl)[i], expected[i]));
@@ -94,12 +96,33 @@ void checkNodeTable(const Grid& grid, const bool deltaNodes) {
       }
     }
   }
+}
 
-  // Each tensor grid refers to the lists of its levels (no copies)
-  for (const auto& tg : grid) {
+/// Checks both node tables of @p grid and that the tensor grids refer to their lists.
+template <typename Grid>
+void checkNodeTable(const Grid& grid, const bool deltaNodes) {
+  for (const bool onDomain : {true, false}) {
+    BOOST_TEST_CONTEXT("on domain " << onDomain) {
+      checkNodeTable(grid, onDomain ? grid.getDomainNodeTable() : grid.getUnitNodeTable(),
+                     deltaNodes, onDomain);
+    }
+  }
+
+  // Each tensor grid refers to the lists of its levels (no copies): the domain variant to the
+  // domain table, the unit variant to the unit table; both have the same levels, coefficient and
+  // counts
+  const NodeTable& table = grid.getDomainNodeTable();
+  const NodeTable& unitTable = grid.getUnitNodeTable();
+  for (size_t idx = 0; idx < grid.nTG(); idx++) {
+    const TensorGridCTDataView tg = grid.getDomainTensorGrid(idx);
+    const TensorGridCTDataView unitTG = grid.getUnitTensorGrid(idx);
+    BOOST_CHECK(unitTG.mi == tg.mi);
+    BOOST_CHECK_EQUAL(unitTG.coefficient, tg.coefficient);
     for (size_t dim = 0; dim < grid.nDim(); dim++) {
       BOOST_CHECK_EQUAL(tg.tensorGrid.nodesInDim(dim), table.nodes(dim, tg.mi[dim]));
       BOOST_CHECK_EQUAL(tg.tensorGrid.nGPInDim(dim), table.nNodes(dim, tg.mi[dim]));
+      BOOST_CHECK_EQUAL(unitTG.tensorGrid.nodesInDim(dim), unitTable.nodes(dim, tg.mi[dim]));
+      BOOST_CHECK_EQUAL(unitTG.tensorGrid.nGPInDim(dim), tg.tensorGrid.nGPInDim(dim));
     }
   }
 }
@@ -174,13 +197,13 @@ BOOST_AUTO_TEST_CASE(Nodes_Of_Sparse_Grids) {
 
 BOOST_AUTO_TEST_CASE(Each_Distinct_List_Stored_Once) {
   // Dimensions 0 and 2 have the same nodes and domain interval: shared; dimension 1 another
-  // family, dimension 3 the same family as 0 but another interval
+  // family, dimension 3 the same family as 0 but another interval (shared on the unit interval)
   const HyperCubeArea domain{{0.0, 1.0}, {0.0, 1.0}, {0.0, 1.0}, {-1.0, 1.0}};
   const CompleteSGGenInstr genInstr = makeGenInstr(5, "cecc", domain, 1);
   for (const bool delta : {false, true}) {
     BOOST_TEST_CONTEXT("deltas " << delta) {
-      const NodeTable table =
-          delta ? DeltasSparseGrid(genInstr).getNodeTable() : SparseGrid(genInstr).getNodeTable();
+      const NodeTable table = delta ? DeltasSparseGrid(genInstr).getDomainNodeTable()
+                                    : SparseGrid(genInstr).getDomainNodeTable();
       BOOST_CHECK(table.sharesRowsWith(0, 2));
       BOOST_CHECK(!table.sharesRowsWith(0, 1));
       BOOST_CHECK(!table.sharesRowsWith(0, 3));
@@ -192,8 +215,41 @@ BOOST_AUTO_TEST_CASE(Each_Distinct_List_Stored_Once) {
         for (LvlType lvl = 0; lvl <= 5; lvl++) nNodes += table.nNodes(dim, lvl);
       }
       BOOST_CHECK_EQUAL(table.nStoredNodes(), nNodes);
+
+      const NodeTable unitTable = delta ? DeltasSparseGrid(genInstr).getUnitNodeTable()
+                                        : SparseGrid(genInstr).getUnitNodeTable();
+      BOOST_CHECK(unitTable.sharesRowsWith(0, 2));
+      BOOST_CHECK(unitTable.sharesRowsWith(0, 3));
+      BOOST_CHECK(!unitTable.sharesRowsWith(0, 1));
+      BOOST_CHECK_EQUAL(unitTable.nRows(), 2u * 6u);
     }
   }
+}
+
+BOOST_AUTO_TEST_CASE(Unit_And_Domain_Tables_Group_Dimensions_Differently) {
+  // One node family: all dimensions share their unit rows (up to level 4, of dimension 1); on the
+  // domain, dimensions 0 and 2 share theirs (up to level 3, of dimension 2), dimension 1 has its
+  // own
+  const LvlMIVec mis{{1, 0, 0}, {0, 4, 0}, {0, 0, 3}};
+  MIVecSGGenInstr genInstr(mis);
+  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
+  genInstr.setDomain({{0.0, 1.0}, {-1.0, 1.0}, {0.0, 1.0}});
+  genInstr.setBoundaryLevelOffset(1);
+  const SparseGrid sg(genInstr);
+  const DeltasSparseGrid dsg(genInstr);
+  for (const NodeTable* unitTable : {&sg.getUnitNodeTable(), &dsg.getUnitNodeTable()}) {
+    BOOST_CHECK(unitTable->sharesRowsWith(0, 1) && unitTable->sharesRowsWith(0, 2));
+    BOOST_CHECK_EQUAL(unitTable->nRows(), 5u);
+  }
+  for (const NodeTable* table : {&sg.getDomainNodeTable(), &dsg.getDomainNodeTable()}) {
+    BOOST_CHECK(table->sharesRowsWith(0, 2) && !table->sharesRowsWith(0, 1));
+    BOOST_CHECK_EQUAL(table->nRows(), 4u + 5u);
+    BOOST_CHECK_EQUAL(table->maxLvl(0), 1u);
+    BOOST_CHECK_EQUAL(table->maxLvl(2), 3u);
+  }
+  checkNodeTable(sg, false);
+  checkNodeTable(dsg, true);
 }
 
 BOOST_AUTO_TEST_CASE(Shared_Rows_Reach_The_Maximum_Level_Of_All_Sharing_Dimensions) {
@@ -203,8 +259,8 @@ BOOST_AUTO_TEST_CASE(Shared_Rows_Reach_The_Maximum_Level_Of_All_Sharing_Dimensio
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   for (const bool delta : {false, true}) {
     BOOST_TEST_CONTEXT("deltas " << delta) {
-      const NodeTable table =
-          delta ? DeltasSparseGrid(genInstr).getNodeTable() : SparseGrid(genInstr).getNodeTable();
+      const NodeTable table = delta ? DeltasSparseGrid(genInstr).getDomainNodeTable()
+                                    : SparseGrid(genInstr).getDomainNodeTable();
       BOOST_CHECK(table.sharesRowsWith(0, 1));
       BOOST_CHECK_EQUAL(table.maxLvl(0), 3u);
       BOOST_CHECK_EQUAL(table.maxLvl(1), 4u);
@@ -229,7 +285,7 @@ BOOST_AUTO_TEST_CASE(Struct_Of_Arrays_And_Views) {
 
   size_t maxGPCnt = 0, maxSum = 0;
   for (size_t idx = 0; idx < sg.nTG(); idx++) {
-    const TensorGridCTDataView tg = sg.getTensorGrid(idx);
+    const TensorGridCTDataView tg = sg.getDomainTensorGrid(idx);
     BOOST_CHECK(tg.mi == miVec[idx]);
     BOOST_CHECK(tg.mi == sg.getLevels()[idx]);
     BOOST_CHECK_EQUAL(tg.coefficient, coeffs[idx]);
@@ -253,32 +309,62 @@ BOOST_AUTO_TEST_CASE(Struct_Of_Arrays_And_Views) {
   BOOST_CHECK_EQUAL(sg.getMaxTGSumOverGPCntsPerDim(), maxSum);
 }
 
-BOOST_AUTO_TEST_CASE(Iterator) {
-  const CompleteSGGenInstr genInstr = makeGenInstr(3, "ce", HyperCubeArea(2, {0.0, 1.0}), 0);
+BOOST_AUTO_TEST_CASE(Domain_And_Unit_Ranges) {
+  const CompleteSGGenInstr genInstr = makeGenInstr(3, "ce", {{-1.0, 2.0}, {0.5, 0.75}}, 0);
   const DeltasSparseGrid dsg(genInstr);
   static_assert(std::random_access_iterator<SparseGridBase::const_iterator>);
+  static_assert(std::ranges::random_access_range<SparseGridBase::TensorGridRange>);
 
-  BOOST_CHECK_EQUAL(static_cast<size_t>(std::distance(dsg.begin(), dsg.end())), dsg.nTG());
-  size_t idx = 0;
-  for (const auto& tg : dsg) {
-    BOOST_CHECK(tg == dsg.getTensorGrid(idx));
-    BOOST_CHECK(dsg.begin()[static_cast<std::ptrdiff_t>(idx)] == tg);
-    BOOST_CHECK_EQUAL((dsg.begin() + static_cast<std::ptrdiff_t>(idx))->coefficient,
-                      tg.coefficient);
-    idx++;
+  for (const bool onDomain : {true, false}) {
+    BOOST_TEST_CONTEXT("on domain " << onDomain) {
+      const SparseGridBase::TensorGridRange tgs =
+          onDomain ? dsg.domainTensorGrids() : dsg.unitTensorGrids();
+      const auto getByIdx = [&](const size_t i) {
+        return onDomain ? dsg.getDomainTensorGrid(i) : dsg.getUnitTensorGrid(i);
+      };
+      const auto findByMI = [&](const LvlMI& mi) {
+        return onDomain ? dsg.getDomainTensorGrid(mi) : dsg.getUnitTensorGrid(mi);
+      };
+      const NodeTable& table = onDomain ? dsg.getDomainNodeTable() : dsg.getUnitNodeTable();
+
+      BOOST_CHECK_EQUAL(tgs.size(), dsg.nTG());
+      BOOST_CHECK_EQUAL(static_cast<size_t>(std::distance(tgs.begin(), tgs.end())), dsg.nTG());
+      size_t idx = 0;
+      for (const auto& tg : tgs) {
+        BOOST_CHECK(tg == getByIdx(idx));
+        BOOST_CHECK(tgs[static_cast<std::ptrdiff_t>(idx)] == tg);
+        BOOST_CHECK_EQUAL((tgs.begin() + static_cast<std::ptrdiff_t>(idx))->coefficient,
+                          tg.coefficient);
+        BOOST_CHECK_EQUAL(tg.tensorGrid.nodesInDim(0), table.nodes(0, tg.mi[0]));
+        idx++;
+      }
+      BOOST_CHECK_EQUAL(idx, dsg.nTG());
+
+      // Lookup by level multi-index: an iterator into the same range
+      const auto found = findByMI(LvlMI{2, 1});
+      BOOST_REQUIRE(found != tgs.end());
+      BOOST_CHECK(found->mi == LvlMI({2, 1}));
+      BOOST_CHECK_EQUAL(found->tensorGrid.nodesInDim(1), table.nodes(1, 1));
+      BOOST_CHECK(findByMI(LvlMI{4, 0}) == tgs.end());
+
+      // Algorithms of std::ranges on the proxies
+      const auto maxIt = std::ranges::max_element(
+          tgs, {}, [](const TensorGridCTDataView& tg) { return tg.tensorGrid.nGP(); });
+      BOOST_CHECK_EQUAL(maxIt->tensorGrid.nGP(), dsg.getMaxTGGPCnt());
+    }
   }
-  BOOST_CHECK_EQUAL(idx, dsg.nTG());
 
-  // Lookup by level multi-index
-  const auto found = dsg.getTensorGrid(LvlMI{2, 1});
-  BOOST_REQUIRE(found != dsg.end());
-  BOOST_CHECK(found->mi == LvlMI({2, 1}));
-  BOOST_CHECK(dsg.getTensorGrid(LvlMI{4, 0}) == dsg.end());
-
-  // Algorithms of std::ranges on the proxies
-  const auto maxIt = std::ranges::max_element(
-      dsg, {}, [](const TensorGridCTDataView& tg) { return tg.tensorGrid.nGP(); });
-  BOOST_CHECK_EQUAL(maxIt->tensorGrid.nGP(), dsg.getMaxTGGPCnt());
+  // The unit variant of a tensor grid has the unit nodes of the domain variant
+  const TensorGridCTDataView domainTG = dsg.getDomainTensorGrid(LvlMI{2, 1})[0];
+  const TensorGridCTDataView unitTG = dsg.getUnitTensorGrid(LvlMI{2, 1})[0];
+  for (size_t dim = 0; dim < 2; dim++) {
+    const auto [lower, upper] = genInstr.getDomainForDim(dim);
+    for (GPCntType i = 0; i < domainTG.tensorGrid.nGPInDim(dim); i++) {
+      BOOST_CHECK(bitwiseEqual(
+          domainTG.tensorGrid.nodesInDim(dim)[i],
+          tools::mapToDomain(unitTG.tensorGrid.nodesInDim(dim)[i], lower, upper - lower)));
+    }
+  }
 }
 
 BOOST_AUTO_TEST_CASE(Equality) {
@@ -313,7 +399,7 @@ BOOST_AUTO_TEST_CASE(Delta_Node_Counts) {
     const CompleteSGGenInstr genInstr =
         makeGenInstr(4, "e", HyperCubeArea(1, {0.0, 1.0}), boundary);
     const DeltasSparseGrid dsg(genInstr);
-    const NodeTable& table = dsg.getNodeTable();
+    const NodeTable& table = dsg.getDomainNodeTable();
     size_t nNodes = 0;
     for (LvlType lvl = 0; lvl <= 4; lvl++) {
       BOOST_CHECK_EQUAL(table.nNodes(0, lvl),

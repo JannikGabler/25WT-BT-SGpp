@@ -8,19 +8,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/miscellaneous/closure_trie/closure_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
 
 namespace sgpp {
 namespace combigrid {
+
 namespace misc {
 
 namespace {
@@ -49,17 +47,12 @@ uint8_t maxNewInOneGap(const std::vector<double>& known, const std::span<const d
   return static_cast<uint8_t>(std::min<size_t>(maxCnt, 2));
 }
 
-/// Appends the nodes of dimension @p dim of @p tg to @p out, sorted ascending.
-/// Appends the delta nodes of level @p lvl of dimension @p dim (normalized) to @p out, sorted.
-void appendSortedDeltaNodes(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl,
-                            std::vector<double>& out) {
-  const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
-  const bool withBoundary = (lvl == genInstr.getBoundaryLevelOffset());
+/// Appends @p nodes to @p out, sorted ascending.
+void appendSorted(const std::span<const double> nodes, std::vector<double>& out) {
   const size_t oldSize = out.size();
-  out.resize(oldSize + tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, withBoundary));
+  out.insert(out.end(), nodes.begin(), nodes.end());
 
   const std::span<double> appended = std::span<double>(out).subspan(oldSize);
-  genInstr.getNodeGenFuncForDim(dim)->genDeltaNodes(lvl, lvl2GPCntFunc, appended, withBoundary);
   if (!std::ranges::is_sorted(appended)) {  // The built-in node families generate them sorted
     std::ranges::sort(appended);
   }
@@ -86,20 +79,19 @@ DSGLinInterpIndex::DSGLinInterpIndex(const DeltasSparseGrid& deltasSparseGrid)
 }
 
 /**
- * The delta nodes are generated on the unit interval as for the deltas sparse grid (the corner
- * search runs on the normalized query point; the corners are mapped onto the domain with
- * tools::mapToDomain, as the node table of the grid).
+ * The delta nodes are the unit nodes of the grid (the corner search runs on the normalized query
+ * point; the corners are mapped onto the domain with tools::mapToDomain, as the domain nodes of
+ * the grid).
  */
 void DSGLinInterpIndex::collectDeltaNodes(const DeltasSparseGrid& deltasSparseGrid) {
-  const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
-  const NodeTable& nodeTable = deltasSparseGrid.getNodeTable();
+  const NodeTable& unitNodeTable = deltasSparseGrid.getUnitNodeTable();
 
   rowOffset_.assign(1, 0);
   nodeOffset.assign(1, 0);
   for (size_t dim = 0; dim < nDim(); dim++) {
-    rowOffset_.push_back(rowOffset_.back() + nodeTable.maxLvl(dim) + 1);
-    for (LvlType lvl = 0; lvl <= nodeTable.maxLvl(dim); lvl++) {
-      appendSortedDeltaNodes(genInstr, dim, lvl, nodes);
+    rowOffset_.push_back(rowOffset_.back() + unitNodeTable.maxLvl(dim) + 1);
+    for (LvlType lvl = 0; lvl <= unitNodeTable.maxLvl(dim); lvl++) {
+      appendSorted(unitNodeTable.nodeSpan(dim, lvl), nodes);
       nodeOffset.push_back(nodes.size());
     }
   }
@@ -141,5 +133,6 @@ void DSGLinInterpIndex::computeSlotOffsets() {
 }
 
 }  // namespace misc
+
 }  // namespace combigrid
 }  // namespace sgpp

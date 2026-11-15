@@ -23,8 +23,7 @@ namespace combigrid {
 class TensorGridView;
 
 /**
- * @brief The 1D node lists of a sparse grid, one per (dimension, level), already mapped onto the
- * domain.
+ * @brief The 1D node lists of a sparse grid, one per (dimension, level).
  *
  * The nodes of a tensor grid of level @f$\vec{\ell}@f$ in dimension @f$k@f$ depend only on
  * @f$k@f$ and @f$\ell_k@f$ (for a given generation instruction). A sparse grid therefore stores
@@ -35,13 +34,16 @@ class TensorGridView;
  * the delta nodes (see @c DeltasSparseGrid).
  *
  * Every dimension has the rows of the levels @f$0, \ldots,@f$ @ref maxLvl "maxLvl(k)". Dimensions
- * with the same node-generation function, level-to-grid-point-count function and domain interval
- * have the same node lists: they share their rows (see @ref sharesRowsWith), so every distinct list
- * is stored once.
+ * with the same node lists share their rows (see @ref sharesRowsWith), so every distinct list is
+ * stored once.
  *
- * The node positions are in domain coordinates: the unit nodes of the node-generation function
- * mapped with @c tools::mapToDomain, i.e. bitwise the coordinates at which the operators evaluate
- * the source function.
+ * A sparse grid has two tables with the same levels and node counts (see @c SparseGridBase): the
+ * nodes on the unit interval, as the node-generation functions generate them, and the nodes in
+ * domain coordinates (mapped with @c tools::mapToDomain, i.e. bitwise the coordinates at which the
+ * operators evaluate the source function). On the unit interval, dimensions with the same
+ * node-generation function and level-to-grid-point-count function share their rows; on the
+ * domain, only those with the same domain interval too (see
+ * @c tools::node_table_generation::findDimsWithSameNodes).
  */
 class NodeTable {
  public:

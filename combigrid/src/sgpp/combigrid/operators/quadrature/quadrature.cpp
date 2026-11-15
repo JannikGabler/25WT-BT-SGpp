@@ -34,7 +34,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
 
 #pragma omp for schedule(guided) nowait
     for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getTensorGrid(tgIdx);
+      const TensorGridCTDataView tgData = sparseGrid.getDomainTensorGrid(tgIdx);
       result +=
           tgData.coefficient * processTensorGrid(context, sourceFunc, tgData.tensorGrid, scratch);
     }

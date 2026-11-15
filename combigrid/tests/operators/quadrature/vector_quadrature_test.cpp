@@ -136,7 +136,7 @@ std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs
 
   std::vector<double> scales(nOutputs, 0.0);
 
-  for (const auto& tgData : sg) {
+  for (const auto& tgData : sg.domainTensorGrids()) {
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
     tools::quadrature::processTensorGrid(context, vectorFunc, tgData.tensorGrid, vectorScratch,
@@ -338,7 +338,7 @@ std::vector<double> checkDeltaTensorGrids(const DeltasSparseGrid& dsg, const siz
 
   std::vector<double> scales(nOutputs, 0.0);
 
-  for (const auto& tgData : dsg) {
+  for (const auto& tgData : dsg.domainTensorGrids()) {
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
     tools::dsg_weighted_sum::processDeltaTensorGrid(data.context, vectorFunc, tgData, vectorScratch,
@@ -392,7 +392,7 @@ void checkVectorDeltaQuadrature(const SGGenInstr& genInstr, const size_t nOutput
 
   // Round-off of the combination grows with the sum of the absolute coefficients
   double sumOfAbsCoeffs = 0.0;
-  for (const auto& tgData : sg) {
+  for (const auto& tgData : sg.domainTensorGrids()) {
     sumOfAbsCoeffs += std::abs(static_cast<double>(tgData.coefficient));
   }
   const double sgTol = std::max(DSG_VS_SG_TOL, 64.0 * EPS * sumOfAbsCoeffs);

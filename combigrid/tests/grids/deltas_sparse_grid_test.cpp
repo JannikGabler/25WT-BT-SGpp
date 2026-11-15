@@ -306,6 +306,12 @@ ExpectedSG genExpectedMIVecDeltasSG(const std::vector<LvlMI>& inputMIs,
   return expected;
 }
 
+/// The tensor grids of @p expected: itself (an ExpectedSG) or the domain tensor grids of a grid.
+const ExpectedSG& tensorGridsOf(const ExpectedSG& expected) { return expected; }
+SparseGridBase::TensorGridRange tensorGridsOf(const SparseGridBase& expected) {
+  return expected.domainTensorGrids();
+}
+
 /**
  * Checks that @p result contains exactly the tensor grids of @p expected (an ExpectedSG or another
  * sparse grid; in any order). Every mismatching tensor grid is reported separately before the
@@ -316,11 +322,11 @@ void checkSG(const SparseGridBase& result, const Expected& expected) {
   BOOST_CHECK_EQUAL(result.nDim(), expected.nDim());
   BOOST_CHECK_EQUAL(result.nTG(), expected.nTG());
 
-  for (const auto& expectedTGData : expected) {
+  for (const auto& expectedTGData : tensorGridsOf(expected)) {
     BOOST_TEST_CONTEXT("Tensor grid " << toString(expectedTGData.mi)) {
-      const auto iter = result.getTensorGrid(expectedTGData.mi);
+      const auto iter = result.getDomainTensorGrid(expectedTGData.mi);
 
-      if (iter == result.end()) {
+      if (iter == result.domainTensorGrids().end()) {
         BOOST_ERROR("Tensor grid is missing");
       } else {
         BOOST_CHECK_EQUAL(iter->coefficient, expectedTGData.coefficient);
@@ -341,7 +347,7 @@ void checkMetaValues(const SparseGridBase& sg) {
   size_t maxTGGPCnt = 0;
   size_t maxTGSumOverGPCntsPerDim = 0;
 
-  for (const auto& tg : sg) {
+  for (const auto& tg : sg.domainTensorGrids()) {
     maxTGGPCnt = std::max(maxTGGPCnt, tg.tensorGrid.getGPCntPerDim().productofElems<size_t>());
     maxTGSumOverGPCntsPerDim =
         std::max(maxTGSumOverGPCntsPerDim, tg.tensorGrid.getGPCntPerDim().sumOfElems<size_t>());
@@ -355,7 +361,7 @@ void checkMetaValues(const SparseGridBase& sg) {
 CTCoeffType sumOfCoeffs(const SparseGridBase& sg) {
   CTCoeffType sum = 0;
 
-  for (const auto& tg : sg) {
+  for (const auto& tg : sg.domainTensorGrids()) {
     sum += tg.coefficient;
   }
 
@@ -415,7 +421,7 @@ std::vector<DataVector> finestNodesPerDim(const SparseGridBase& sg, const SGGenI
 
   for (size_t dim = 0; dim < sg.nDim(); dim++) {
     LvlType maxLvl = 0;
-    for (const auto& tg : sg) {
+    for (const auto& tg : sg.domainTensorGrids()) {
       maxLvl = std::max(maxLvl, tg.mi[dim]);
     }
 
@@ -448,7 +454,7 @@ GPCounts countGridPoints(const SparseGridBase& sg, const std::vector<DataVector>
   GPCounts result;
   GPKey key(sg.nDim());
 
-  for (const auto& tg : sg) {
+  for (const auto& tg : sg.domainTensorGrids()) {
     const TensorGrid tensorGrid = tg.tensorGrid.toTensorGrid();
     for (const auto& point : tensorGrid.gridPointsImmutable()) {
       result.nIterated++;
@@ -545,7 +551,7 @@ void checkHierarchicalLevels(const SGGenInstr& genInstr) {
   std::vector<std::vector<DataVector>> regularNodesPerLvl(nDim);
   for (size_t dim = 0; dim < nDim; dim++) {
     LvlType maxLvl = 0;
-    for (const auto& tg : deltasSG) {
+    for (const auto& tg : deltasSG.domainTensorGrids()) {
       maxLvl = std::max(maxLvl, tg.mi[dim]);
     }
 
@@ -557,7 +563,7 @@ void checkHierarchicalLevels(const SGGenInstr& genInstr) {
   size_t nMismatches = 0;
   std::string firstMismatch;
 
-  for (const auto& tg : deltasSG) {
+  for (const auto& tg : deltasSG.domainTensorGrids()) {
     const TensorGrid tensorGrid = tg.tensorGrid.toTensorGrid();
     for (const auto& point : tensorGrid.gridPointsImmutable()) {
       for (size_t dim = 0; dim < nDim; dim++) {
@@ -748,7 +754,7 @@ BOOST_AUTO_TEST_CASE(Contains_Tensor_Grids_With_Zero_Coefficient) {
   BOOST_CHECK_EQUAL(result.nTG(), size_t{35});  // binom(4 + 3, 3)
 
   size_t nZeroCoeffs = 0;
-  for (const auto& tg : result) {
+  for (const auto& tg : result.domainTensorGrids()) {
     BOOST_TEST_CONTEXT("Tensor grid " << toString(tg.mi)) {
       BOOST_CHECK_LE(tg.mi.sumOfElems(), maxLvl);
       BOOST_CHECK_EQUAL(tg.coefficient == 0, tg.mi.sumOfElems() <= 1);
@@ -757,11 +763,11 @@ BOOST_AUTO_TEST_CASE(Contains_Tensor_Grids_With_Zero_Coefficient) {
   }
 
   BOOST_CHECK_EQUAL(nZeroCoeffs, size_t{4});
-  BOOST_CHECK(result.getTensorGrid(LvlMI{0, 0, 0}) != result.end());
-  BOOST_CHECK(result.getTensorGrid(LvlMI{1, 0, 0}) != result.end());
-  BOOST_CHECK(result.getTensorGrid(LvlMI{0, 0, 4}) != result.end());
-  BOOST_CHECK(result.getTensorGrid(LvlMI{0, 0, 5}) == result.end());
-  BOOST_CHECK(result.getTensorGrid(LvlMI{2, 2, 1}) == result.end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{0, 0, 0}) != result.domainTensorGrids().end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{1, 0, 0}) != result.domainTensorGrids().end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{0, 0, 4}) != result.domainTensorGrids().end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{0, 0, 5}) == result.domainTensorGrids().end());
+  BOOST_CHECK(result.getDomainTensorGrid(LvlMI{2, 2, 1}) == result.domainTensorGrids().end());
 }
 
 BOOST_AUTO_TEST_CASE(Agrees_With_Sparse_Grid_On_Non_Zero_Coefficients) {
@@ -790,15 +796,15 @@ BOOST_AUTO_TEST_CASE(Agrees_With_Sparse_Grid_On_Non_Zero_Coefficients) {
 
           // The tensor grids of the sparse grid are exactly those with a non-zero coefficient
           size_t nNonZeroCoeffs = 0;
-          for (const auto& deltaTG : deltasSG) {
-            const auto iter = sg.getTensorGrid(deltaTG.mi);
+          for (const auto& deltaTG : deltasSG.domainTensorGrids()) {
+            const auto iter = sg.getDomainTensorGrid(deltaTG.mi);
 
             BOOST_TEST_CONTEXT("Tensor grid " << toString(deltaTG.mi)) {
               if (deltaTG.coefficient == 0) {
-                BOOST_CHECK(iter == sg.end());
+                BOOST_CHECK(iter == sg.domainTensorGrids().end());
               } else {
                 nNonZeroCoeffs++;
-                BOOST_REQUIRE(iter != sg.end());
+                BOOST_REQUIRE(iter != sg.domainTensorGrids().end());
                 BOOST_CHECK_EQUAL(iter->coefficient, deltaTG.coefficient);
               }
             }
@@ -825,7 +831,7 @@ BOOST_AUTO_TEST_CASE(Tensor_Grid_Sizes) {
 
       const DeltasSparseGrid result(genInstr);
 
-      for (const auto& tg : result) {
+      for (const auto& tg : result.domainTensorGrids()) {
         BOOST_TEST_CONTEXT("Tensor grid " << toString(tg.mi)) {
           size_t nGP = 1;
 
@@ -948,11 +954,11 @@ BOOST_AUTO_TEST_CASE(Nodes_Mapped_Onto_Domain) {
 
   BOOST_REQUIRE_EQUAL(deltasSG.nTG(), unitDeltasSG.nTG());
   for (size_t tg = 0; tg < deltasSG.nTG(); tg++) {
-    BOOST_CHECK(deltasSG.getTensorGrid(tg).mi == unitDeltasSG.getTensorGrid(tg).mi);
+    BOOST_CHECK(deltasSG.getDomainTensorGrid(tg).mi == unitDeltasSG.getDomainTensorGrid(tg).mi);
   }
   BOOST_CHECK(std::ranges::equal(deltasSG.getCoefficients(), unitDeltasSG.getCoefficients()));
-  const NodeTable& table = deltasSG.getNodeTable();
-  const NodeTable& unitTable = unitDeltasSG.getNodeTable();
+  const NodeTable& table = deltasSG.getDomainNodeTable();
+  const NodeTable& unitTable = unitDeltasSG.getDomainNodeTable();
   for (size_t dim = 0; dim < 3; dim++) {
     const double width = domain[dim].second - domain[dim].first;
     for (LvlType lvl = 0; lvl <= table.maxLvl(dim); lvl++) {
@@ -1075,7 +1081,7 @@ BOOST_AUTO_TEST_CASE(Handwritten_2D) {
   const DeltasSparseGrid deltasSG(genInstr);
 
   size_t nGP = 0;
-  for (const auto& tg : deltasSG) {
+  for (const auto& tg : deltasSG.domainTensorGrids()) {
     nGP += tg.tensorGrid.nGP();
   }
 

@@ -20,11 +20,10 @@
  * zero extent in dimension k (the query point is a node). The corners are visited and summed in
  * the order of @c c.
  *
- * The cell and the weights are computed in normalized coordinates: the query point on
- * @f$[0,1]^d@f$ and the nodes on the unit interval (@c misc::UnitNodeTable, see
- * @c tools::node_table_generation::getUnitNodeTable); outside the nodes of a dimension, the cell
- * is bounded by 0 resp. 1. The corners are mapped onto the domain with @c tools::mapToDomain, which
- * gives bitwise the nodes of the grid's node table.
+ * The cell and the weights are computed on @f$[0,1]^d@f$, from the normalized query point and the
+ * unit nodes (@c SparseGridBase::getUnitNodeTable); outside the nodes of a dimension, the cell is
+ * bounded by 0 resp. 1. The corners are mapped onto the domain with @c tools::mapToDomain, which
+ * gives bitwise the domain nodes (@c SparseGridBase::getDomainNodeTable).
  */
 #pragma once
 
@@ -55,7 +54,7 @@ namespace lin_interpolation {
  *
  * @param sourceFunc Source function to evaluate at the corner grid points.
  * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param unitTG     Tensor grid with its nodes on the unit interval (@c misc::UnitNodeTable).
+ * @param unitTG     Tensor grid with its nodes on the unit interval.
  * @param genInstr   Generation instruction (used for the domain).
  * @param scratch    Per-thread scratch space; reused across calls.
  * @return Interpolated value on this single tensor grid.
@@ -70,7 +69,7 @@ double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& p
  *
  * @param sourceFunc Vector-valued source function to evaluate at the corner grid points.
  * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param unitTG     Tensor grid with its nodes on the unit interval (@c misc::UnitNodeTable).
+ * @param unitTG     Tensor grid with its nodes on the unit interval.
  * @param genInstr   Generation instruction (used for the domain).
  * @param scratch    Per-thread scratch space, constructed with m outputs.
  * @param out        Output: the m interpolated values (size m).
@@ -93,7 +92,7 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
  *                   @c misc::LinInterpScratch::RESULT_ACC of the view's buffer).
  * @param values   View of the source function.
  * @param point    Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param unitTG   Tensor grid with its nodes on the unit interval (@c misc::UnitNodeTable).
+ * @param unitTG   Tensor grid with its nodes on the unit interval.
  * @param genInstr Generation instruction (used for the domain).
  * @param scratch  Per-thread scratch space (neighbors, corner data, current corner).
  * @return Accumulator of the interpolated values (a @c double for scalar values, a pointer to

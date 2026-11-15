@@ -1,0 +1,25 @@
+diff --git a/combigrid/benchmarks/perf/perf_e2e.cpp b/combigrid/benchmarks/perf/perf_e2e.cpp
+--- a/combigrid/benchmarks/perf/perf_e2e.cpp
++++ b/combigrid/benchmarks/perf/perf_e2e.cpp
+@@ -80,7 +80,7 @@
+ template <typename Grid>
+ size_t sumOfGridPoints(const Grid& grid) {
+   size_t sum = 0;
+-  for (const auto& tgData : grid) sum += tgData.tensorGrid.nGP();
++  for (const auto& tgData : grid.domainTensorGrids()) sum += tgData.tensorGrid.nGP();
+   return sum;
+ }
+ 
+diff --git a/combigrid/benchmarks/perf/perf_reference.cpp b/combigrid/benchmarks/perf/perf_reference.cpp
+--- a/combigrid/benchmarks/perf/perf_reference.cpp
++++ b/combigrid/benchmarks/perf/perf_reference.cpp
+@@ -133,7 +133,8 @@
+   double sumAbsCoeffs = 0.0;
+   double nodeChecksum = 0.0;
+ 
+-  for (const auto& tgData : grid) {
++  // The node checksum of the reference is taken on the unit nodes
++  for (const auto& tgData : grid.unitTensorGrids()) {
+     uint64_t h = 0x243f6a8885a308d3ULL;
+     for (const LvlType lvl : tgData.mi) h = mix(h ^ (static_cast<uint64_t>(lvl) + 1));
+     h = mix(h ^ static_cast<uint64_t>(static_cast<int64_t>(tgData.coefficient) + (1LL << 32)));

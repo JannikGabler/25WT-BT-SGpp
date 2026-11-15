@@ -43,7 +43,7 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
       compNodeIdxLvlMapFuncs(deltasSparseGrid);
 
   // The maximum level per dimension is the one of the node table
-  const NodeTable& nodeTable = deltasSparseGrid.getNodeTable();
+  const NodeTable& nodeTable = deltasSparseGrid.getDomainNodeTable();
 
   FlatNestedVec<double, 3> weights;
   weights.reserveSubVecs(1, nDim);
@@ -109,8 +109,8 @@ void combineDeltaTensorGrids(const GenericDSGOperatorContext& context,
     // of magnitude)
 #pragma omp for schedule(dynamic) nowait
     for (size_t tgIdx = 0; tgIdx < deltasSparseGrid.nTG(); tgIdx++) {
-      processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getTensorGrid(tgIdx), scratch,
-                             tgResult);
+      processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getDomainTensorGrid(tgIdx),
+                             scratch, tgResult);
       for (size_t k = 0; k < nOutputs; k++) {
         threadResult[k] += tgResult[k];
       }

@@ -31,12 +31,9 @@ namespace combigrid {
  * @f$c_{\vec{\ell}}@f$ is the integer combination coefficient. A
  * @c SparseGrid stores the tensor grids with a non-zero coefficient (see
  * @c SparseGridBase: their level multi-indices and coefficients, and the 1D
- * node lists once per (dimension, level), already mapped onto the domain of
- * the generation instruction) and a copy of the generation instruction.
- *
- * The nodes are in domain coordinates: @c tools::mapToDomain of the unit nodes
- * of the node-generation functions, i.e. bitwise the coordinates at which the
- * operators evaluate the source function.
+ * node lists once per (dimension, level), on the unit interval and mapped onto
+ * the domain of the generation instruction) and a copy of the generation
+ * instruction.
  */
 class SparseGrid : public SparseGridBase {
  public:

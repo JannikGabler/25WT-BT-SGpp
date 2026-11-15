@@ -1121,7 +1121,7 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
   double expectedTotal = 0.0;
   double absTotal = 0.0;
 
-  for (const auto& tgData : sg) {
+  for (const auto& tgData : sg.domainTensorGrids()) {
     const NaiveTGQuadrature expected = naiveTGQuadrature(sourceFunc, tgData.tensorGrid, genInstr);
 
     evaluatedPoints.clear();
@@ -1215,7 +1215,7 @@ BOOST_AUTO_TEST_CASE(Single_Point_Tensor_Grids) {
 
       const SparseGrid sg(genInstr);
       BOOST_REQUIRE_EQUAL(sg.nTG(), 1u);
-      BOOST_REQUIRE_EQUAL(sg.begin()->tensorGrid.nGP(), 1u);
+      BOOST_REQUIRE_EQUAL(sg.domainTensorGrids().begin()->tensorGrid.nGP(), 1u);
 
       checkAgainstNaiveSum(genInstr);
     }

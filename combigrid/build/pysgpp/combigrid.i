@@ -163,7 +163,7 @@ namespace std {
 %include "combigrid/src/sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp"
 
 namespace std {
-  // SparseGrid::getTensorGrids, DeltasSparseGrid::getTensorGrids; returned as a tuple of owned
+  // get{Domain,Unit}TensorGrids of SparseGrid and DeltasSparseGrid; returned as a tuple of owned
   // copies.
   %template(TensorGridCTDataVector) vector<sgpp::combigrid::TensorGridCTData>;
 }
@@ -171,20 +171,22 @@ namespace std {
 // SparseGridBase (the abstract base class of SparseGrid and DeltasSparseGrid) is not wrapped, as
 // it is irrelevant for Python users. SWIG therefore does not see the methods both grids inherit
 // from it: its public methods that are meaningful in Python are declared again on both classes by
-// the macro below and forward to the inherited C++ methods. Not declared again are the iterators
-// (iteration is provided by __len__ / __getitem__, which raises IndexError so that
-// 'for tgData in grid' terminates) and the protected methods for manual assembly (a grid without
-// generation instruction or with unset size caches crashes the operators).
-//  - getTensorGrid(idx): the C++ method returns a TensorGridCTDataView into the grid's storage
-//    (levels, coefficients and node table; not wrapped); this one returns an owned copy
-//    (TensorGridCTData, nodes on the domain).
-//  - getTensorGrid(mi): the C++ overload returns a const_iterator, which cannot be used from
-//    Python; this one returns an owned copy of the matching tensor grid, or None if the grid
-//    contains no tensor grid with this level multi-index.
-//  - getTensorGrids: returned as a tuple of owned copies (TensorGridCTDataVector).
+// the macro below and forward to the inherited C++ methods. Not declared again are the ranges
+// (domainTensorGrids / unitTensorGrids; as in C++, a grid has no default iteration and no
+// indexing: every accessor names the coordinates of the nodes it returns; len(grid) = nTG) and
+// the protected methods for manual assembly.
+//  - getDomainTensorGrid(idx) / getUnitTensorGrid(idx): the C++ methods return a
+//    TensorGridCTDataView into the grid's storage (not wrapped); these return an owned copy
+//    (TensorGridCTData) with the nodes in domain coordinates / on the unit interval.
+//  - getDomainTensorGrid(mi) / getUnitTensorGrid(mi): the C++ overloads return a const_iterator,
+//    which cannot be used from Python; these return an owned copy of the matching tensor grid, or
+//    None if the grid contains no tensor grid with this level multi-index.
+//  - getDomainTensorGrids / getUnitTensorGrids: all tensor grids as a tuple of owned copies
+//    (TensorGridCTDataVector), in place of the C++ ranges.
 //  - getLevels: the level multi-indices of the tensor grids (an LvlMIVec in the grid).
-//  - getNodes(dim, lvl): copy of the node list of (dim, lvl) of the grid's node table (NodeTable,
-//    not wrapped), on the domain; nNodes(dim, lvl), maxLvl(dim): its size and the levels.
+//  - getDomainNodes(dim, lvl) / getUnitNodes(dim, lvl): copy of the node list of (dim, lvl) of the
+//    grid's domain / unit node table (NodeTable, not wrapped); nNodes(dim, lvl), maxLvl(dim): its
+//    size and the levels (the same for both tables).
 //  - operator== compares grids of the same class only.
 // Keep-alive references: getLevels and getGenInstr return a reference into the grid (_owner). The grid holds a clone of the generation instruction; the clone of an
 // MIVecSGGenInstr references the caller's LvlMIVec, so the instruction's Python proxy (which keeps
@@ -203,44 +205,73 @@ namespace std {
 %pythonappend sgpp::combigrid::Class::getGenInstr %{
   val._owner = self
 %}
-%newobject sgpp::combigrid::Class::getTensorGrid(const sgpp::combigrid::LvlMI&) const;
+%newobject sgpp::combigrid::Class::getDomainTensorGrid(const sgpp::combigrid::LvlMI&) const;
+%newobject sgpp::combigrid::Class::getUnitTensorGrid(const sgpp::combigrid::LvlMI&) const;
 %warnfilter(SWIGWARN_TYPE_UNDEFINED_CLASS) sgpp::combigrid::Class;
 %extend sgpp::combigrid::Class {
   size_t nDim() const { return $self->nDim(); }
 
   size_t nTG() const { return $self->nTG(); }
 
-  sgpp::combigrid::TensorGridCTData getTensorGrid(size_t idx) const {
-    return $self->getTensorGrid(idx).toTensorGridCTData();
+  sgpp::combigrid::TensorGridCTData getDomainTensorGrid(size_t idx) const {
+    return $self->getDomainTensorGrid(idx).toTensorGridCTData();
   }
 
-  sgpp::combigrid::TensorGridCTData* getTensorGrid(const sgpp::combigrid::LvlMI& mi) const {
-    auto it = $self->getTensorGrid(mi);
-    return (it == $self->end()) ? nullptr
-                                : new sgpp::combigrid::TensorGridCTData((*it).toTensorGridCTData());
+  sgpp::combigrid::TensorGridCTData getUnitTensorGrid(size_t idx) const {
+    return $self->getUnitTensorGrid(idx).toTensorGridCTData();
   }
 
-  std::vector<sgpp::combigrid::TensorGridCTData> getTensorGrids() const {
+  sgpp::combigrid::TensorGridCTData* getDomainTensorGrid(const sgpp::combigrid::LvlMI& mi) const {
+    auto it = $self->getDomainTensorGrid(mi);
+    return (it == $self->domainTensorGrids().end())
+               ? nullptr
+               : new sgpp::combigrid::TensorGridCTData((*it).toTensorGridCTData());
+  }
+
+  sgpp::combigrid::TensorGridCTData* getUnitTensorGrid(const sgpp::combigrid::LvlMI& mi) const {
+    auto it = $self->getUnitTensorGrid(mi);
+    return (it == $self->unitTensorGrids().end())
+               ? nullptr
+               : new sgpp::combigrid::TensorGridCTData((*it).toTensorGridCTData());
+  }
+
+  std::vector<sgpp::combigrid::TensorGridCTData> getDomainTensorGrids() const {
     std::vector<sgpp::combigrid::TensorGridCTData> result;
     result.reserve($self->nTG());
-    for (const auto& tg : *$self) result.push_back(tg.toTensorGridCTData());
+    for (const auto& tg : $self->domainTensorGrids()) result.push_back(tg.toTensorGridCTData());
+    return result;
+  }
+
+  std::vector<sgpp::combigrid::TensorGridCTData> getUnitTensorGrids() const {
+    std::vector<sgpp::combigrid::TensorGridCTData> result;
+    result.reserve($self->nTG());
+    for (const auto& tg : $self->unitTensorGrids()) result.push_back(tg.toTensorGridCTData());
     return result;
   }
 
   const sgpp::combigrid::LvlMIVec& getLevels() const { return $self->getLevels(); }
 
-  sgpp::base::DataVector getNodes(size_t dim, sgpp::combigrid::LvlType lvl) const {
-    const auto nodes = $self->getNodeTable().nodeSpan(dim, lvl);
+  sgpp::base::DataVector getDomainNodes(size_t dim, sgpp::combigrid::LvlType lvl) const {
+    const auto nodes = $self->getDomainNodeTable().nodeSpan(dim, lvl);
+    sgpp::base::DataVector result(nodes.size());
+    std::copy(nodes.begin(), nodes.end(), result.begin());
+    return result;
+  }
+
+  sgpp::base::DataVector getUnitNodes(size_t dim, sgpp::combigrid::LvlType lvl) const {
+    const auto nodes = $self->getUnitNodeTable().nodeSpan(dim, lvl);
     sgpp::base::DataVector result(nodes.size());
     std::copy(nodes.begin(), nodes.end(), result.begin());
     return result;
   }
 
   size_t nNodes(size_t dim, sgpp::combigrid::LvlType lvl) const {
-    return $self->getNodeTable().nNodes(dim, lvl);
+    return $self->getDomainNodeTable().nNodes(dim, lvl);
   }
 
-  sgpp::combigrid::LvlType maxLvl(size_t dim) const { return $self->getNodeTable().maxLvl(dim); }
+  sgpp::combigrid::LvlType maxLvl(size_t dim) const {
+    return $self->getDomainNodeTable().maxLvl(dim);
+  }
 
   size_t getMaxTGGPCnt() const { return $self->getMaxTGGPCnt(); }
 
@@ -251,11 +282,6 @@ namespace std {
   %pythoncode %{
     def __len__(self):
         return self.nTG()
-
-    def __getitem__(self, idx):
-        if idx < 0 or idx >= self.nTG():
-            raise IndexError("tensor grid index out of range")
-        return self.getTensorGrid(idx)
   %}
 }
 %enddef

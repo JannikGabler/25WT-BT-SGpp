@@ -28,9 +28,12 @@ DeltasSparseGrid::DeltasSparseGrid(const SGGenInstr& genInstr)
   }
 
   std::pair<LvlMIVec, std::vector<CTCoeffType>> mis = genInstr.genFullMIVecWithCoeffs();
-  NodeTable nodeTable = tools::node_table_generation::genNodeTable(genInstr, mis.first, true);
+  NodeTable unitNodeTable =
+      tools::node_table_generation::genUnitNodeTable(genInstr, mis.first, true);
+  NodeTable domainNodeTable = tools::node_table_generation::mapOntoDomain(genInstr, unitNodeTable);
 
-  setStorage(std::move(mis.first), std::move(mis.second), std::move(nodeTable));
+  setStorage(std::move(mis.first), std::move(mis.second), std::move(domainNodeTable),
+             std::move(unitNodeTable));
 }
 
 /// @}

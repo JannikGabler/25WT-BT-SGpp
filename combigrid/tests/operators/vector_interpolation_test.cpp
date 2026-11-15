@@ -51,7 +51,6 @@
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
-#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
@@ -207,10 +206,9 @@ std::vector<double> checkGlobalTensorGrids(const SparseGrid& sg, const DataVecto
   const VectorSourceFunc vectorFunc = recordingVectorFunc(nOutputs, vectorPoints);
   std::vector<double> scales(nOutputs, 0.0);
 
-  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sg);
-
-  for (const auto& tgData : sg) {
-    const TensorGridView unitTG(tgData.mi, unitNodes);
+  for (size_t tgIdx = 0; tgIdx < sg.nTG(); tgIdx++) {
+    const TensorGridCTDataView tgData = sg.getDomainTensorGrid(tgIdx);
+    const TensorGridView unitTG = sg.getUnitTensorGrid(tgIdx).tensorGrid;
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
     tools::global_interpolation::processTensorGrid(vectorFunc, normPoint, tgData.tensorGrid, unitTG,
@@ -251,10 +249,8 @@ std::vector<double> checkLinearTensorGrids(const SparseGrid& sg, const DataVecto
   const VectorSourceFunc vectorFunc = recordingVectorFunc(nOutputs, vectorPoints);
   std::vector<double> scales(nOutputs, 0.0);
 
-  const NodeTable& unitNodes = tools::node_table_generation::getUnitNodeTable(sg);
-
-  for (const auto& tgData : sg) {
-    const TensorGridView unitTG(tgData.mi, unitNodes);
+  for (const auto& tgData : sg.unitTensorGrids()) {
+    const TensorGridView unitTG = tgData.tensorGrid;
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
     tools::lin_interpolation::processTensorGrid(vectorFunc, normPoint, unitTG, genInstr,
