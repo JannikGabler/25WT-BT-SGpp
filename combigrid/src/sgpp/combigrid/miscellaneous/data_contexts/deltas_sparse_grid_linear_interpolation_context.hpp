@@ -4,10 +4,10 @@
 // sgpp.sparsegrids.org
 
 /**
- * @file dsg_lin_interp_query.hpp
- * @brief Defines @c DSGLinInterpQuery, the per-call data of the linear interpolation operator on
- * a deltas sparse grid: corner ids, 1D weights and coordinates of the query point and the value
- * store.
+ * @file deltas_sparse_grid_linear_interpolation_context.hpp
+ * @brief Defines @c DSGLinInterpContext, the read-only data of one call of the linear
+ * interpolation operator on a deltas sparse grid: corner ids, 1D weights and coordinates of the
+ * query point.
  */
 #pragma once
 
@@ -16,6 +16,7 @@
 #include <memory>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <span>
 #include <vector>
 
 namespace sgpp {
@@ -23,8 +24,11 @@ namespace combigrid {
 namespace misc {
 
 /**
- * @brief Per-call data of the linear interpolation on a deltas sparse grid (see
- * @c DSGLinInterpIndex for the identification of the corners with slots).
+ * @brief Read-only data of one call of the linear interpolation on a deltas sparse grid, shared
+ * by all functions and threads: the query point's brackets and their ids (see
+ * @c DSGLinInterpIndex for the identification of the corners with slots). Set before the passes
+ * (@c tools::dsg_lin_interpolation::prepareContext), then only read; the values the passes compute
+ * are in @c DSGLinInterpSlotScratch.
  *
  * Per row r = row(j, l) of the index, i.e. per (dimension j, level l), and bit b (0: lower,
  * 1: upper neighbor of the query coordinate in the nodes of level l):
@@ -34,16 +38,14 @@ namespace misc {
  * - @ref factors[2r + b]: its 1D weight in the tensor grids of level l.
  *
  * @ref coords[2 row(j, λ) + s] is the coordinate (on the domain) of the corner coordinate with
- * id (λ, s) in dimension j. @ref marks and @ref values are the value store: one mark (nonzero: a
- * corner of some tensor grid) and m values per slot.
+ * id (λ, s) in dimension j.
  */
-struct DSGLinInterpQuery {
+struct DSGLinInterpContext {
   /**
-   * @brief Allocates the data of a call (the marks are zero, the values uninitialized).
-   * @param index    Index of the deltas sparse grid.
-   * @param nOutputs Number of values per slot m.
+   * @brief Allocates the data of a call (uninitialized).
+   * @param index Index of the deltas sparse grid.
    */
-  DSGLinInterpQuery(const DSGLinInterpIndex& index, size_t nOutputs);
+  explicit DSGLinInterpContext(const DSGLinInterpIndex& index);
 
   /**
    * @brief Encodes a corner-coordinate id.
@@ -56,7 +58,7 @@ struct DSGLinInterpQuery {
     return (static_cast<uint32_t>(firstLvl) << 2) | (static_cast<uint32_t>(twoNew) << 1) | s;
   }
 
-  /// @brief Returns the level of first appearance λ of an id (the child level in the trie).
+  /// @brief Returns the level of first appearance λ of an id.
   static constexpr LvlType idLvl(const uint32_t id) { return id >> 2; }
 
   /// @brief Returns the number of bits (0 or 1) an id contributes to the sub-index of the slot.
@@ -65,11 +67,11 @@ struct DSGLinInterpQuery {
   /// @brief Returns the index s of an id among the coordinates new at its level.
   static constexpr uint32_t idSub(const uint32_t id) { return id & 1; }
 
-  std::vector<uint32_t> cornerIds;   ///< Per row and bit: corner-coordinate id.
-  std::vector<double> factors;       ///< Per row and bit: 1D weight.
-  std::vector<double> coords;        ///< Per (dimension, λ) and s: coordinate on the domain.
-  std::vector<uint8_t> marks;        ///< Per slot: nonzero if a corner uses it.
-  std::unique_ptr<double[]> values;  ///< Per slot: m function values (written if marked).
+  std::vector<uint32_t> cornerIds;  ///< Per row and bit: corner-coordinate id.
+  /// @brief Storage of @ref factors and @ref coords (one allocation).
+  std::unique_ptr<double[]> doubles;
+  std::span<double> factors;  ///< Per row and bit: 1D weight.
+  std::span<double> coords;   ///< Per id: coordinate on the domain.
 };
 
 }  // namespace misc

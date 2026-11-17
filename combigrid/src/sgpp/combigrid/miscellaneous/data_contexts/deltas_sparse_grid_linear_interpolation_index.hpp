@@ -4,7 +4,7 @@
 // sgpp.sparsegrids.org
 
 /**
- * @file dsg_lin_interp_index.hpp
+ * @file deltas_sparse_grid_linear_interpolation_index.hpp
  * @brief Defines @c DSGLinInterpIndex, the query-independent data of the linear interpolation
  * operator on a deltas sparse grid (built once per grid, on first use).
  */
@@ -20,6 +20,7 @@
 namespace sgpp {
 namespace combigrid {
 
+// Forward declaration
 class DeltasSparseGrid;
 
 namespace misc {
@@ -45,8 +46,17 @@ namespace misc {
  * one block of slots per multi-index @f$\vec{\lambda}@f$ (in the order of the leaves of
  * @ref trie), with one slot per combination of the @f$s_j@f$ (@f$\prod_j@f$ maxNewCoords(j,
  * @f$\lambda_j@f$) slots; @f$s_0@f$ least significant, dimensions with one new coordinate
- * contribute no bit). The slot of a corner is @c slotOffset(leaf) + sub-index, where the leaf is
- * found by the trie walk over @f$\lambda_{d-1}, \ldots, \lambda_0@f$.
+ * contribute no bit; a level without new coordinates, possible for growth functions that repeat a
+ * node count, gets one unused slot). The slot of a corner is @c slotOffset(leaf) + sub-index,
+ * where the leaf is found by the trie walk over @f$\lambda_{d-1}, \ldots, \lambda_0@f$.
+ *
+ * <b>Fibers.</b> The fiber of dimension k through a multi-index is the sequence of the leaves that
+ * differ from it in @f$\lambda_k@f$ only, ordered by @f$\lambda_k = 0, 1, \ldots@f$ (by downwards
+ * closure, the levels of a fiber start at 0 and have no gaps). The fibers of a dimension partition
+ * the leaves. The operator computes the weights of the slots by a transform along the fibers of
+ * one dimension after another (see deltas_sparse_grid_linear_interpolation_tools.hpp); the
+ * dimensions below k with two new coordinates at their levels are the same for all leaves of a
+ * fiber, so their number (@ref fiberShift) is the bit position of dimension k in the sub-index.
  *
  * <b>Rows.</b> The per-(dimension, level) data are stored in rows: row(j, l) = rowOffset(j) + l
  * for l = 0, ..., maxLvl(j).
@@ -111,6 +121,29 @@ class DSGLinInterpIndex {
   /// @brief Returns the combination coefficient of the tensor grid @p tgIdx.
   CTCoeffType coefficient(const size_t tgIdx) const noexcept { return coeffs_[tgIdx]; }
 
+  /// @brief Returns the combination coefficient of the multi-index of leaf @p leaf as a double.
+  double leafCoefficient(const size_t leaf) const noexcept { return leafCoeffs_[leaf]; }
+
+  /// @brief Returns the first fiber of dimension @p dim; the fibers of @p dim are
+  /// firstFiber(dim), ..., firstFiber(dim + 1) - 1 (firstFiber(nDim()) is the number of fibers).
+  size_t firstFiber(const size_t dim) const noexcept { return dimFiberBegin_[dim]; }
+
+  /// @brief Returns the first slots of the blocks of the leaves of fiber @p fiber, ordered by
+  /// their level in the fiber's dimension (entry l: the leaf of level l).
+  std::span<const size_t> fiberBlocks(const size_t fiber) const noexcept {
+    return std::span<const size_t>(fiberBlocks_)
+        .subspan(fiberBegin_[fiber], fiberBegin_[fiber + 1] - fiberBegin_[fiber]);
+  }
+
+  /// @brief Returns the first leaf of fiber @p fiber of dimension 0: the fibers of dimension 0
+  /// are runs of consecutive leaves, in leaf order.
+  size_t firstLeafOfDim0Fiber(const size_t fiber) const noexcept { return fiberBegin_[fiber]; }
+
+  /// @brief Returns the number of dimensions below the fiber's dimension k that have two new
+  /// coordinates at the levels of the leaves of fiber @p fiber, i.e. the bit of k in the sub-index
+  /// of their slots (if it has one) and the number of bits below it.
+  uint8_t fiberShift(const size_t fiber) const noexcept { return fiberShift_[fiber]; }
+
  private:
   /// @brief Sets the rows and copies the sorted unit delta nodes of every (dimension, level) of
   /// @p deltasSparseGrid.
@@ -122,6 +155,13 @@ class DSGLinInterpIndex {
   /// @brief Sets the slot offsets of the leaves.
   void computeSlotOffsets();
 
+  /// @brief Sets the fibers of dimension @p dim (appends them to the fiber arrays).
+  void collectFibers(size_t dim);
+
+  /// @brief Returns the number of dimensions below @p dim with two new coordinates at the levels
+  /// of @p mi.
+  uint8_t nMultiDimsBelow(LvlMIView mi, size_t dim) const;
+
   LvlMIVecView levels_;                  ///< Level multi-indices of the deltas sparse grid.
   std::span<const CTCoeffType> coeffs_;  ///< Their combination coefficients.
   ClosureTrie trie_;                     ///< Trie over the multi-indices.
@@ -131,6 +171,11 @@ class DSGLinInterpIndex {
   std::vector<uint8_t> maxNewCoords_;    ///< Per row: see @ref maxNewCoords.
   std::vector<size_t> slotOffset_;       ///< Per leaf (+ end): first slot.
   std::vector<size_t> ctTGs;             ///< See @ref combinationTGs.
+  std::vector<double> leafCoeffs_;       ///< Per leaf: combination coefficient.
+  std::vector<size_t> dimFiberBegin_;    ///< Per dimension (+ end): first fiber.
+  std::vector<size_t> fiberBegin_;       ///< Per fiber (+ end): offset into fiberBlocks_.
+  std::vector<size_t> fiberBlocks_;      ///< See @ref fiberBlocks, fiber after fiber.
+  std::vector<uint8_t> fiberShift_;      ///< Per fiber: see @ref fiberShift.
 };
 
 }  // namespace misc

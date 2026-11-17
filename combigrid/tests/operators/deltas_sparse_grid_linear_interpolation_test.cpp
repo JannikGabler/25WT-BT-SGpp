@@ -163,11 +163,13 @@ std::vector<Config> lowDimConfigs() {
   return result;
 }
 
-/// Larger grids: parallel passes (d5 L5), the weight table exceeded (d11, d12), a deep level.
+/// Larger grids: parallel passes (d5 L5, d10 L2), the weight table exceeded (d11, d12), deep
+/// levels (d2 L9; d2 L16 as the e2e benchmark, a call below the parallel work gate).
 std::vector<Config> largeConfigs() {
   return {{"equi", 1, false, 5, false, 5},  {"cc", 0, true, 5, false, 4},
-          {"equi", 1, false, 11, false, 2}, {"cc", 2, false, 12, false, 2},
-          {"equi", 0, false, 2, false, 9},  {"equi", 1, true, 1, false, 7}};
+          {"equi", 1, false, 10, false, 2}, {"equi", 1, false, 11, false, 2},
+          {"cc", 2, false, 12, false, 2},   {"equi", 0, false, 2, false, 9},
+          {"equi", 1, false, 2, false, 16}, {"equi", 1, true, 1, false, 7}};
 }
 
 std::string describe(const Config& c, const size_t pointIdx) {
@@ -281,11 +283,10 @@ BOOST_AUTO_TEST_CASE(Each_Distinct_Corner_Evaluated_Once) {
 }
 
 BOOST_AUTO_TEST_CASE(Vector_Outputs_Equal_Scalar_Interpolation) {
-  const std::vector<Config> configs = {{"equi", 1, false, 3, false},
-                                       {"cc", 0, true, 2, true},
-                                       {"equi", 2, false, 4, true},
-                                       {"equi", 1, false, 5, false, 5},
-                                       {"cc", 1, false, 11, false, 2}};
+  const std::vector<Config> configs = {
+      {"equi", 1, false, 3, false},     {"cc", 0, true, 2, true},
+      {"equi", 2, false, 4, true},      {"equi", 1, false, 5, false, 5},
+      {"equi", 1, false, 2, false, 16}, {"cc", 1, false, 11, false, 2}};
   const VectorSourceFunc vecFunc(testFuncVec, 3);
 
   for (const Config& config : configs) {
@@ -312,6 +313,41 @@ BOOST_AUTO_TEST_CASE(Vector_Outputs_Equal_Scalar_Interpolation) {
       }
     }
   }
+}
+
+BOOST_AUTO_TEST_CASE(Results_Independent_Of_Thread_Count) {
+  // Bitwise equal results for 1, 2, 3 and 16 threads, below (d2) and above (d5, d10) the
+  // parallel work gate, scalar and vector-valued
+  const std::vector<Config> configs = {{"equi", 1, false, 2, false, 16},
+                                       {"equi", 1, false, 5, false, 5},
+                                       {"cc", 0, false, 10, false, 2}};
+  const VectorSourceFunc vecFunc(testFuncVec, 3);
+  const int maxThreads = omp_get_max_threads();
+  const auto bitsOf = [](const double v) { return std::bit_cast<uint64_t>(v); };
+
+  for (const Config& config : configs) {
+    LvlMIVec miVec(config.nDim, 0);
+    const std::unique_ptr<SGGenInstr> genInstr = makeGenInstr(config, miVec);
+    const DeltasSparseGrid dsg(*genInstr);
+
+    for (const DataVector& point : testPoints(genInstr->getDomain())) {
+      omp_set_num_threads(1);
+      const double reference = interpolateLinear(SourceFunc(testFunc), point, dsg);
+      const DataVector vecReference = interpolateLinear(vecFunc, point, dsg);
+      for (const int nThreads : {2, 3, 16}) {
+        omp_set_num_threads(nThreads);
+        const double result = interpolateLinear(SourceFunc(testFunc), point, dsg);
+        const DataVector vecResult = interpolateLinear(vecFunc, point, dsg);
+        BOOST_TEST_CONTEXT(describe(config, 0) << " threads " << nThreads) {
+          BOOST_CHECK_EQUAL(bitsOf(result), bitsOf(reference));
+          for (size_t k = 0; k < 3; k++) {
+            BOOST_CHECK_EQUAL(bitsOf(vecResult[k]), bitsOf(vecReference[k]));
+          }
+        }
+      }
+    }
+  }
+  omp_set_num_threads(maxThreads);
 }
 
 BOOST_AUTO_TEST_CASE(Wrong_Result_Size_Is_Rejected) {

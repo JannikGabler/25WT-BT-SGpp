@@ -54,14 +54,16 @@ miscellaneous/         (namespace misc)
                          row, computed once (std::call_once) on first use or eagerly by all
                          threads (computeAllRows, largest row first), shared by all threads;
                          GenericDSGOperatorContext; DSGLinInterpIndex (per grid) and
-                         DSGLinInterpQuery (per call) of the DSG linear interpolation;
+                         DSGLinInterpContext (per call) of the DSG linear interpolation;
                          DSGGlobalInterpIndex (per grid) of the DSG global interpolation)
   data_scratches/        per-thread scratch: WeightedSumScratch (SG weighted sum; points to the 1D
                          weights per dimension; wrapped by QuadratureScratch (weights in the
                          QuadWeightTable) and GlobalInterpScratch (basis values + 1D nodes)),
                          DeltaWeightedSumScratch (DSG weighted sum: quadrature and global
                          interpolation; its projected sub-trie of ProjectedTrieNode), linear
-                         interpolation, DSG linear interpolation
+                         interpolation, DSG linear interpolation (per thread, and
+                         DSGLinInterpSlotScratch: per call, shared by the threads, disjoint
+                         writes per pass)
   operators/value_types/ ScalarValues / VectorValues: value types the operator kernels are
                          templates over (scalar vs. m outputs)
   flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
@@ -164,10 +166,15 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   overloads; [deltas_sparse_grid_linear_interpolation.hpp](../src/sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp))
   evaluates every distinct corner of the combination tensor grids once per call (WP-47): a corner
   coordinate is identified by the level at which it first brackets the query coordinate, a corner
-  by a slot of a per-call store (one block per closure MI, `DSGLinInterpIndex`, built on the first
-  call and kept in the grid); three passes in one parallel region (mark the corners of all
-  tensor grids, evaluate the marked slots, gather per tensor grid with the `SparseGrid` kernel's
-  weights and order), serial below `DSG_PARALLEL_MIN_CORNER_VISITS`.
+  by a slot (one block per closure MI, `DSGLinInterpIndex`, built on the first call and kept in
+  the grid, with the fibers of every dimension). Per call (WP-49), one global weight per slot,
+  `W = Σ_ℓ c_ℓ Π_j v_j(ℓ_j; id_j)`, by sum factorization: d in-place 1D transforms along the fibers
+  (each level adds its input to the 2 ids bracketing x_j there, ascending), O(d · slots), with a
+  reach flag ("or" instead of sum) that marks exactly the corners of the combination TGs; then the
+  reached slots are evaluated and Σ W·f summed per fixed chunk of 16 leaves, chunks added in order
+  (thread-count independent). Serial below `DSG_PARALLEL_MIN_CORNER_VISITS` (640). Per-TG / per-MI
+  contributions are not formed (refinement indicators would need them, e.g. by the transposed
+  transform).
   `interpolate(const SourceFunc&, const DataVector&, const DeltasSparseGrid&)` (+ vector overloads;
   [deltas_sparse_grid_global_interpolation.hpp](../src/sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp))
   evaluates every grid point once per call (WP-45): the CT interpolant regrouped by grid point,

@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <bit>
 #include <cassert>
 #include <cmath>
@@ -16,13 +15,12 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/closure_trie/closure_trie.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
-#include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_query.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/deltas_sparse_grid_linear_interpolation_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/deltas_sparse_grid_linear_interpolation_slot_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
@@ -31,10 +29,10 @@
 #include <tuple>
 #include <utility>
 
-using sgpp::combigrid::misc::ClosureTrie;
+using sgpp::combigrid::misc::DSGLinInterpContext;
 using sgpp::combigrid::misc::DSGLinInterpIndex;
-using sgpp::combigrid::misc::DSGLinInterpQuery;
 using sgpp::combigrid::misc::DSGLinInterpScratch;
+using sgpp::combigrid::misc::DSGLinInterpSlotScratch;
 
 namespace sgpp {
 namespace combigrid {
@@ -59,67 +57,18 @@ size_t updateNeighbors(const std::span<const double> nodes, const double x, cons
   return pos;
 }
 
-/**
- * Calls visit(corner, slot) for the 2^d corners of the tensor grid whose corner ids are ids
- * (lower / upper neighbor of dimension j at 2j / 2j + 1), in corner index order (bit k of the
- * corner selects the upper neighbor in dimension k). The walk state (trie node and sub-index after
- * the dimensions d - 1, ..., j) is updated for the dimensions whose bit changes, as the coordinates
- * in lin_interpolation::moveToCorner.
- */
-template <typename Visit>
-inline void forEachCornerSlot(const uint32_t* const firstChild, const size_t* const slotOffsets,
-                              const uint32_t* const ids, const size_t nDim, uint32_t* const node,
-                              size_t* const sub, Visit&& visit) {
-  const auto step = [&](const size_t j, const uint32_t id) {
-    node[j] = firstChild[node[j + 1]] + DSGLinInterpQuery::idLvl(id);
-    sub[j] = (sub[j + 1] << DSGLinInterpQuery::idShift(id)) | DSGLinInterpQuery::idSub(id);
-  };
-
-  node[nDim] = ClosureTrie::ROOT;
-  sub[nDim] = 0;
-  for (size_t j = nDim; j-- > 0;) {
-    step(j, ids[2 * j]);
-  }
-  visit(size_t{0}, slotOffsets[node[0]] + sub[0]);
-
-  const size_t nCorners = size_t{1} << nDim;
-  for (size_t corner = 1; corner < nCorners; corner++) {
-    const auto t = static_cast<size_t>(std::countr_zero(corner));
-    step(t, ids[2 * t + 1]);
-    for (size_t j = t; j-- > 0;) {
-      step(j, ids[2 * j]);
-    }
-    visit(corner, slotOffsets[node[0]] + sub[0]);
-  }
-}
-
-/// Sets the corner ids and the 1D weights of the tensor grid of level @p mi in @p scratch and
-/// fills its weight table.
-void prepareTG(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query, const LvlMIView mi,
-               DSGLinInterpScratch& scratch) {
-  double* const factors = scratch.factors.data();
-  for (size_t j = 0; j < index.nDim(); j++) {
-    const size_t r = index.row(j, mi[j]);
-    scratch.cornerIds[2 * j] = query.cornerIds[2 * r];
-    scratch.cornerIds[2 * j + 1] = query.cornerIds[2 * r + 1];
-    factors[2 * j] = query.factors[2 * r];
-    factors[2 * j + 1] = query.factors[2 * r + 1];
-  }
-  lin_interpolation::fillWeightTable(factors, scratch.tableDim, scratch.weightTable.data());
-}
-
 /// Sets the coordinates of the first slot of the block of @p leaf in @c scratch.gp and collects
 /// the dimensions that contribute a bit to the sub-index; returns their number.
-size_t prepareBlock(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query,
+size_t prepareBlock(const DSGLinInterpIndex& index, const DSGLinInterpContext& context,
                     const size_t leaf, DSGLinInterpScratch& scratch) {
   const LvlMIView lambda = index.leafMI(leaf);
   size_t nMulti = 0;
   for (size_t j = 0; j < index.nDim(); j++) {
     const size_t r = index.row(j, lambda[j]);
-    scratch.gp[j] = query.coords[2 * r];
+    scratch.gp[j] = context.coords[2 * r];
     if (index.maxNewCoords(r) == 2) {
-      scratch.multiDims[nMulti] = j;
-      scratch.multiRows[nMulti] = r;
+      scratch.multiDims()[nMulti] = j;
+      scratch.multiRows()[nMulti] = r;
       nMulti++;
     }
   }
@@ -132,21 +81,69 @@ size_t prepareBlock(const DSGLinInterpIndex& index, const DSGLinInterpQuery& que
 void assignCornerIds(const DSGLinInterpIndex& index, const LvlType lvl, const size_t r,
                      const std::pair<double, double> bracket,
                      const std::pair<double, double> domain, const std::array<double, 2>& prev,
-                     const std::array<uint32_t, 2>& prevIds, DSGLinInterpQuery& query) {
+                     const std::array<uint32_t, 2>& prevIds, DSGLinInterpContext& context) {
   const bool twoNew = (index.maxNewCoords(r) == 2);
   uint32_t nNew = 0;
   const auto idOf = [&](const double coord) {
     if (coord == prev[0]) return prevIds[0];
     if (coord == prev[1]) return prevIds[1];
-    query.coords[2 * r + nNew] =
+    context.coords[2 * r + nNew] =
         tools::mapToDomain(coord, domain.first, domain.second - domain.first);
-    return DSGLinInterpQuery::encodeId(lvl, twoNew, nNew++);
+    return DSGLinInterpContext::encodeId(lvl, twoNew, nNew++);
   };
 
-  query.cornerIds[2 * r] = idOf(bracket.first);
-  query.cornerIds[2 * r + 1] =
-      (bracket.second == bracket.first) ? query.cornerIds[2 * r] : idOf(bracket.second);
+  context.cornerIds[2 * r] = idOf(bracket.first);
+  context.cornerIds[2 * r + 1] =
+      (bracket.second == bracket.first) ? context.cornerIds[2 * r] : idOf(bracket.second);
   assert(nNew <= index.maxNewCoords(r));
+}
+
+/// Returns the first slot of the id @p id along a fiber with the blocks @p blocks: its block is
+/// that of its first level, the slots of s = 1 follow those of s = 0.
+inline size_t slotOfId(const std::span<const size_t> blocks, const uint32_t id,
+                       const size_t nInner) {
+  return blocks[DSGLinInterpContext::idLvl(id)] + DSGLinInterpContext::idSub(id) * nInner;
+}
+
+/// Adds @p value times the 1D weights of row @p r to the two ids that bracket the query
+/// coordinate at the row's level (from slot @p o of their blocks along a fiber with @p blocks),
+/// and @p reach to their flags.
+inline void pushToIds(const DSGLinInterpContext& context, const size_t r,
+                      const std::span<const size_t> blocks, const size_t nInner, const size_t o,
+                      const double value, const bool reach, double* const weights,
+                      bool* const reached) {
+  const size_t lowerDst = slotOfId(blocks, context.cornerIds[2 * r], nInner) + o;
+  const size_t upperDst = slotOfId(blocks, context.cornerIds[2 * r + 1], nInner) + o;
+  weights[lowerDst] += context.factors[2 * r] * value;
+  reached[lowerDst] |= reach;
+  weights[upperDst] += context.factors[2 * r + 1] * value;
+  reached[upperDst] |= reach;
+}
+
+/**
+ * Transform of dimension 0 along @p fiber: its inputs are the coefficients of its leaves, which
+ * are consecutive, so the blocks of the fiber are one range of slots. The range is set to zero and
+ * only the nonzero coefficients are added (a zero input would add zeros), in ascending order of
+ * the level.
+ */
+void transformDim0Fiber(const DSGLinInterpIndex& index, const DSGLinInterpContext& context,
+                        DSGLinInterpSlotScratch& slots, const size_t fiber) {
+  const std::span<const size_t> blocks = index.fiberBlocks(fiber);
+  const size_t firstLeaf = index.firstLeafOfDim0Fiber(fiber);
+  const size_t begin = blocks.front();
+  const size_t end = index.slotOffsets()[firstLeaf + blocks.size()];
+  double* const weights = slots.slotWeights.data();
+  bool* const reached = slots.reached.get();
+  std::fill(weights + begin, weights + end, 0.0);
+  std::fill(reached + begin, reached + end, false);
+
+  for (size_t lvl = 0; lvl < blocks.size(); lvl++) {
+    const double coefficient = index.leafCoefficient(firstLeaf + lvl);
+    if (coefficient != 0.0) {
+      pushToIds(context, index.row(0, static_cast<LvlType>(lvl)), blocks, 1, 0, coefficient, true,
+                weights, reached);
+    }
+  }
 }
 
 }  // namespace
@@ -163,15 +160,15 @@ bool runInParallel(const DSGLinInterpIndex& index) {
   return nDim >= static_cast<size_t>(std::bit_width(minVisits)) || (nTG << nDim) >= minVisits;
 }
 
-void prepareQuery(const DSGLinInterpIndex& index, const base::DataVector& normPoint,
-                  const HyperCubeArea& domain, DSGLinInterpQuery& query) {
+void prepareContext(const DSGLinInterpIndex& index, const base::DataVector& normPoint,
+                    const HyperCubeArea& domain, DSGLinInterpContext& context) {
   for (size_t dim = 0; dim < index.nDim(); dim++) {
-    prepareDimension(index, normPoint[dim], dim, domain[dim], query);
+    prepareDimension(index, normPoint[dim], dim, domain[dim], context);
   }
 }
 
 void prepareDimension(const DSGLinInterpIndex& index, const double x, const size_t dim,
-                      const std::pair<double, double> domain, DSGLinInterpQuery& query) {
+                      const std::pair<double, double> domain, DSGLinInterpContext& context) {
   double below = -std::numeric_limits<double>::infinity();
   double atOrAbove = std::numeric_limits<double>::infinity();
   // Bracket of the previous level: a coordinate of the current bracket is either one of them or
@@ -192,11 +189,11 @@ void prepareDimension(const DSGLinInterpIndex& index, const double x, const size
     prevCnt = nodes.size();
     const std::pair<double, double> bracket = bracketOf(below, atOrAbove, x);
 
-    assignCornerIds(index, lvl, r, bracket, domain, prev, prevIds, query);
-    std::tie(query.factors[2 * r], query.factors[2 * r + 1]) =
+    assignCornerIds(index, lvl, r, bracket, domain, prev, prevIds, context);
+    std::tie(context.factors[2 * r], context.factors[2 * r + 1]) =
         lin_interpolation::weights1D(x, bracket.first, bracket.second);
     prev = {bracket.first, bracket.second};
-    prevIds = {query.cornerIds[2 * r], query.cornerIds[2 * r + 1]};
+    prevIds = {context.cornerIds[2 * r], context.cornerIds[2 * r + 1]};
   }
 }
 
@@ -239,143 +236,121 @@ std::pair<double, double> bracketOf(const double below, const double atOrAbove, 
   return {below, atOrAbove};
 }
 
-void setCornerIds(const DSGLinInterpIndex& index, const DSGLinInterpQuery& query,
-                  const LvlMIView mi, DSGLinInterpScratch& scratch) {
-  for (size_t j = 0; j < index.nDim(); j++) {
-    const size_t r = index.row(j, mi[j]);
-    scratch.cornerIds[2 * j] = query.cornerIds[2 * r];
-    scratch.cornerIds[2 * j + 1] = query.cornerIds[2 * r + 1];
+/**
+ * Dimension 0: transformDim0Fiber. Otherwise, per level l of the fiber (ascending), the weights
+ * at the block of l (the inputs, the first nInner slots) are read, the slots of the ids new at l
+ * are set to zero (they receive contributions from the levels >= l only; the s = 0 slots are the
+ * inputs), and the inputs are added, times the 1D weights of level l, to the slots of the two ids
+ * that bracket the query coordinate at l. Every slot thus sums its contributions in ascending order
+ * of the level. Unreached inputs have weight 0 (no combination tensor grid contributes to them).
+ */
+void transformFiber(const DSGLinInterpIndex& index, const DSGLinInterpContext& context,
+                    DSGLinInterpSlotScratch& slots, const size_t dim, const size_t fiber) {
+  if (dim == 0) {
+    transformDim0Fiber(index, context, slots, fiber);
+    return;
+  }
+  const std::span<const size_t> blocks = index.fiberBlocks(fiber);
+  double* const weights = slots.slotWeights.data();
+  bool* const reached = slots.reached.get();
+  const size_t nInner = size_t{1} << index.fiberShift(fiber);
+
+  for (size_t lvl = 0; lvl < blocks.size(); lvl++) {
+    const size_t r = index.row(dim, static_cast<LvlType>(lvl));
+    const size_t in = blocks[lvl];
+    const size_t inEnd = in + nInner * ((index.maxNewCoords(r) == 2) ? 2 : 1);
+
+    for (size_t o = 0; o < nInner; o++) {
+      const double value = weights[in + o];
+      const bool reach = reached[in + o];
+      for (size_t slot = in + o; slot < inEnd; slot += nInner) {
+        weights[slot] = 0.0;
+        reached[slot] = false;
+      }
+      pushToIds(context, r, blocks, nInner, o, value, reach, weights, reached);
+    }
   }
 }
 
-void markCorners(const DSGLinInterpIndex& index, DSGLinInterpQuery& query,
-                 DSGLinInterpScratch& scratch) {
-  const std::span<const size_t> tgs = index.combinationTGs();
-  const uint32_t* const firstChild = index.trie().firstChild();
-  const size_t* const slotOffsets = index.slotOffsets();
-  uint8_t* const marks = query.marks.data();
-
-#pragma omp for schedule(static)
-  for (size_t t = 0; t < tgs.size(); t++) {
-    setCornerIds(index, query, index.mi(tgs[t]), scratch);
-    forEachCornerSlot(firstChild, slotOffsets, scratch.cornerIds.data(), index.nDim(),
-                      scratch.node.data(), scratch.sub.data(), [&](size_t, const size_t slot) {
-                        // Read first: most slots are shared, writing only once keeps their cache
-                        // lines shared among the threads
-                        std::atomic_ref<uint8_t> mark(marks[slot]);
-                        if (mark.load(std::memory_order_relaxed) == 0) {
-                          mark.store(1, std::memory_order_relaxed);
-                        }
-                      });
+void transformDimension(const DSGLinInterpIndex& index, const DSGLinInterpContext& context,
+                        DSGLinInterpSlotScratch& slots, const size_t dim) {
+#pragma omp for schedule(dynamic, 16)
+  for (size_t fiber = index.firstFiber(dim); fiber < index.firstFiber(dim + 1); fiber++) {
+    transformFiber(index, context, slots, dim, fiber);
   }
 }
 
 /**
- * Evaluates the source function at the marked slots of the block of @p leaf. The coordinates of
- * the block are prepared at its first marked slot (most blocks have none); the dimensions with two
- * new coordinates then take theirs from the bits of the slot's sub-index.
+ * Adds the weighted values of the reached slots of the block of @p leaf to @p acc. The coordinates
+ * of the block are prepared at its first reached slot (most blocks have none); the dimensions with
+ * two new coordinates then take theirs from the bits of the slot's sub-index.
  */
 template <typename ValueType>
 void evaluateBlock(const ValueType values, const DSGLinInterpIndex& index,
-                   const DSGLinInterpQuery& query, const size_t leaf,
-                   DSGLinInterpScratch& scratch) {
+                   const DSGLinInterpContext& context, const DSGLinInterpSlotScratch& slots,
+                   const size_t leaf, DSGLinInterpScratch& scratch, typename ValueType::Acc& acc) {
   const size_t begin = index.slotOffsets()[leaf];
   const size_t end = index.slotOffsets()[leaf + 1];
-  const uint8_t* const marks = query.marks.data();
-  const double* const coords = query.coords.data();
-  double* const store = query.values.get();
+  const bool* const reached = slots.reached.get();
+  const double* const weights = slots.slotWeights.data();
+  const double* const coords = context.coords.data();
   double* const gp = scratch.gp.data();
-  const size_t* const multiDims = scratch.multiDims.data();
-  const size_t* const multiRows = scratch.multiRows.data();
+  const size_t* const multiDims = scratch.multiDims();
+  const size_t* const multiRows = scratch.multiRows();
   size_t nMulti = 0;
   bool prepared = false;
 
   for (size_t slot = begin; slot < end; slot++) {
-    if (marks[slot] == 0) {
+    if (!reached[slot]) {
       continue;
     }
     if (!prepared) {
-      nMulti = prepareBlock(index, query, leaf, scratch);
+      nMulti = prepareBlock(index, context, leaf, scratch);
       prepared = true;
     }
     const size_t bits = slot - begin;
     for (size_t i = 0; i < nMulti; i++) {
       gp[multiDims[i]] = coords[2 * multiRows[i] + ((bits >> i) & 1)];
     }
-    values.evaluateInto(scratch.gp, store + slot * values.nOutputs());
+    values.addScaled(acc, weights[slot], values.evaluate(scratch.gp));
   }
 }
 
 template <typename ValueType>
-void evaluateMarked(const ValueType values, const DSGLinInterpIndex& index,
-                    DSGLinInterpQuery& query, DSGLinInterpScratch& scratch) {
-#pragma omp for schedule(dynamic, 16)
-  for (size_t leaf = 0; leaf < index.nLeaves(); leaf++) {
-    evaluateBlock(values, index, query, leaf, scratch);
+void evaluateChunks(const ValueType values, const DSGLinInterpIndex& index,
+                    const DSGLinInterpContext& context, DSGLinInterpSlotScratch& slots,
+                    DSGLinInterpScratch& scratch) {
+  const size_t chunkLeaves = constants::lin_interpolation::DSG_SUM_CHUNK_LEAVES;
+  const size_t nChunks = DSGLinInterpSlotScratch::nChunks(index);
+
+#pragma omp for schedule(dynamic, 1) nowait
+  for (size_t chunk = 0; chunk < nChunks; chunk++) {
+    typename ValueType::Acc acc = values.zeroAcc(DSGLinInterpScratch::CHUNK_ACC);
+    const size_t end = std::min(index.nLeaves(), (chunk + 1) * chunkLeaves);
+    for (size_t leaf = chunk * chunkLeaves; leaf < end; leaf++) {
+      evaluateBlock(values, index, context, slots, leaf, scratch, acc);
+    }
+    values.store(acc, slots.chunkSums.data() + chunk * values.nOutputs());
   }
 }
 
-/**
- * Adds the weighted values of the corners of the tensor grid prepared in @p scratch (prepareTG) to
- * @p tgSum, with the weights and in the order of lin_interpolation::sumOverCorners: the table
- * entry, then the factors of the dimensions beyond the table (fixed per block of 2^tableDim
- * corners).
- */
-template <typename ValueType>
-void sumTGCorners(const ValueType values, const DSGLinInterpIndex& index,
-                  const DSGLinInterpQuery& query, DSGLinInterpScratch& scratch,
-                  typename ValueType::Acc& tgSum) {
-  const double* const store = query.values.get();
-  const size_t nDim = index.nDim();
-  const size_t tableDim = scratch.tableDim;
-  const size_t nHigh = nDim - tableDim;
-  const size_t tableMask = (size_t{1} << tableDim) - 1;
-  const double* const table = scratch.weightTable.data();
-  const double* const factors = scratch.factors.data();
-  double* const high = scratch.highFactors.data();
-
-  forEachCornerSlot(index.trie().firstChild(), index.slotOffsets(), scratch.cornerIds.data(), nDim,
-                    scratch.node.data(), scratch.sub.data(),
-                    [&](const size_t corner, const size_t slot) {
-                      if (nHigh > 0 && (corner & tableMask) == 0) {
-                        for (size_t k = 0; k < nHigh; k++) {
-                          high[k] = factors[2 * (tableDim + k) + ((corner >> (tableDim + k)) & 1)];
-                        }
-                      }
-                      double weight = table[corner & tableMask];
-                      for (size_t k = 0; k < nHigh; k++) {
-                        weight *= high[k];
-                      }
-                      values.addScaled(tgSum, weight, values.valueAt(store, slot));
-                    });
-}
-
-template <typename ValueType>
-typename ValueType::Acc gatherCorners(const ValueType values, const DSGLinInterpIndex& index,
-                                      const DSGLinInterpQuery& query,
-                                      DSGLinInterpScratch& scratch) {
-  const std::span<const size_t> tgs = index.combinationTGs();
-  typename ValueType::Acc total = values.zeroAcc(DSGLinInterpScratch::THREAD_ACC);
-
-#pragma omp for schedule(static) nowait
-  for (size_t t = 0; t < tgs.size(); t++) {
-    prepareTG(index, query, index.mi(tgs[t]), scratch);
-    typename ValueType::Acc tgSum = values.zeroAcc(DSGLinInterpScratch::TG_ACC);
-    sumTGCorners(values, index, query, scratch, tgSum);
-    values.addScaled(total, static_cast<double>(index.coefficient(tgs[t])), tgSum);
+void sumChunks(const DSGLinInterpIndex& index, const DSGLinInterpSlotScratch& slots,
+               const std::span<double> result) {
+  const size_t nOutputs = result.size();
+  const double* const chunkSums = slots.chunkSums.data();
+  for (size_t chunk = 0; chunk < DSGLinInterpSlotScratch::nChunks(index); chunk++) {
+    for (size_t k = 0; k < nOutputs; k++) {
+      result[k] += chunkSums[chunk * nOutputs + k];
+    }
   }
-
-  return total;
 }
 
-template void evaluateMarked(misc::ScalarValues, const DSGLinInterpIndex&, DSGLinInterpQuery&,
+template void evaluateChunks(misc::ScalarValues, const DSGLinInterpIndex&,
+                             const DSGLinInterpContext&, DSGLinInterpSlotScratch&,
                              DSGLinInterpScratch&);
-template void evaluateMarked(misc::VectorValues, const DSGLinInterpIndex&, DSGLinInterpQuery&,
+template void evaluateChunks(misc::VectorValues, const DSGLinInterpIndex&,
+                             const DSGLinInterpContext&, DSGLinInterpSlotScratch&,
                              DSGLinInterpScratch&);
-template misc::ScalarValues::Acc gatherCorners(misc::ScalarValues, const DSGLinInterpIndex&,
-                                               const DSGLinInterpQuery&, DSGLinInterpScratch&);
-template misc::VectorValues::Acc gatherCorners(misc::VectorValues, const DSGLinInterpIndex&,
-                                               const DSGLinInterpQuery&, DSGLinInterpScratch&);
 
 }  // namespace dsg_lin_interpolation
 }  // namespace tools

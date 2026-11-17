@@ -4,45 +4,61 @@
 // sgpp.sparsegrids.org
 
 /**
- * @file dsg_linear_interpolation_tools.hpp
+ * @file deltas_sparse_grid_linear_interpolation_tools.hpp
  * @brief Internals of the linear interpolation operator on a deltas sparse grid
  * (@c interpolateLinear on a @c DeltasSparseGrid): every distinct corner of the combination
- * tensor grids is evaluated once per call.
+ * tensor grids is evaluated once per call and weighted with its global weight.
  *
  * The combination technique interpolant is @f$\sum_{\vec{\ell}} c_{\vec{\ell}}
  * I^{\mathrm{lin}}_{\vec{\ell}} f(\vec{x})@f$; @f$I^{\mathrm{lin}}_{\vec{\ell}}@f$ is the weighted
  * sum of f at the @f$2^d@f$ corners of the cell of the tensor grid @f$\vec{\ell}@f$ that contains
  * @f$\vec{x}@f$ (see linear_interpolation_tools.hpp). Most corners are shared by many tensor grids:
  * with nested nodes, a corner coordinate in dimension j is identified by the level at which it
- * appears first in the bracket chain of @f$x_j@f$ (see @c misc::DSGLinInterpIndex), which maps
- * every corner to a slot of a per-call value store. A call (@ref prepareQuery, then the three
- * passes in one parallel region):
- * 1. @ref markCorners: per combination tensor grid (parallel), the slots of its corners are marked;
- * 2. @ref evaluateMarked: per block of slots (parallel), the source function is evaluated at the
- *    marked slots, i.e. exactly once at every distinct corner and nowhere else;
- * 3. @ref gatherCorners: per combination tensor grid (parallel), the values of its corners are
- *    summed with the weights and in the order of the per-tensor-grid kernel of the @c SparseGrid
- *    operator (@c lin_interpolation::sumOverCorners), so the sum of a tensor grid is the one of
- *    that kernel; the sums are combined with the coefficients.
+ * appears first in the bracket chain of @f$x_j@f$ and its index s among the coordinates new there,
+ * its id @f$(\lambda_j, s_j)@f$ (see @c misc::DSGLinInterpIndex), which maps every corner to a
+ * slot.
  *
- * Passes 1 and 3 walk the corners of a tensor grid in index order, computing the slot
- * incrementally like the coordinates of the kernel (forEachCornerSlot in the .cpp): corner c
- * changes the trie lookups of the dimensions 0 ... t (t: lowest set bit of c, two on average).
+ * <b>Slot weights.</b> Let @f$v_j(\ell; \lambda, s)@f$ be the 1D weight of the id
+ * @f$(\lambda, s)@f$ at level @f$\ell \geq \lambda@f$ (0 if it does not bracket @f$x_j@f$ at
+ * @f$\ell@f$). The interpolant is @f$\sum_{\mathrm{slots}} W \cdot f@f$ with
+ * @f[ W(\vec{\lambda}, \vec{s}) = \sum_{\vec{\ell}} c_{\vec{\ell}}
+ *     \prod_{j=0}^{d-1} v_j(\ell_j; \lambda_j, s_j). @f]
+ * The sum factorizes into one 1D transform per dimension (sum factorization over the downwards
+ * closed set): starting with @f$c_{\vec{\ell}}@f$ in the first slot of every multi-index, the
+ * transform of dimension k replaces the level @f$\ell_k@f$ by the id @f$(\lambda_k, s_k)@f$ along
+ * every fiber of dimension k (@ref transformFiber), in place:
+ * @f$W_k(\ldots, (\lambda_k, s_k), \ldots) = \sum_{\ell_k \geq \lambda_k}
+ * v_k(\ell_k; \lambda_k, s_k)\, W_{k-1}(\ldots, \ell_k, \ldots)@f$, summed in ascending order
+ * of @f$\ell_k@f$: each level adds its input to the two ids that bracket @f$x_k@f$ there. The
+ * cost is two multiply-adds per slot and dimension, independent of the number of tensor grids and
+ * of @f$2^d@f$. Alongside, a flag per slot is transformed with "or" instead of the weighted sum,
+ * starting from @f$c_{\vec{\ell}} \neq 0@f$: it ends nonzero exactly at the corners of the
+ * combination tensor grids (the corners of tensor grids with coefficient 0 and the slots of ids
+ * that occur at no level are not evaluated, also where the weight cancels).
+ *
+ * A call: @ref prepareContext fills the read-only @c misc::DSGLinInterpContext (brackets, ids,
+ * 1D weights). Then, in one parallel region, the d transforms (@ref transformDimension, one barrier
+ * each) and @ref evaluateChunks (each reached slot evaluated once, its value times its weight
+ * summed per fixed chunk of leaves) write the shared @c misc::DSGLinInterpSlotScratch; finally the
+ * chunk sums are added in order (@ref sumChunks). Every slot weight and chunk sum is computed by
+ * one thread in a fixed order, so the result does not depend on the number of threads.
  */
 #pragma once
 
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
-#include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_query.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/deltas_sparse_grid_linear_interpolation_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/data_scratches/deltas_sparse_grid_linear_interpolation_slot_scratch.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>
 
 namespace sgpp {
 namespace combigrid {
+
 namespace tools {
 namespace dsg_lin_interpolation {
 
@@ -54,23 +70,24 @@ namespace dsg_lin_interpolation {
 const misc::DSGLinInterpIndex& getIndex(const DeltasSparseGrid& deltasSparseGrid);
 
 /**
- * @brief Returns whether a call runs its passes in parallel: the number of corner visits per pass
- * is at least @c constants::lin_interpolation::DSG_PARALLEL_MIN_CORNER_VISITS.
+ * @brief Returns whether a call runs its passes in parallel: the number of corner visits (number
+ * of combination tensor grids times @f$2^d@f$) is at least
+ * @c constants::lin_interpolation::DSG_PARALLEL_MIN_CORNER_VISITS.
  */
 bool runInParallel(const misc::DSGLinInterpIndex& index);
 
 /**
- * @brief Fills the corner ids, 1D weights and coordinates of @p query for the query point.
+ * @brief Fills the corner ids, 1D weights and coordinates of @p context for the query point.
  * @param index     Index of the deltas sparse grid.
  * @param normPoint Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param domain    Domain of the deltas sparse grid.
- * @param query     Data of the call.
+ * @param context   Read-only data of the call (output).
  */
-void prepareQuery(const misc::DSGLinInterpIndex& index, const base::DataVector& normPoint,
-                  const HyperCubeArea& domain, misc::DSGLinInterpQuery& query);
+void prepareContext(const misc::DSGLinInterpIndex& index, const base::DataVector& normPoint,
+                    const HyperCubeArea& domain, misc::DSGLinInterpContext& context);
 
 /**
- * @brief @ref prepareQuery for dimension @p dim: walks the levels 0 ... maxLvl(dim), brackets
+ * @brief @ref prepareContext for dimension @p dim: walks the levels 0 ... maxLvl(dim), brackets
  * @p x in the nodes of each level (the union of the delta nodes up to that level, as
  * @c TensorGrid::getNeighborsForLinInterpolation does in the nodes of a tensor grid) and assigns
  * each bracketing coordinate the id of its first appearance.
@@ -79,10 +96,10 @@ void prepareQuery(const misc::DSGLinInterpIndex& index, const base::DataVector& 
  * @param x      Normalized query coordinate.
  * @param dim    Dimension.
  * @param domain Domain interval of @p dim.
- * @param query  Data of the call (rows of @p dim).
+ * @param context Read-only data of the call (output: rows of @p dim).
  */
 void prepareDimension(const misc::DSGLinInterpIndex& index, double x, size_t dim,
-                      std::pair<double, double> domain, misc::DSGLinInterpQuery& query);
+                      std::pair<double, double> domain, misc::DSGLinInterpContext& context);
 
 /**
  * @brief Index of the first value of @p nodes (sorted) that is not less than @p x, as
@@ -103,44 +120,42 @@ size_t lowerBoundFrom(std::span<const double> nodes, double x, size_t hint);
 std::pair<double, double> bracketOf(double below, double atOrAbove, double x);
 
 /**
- * @brief Sets @c scratch.cornerIds to the corner ids of the tensor grid of level @p mi.
+ * @brief Transform of dimension @p dim along the fiber @p fiber (see the file description), in
+ * place in @c slots.slotWeights and @c slots.reached; the transform of dimension 0 starts from the
+ * coefficients of the leaves.
  */
-void setCornerIds(const misc::DSGLinInterpIndex& index, const misc::DSGLinInterpQuery& query,
-                  LvlMIView mi, misc::DSGLinInterpScratch& scratch);
+void transformFiber(const misc::DSGLinInterpIndex& index, const misc::DSGLinInterpContext& context,
+                    misc::DSGLinInterpSlotScratch& slots, size_t dim, size_t fiber);
 
 /**
- * @brief Pass 1: marks the slots of the corners of all combination tensor grids (work-shared
- * loop over the tensor grids, binds to the enclosing parallel region; ends with its barrier).
+ * @brief Transform of dimension @p dim along all its fibers (work-shared loop, binds to the
+ * enclosing parallel region; ends with its barrier). After the transforms of the dimensions
+ * 0, ..., d - 1 in this order, @c slots.slotWeights and @c slots.reached are set for every slot.
  */
-void markCorners(const misc::DSGLinInterpIndex& index, misc::DSGLinInterpQuery& query,
-                 misc::DSGLinInterpScratch& scratch);
+void transformDimension(const misc::DSGLinInterpIndex& index,
+                        const misc::DSGLinInterpContext& context,
+                        misc::DSGLinInterpSlotScratch& slots, size_t dim);
 
 /**
- * @brief Pass 2: evaluates the source function at the marked slots and stores the values
- * (work-shared loop over the blocks of slots; ends with its barrier).
+ * @brief Evaluates the source function at the reached slots and sums the values times the slot
+ * weights per chunk of @c constants::lin_interpolation::DSG_SUM_CHUNK_LEAVES leaves into
+ * @c slots.chunkSums (work-shared loop over the chunks without barrier).
  *
  * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues (buffer of @p scratch).
  */
 template <typename ValueType>
-void evaluateMarked(ValueType values, const misc::DSGLinInterpIndex& index,
-                    misc::DSGLinInterpQuery& query, misc::DSGLinInterpScratch& scratch);
+void evaluateChunks(ValueType values, const misc::DSGLinInterpIndex& index,
+                    const misc::DSGLinInterpContext& context, misc::DSGLinInterpSlotScratch& slots,
+                    misc::DSGLinInterpScratch& scratch);
 
 /**
- * @brief Pass 3: sums the stored values of the corners of the combination tensor grids with the
- * corner weights (per tensor grid as the @c SparseGrid kernel) and combines the sums with the
- * coefficients (work-shared loop over the tensor grids without barrier).
- *
- * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues (accumulator slots
- *                   @c misc::DSGLinInterpScratch::TG_ACC and @c THREAD_ACC of the buffer).
- * @return The combination of the tensor grids of this thread (a @c double, or a pointer to the m
- *         values in the buffer).
+ * @brief Adds the m sums of the chunks in chunk order to @p result (m values).
  */
-template <typename ValueType>
-typename ValueType::Acc gatherCorners(ValueType values, const misc::DSGLinInterpIndex& index,
-                                      const misc::DSGLinInterpQuery& query,
-                                      misc::DSGLinInterpScratch& scratch);
+void sumChunks(const misc::DSGLinInterpIndex& index, const misc::DSGLinInterpSlotScratch& slots,
+               std::span<double> result);
 
 }  // namespace dsg_lin_interpolation
 }  // namespace tools
+
 }  // namespace combigrid
 }  // namespace sgpp

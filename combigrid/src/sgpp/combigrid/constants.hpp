@@ -167,13 +167,16 @@ namespace lin_interpolation {
 /// dimensions are multiplied per corner. Bounds the scratch memory at high d.
 constexpr size_t WEIGHT_TABLE_MAX_DIM = 10;
 
-/// The linear interpolation on a deltas sparse grid runs its three passes (mark the corners,
-/// evaluate the marked slots, gather the corners per tensor grid) in one parallel region, with a
-/// barrier after each of the first two. Below this many corner visits per pass (number of
-/// combination tensor grids times 2^d) it runs on the calling thread only. Measured at 16 threads
-/// with a cheap integrand (a product of d cosines), parallel vs. serial per call: 132 visits
-/// (d = 2, level 16) 13.6 vs. 9.4 us, 872 visits (d = 3, level 8) 22 vs. 38 us.
-constexpr size_t DSG_PARALLEL_MIN_CORNER_VISITS = 256;
+/// The linear interpolation on a deltas sparse grid runs its passes (the slot weights dimension by
+/// dimension, then the evaluation and weighted sum) in one parallel region, with a barrier after
+/// each. Below this many corner visits (number of combination tensor grids times 2^d) it runs on
+/// the calling thread only.
+constexpr size_t DSG_PARALLEL_MIN_CORNER_VISITS = 640;
+
+/// The linear interpolation on a deltas sparse grid sums the weighted values of the slots per
+/// chunk of this many consecutive leaves (multi-indices) of its index and adds the chunk sums in
+/// order: the chunks do not depend on the number of threads, so neither does the result.
+constexpr size_t DSG_SUM_CHUNK_LEAVES = 16;
 
 }  // namespace lin_interpolation
 

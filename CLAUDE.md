@@ -43,7 +43,8 @@ nodes: `getDomainTensorGrid(i)` / `getUnitTensorGrid(i)`, ranges `domainTensorGr
 → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid`
 (nested nodes only; Python-bound with its operators since WP-50) + its `quadrature` overload
 evaluates every grid point once; its `interpolateLinear` overloads (WP-47) every distinct corner
-once per call (index built on the first call); its `interpolate` overloads (WP-45) every grid point
+once per call (index built on the first call; WP-49: corner weights by sum factorization over the
+closure, thread-count independent); its `interpolate` overloads (WP-45) every grid point
 once per call, weighted with global weights from the 1D basis values
 (`InterpolationMethod::basisValues`) through the weighted-sum kernel it shares with the DSG
 quadrature (`tools::dsg_weighted_sum`; thread-count independent). User functions are wrapped in

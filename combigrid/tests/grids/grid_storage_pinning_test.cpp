@@ -313,28 +313,28 @@ const std::vector<Golden> GOLDEN = {
      {1.1500903106344462, 1.1487735336360487,
       1.0298374180359597, 1.0298374180359597}},
     // equi b0 unit d2 complete dsg
-    {0xd05ce85eb4fa4df7ULL, 0x9c4e43ad29ac6759ULL, 0x85812487f39d5a3aULL,
+    {0xd05ce85eb4fa4df7ULL, 0xbe1a5e4aa6a168eeULL, 0xcb160eaa80e6626bULL,
      {}},
     // equi b0 unit d2 mivec sg
     {0x6e3c2b0c4be03691ULL, 0x0a69f6f6b962406fULL, 0xfca7394212a61800ULL,
      {1.1500908511320058, 1.1453391189133109,
       1.0298374180359597, 1.0298374180359597}},
     // equi b0 unit d2 mivec dsg
-    {0x677f6629b60dad7cULL, 0xc9ef95bb01e00c6bULL, 0x8a52f96eae23f176ULL,
+    {0x677f6629b60dad7cULL, 0xeac16c89d57db9caULL, 0xb9db4d736c857435ULL,
      {}},
     // equi b0 unit d3 complete sg
     {0x41dbd6ec81bbbdd7ULL, 0xaa0603fc089413f7ULL, 0x31b3ac15209c8183ULL,
      {1.1604884409687153, 1.1586151205975486,
       0.95468808971871366, 0.95468808971871366}},
     // equi b0 unit d3 complete dsg
-    {0x62834c9b50052f6bULL, 0x2a4fc376aaf74584ULL, 0xc480b0b158be56edULL,
+    {0x62834c9b50052f6bULL, 0x4e740020f1710717ULL, 0x8a43c40879f82203ULL,
      {}},
     // equi b0 unit d3 mivec sg
     {0x63ca960f7ae108daULL, 0x9392025e8c1eb9a2ULL, 0x7096e263e0d53546ULL,
      {1.1604291397946009, 1.1486522184045125,
       0.95468808971871344, 0.95468808971871344}},
     // equi b0 unit d3 mivec dsg
-    {0x6835ea4326a605ebULL, 0x2af628f4b62359b1ULL, 0x6a2efee87eb199d6ULL,
+    {0x6835ea4326a605ebULL, 0x6b6e2ddd4628f2a9ULL, 0x184432275e111ee6ULL,
      {}},
     // equi b0 shifted d1 complete sg
     {0x545823869876c64cULL, 0x773dc47d53d41eecULL, 0x773dc47d53d41eecULL,
@@ -355,28 +355,28 @@ const std::vector<Golden> GOLDEN = {
      {0.67393439877871686, 0.67346960102245945,
       0.49546931803228644, 0.49546931803228644}},
     // equi b0 shifted d2 complete dsg
-    {0xfd9c6b52171b3076ULL, 0xa1dec167d0b1f239ULL, 0x692b3855ebaed894ULL,
+    {0xfd9c6b52171b3076ULL, 0x997afdd71f79c021ULL, 0x5b9656a738c18c96ULL,
      {}},
     // equi b0 shifted d2 mivec sg
     {0xba0fc6c9a1d0fadbULL, 0xcb91c74310c75bc7ULL, 0xaba8ca22e6942640ULL,
      {0.67392572933489003, 0.66850527773653423,
       0.49546931803228644, 0.49546931803228644}},
     // equi b0 shifted d2 mivec dsg
-    {0xe758a636cec0b23dULL, 0xc7a4dffce02b7c0bULL, 0xe25a63c0f6fc485aULL,
+    {0xe758a636cec0b23dULL, 0xeca048da2c0bfa1bULL, 0x3ef834b4a10bcb3dULL,
      {}},
     // equi b0 shifted d3 complete sg
     {0x4aeca3d38970c02aULL, 0xdf83c19f4329c918ULL, 0xbd5da88c931c1717ULL,
      {0.71522318691504483, 0.71420425185295278,
       0.52592771607034816, 0.52592771607034816}},
     // equi b0 shifted d3 complete dsg
-    {0xe7add6891e11e4a9ULL, 0x226d18f7cac0a1dfULL, 0x0325f051913b686fULL,
+    {0xe7add6891e11e4a9ULL, 0x5a30a7872dcb81caULL, 0x5066a7e35e1a5868ULL,
      {}},
     // equi b0 shifted d3 mivec sg
     {0x142aaa53e1638eccULL, 0xffadb174a32c89f4ULL, 0x53f52162f86bd3b4ULL,
      {0.71563344670579188, 0.70429981820528287,
       0.52592771607034816, 0.52592771607034816}},
     // equi b0 shifted d3 mivec dsg
-    {0x55ab8387ea916b0eULL, 0x0df6d0b6ff4127baULL, 0x2639d46a9ddf3b4dULL,
+    {0x55ab8387ea916b0eULL, 0x5ec68a092f4731aeULL, 0x4ef0e517affb9016ULL,
      {}},
     // equi b1 unit d1 complete sg
     {0xafd0444e2c4f11ffULL, 0x2a5aa45e23bd97aaULL, 0x8eaa03361308f51cULL,
@@ -397,28 +397,28 @@ const std::vector<Golden> GOLDEN = {
      {1.1500903120975128, 1.1487735336360487,
       1.0298374180359597, 1.0298374180359597}},
     // equi b1 unit d2 complete dsg
-    {0x2a914b360909ae54ULL, 0x7db289e164df5a70ULL, 0x24f73c1053e7b551ULL,
+    {0x2a914b360909ae54ULL, 0x79b4b27cc8a4d445ULL, 0xdb3303a044131c57ULL,
      {}},
     // equi b1 unit d2 mivec sg
     {0xa8f14efe4bc6a89cULL, 0x8af17fb488213024ULL, 0xc164bdd5d69ddc39ULL,
      {1.1501002633420183, 1.1453391189133109,
       1.0298374180359597, 1.0298374180359597}},
     // equi b1 unit d2 mivec dsg
-    {0x46250fc89b1ad6e5ULL, 0x8b2ff7a31a6b0d0eULL, 0x485e9decc4cfd390ULL,
+    {0x46250fc89b1ad6e5ULL, 0xded0706d73673f2cULL, 0x1b19038f3c19d6f8ULL,
      {}},
     // equi b1 unit d3 complete sg
     {0xcab69392681afb09ULL, 0x350b726b5ffcbc6aULL, 0x4d9fe9d7d812cb1aULL,
      {1.1604878936794611, 1.1586151205975486,
       0.954688089718712, 0.95468808971871366}},
     // equi b1 unit d3 complete dsg
-    {0x5757f50d757ea1a7ULL, 0x47a0fe1eeb3f86a2ULL, 0x40a8812dc071676aULL,
+    {0x5757f50d757ea1a7ULL, 0x081b9034a9532400ULL, 0x227b711453d27e48ULL,
      {}},
     // equi b1 unit d3 mivec sg
     {0x0e25bba71987fea5ULL, 0x89a01fa5a2880ab7ULL, 0x0089b4d36cf880d0ULL,
      {1.1604407183622192, 1.1486522184045125,
       0.95468808971871344, 0.95468808971871344}},
     // equi b1 unit d3 mivec dsg
-    {0x74cb906ec0e5c9f8ULL, 0xbc26b1ca0dccd0efULL, 0x4c825b7152f245fdULL,
+    {0x74cb906ec0e5c9f8ULL, 0x9c1a549bb4fae008ULL, 0xf9898268f9e7e5f7ULL,
      {}},
     // equi b1 shifted d1 complete sg
     {0x545823869876c64cULL, 0x773dc47d53d41eecULL, 0x773dc47d53d41eecULL,
@@ -439,28 +439,28 @@ const std::vector<Golden> GOLDEN = {
      {0.67393436206837953, 0.67346960102245945,
       0.49546931803228622, 0.49546931803228644}},
     // equi b1 shifted d2 complete dsg
-    {0x0b68e58875b41fd5ULL, 0xcf9e15de21abf2e3ULL, 0x712ad58ab12fe3e1ULL,
+    {0x0b68e58875b41fd5ULL, 0x2721fc6e866d6329ULL, 0xda5745bbbddb5448ULL,
      {}},
     // equi b1 shifted d2 mivec sg
     {0xd93647c444e9ef02ULL, 0xf7eb809221512f76ULL, 0x93a0f39da63ed3a2ULL,
      {0.67388571514220119, 0.66850527773653423,
       0.49546931803228644, 0.49546931803228644}},
     // equi b1 shifted d2 mivec dsg
-    {0x9bde285d7244ab13ULL, 0x43a7e53309d72914ULL, 0xa809ac308c80d9a3ULL,
+    {0x9bde285d7244ab13ULL, 0x4d33914e927d594eULL, 0xeab02e471b914240ULL,
      {}},
     // equi b1 shifted d3 complete sg
     {0x741b0e670bea8ab0ULL, 0xde52cfccf8f7e991ULL, 0xe0840c340c97fb76ULL,
      {0.71522261679515153, 0.71420425185295278,
       0.52592771607034949, 0.52592771607034816}},
     // equi b1 shifted d3 complete dsg
-    {0x0e3e25f1292ec31cULL, 0xa78270a2b955f361ULL, 0xd7602a239078f9cdULL,
+    {0x0e3e25f1292ec31cULL, 0xec26ce964075c4c5ULL, 0x8dd0c8e7bb29f3e1ULL,
      {}},
     // equi b1 shifted d3 mivec sg
     {0x2507393b7ff38813ULL, 0x85d0787bba42b871ULL, 0xa5ff7ae321441085ULL,
      {0.71677568816510651, 0.70429981820528287,
       0.52592771607034816, 0.52592771607034816}},
     // equi b1 shifted d3 mivec dsg
-    {0xdd1f82e547b84079ULL, 0xb49570a922be026aULL, 0xe22f342fe64b33a5ULL,
+    {0xdd1f82e547b84079ULL, 0x1aa7174f459a1825ULL, 0x6222e14feaf9ceeaULL,
      {}},
     // equi b2 unit d1 complete sg
     {0xafd0444e2c4f11ffULL, 0x2a5aa45e23bd97aaULL, 0x8eaa03361308f51cULL,
@@ -481,28 +481,28 @@ const std::vector<Golden> GOLDEN = {
      {1.1500875436460565, 1.1487735336360487,
       1.0298374180359597, 1.0298374180359597}},
     // equi b2 unit d2 complete dsg
-    {0x76d444c79d60066eULL, 0x0afeb7b61f6ede9aULL, 0xed9b33bcc2d88dbfULL,
+    {0x76d444c79d60066eULL, 0x9de555489d258062ULL, 0x1ec0f410c0d44e13ULL,
      {}},
     // equi b2 unit d2 mivec sg
     {0x8c46b6c6f8b5ee95ULL, 0xaee398a9fc85f530ULL, 0x1ac89c3b12f6ecdfULL,
      {1.1501732809490894, 1.1453391189133109,
       1.0298374180359597, 1.0298374180359597}},
     // equi b2 unit d2 mivec dsg
-    {0x1d36c2ce63915858ULL, 0x9a9822591b42e189ULL, 0x4d51faa8d6cfcb92ULL,
+    {0x1d36c2ce63915858ULL, 0xff52c4c69c42fa80ULL, 0x49204ccefb3fc111ULL,
      {}},
     // equi b2 unit d3 complete sg
     {0xa5eaa9c743aa2ab0ULL, 0xd391d0f7748d3a03ULL, 0x72b70e778f8ad98aULL,
      {1.1604820806319069, 1.1586151205975486,
       0.95411491695811268, 0.95468808971871366}},
     // equi b2 unit d3 complete dsg
-    {0x25c1a9e9855e527cULL, 0x1f1ae8ed6d7e5cebULL, 0x347da5342bc3606dULL,
+    {0x25c1a9e9855e527cULL, 0x32bf7c05382d65b8ULL, 0xb93eb45107d3874dULL,
      {}},
     // equi b2 unit d3 mivec sg
     {0x899d91ed3b763edbULL, 0xdf5da99b62668366ULL, 0x5c14ed03e001824fULL,
      {1.1603564049561126, 1.1486522184045125,
       0.96726665784358423, 0.95468808971871344}},
     // equi b2 unit d3 mivec dsg
-    {0x88f744fea5a8cb7bULL, 0xbc6a42ed15f92137ULL, 0x0fee17df712e90d3ULL,
+    {0x88f744fea5a8cb7bULL, 0x2de97b51a38399ebULL, 0xd4370599e64948b3ULL,
      {}},
     // equi b2 shifted d1 complete sg
     {0x545823869876c64cULL, 0x773dc47d53d41eecULL, 0x773dc47d53d41eecULL,
@@ -523,280 +523,280 @@ const std::vector<Golden> GOLDEN = {
      {0.67396483704721821, 0.67346960102245945,
       0.49546931803228644, 0.49546931803228644}},
     // equi b2 shifted d2 complete dsg
-    {0x6dd7a7ef427291aaULL, 0x3a0a2a02b00f3107ULL, 0x126be1aa64b62a3aULL,
+    {0x6dd7a7ef427291aaULL, 0x4b8f1743d48ec45eULL, 0xf84bba3132c72922ULL,
      {}},
     // equi b2 shifted d2 mivec sg
     {0x830ec914a1c60b22ULL, 0xe83104245b5f512aULL, 0x6cd53c7ea8ecd687ULL,
      {0.67367141542595121, 0.66850527773653423,
       0.49546931803228644, 0.49546931803228644}},
     // equi b2 shifted d2 mivec dsg
-    {0x167255c362dd2f82ULL, 0xfb317d90773479e1ULL, 0x7ece3a2a1e9e632fULL,
+    {0x167255c362dd2f82ULL, 0xdff59b4a1ccc0c73ULL, 0x5dd17c49ed352eefULL,
      {}},
     // equi b2 shifted d3 complete sg
     {0x4e3ca93b5ab353efULL, 0xcbf3ff7e7d582cefULL, 0x9922f866afee9cecULL,
      {0.71512226243992716, 0.71420425185295278,
       0.48520365869804616, 0.52592771607034816}},
     // equi b2 shifted d3 complete dsg
-    {0xec9ef51dbfae2729ULL, 0xa2c2bb07285f7a62ULL, 0x4c432a8465095448ULL,
+    {0xec9ef51dbfae2729ULL, 0x160dcbc21af45150ULL, 0xcf43940f62ceb07fULL,
      {}},
     // equi b2 shifted d3 mivec sg
     {0x8986e0c08142a90bULL, 0x24d3e1df84fb7229ULL, 0x24d3e1df84fb7229ULL,
      {0.7294063396683087, 0.70429981820528287,
       0.82243862295254799, 0.52592771607034816}},
     // equi b2 shifted d3 mivec dsg
-    {0xaa84ded0f70ca70bULL, 0x70feedeb944b991cULL, 0x181c8f6c6693ce63ULL,
+    {0xaa84ded0f70ca70bULL, 0x9f13d499a8363383ULL, 0x8c51f70700603ae1ULL,
      {}},
     // cc b0 unit d1 complete sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // cc b0 unit d1 complete dsg
-    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x40fbcfd838cfc86fULL,
      {}},
     // cc b0 unit d1 mivec sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // cc b0 unit d1 mivec dsg
-    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x40fbcfd838cfc86fULL,
      {}},
     // cc b0 unit d2 complete sg
     {0x9d010fbe67489a4dULL, 0xe06b093bb1809a7fULL, 0x783464774aa4bd50ULL,
      {1.1500903199498445, 1.1470180434016573,
       1.0298374180359597, 1.0298374180359597}},
     // cc b0 unit d2 complete dsg
-    {0x2eec48ffc577e5ffULL, 0xb0ba003717f94a45ULL, 0x772cbfc7736c61c4ULL,
+    {0x2eec48ffc577e5ffULL, 0xea4262834de90e68ULL, 0x716cdb49d8f8e045ULL,
      {}},
     // cc b0 unit d2 mivec sg
     {0x9f3c6a1927ee9c79ULL, 0x7a9c96c128a24c7fULL, 0xe404bdd127d70c29ULL,
      {1.150091322503229, 1.1418167302960542,
       1.0298374180359597, 1.0298374180359597}},
     // cc b0 unit d2 mivec dsg
-    {0xa897683a0ed18479ULL, 0x46305410f5a825fdULL, 0x96f8890d68b25d89ULL,
+    {0xa897683a0ed18479ULL, 0x5561cf2c629d1d9fULL, 0x34e8571544a5d648ULL,
      {}},
     // cc b0 unit d3 complete sg
     {0x201f33f14bfc21b5ULL, 0x5af32a34f5d4801dULL, 0xb97696746a1951a3ULL,
      {1.1604884614682927, 1.1558698687084865,
       0.95468808971871366, 0.95468808971871366}},
     // cc b0 unit d3 complete dsg
-    {0x206fdd1e0327d863ULL, 0xa98f2b1ac98e235bULL, 0x47d531c63d4c02e5ULL,
+    {0x206fdd1e0327d863ULL, 0x2d1f6f81d3f56848ULL, 0xce1568cefe33edc2ULL,
      {}},
     // cc b0 unit d3 mivec sg
     {0x548b0ef43bd6343aULL, 0xb1bac389b509503bULL, 0x3545dec4f13bb201ULL,
      {1.1603669983519631, 1.1391269180106591,
       0.95468808971871344, 0.95468808971871344}},
     // cc b0 unit d3 mivec dsg
-    {0xabca040d5a02fb35ULL, 0xe08289cbd3c0626fULL, 0xe0c04d2b0066825aULL,
+    {0xabca040d5a02fb35ULL, 0x67af95d13a3dfcd1ULL, 0xcad6fd095e2178faULL,
      {}},
     // cc b0 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // cc b0 shifted d1 complete dsg
-    {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x2ac4483f14c68fe9ULL,
+    {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x78d7c7e037c08433ULL,
      {}},
     // cc b0 shifted d1 mivec sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // cc b0 shifted d1 mivec dsg
-    {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x2ac4483f14c68fe9ULL,
+    {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x78d7c7e037c08433ULL,
      {}},
     // cc b0 shifted d2 complete sg
     {0xa3ec7b8468064281ULL, 0xdcb02e5ac0a2bedeULL, 0xd1edd34a53f3bd87ULL,
      {0.67393388238651486, 0.67065602980665839,
       0.49546931803228644, 0.49546931803228644}},
     // cc b0 shifted d2 complete dsg
-    {0x5f1d8d943782b771ULL, 0xd07072331749ffd9ULL, 0x48d2b6646eb2c60cULL,
+    {0x5f1d8d943782b771ULL, 0xedfebe71ea19fcfdULL, 0xe02f37d341723059ULL,
      {}},
     // cc b0 shifted d2 mivec sg
     {0x63e1fdd9693d45ddULL, 0x991c55f523de19f1ULL, 0x861595faadef4d0bULL,
      {0.67391814141716921, 0.66374218920400074,
       0.49546931803228644, 0.49546931803228644}},
     // cc b0 shifted d2 mivec dsg
-    {0xd2081aaa4184a37cULL, 0x8df544615fa927e9ULL, 0x35b9bc389743a900ULL,
+    {0xd2081aaa4184a37cULL, 0xdd4c847c174d6bd7ULL, 0xa0336231f0ba2cebULL,
      {}},
     // cc b0 shifted d3 complete sg
     {0xbed033c1203ac5a5ULL, 0x612744e75ff198d4ULL, 0x6f35ce0fe492bb36ULL,
      {0.71522836154106928, 0.71075500963000537,
       0.52592771607034816, 0.52592771607034816}},
     // cc b0 shifted d3 complete dsg
-    {0x1ddc13baf4268d31ULL, 0xe47769d2281bcf74ULL, 0x134848da790ac350ULL,
+    {0x1ddc13baf4268d31ULL, 0xb72d3eebd1fd0e31ULL, 0x822c5eb0767080c0ULL,
      {}},
     // cc b0 shifted d3 mivec sg
     {0x5dee7e735b2c912eULL, 0xe3a3fae26d5d1feaULL, 0x44a3b5de8602ab81ULL,
      {0.71503863916511101, 0.6954296517702856,
       0.52592771607034816, 0.52592771607034816}},
     // cc b0 shifted d3 mivec dsg
-    {0x6cc88d3b6fcad60aULL, 0x01b13d15bca873ceULL, 0xb13dd92bcbbd0f60ULL,
+    {0x6cc88d3b6fcad60aULL, 0x4a306b8cef056ab1ULL, 0xa332fa3a75884e28ULL,
      {}},
     // cc b1 unit d1 complete sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // cc b1 unit d1 complete dsg
-    {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x40fbcfd838cfc86fULL,
      {}},
     // cc b1 unit d1 mivec sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // cc b1 unit d1 mivec dsg
-    {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x40fbcfd838cfc86fULL,
      {}},
     // cc b1 unit d2 complete sg
     {0x3d3fd10ad83042ceULL, 0x83196fd29b41c718ULL, 0xccca82630c69bc89ULL,
      {1.1500903314663915, 1.1470180434016573,
       1.0298374180359597, 1.0298374180359597}},
     // cc b1 unit d2 complete dsg
-    {0x488b7e9d15db965fULL, 0xce464d34cda20929ULL, 0xdda49a9143fe2e86ULL,
+    {0x488b7e9d15db965fULL, 0x6e3a93929134647aULL, 0xa4a67c35405fde73ULL,
      {}},
     // cc b1 unit d2 mivec sg
     {0x4af6615774763b0aULL, 0x7e6e6beeeabfaf3fULL, 0xbb377f6154bdb098ULL,
      {1.1501101580658555, 1.1418167302960542,
       1.0298374180359597, 1.0298374180359597}},
     // cc b1 unit d2 mivec dsg
-    {0x769f853f8cb5b128ULL, 0x5343b634e140606eULL, 0x4ce9b4cc5e277191ULL,
+    {0x769f853f8cb5b128ULL, 0x01dd13815519f113ULL, 0xb95300ab5719caebULL,
      {}},
     // cc b1 unit d3 complete sg
     {0xfd9d76637d8d412eULL, 0x10397a803ca657ffULL, 0x0f1db468bdc4a8cfULL,
      {1.1604870782126682, 1.1558698687084865,
       0.954688089718712, 0.95468808971871366}},
     // cc b1 unit d3 complete dsg
-    {0x5db31bef03ecefd4ULL, 0x818e3a4bf26d0d00ULL, 0x7c23e5d744d52149ULL,
+    {0x5db31bef03ecefd4ULL, 0x98a570485bd31666ULL, 0xfa675322420b31d3ULL,
      {}},
     // cc b1 unit d3 mivec sg
     {0x1554f05f813f684aULL, 0x93e614a5bca880adULL, 0x93e614a5bca880adULL,
      {1.1603526781457885, 1.1391269180106591,
       0.95468808971871344, 0.95468808971871344}},
     // cc b1 unit d3 mivec dsg
-    {0x078e38fabe601cc6ULL, 0x40933b72b4c2dda6ULL, 0xfac2470203a09eb2ULL,
+    {0x078e38fabe601cc6ULL, 0x5671ea33f56fdac1ULL, 0x32fb5bd1694d6f1aULL,
      {}},
     // cc b1 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // cc b1 shifted d1 complete dsg
-    {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0xb482ed03592d7341ULL,
+    {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0x640eba4aee12b07eULL,
      {}},
     // cc b1 shifted d1 mivec sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // cc b1 shifted d1 mivec dsg
-    {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0xb482ed03592d7341ULL,
+    {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0x640eba4aee12b07eULL,
      {}},
     // cc b1 shifted d2 complete sg
     {0x84944ec3c5ebc935ULL, 0xe35d07699021174eULL, 0x90c62f69868df2dbULL,
      {0.67393369415312476, 0.67065602980665839,
       0.49546931803228622, 0.49546931803228644}},
     // cc b1 shifted d2 complete dsg
-    {0x3f52096b52ea05c8ULL, 0x48564aefc0a8668aULL, 0x0225abd19a110710ULL,
+    {0x3f52096b52ea05c8ULL, 0x23380c056de646d8ULL, 0x0f51cc60fd3f1de2ULL,
      {}},
     // cc b1 shifted d2 mivec sg
     {0xe65d0f6a45625107ULL, 0x17ec4339afe39663ULL, 0xe112ddf5761d2e75ULL,
      {0.67383964452083167, 0.66374218920400074,
       0.49546931803228644, 0.49546931803228644}},
     // cc b1 shifted d2 mivec dsg
-    {0xb7317ae7773aaa8bULL, 0x840b297193bca1c2ULL, 0x0a3ed766c54325c4ULL,
+    {0xb7317ae7773aaa8bULL, 0x8b368e645e246f3aULL, 0x4285f3c9e7d0b11aULL,
      {}},
     // cc b1 shifted d3 complete sg
     {0x0b550aa95fc7e0d9ULL, 0xf7d407fcc62ac658ULL, 0x0c5404cfef6f5741ULL,
      {0.71526058587368524, 0.71075500963000537,
       0.52592771607034949, 0.52592771607034816}},
     // cc b1 shifted d3 complete dsg
-    {0xb6f79f93656eb93fULL, 0x1342f04104ec8ed3ULL, 0x05a601367edf11a8ULL,
+    {0xb6f79f93656eb93fULL, 0x9678e12705af5776ULL, 0x6043dac8e51848b2ULL,
      {}},
     // cc b1 shifted d3 mivec sg
     {0x921b9eabc0f7b45aULL, 0x416910009f63f02bULL, 0xf69e1b7e07ad1698ULL,
      {0.71366905948285908, 0.6954296517702856,
       0.52592771607034816, 0.52592771607034816}},
     // cc b1 shifted d3 mivec dsg
-    {0xdcd3a96b59722185ULL, 0x284cefc4733b190dULL, 0xe0ea58177791761fULL,
+    {0xdcd3a96b59722185ULL, 0x8187e4d079be6d16ULL, 0x0fb133e939b492a0ULL,
      {}},
     // cc b2 unit d1 complete sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // cc b2 unit d1 complete dsg
-    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x40fbcfd838cfc86fULL,
      {}},
     // cc b2 unit d1 mivec sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // cc b2 unit d1 mivec dsg
-    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x40fbcfd838cfc86fULL,
      {}},
     // cc b2 unit d2 complete sg
     {0x760412d7815a2f61ULL, 0x5093bd5915c5a83bULL, 0x5229b4a95ed9fec3ULL,
      {1.1500898051200037, 1.1470180434016573,
       1.0298374180359597, 1.0298374180359597}},
     // cc b2 unit d2 complete dsg
-    {0xd75186c0808726ceULL, 0xc93a99ef221cc755ULL, 0xa99464ad6ef54e98ULL,
+    {0xd75186c0808726ceULL, 0x2923877310ec7767ULL, 0xeda1e76595c60e91ULL,
      {}},
     // cc b2 unit d2 mivec sg
     {0x93317ada7476f764ULL, 0xcdf625e067e9b700ULL, 0xe3c0d2e75ea07eabULL,
      {1.1502545625484306, 1.1418167302960542,
       1.0298374180359597, 1.0298374180359597}},
     // cc b2 unit d2 mivec dsg
-    {0x8a752f10bc7763c9ULL, 0x0686ac53bfbb9b51ULL, 0xa29b06ca85daac16ULL,
+    {0x8a752f10bc7763c9ULL, 0x67ad9cc3b77f405fULL, 0xecce6255823d1534ULL,
      {}},
     // cc b2 unit d3 complete sg
     {0x60d28cb7d799916aULL, 0x4355910a08ecc161ULL, 0x61eca01a229c4f28ULL,
      {1.1604787353407866, 1.1558698687084865,
       0.95444336081090331, 0.95468808971871366}},
     // cc b2 unit d3 complete dsg
-    {0x86d80cfcca5e114eULL, 0xabb4a8b323e72771ULL, 0xe99c6a895c32d853ULL,
+    {0x86d80cfcca5e114eULL, 0xc5c086995095e9ceULL, 0x235c06cf3aab13f1ULL,
      {}},
     // cc b2 unit d3 mivec sg
     {0x124f83a77d07a334ULL, 0xffa437ef1a9576e8ULL, 0xffa437ef1a9576e8ULL,
      {1.1592475905941071, 1.1391269180106591,
       0.96277751266224232, 0.95468808971871344}},
     // cc b2 unit d3 mivec dsg
-    {0xfd372b805f5f2d08ULL, 0xe8735a101f35ce38ULL, 0xaff5845aebb68922ULL,
+    {0xfd372b805f5f2d08ULL, 0x3b595e82d40a00d1ULL, 0x893dbd0c729290deULL,
      {}},
     // cc b2 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // cc b2 shifted d1 complete dsg
-    {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x144c6acd38b81f49ULL,
+    {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x2685449c9b4ecf10ULL,
      {}},
     // cc b2 shifted d1 mivec sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // cc b2 shifted d1 mivec dsg
-    {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x144c6acd38b81f49ULL,
+    {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x2685449c9b4ecf10ULL,
      {}},
     // cc b2 shifted d2 complete sg
     {0xc1ecde5c66e32176ULL, 0xb8a639b74422f82bULL, 0xda12fb21326d43afULL,
      {0.67393912927963362, 0.67065602980665839,
       0.49546931803228633, 0.49546931803228644}},
     // cc b2 shifted d2 complete dsg
-    {0x5741a401f09781e2ULL, 0x0b842611bbfeddf3ULL, 0x0dcc32e5c5360e3eULL,
+    {0x5741a401f09781e2ULL, 0xe3db39b8ed20ffefULL, 0x4b77001e0d309442ULL,
      {}},
     // cc b2 shifted d2 mivec sg
     {0x6dce2aac5775a4e7ULL, 0x390a3c988cb4ab82ULL, 0xd409432aaa9d88cbULL,
      {0.67342433843046134, 0.66374218920400074,
       0.49546931803228644, 0.49546931803228644}},
     // cc b2 shifted d2 mivec dsg
-    {0x8a4734825bba3825ULL, 0x350ba65287602505ULL, 0xa09a45381550ba10ULL,
+    {0x8a4734825bba3825ULL, 0x9a23f640158c5074ULL, 0x2edbe3aeb977712fULL,
      {}},
     // cc b2 shifted d3 complete sg
     {0xefe37f732e094f60ULL, 0x521e7e61a7335160ULL, 0xdd1dee8c5c060b4eULL,
      {0.71548083999029233, 0.71075500963000537,
       0.51000964823268347, 0.52592771607034816}},
     // cc b2 shifted d3 complete dsg
-    {0xd3b6bdff9287a248ULL, 0x36ae0db47fca409bULL, 0xfe97c01e05164926ULL,
+    {0xd3b6bdff9287a248ULL, 0xd46bec14de322b1bULL, 0x30846cce630bed85ULL,
      {}},
     // cc b2 shifted d3 mivec sg
     {0xd798996a3fc28f32ULL, 0x0cedeee1b73e8859ULL, 0x301fc116ccf54bfaULL,
      {0.70678666515411692, 0.6954296517702856,
       0.70176768667511746, 0.52592771607034816}},
     // cc b2 shifted d3 mivec dsg
-    {0x3a33f9a47400a863ULL, 0xc60c1846205a720cULL, 0xbba7f0a2eecac1ceULL,
+    {0x3a33f9a47400a863ULL, 0x50c3b9e50f3c4516ULL, 0x7143228d4fbd1257ULL,
      {}},
     // cheb1 b0 unit d1 complete sg
     {0x5aaa6d3d9eb1d110ULL, 0x13198a2e03707344ULL, 0x13198a2e03707344ULL,
@@ -947,252 +947,252 @@ const std::vector<Golden> GOLDEN = {
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // mixed b0 unit d1 complete dsg
-    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x40fbcfd838cfc86fULL,
      {}},
     // mixed b0 unit d1 mivec sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // mixed b0 unit d1 mivec dsg
-    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x40fbcfd838cfc86fULL,
      {}},
     // mixed b0 unit d2 complete sg
     {0xcd36a50d7dfb0553ULL, 0xbd76ae8a2f28747eULL, 0x300e02b14c4b5dcdULL,
      {1.150090320421703, 1.1489753355339904,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b0 unit d2 complete dsg
-    {0xfff322bf55265554ULL, 0x422d7aad507e0055ULL, 0x8745635e6e40bf97ULL,
+    {0xfff322bf55265554ULL, 0xc3043d5eea114648ULL, 0x8720551aec4df398ULL,
      {}},
     // mixed b0 unit d2 mivec sg
     {0x04b860bd31412163ULL, 0x3d2d32e582e92ef7ULL, 0x616665efff4320d4ULL,
      {1.1500908511307606, 1.1454669248287423,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b0 unit d2 mivec dsg
-    {0x537f796ceb1cba93ULL, 0xba71815cc4398fc8ULL, 0x1df3e028d3681898ULL,
+    {0x537f796ceb1cba93ULL, 0xefb35c91941662b6ULL, 0xa51f730bc953b4bdULL,
      {}},
     // mixed b0 unit d3 complete sg
     {0x347b38fba0a7474dULL, 0x6cb63cf3a7d592dbULL, 0x5bf2daaa7a83803dULL,
      {1.1604884575510701, 1.157789049079307,
       0.95468808971871366, 0.95468808971871366}},
     // mixed b0 unit d3 complete dsg
-    {0x3553b8e11604802dULL, 0x273b444242c3b8c2ULL, 0x76814b40c9022cd2ULL,
+    {0x3553b8e11604802dULL, 0xed0b90e205487ae8ULL, 0xa1247d598105ac17ULL,
      {}},
     // mixed b0 unit d3 mivec sg
     {0x167e3e227b4a8074ULL, 0x54ac2006c61beb2dULL, 0x9b7ded4fc54cad55ULL,
      {1.1604274703387298, 1.1440079535505325,
       0.95468808971871344, 0.95468808971871344}},
     // mixed b0 unit d3 mivec dsg
-    {0x278f20c92ed8614dULL, 0x9a60f7e826b06093ULL, 0x3ad7b28b508fc06cULL,
+    {0x278f20c92ed8614dULL, 0x9f6214e82f3ad3c2ULL, 0xcd57b27060ac1498ULL,
      {}},
     // mixed b0 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // mixed b0 shifted d1 complete dsg
-    {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x2ac4483f14c68fe9ULL,
+    {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x78d7c7e037c08433ULL,
      {}},
     // mixed b0 shifted d1 mivec sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // mixed b0 shifted d1 mivec dsg
-    {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x2ac4483f14c68fe9ULL,
+    {0x589f6cc425ff560aULL, 0xed2ff39eb250f77fULL, 0x78d7c7e037c08433ULL,
      {}},
     // mixed b0 shifted d2 complete sg
     {0x66325f1f0fe8f011ULL, 0xb4fbf1621fb75c5cULL, 0x78df0beeceae4e4eULL,
      {0.67393386024894686, 0.67340037493408622,
       0.49546931803228644, 0.49546931803228644}},
     // mixed b0 shifted d2 complete dsg
-    {0xf6fd92eb3983c7d6ULL, 0xddb64ca0c5c890cfULL, 0xc20e7963eb53ba67ULL,
+    {0xf6fd92eb3983c7d6ULL, 0x5a790511363b6116ULL, 0xef678f0e8a67e393ULL,
      {}},
     // mixed b0 shifted d2 mivec sg
     {0xcda2464a5881649cULL, 0xb599cac930032728ULL, 0xdde5480f68ddb7fcULL,
      {0.67392573071468287, 0.66854757719633096,
       0.49546931803228644, 0.49546931803228644}},
     // mixed b0 shifted d2 mivec dsg
-    {0xf784d4a6402b8d54ULL, 0x0092ce82c8c7cfa9ULL, 0xa8a2fc28dda241e0ULL,
+    {0xf784d4a6402b8d54ULL, 0x5210e3475901d725ULL, 0xeb97e7cfe4de6e7eULL,
      {}},
     // mixed b0 shifted d3 complete sg
     {0x8702f390b38fb2b6ULL, 0x354213665b6c36c0ULL, 0x4fc52f34b257ee93ULL,
      {0.71522817016060736, 0.71306255993787171,
       0.52592771607034816, 0.52592771607034816}},
     // mixed b0 shifted d3 complete dsg
-    {0xa932708715b42dcbULL, 0xb6647102791a6cebULL, 0x2321a0612e02c11bULL,
+    {0xa932708715b42dcbULL, 0x228d584624f325c6ULL, 0xcf4434b0fc69e495ULL,
      {}},
     // mixed b0 shifted d3 mivec sg
     {0x0fe3e6b6192a99ecULL, 0xab0d6661a0a5624aULL, 0x424711642f32e94dULL,
      {0.71499663754317111, 0.6996905779964131,
       0.52592771607034816, 0.52592771607034816}},
     // mixed b0 shifted d3 mivec dsg
-    {0x0e8385e42f872ae7ULL, 0x59288450eb43ec32ULL, 0x48a3a20a985fbf11ULL,
+    {0x0e8385e42f872ae7ULL, 0x7aa573fac3b2e06aULL, 0x7fcf39f992ee5c3cULL,
      {}},
     // mixed b1 unit d1 complete sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // mixed b1 unit d1 complete dsg
-    {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x40fbcfd838cfc86fULL,
      {}},
     // mixed b1 unit d1 mivec sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // mixed b1 unit d1 mivec dsg
-    {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x3efa1daa4b5fc79fULL, 0x40fbcfd838cfc86fULL,
      {}},
     // mixed b1 unit d2 complete sg
     {0x403d0bdbf4b46bc8ULL, 0x223ef652490bdbd3ULL, 0x52cf75aef16e11a8ULL,
      {1.1500903218809946, 1.1489753355339904,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b1 unit d2 complete dsg
-    {0x813f8d9728bebfc9ULL, 0x2d4a967e761d936aULL, 0x5805d7fbdd2142d2ULL,
+    {0x813f8d9728bebfc9ULL, 0xf1bf678d31cef653ULL, 0xd78d7d3696d13419ULL,
      {}},
     // mixed b1 unit d2 mivec sg
     {0xd42ab4e12f992762ULL, 0x48a5c9aee5f2a739ULL, 0xedec5f25aeb416b9ULL,
      {1.1501002633369988, 1.1454669248287423,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b1 unit d2 mivec dsg
-    {0x7556ba69a47ad95aULL, 0xe424477db6753bc7ULL, 0x6db2c9b3770e2212ULL,
+    {0x7556ba69a47ad95aULL, 0x78c57c81d72b2281ULL, 0x855b4a818c7bed8dULL,
      {}},
     // mixed b1 unit d3 complete sg
     {0xde45d8c69382fd65ULL, 0xb8ac5426b70e4fedULL, 0x1f494e6d628a1d6fULL,
      {1.1604877016966493, 1.157789049079307,
       0.954688089718712, 0.95468808971871366}},
     // mixed b1 unit d3 complete dsg
-    {0x90e87576739eaf69ULL, 0xc749501ba555d73eULL, 0x9abac689f2c7324bULL,
+    {0x90e87576739eaf69ULL, 0xac0b9ea38270c0aeULL, 0x9459eaf2f5a4a473ULL,
      {}},
     // mixed b1 unit d3 mivec sg
     {0x1b210470a900b723ULL, 0xe32a16e12d3a3420ULL, 0x564fc723085ab47cULL,
      {1.1604131501948538, 1.1440079535505325,
       0.95468808971871344, 0.95468808971871344}},
     // mixed b1 unit d3 mivec dsg
-    {0xb96f6912a48ad4a1ULL, 0xe00009452a227742ULL, 0x4fd123c9568ff415ULL,
+    {0xb96f6912a48ad4a1ULL, 0xffb964f02f0410d3ULL, 0x48f13ae37700562fULL,
      {}},
     // mixed b1 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // mixed b1 shifted d1 complete dsg
-    {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0xb482ed03592d7341ULL,
+    {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0x640eba4aee12b07eULL,
      {}},
     // mixed b1 shifted d1 mivec sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // mixed b1 shifted d1 mivec dsg
-    {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0xb482ed03592d7341ULL,
+    {0x589f6cc425ff560aULL, 0x4d8e085e27b9f4e4ULL, 0x640eba4aee12b07eULL,
      {}},
     // mixed b1 shifted d2 complete sg
     {0x9d45b20cde766793ULL, 0x1c8a7bbe4ae0aeceULL, 0x1e2acfde4a5670f8ULL,
      {0.67393382769912435, 0.67340037493408622,
       0.49546931803228622, 0.49546931803228644}},
     // mixed b1 shifted d2 complete dsg
-    {0x8cf365cd599e322cULL, 0x5dd2af9bd7d42ad9ULL, 0xcfab1785a63a3785ULL,
+    {0x8cf365cd599e322cULL, 0x84b5b39c303cbefbULL, 0xfa4e478fceaf05f1ULL,
      {}},
     // mixed b1 shifted d2 mivec sg
     {0x292aca0f04e1147cULL, 0x23144fbdc7317cdaULL, 0xfdf4fb302f6f8631ULL,
      {0.67388572068250896, 0.66854757719633096,
       0.49546931803228644, 0.49546931803228644}},
     // mixed b1 shifted d2 mivec dsg
-    {0xcdfa65d5adab6e57ULL, 0x56f8aecde7948655ULL, 0xcb592adfd011efc7ULL,
+    {0xcdfa65d5adab6e57ULL, 0xea59584b4d11dd3eULL, 0xb44d6884350074f2ULL,
      {}},
     // mixed b1 shifted d3 complete sg
     {0x27ca3178ab4934cbULL, 0x854ae21360af6c75ULL, 0xcdd868da4dfe9252ULL,
      {0.71525146367106396, 0.71306255993787171,
       0.52592771607034949, 0.52592771607034816}},
     // mixed b1 shifted d3 complete dsg
-    {0x001907e5821214bcULL, 0x7256277d469726b5ULL, 0xcdf6797a11a49d02ULL,
+    {0x001907e5821214bcULL, 0xa61e6a4ea0170d45ULL, 0x8350859b24c41386ULL,
      {}},
     // mixed b1 shifted d3 mivec sg
     {0xa7372ce2f77ba23fULL, 0xd88ea81140a86858ULL, 0x127b8df3e6d26839ULL,
      {0.71362704931017873, 0.6996905779964131,
       0.52592771607034816, 0.52592771607034816}},
     // mixed b1 shifted d3 mivec dsg
-    {0x8e55c4816ed90a03ULL, 0xe49a8efed6398033ULL, 0x3b17be3b050f12cdULL,
+    {0x8e55c4816ed90a03ULL, 0x19ed95cd7ac37237ULL, 0xf6b5d6f0a838e31dULL,
      {}},
     // mixed b2 unit d1 complete sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // mixed b2 unit d1 complete dsg
-    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x40fbcfd838cfc86fULL,
      {}},
     // mixed b2 unit d1 mivec sg
     {0x0164a09b7764b0b6ULL, 0x7cdf6aa3f7bd9b5bULL, 0x7cdf6aa3f7bd9b5bULL,
      {1.0747348389074531, 1.0743405895206195,
       0.91393118527122819, 0.91393118527122819}},
     // mixed b2 unit d1 mivec dsg
-    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x54f07dceeb360dfbULL,
+    {0xb91179c84c66dea2ULL, 0x55323b10f3448d0bULL, 0x40fbcfd838cfc86fULL,
      {}},
     // mixed b2 unit d2 complete sg
     {0x6bc328c3d06a1e30ULL, 0x046e0ba0a93d56e9ULL, 0xb2b75475c4ddeeceULL,
      {1.1500900561039944, 1.1489753355339904,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b2 unit d2 complete dsg
-    {0x1d88ebce878b111cULL, 0x4ee63ffa73cccabdULL, 0xff32247a0d4cd4c2ULL,
+    {0x1d88ebce878b111cULL, 0x6fa1fa3126715898ULL, 0xb1fbcf1f78ec41ddULL,
      {}},
     // mixed b2 unit d2 mivec sg
     {0xb12b9c13820e7002ULL, 0x8f95726f5ec8034aULL, 0xf3a3225525c7686fULL,
      {1.1501732809443705, 1.1454669248287423,
       1.0298374180359597, 1.0298374180359597}},
     // mixed b2 unit d2 mivec dsg
-    {0x697c541e70e5f286ULL, 0x7e3d2336e342e9f1ULL, 0x657745c1473fb3c5ULL,
+    {0x697c541e70e5f286ULL, 0x59df629aee93faf7ULL, 0x579810913d5e6d72ULL,
      {}},
     // mixed b2 unit d3 complete sg
     {0x551a9919ed90f1b9ULL, 0x362b6e2bef33873dULL, 0x36639e53d37a2ea3ULL,
      {1.1604830185611257, 1.157789049079307,
       0.95444336081090331, 0.95468808971871366}},
     // mixed b2 unit d3 complete dsg
-    {0xa2ae7c09b2977b41ULL, 0xb95e210dfe914006ULL, 0xb1fc278cf0f8be70ULL,
+    {0xa2ae7c09b2977b41ULL, 0x5778e222f34d7496ULL, 0x7291f660d3e7542cULL,
      {}},
     // mixed b2 unit d3 mivec sg
     {0x81c7242a4b087887ULL, 0x9df9690425899b88ULL, 0x0fdf4538911930aaULL,
      {1.1597417873945934, 1.1440079535505325,
       0.96277751266224232, 0.95468808971871344}},
     // mixed b2 unit d3 mivec dsg
-    {0xf576814aeab01b13ULL, 0x4b3c272795178c5bULL, 0xead08e58c5365841ULL,
+    {0xf576814aeab01b13ULL, 0x04d17922a4304af3ULL, 0xa3062549087a0b11ULL,
      {}},
     // mixed b2 shifted d1 complete sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // mixed b2 shifted d1 complete dsg
-    {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x144c6acd38b81f49ULL,
+    {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x2685449c9b4ecf10ULL,
      {}},
     // mixed b2 shifted d1 mivec sg
     {0xd999d1b89d86d3c3ULL, 0x600825c7473adec4ULL, 0x600825c7473adec4ULL,
      {0.52523998455618148, 0.52555586674826027,
       0.27046931803228641, 0.27046931803228641}},
     // mixed b2 shifted d1 mivec dsg
-    {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x144c6acd38b81f49ULL,
+    {0x589f6cc425ff560aULL, 0x959730e73868a2cfULL, 0x2685449c9b4ecf10ULL,
      {}},
     // mixed b2 shifted d2 complete sg
     {0x87d21d6497944783ULL, 0xa399839f7ce7613eULL, 0x511464cd5e0ece09ULL,
      {0.6739366264167812, 0.67340037493408622,
       0.49546931803228633, 0.49546931803228644}},
     // mixed b2 shifted d2 complete dsg
-    {0xdf0a4265a0bde9afULL, 0x92bc99080cc6e209ULL, 0x98590b59bf68e316ULL,
+    {0xdf0a4265a0bde9afULL, 0xb963ffe42b69c804ULL, 0x956a66ac6cc52b0dULL,
      {}},
     // mixed b2 shifted d2 mivec sg
     {0x7a596cefd1810829ULL, 0xde20fe1321d6b1b4ULL, 0xc9e7d0e94bfcb8adULL,
      {0.67367142063303331, 0.66854757719633096,
       0.49546931803228644, 0.49546931803228644}},
     // mixed b2 shifted d2 mivec dsg
-    {0xe13c162d2e523a2eULL, 0x1a5895dcb7b9d0e5ULL, 0xb90ef543eb47e8faULL,
+    {0xe13c162d2e523a2eULL, 0x123806b17e6fd8d6ULL, 0xf9a065d8668a9f79ULL,
      {}},
     // mixed b2 shifted d3 complete sg
     {0x743ca6789f440d54ULL, 0x5fa75c85ac51956fULL, 0xc4f45416ab4a16a3ULL,
      {0.71544037633020041, 0.71306255993787171,
       0.51000964823268347, 0.52592771607034816}},
     // mixed b2 shifted d3 complete dsg
-    {0x800041d692117e6eULL, 0x091a9e29110b559fULL, 0x65e2ef6eac7e2c57ULL,
+    {0x800041d692117e6eULL, 0x7269abfcee20a607ULL, 0xe616b06dc6b83371ULL,
      {}},
     // mixed b2 shifted d3 mivec sg
     {0x5246006331942dc7ULL, 0xa8f6652f3e801bfcULL, 0xabc341827dda58d5ULL,
      {0.70655809347438647, 0.6996905779964131,
       0.70176768667511746, 0.52592771607034816}},
     // mixed b2 shifted d3 mivec dsg
-    {0x6934b33825c54666ULL, 0xb768d887a2abf35bULL, 0xf1e9a3a426dd20b8ULL,
+    {0x6934b33825c54666ULL, 0x614eafbff3740cb3ULL, 0xdb0271940122a31cULL,
      {}},
 };
 // clang-format on

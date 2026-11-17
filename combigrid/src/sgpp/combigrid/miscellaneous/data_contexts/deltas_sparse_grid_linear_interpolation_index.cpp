@@ -76,6 +76,18 @@ DSGLinInterpIndex::DSGLinInterpIndex(const DeltasSparseGrid& deltasSparseGrid)
       ctTGs.push_back(tgIdx);
     }
   }
+  leafCoeffs_.resize(nLeaves());
+  for (size_t leaf = 0; leaf < nLeaves(); leaf++) {
+    leafCoeffs_[leaf] = static_cast<double>(coeffs_[trie_.leafItem(leaf)]);
+  }
+
+  dimFiberBegin_.assign(1, 0);
+  fiberBegin_.assign(1, 0);
+  fiberBlocks_.reserve(nDim() * nLeaves());
+  for (size_t dim = 0; dim < nDim(); dim++) {
+    collectFibers(dim);
+    dimFiberBegin_.push_back(fiberShift_.size());
+  }
 }
 
 /**
@@ -126,10 +138,45 @@ void DSGLinInterpIndex::computeSlotOffsets() {
     const LvlMIView mi = leafMI(leaf);
     size_t blockSize = 1;
     for (size_t dim = 0; dim < nDim(); dim++) {
-      blockSize *= maxNewCoords_[row(dim, mi[dim])];
+      // A level without new coordinates keeps one slot (the transform of the slot weights stores
+      // the intermediate values of every multi-index in the first slot of its block)
+      blockSize *= std::max<size_t>(maxNewCoords_[row(dim, mi[dim])], 1);
     }
     slotOffset_.push_back(slotOffset_.back() + blockSize);
   }
+}
+
+/**
+ * The fibers start at the leaves of level 0 in @p dim (in leaf order); the next leaf of a fiber is
+ * found in the trie (d lookups).
+ */
+void DSGLinInterpIndex::collectFibers(const size_t dim) {
+  LvlMI mi(nDim());
+
+  for (size_t leaf = 0; leaf < nLeaves(); leaf++) {
+    const LvlMIView leafLevels = leafMI(leaf);
+    if (leafLevels[dim] != 0) {
+      continue;
+    }
+    std::copy(leafLevels.begin(), leafLevels.end(), mi.begin());
+    fiberShift_.push_back(nMultiDimsBelow(leafLevels, dim));
+
+    for (size_t next = leaf; next != ClosureTrie::NOT_FOUND; next = trie_.findLeaf(mi)) {
+      // Dimension 0 is the last one of the trie walk: its fibers are runs of consecutive leaves
+      assert(dim != 0 || next == fiberBlocks_.size());
+      fiberBlocks_.push_back(slotOffset_[next]);
+      mi[dim]++;
+    }
+    fiberBegin_.push_back(fiberBlocks_.size());
+  }
+}
+
+uint8_t DSGLinInterpIndex::nMultiDimsBelow(const LvlMIView mi, const size_t dim) const {
+  uint8_t count = 0;
+  for (size_t j = 0; j < dim; j++) {
+    count += (maxNewCoords_[row(j, mi[j])] == 2);
+  }
+  return count;
 }
 
 }  // namespace misc
