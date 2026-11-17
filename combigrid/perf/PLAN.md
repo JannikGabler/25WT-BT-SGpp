@@ -38,7 +38,7 @@ integrands in the benchmark binary (`perf::expSum` offset 16 ↔ 48: dsg equi b0
 1.063x with identical libraries). Cross-snapshot ratios spanning such an edit carry ±2–6 % on cheap
 `exp` cases. Not pinned (WP-53 dropped); when such a ratio matters, check it with a hybrid
 snapshot (same libraries, the other benchmark binary; RP-4 `rp-4-binWP45`).
-**Future feature: dimension-adaptive refinement** (owner 2026-10-29; not planned, no WP yet):
+**Future feature: dimension-adaptive refinement** (owner 2026-10-29; exploration WP-62 since 2026-11-17):
 the owner intends to add a dimension-adaptive CT later (CLAUDE.md §6: today the caller builds the
 adaptive loop on `MIVecSGGenInstr`). Every WP that designs or changes an API (`SourceFunc` and
 caching, batched / vector-valued evaluation, sparse-grid storage, generation instructions,
@@ -150,7 +150,8 @@ interp/dsg 0.83 s · interplin/dsg 1.17 s. Peak memory geomean baseline → rp-5
 | – | WP-05 | SG quadrature at low d: shared, lazily filled 1D weight table (`misc::QuadWeightTable`, one row per unit-table row, `std::call_once`), CC rule writes in place with fewer FFT temporaries, no per-thread `weights1D` | accepted (2026-11-15, 3261399ec) | measured: `quad/sg/cc-uq/b0/d2/L20` 1.237 s → 777 ms (1.555x, −460 ms), cc d3 L14 1.113x; e2e 38.028 → 37.660 s (1.010x); memory geomean 0.938 (5 MEM−: sg cc d2 L20 862 → 310 MiB, equi d2 342 → 110, cc d3 34 → 17); refcheck = before; `quad/dsg/cc-uq/b0/d10/L7` 0.978 (placement: same instructions, op-cache misses 11x → RP-5) |
 | – | RP-5 | Re-profiling after WP-18 / WP-05 (+ cumulative memory; critical path of sg cc d2; DSG cc d10 placement check; re-rank) | accepted (2026-11-15) | measured: baseline → rp-5 e2e 69.93 → 35.45 s (**1.973x**; d ≥ 7 1.97x; since rp-4 1.017x), 0 SLOWER; suite 48 cases 37.44 s; quad/sg 2.59x, quad/dsg 1.50x (47.6 % of the suite; b0 d7/d10 15.0 s, row loop 5.72 s), interp/sg 1.56x, interplin/sg 1.43x, mivec 7.33x; memory geomean **0.724** (26 MEM−); WP-05 dsg cc d10 placement loss gone (1.001x); WP-19 merged into WP-56; new WP-58 |
 | – | WP-19 | SG quadrature: load balancing at low d (RP-1 NEW-C) | dropped (2026-11-15): merged into WP-56 (RP-5) | – |
-| – | WP-56 | SG quadrature: CC weights off the critical path — real FFT of length m (owner: option (a)), eager weight table (`computeAllRows`, dynamic, largest row first), TG loop guided → dynamic; slabs (WP-19) measured, dropped by the owner (from WP-05; + WP-19) | accepted (2026-11-15; commit pending) | measured: `quad/sg/cc-uq/b0/d2/L20` 792 → 438 ms (1.84x), equi b1 d10 L7 1.22x, mivec cc d10 1.32x; `^(quad\|mivec)/` 27.79 → 27.24 s (−551 ms); equi d5 L10 0.981 (+3 ms, unexplained); memory geomean 0.981 (cc d2 L20 323 → 195 MiB); refcheck WARN (known); CC weights |Δ| ≤ 4.2e-22 (re-pinned hashes) |
+| – | WP-56 | SG quadrature: CC weights off the critical path — real FFT of length m (owner: option (a)), eager weight table (`computeAllRows`, dynamic, largest row first), TG loop guided → dynamic; slabs (WP-19) measured, dropped by the owner (from WP-05; + WP-19) | accepted (2026-11-15; 14c1e3d16) | measured: `quad/sg/cc-uq/b0/d2/L20` 792 → 438 ms (1.84x), equi b1 d10 L7 1.22x, mivec cc d10 1.32x; `^(quad\|mivec)/` 27.79 → 27.24 s (−551 ms); equi d5 L10 0.981 (+3 ms, unexplained); memory geomean 0.981 (cc d2 L20 323 → 195 MiB); refcheck WARN (known); CC weights |Δ| ≤ 4.2e-22 (re-pinned hashes) |
+| – | WP-62 | Dimension-adaptive refinement: exploration + implementation plan (owner's request 2026-11-17; few restrictions; Fable 5.2, autonomous) | in progress (prompt 2026-11-17; after WP-49 is committed) | decision data: approaches incl. dimension buffering, measured prototypes, plan + WP split |
 | 1 | WP-49 | DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47) | in progress (prompt 2026-11-15; + serial d2 call, RP-4) | RP-4: 0.15–0.25 s (gather + mark 0.40 s: d10 0.16, d8 0.15, d5 0.08 s) + serial d2 ≈ 0.07 s (0.184 vs. SG 0.111 s) |
 | 2 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | RP-5: 0.1–0.15 s (builder 0.245 s: d20 0.146, d15 0.099 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 3 | WP-59 | Global interpolation: TG loop `schedule(guided)` → `schedule(dynamic)` (SG + vector `combineTensorGrids`) (from WP-56) | ready | estimate 0–0.2 s on `^interp/sg/` (WP-56 quadrature: dynamic vs. guided equi b1 d10 L7 1.19x, mivec d10 1.10x); cheap A/B |
@@ -2948,6 +2949,105 @@ rank (low; the owner may move them up); WP-43 stays last.
   cc / equi); quadrature pinning. **E2E filter**: `^(quad/sg|mivec)/`.
 - **Functional change**: agreed by the owner (2026-11-15: plan as a low WP) — results become
   thread-count independent. **Dependencies**: WP-56 accepted. **Status**: ready (low).
+
+## WP-62 — Dimension-adaptive refinement: exploration + implementation plan (owner's request)
+- **Source**: owner, 2026-11-17 (header note "Future feature: dimension-adaptive refinement",
+  2026-10-29; thesis §8.2: highest-priority future work). Run by a Fable 5.2 session, **fully
+  autonomous** (no questions to the owner; decisions become recommendations in the plan).
+- **Goal**: not a production implementation. Explore and test approaches for a dimension-adaptive
+  CT in combigrid and deliver a decision-ready implementation plan (decisions with options,
+  measured evidence and a recommendation; WP split for the implementation).
+- **Restrictions (owner 2026-11-17: keep them low, it is an exploration)**: prototypes may touch
+  any combigrid code (incl. public API, `SparseGrid` / generation instructions / operators,
+  bindings, new tests / examples / unprotected benchmarks) without BLOCKED stops. Only the
+  protected perf files stay unchanged. Prototype code may stay in the tree (listed with a
+  keep / revert recommendation; debug tests must pass at the end); if it changes code the judged
+  suite runs, the summary carries a refcheck + `ab e2e` neutrality check.
+- **Questions** (the session may add its own):
+  1. State of the art: Gerstner–Griebel (old / active sets, Δ_ℓ indicators, work weighting),
+     Nobile–Tamellini–Tempone profits, SGMK `adapt_sparse_grid` (profit indicators, **dimension
+     buffering** for high d), Tasmanian (anisotropic / surplus refinement, estimated anisotropy),
+     sparseSpACE (dimension-wise / spatial CT), Hegland / Chkifa–Cohen–Schwab. What fits a CT with
+     full tensor grids, nested and non-nested node families (CC, equidistant doubling, cheb1,
+     linear growth), boundary offset, vector-valued functions?
+  2. Algorithm: indicators per operator (quadrature: Δ_ℓ integral; interpolation: Δ_ℓ on new
+     points / validation points; vector: norm over outputs), work model (new points vs. all points
+     of a TG), admissibility, stopping criteria (tolerance, evaluation / time budget), batch / bulk
+     marking (several MIs per step to keep 16 threads busy), dimension buffering for d ≥ 20, and
+     new techniques (e.g. sensitivity-based dimension activation, fitted anisotropy → a-priori
+     growth, look-ahead).
+  3. Incremental data structures vs. rebuild per step, with measured costs: CT coefficients (only
+     ℓ − z, z ∈ {0,1}^d change; `computeCTCoeffs` = 64–71 % of mivec generation, d10 4.8 ms at
+     16 t), closure (adding admissible MIs keeps the set closed), `SparseGrid` / `NodeTable` growth
+     (WP-18 note: `setStorage` replaces everything, views hold raw row pointers), DSG rebuild per
+     MI set (`prepare` b1 d20 114 ms at 1 t; immutable trie / index), zero-coefficient TGs (both
+     instructions drop them, but Δ_ℓ indicators need Q_ℓ of the backward neighbours), reuse of
+     per-TG operator results across steps, function values via `CachedSourceFunc` (bitwise
+     user-domain keys, step-independent) or per-TG / per-point stores.
+  4. API sketch (C++ + Python): driver class / generation instruction, pluggable indicator / work
+     / buffering policies without hot-path virtual calls, per-step callbacks, results usable by all
+     operators (SG and DSG), vector-valued (design T), caching (design W).
+- **Evidence**: prototypes compared on test functions with known anisotropy / low effective
+  dimension (Genz families with decaying coefficients, d = 2 … 100; the thesis UQ example):
+  error vs. distinct evaluations and vs. wall time against the complete CT and a-priori
+  anisotropic sets of equal budget; bookkeeping cost share for cheap / 1 µs / 1 ms functions.
+- **Deliverable**: summary `summaries/WP-62-dimension-adaptive-exploration.md` + the plan
+  `results/WP-62/plan.md` (decisions, recommended design, API, data-structure changes, WP split
+  with scope / files / tests / benchmark cases / dependencies / risks, impact on the judged suite)
+  → owner decides; the master turns the plan into implementation WPs. Progress log
+  `results/WP-62/progress.md`, updated after every milestone (owner 2026-11-17), so partial
+  results survive an interrupted session and a new session can resume from it.
+- **Expected gain**: decision data (feature). Judged suite: unchanged unless prototypes stay.
+- **Dependencies**: none in the code; runs on a clean tree (after WP-49 is committed). Earlier
+  "refinement" notes: summaries WP-18 (+ `results/WP-18/design-and-obsolete-code.md`), WP-25,
+  WP-26, WP-29a–c, WP-45, WP-47, WP-50, RP-3 / ANALYSIS.md (mivec generation split).
+- **Status**: **accepted** (2026-11-17; commit pending). Result: plan `results/WP-62/plan.md`
+  (design §3, decisions §5, WP split §6 → WP-63 … WP-72), literature, prototypes in
+  `results/WP-62/proto/` (kept as evidence, untracked binaries). Headline: Gerstner–Griebel with
+  profit 8.5–42x fewer evaluations than the complete CT at d = 10; d = 100 level-2 CT 80 001 points
+  error 4.0e-3 vs. adaptive 7.5e-8 with 2e5; lazy selection 0.19–0.84x of GG's evaluations but
+  blind to hidden interactions; incremental bookkeeping 10.5–47.5 ns per evaluation (d 10–100) vs.
+  rebuild 73.7 ms per step at d = 100; standard CC growth 5–48x lower error at d = 100.
+- **Decisions D1–D9** (plan §5): recorded as the session's recommendations, **open — the owner
+  decides later** (2026-11-17): D1 GG (verified) default, lazy + exploration share 0.1 as option ·
+  D2 profit |Δ| / work, safeguard w option (default 1) · D3 index value store for nested nodes,
+  switchable off · D4 separate driver + owning instruction (no growable `SparseGrid`) · D5 θ = 0.5,
+  maxBulk = 4 × threads · D6 dimension buffering option, off by default · D7 standard CC growth +
+  generic nestedness as the first prerequisite WP · D8 tolerance = raw estimate η ≤ tol (relative to
+  the first increment per output; factor documented) · D9 interpolation indicator: surplus / work
+  (nested), indicator points (non-nested), quadrature indicator selectable.
+- **Placement** (owner 2026-11-17): WP-63 … WP-72 are **not ranked** yet; the owner says when they
+  fit. Library gaps found (no WP yet unless covered): cheb1 has no quadrature rule (documented
+  only); offset 0 makes the coarsest grid 3^d points; 16 threads slower than 1 for cheap
+  integrands in short regions (→ WP-48 / driver's work gate).
+
+## WP-63 … WP-72 — Dimension-adaptive CT: implementation (from WP-62; plan §6)
+Common to all: **needs decision** (D1–D9 open) and **not ranked** (owner places them). Feature WPs:
+tests first, an example, feature benchmarks in a new **unprotected** `perf_adaptive.cpp`; the
+judged suite stays neutral (refcheck + `ab e2e` only where judged code is touched: WP-63). The
+prompt points the session to `results/WP-62/plan.md` §3 (design, API sketch, data structures,
+required changes) and to the prototypes in `results/WP-62/proto/` (reference, not to be copied
+blindly). Suggested order (plan): 63 → 64 → 65 → 68 (first usable release, C++ + Python) → 66 → 67
+→ 69 → 70 → 71 / 72. Related: WP-48 (share the work-gate threshold logic with the driver's
+work-gated regions), WP-09 (A5's surplus has the same kernel shape; if WP-09 lands first, A5 uses
+it), WP-34 (driver evaluates Python callables serially), WP-42 (index store makes the cache
+unnecessary inside the driver), WP-31 not needed. CLAUDE.md §6 "Not implemented: dimension-adaptive
+refinement" and module-reference "Known limitations" are updated by WP-65 / WP-68.
+
+| WP | Plan | Scope | Files | Tests | Benchmarks | Depends on | Decisions | Risk |
+|---|---|---|---|---|---|---|---|---|
+| WP-63 | A1 | Generic nestedness + standard CC growth 1, 3, 5, 9, …: `isNested` / level-to-level index maps from node lists instead of a known-function list (today throws "Unknown level-to-grid-point-count function"); new growth function (name open) incl. Python constant | `functions/level_to_grid_point_count_functions/*`, `functions/node_generation_functions/**`, `Functions.i` | DSG == SG for the new growth; unchanged structure hashes for doubling / linear | refcheck + `ab e2e '^(quad\|interp\|interplin)/dsg/'` neutral; micro `gen` | – | D7 (public API addition) | low; touches DSG generation |
+| WP-64 | A2 | Core structures: sparse index set + hash, incremental CT coefficients, hierarchical 1D rule table (lazily extended), value / result store | `miscellaneous/adaptive/*`, `tools/adaptive/*` | coefficients == `computeCTCoeffs` on random admissible sequences (d 1 … 50); new nodes == `genDeltaNodes`; store layout == DSG delta grids; offsets 0 / 1; non-unit domains (`mapToDomain` bitwise) | `micro/adaptive/{insert,neighbours,coeffs,delta}` vs. rebuild numbers (plan §2.3) | 63 | D3, D4 | medium (kernel of everything) |
+| WP-65 | A3 | Quadrature driver, scalar: GG selection, profit, bulk marking, budgets / tolerance, statistics, `step` / `refine`, owning generation instruction, work-gated OpenMP | `operators/adaptive/*` (public), new class in `sparse_grid_generation_instructions/`, umbrella header | estimate == `quadrature` on the handed-over SG / DSG; evaluations == DSG points; budget never overshot; d = 1; isotropic == complete CT sets; thread-count-independent set | `perf_adaptive`: Genz d 10 / 50 / 100, N(ε) and wall time at 1 / 16 t, cheap / 1 µs | 64 | D1, D2, D4, D5, D8 | medium |
+| WP-66 | A4 | Non-nested nodes (result store) + vector values (kernels templated over scalar / vector values; output norms) | WP-64 / 65 files | equidistant linear growth; vector output k == scalar run k; norms | `perf_adaptive` vector + non-nested | 65 | D3 | low–medium |
+| WP-67 | A5 | Interpolation target: surplus indicator on new points (`InterpolationMethod::basisValues`), indicator points for non-nested nodes (cheb1) | `tools/adaptive/*`, driver | surplus == difference of library interpolants; validation-point errors vs. the NumPy model | error vs. points at fixed-seed validation points | 65 (66 for cheb1) | D9 | medium (surplus cost) |
+| WP-68 | A6 | Python bindings + docs: `AdaptiveConfig`, `AdaptiveCombination` (`step`, `refine`, statistics, `genInstr`), example, `python-bindings.md`, `module-reference.md`, CLAUDE.md | `combigrid.i` (+ new `.i`), examples | as WP-50 (results == C++, exceptions, cached functions 0 extra calls) | evaluation counts with Python callables | 65 (66, 67 as available) | as WP-65 | low |
+| WP-69 | B1 | Predicted (lazy) selection: prediction, exploration share, surprise diagnostics, allocation-free bookkeeping | driver | product functions exact; `inter` found with the share; share = 1 ⇒ verified behaviour | N(ε) ratios (plan §2.1) as regression numbers | 65 | D1 (only if lazy is an option) | medium |
+| WP-70 | B2 | Dimension buffering (explored / activated dimensions) | driver | SGMK order on a reference case; d = 1000 smoke test | small-budget errors (plan §2.2) | 65 | D6 (only if option) | low |
+| WP-71 | C1 | Operators on stored values (optional): DSG operators reading the driver's value blocks instead of calling f | DSG operator overloads | results == operators with a cached function | interpolation at many points without function calls | 65, WP-49 | D3, D4 (API) | medium |
+| WP-72 | C2 | Resume / persistence (optional): serialize the adaptive state, continue a run | `miscellaneous/adaptive/*` | round trip | – | 65 | D4 | low |
+
+**Status** (all): needs decision · unranked.
 
 ## WP-37 — pysgpp `DataVector`: iteration / bounds-checked indexing (from WP-29d; needs decision)
 - **Source**: WP-29d summary (follow-ups).

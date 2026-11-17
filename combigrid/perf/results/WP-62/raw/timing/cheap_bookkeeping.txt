@@ -1,0 +1,36 @@
+== d=10 mode=gg threads=1
+gauss d=10 mode=gg: nI=2109 evals=999841 tgPoints=4404073 wall=0.0615s eval=0.0511s book=0.0105s storeMB=8.0
+function cost: 33.9 ns per evaluation (checksum 1.190e+05); rounds 1097
+== d=10 mode=gg threads=16
+gauss d=10 mode=gg: nI=2109 evals=999841 tgPoints=4404073 wall=0.1440s eval=0.1314s book=0.0126s storeMB=8.0
+function cost: 35.5 ns per evaluation (checksum 1.190e+05); rounds 1097
+== d=10 mode=lazy threads=1
+gauss d=10 mode=lazy: nI=1886 evals=997065 tgPoints=4407530 wall=0.0824s eval=0.0611s book=0.0213s storeMB=8.0
+function cost: 34.9 ns per evaluation (checksum 1.190e+05); rounds 1877
+== d=10 mode=lazy threads=16
+gauss d=10 mode=lazy: nI=1886 evals=997065 tgPoints=4407530 wall=0.1336s eval=0.0955s book=0.0381s storeMB=8.0
+function cost: 33.7 ns per evaluation (checksum 1.190e+05); rounds 1877
+== d=50 mode=gg threads=1
+gauss d=50 mode=gg: nI=11725 evals=999873 tgPoints=2554325 wall=0.1397s eval=0.1114s book=0.0282s storeMB=8.0
+function cost: 85.0 ns per evaluation (checksum 1.190e+05); rounds 2713
+== d=50 mode=gg threads=16
+gauss d=50 mode=gg: nI=11725 evals=999873 tgPoints=2554325 wall=0.1948s eval=0.1545s book=0.0404s storeMB=8.0
+function cost: 82.1 ns per evaluation (checksum 1.190e+05); rounds 2713
+== d=50 mode=lazy threads=1
+gauss d=50 mode=lazy: nI=7910 evals=999689 tgPoints=2861330 wall=0.2772s eval=0.1618s book=0.1154s storeMB=8.0
+function cost: 79.2 ns per evaluation (checksum 1.190e+05); rounds 7861
+== d=50 mode=lazy threads=16
+gauss d=50 mode=lazy: nI=7910 evals=999689 tgPoints=2861330 wall=0.3592s eval=0.1921s book=0.1671s storeMB=8.0
+function cost: 81.5 ns per evaluation (checksum 1.190e+05); rounds 7861
+== d=100 mode=gg threads=1
+gauss d=100 mode=gg: nI=15950 evals=999977 tgPoints=2426902 wall=0.2468s eval=0.1993s book=0.0475s storeMB=8.0
+function cost: 156.1 ns per evaluation (checksum 1.190e+05); rounds 3084
+== d=100 mode=gg threads=16
+gauss d=100 mode=gg: nI=15950 evals=999977 tgPoints=2426902 wall=0.3075s eval=0.2501s book=0.0575s storeMB=8.0
+function cost: 156.1 ns per evaluation (checksum 1.190e+05); rounds 3084
+== d=100 mode=lazy threads=1
+gauss d=100 mode=lazy: nI=10198 evals=999893 tgPoints=2738010 wall=0.4548s eval=0.2626s book=0.1922s storeMB=8.0
+function cost: 156.4 ns per evaluation (checksum 1.190e+05); rounds 10099
+== d=100 mode=lazy threads=16
+gauss d=100 mode=lazy: nI=10198 evals=999893 tgPoints=2738010 wall=0.4880s eval=0.2699s book=0.2181s storeMB=8.0
+function cost: 155.9 ns per evaluation (checksum 1.190e+05); rounds 10099

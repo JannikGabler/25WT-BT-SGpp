@@ -1,7 +1,7 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-56 (2026-11-15; accepted, commit pending) ·
-Next free WP number: 62 ·
+Last processed: WP-62 (2026-11-17; accepted, commit pending) ·
+Next free WP number: 73 ·
 Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13, RP-5 11-15 (RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC 15.2,
@@ -34,6 +34,8 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13, RP-5 11-15 (RP-0 
   - Prompt notes (PLAN.md header): strict aliasing (10-28, code-changing WPs), dimension-adaptive
     refinement (10-29, API WPs), Python `.venv/` (10-30, every prompt).
   - Vector-valued (10-30): design T; component k == scalar k within round-off. Doc updates by the sessions.
+  - Dimension-adaptive refinement (11-17): exploration WP-62 (Fable 5.2, autonomous) with few
+    functional restrictions (prototypes may change API / behavior); implementation WPs from its plan.
   - Caching (10-30 … 11-02): design W, bitwise user-domain keys, sharded table, stop inserting at
     the limit; API / disk / adaptive details decided in-session; default `storageSpaceLimit` 32 GiB;
     public headers free of Boost / xxHash / LMDB; `USE_LMDB` as `USE_GSL` / `USE_ZLIB`.
@@ -57,7 +59,9 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13, RP-5 11-15 (RP-0 
 | – | WP-47, 45, 50 | `DeltasSparseGrid` linear / global interpolation + Python bindings (+ judged `interp(lin)/dsg` cases) | accepted | DSG vs. SG 16 t: interplin d10 4.56x (d2 0.60x), interp cc d7 8.48x, d2 3.40x; Python 2.2–7.0x | [47](summaries/WP-47-dsg-linear-interpolation.md) [45](summaries/WP-45-dsg-global-interpolation.md) [50](summaries/WP-50-dsg-python-bindings.md) |
 | – | WP-18 | Tensor-grid storage: unit + domain `NodeTable`s, SoA, views, explicit domain / unit accessors | accepted (11-15) | e2e 1.005x; **memory 0.810** (sg equi d2 L20 620 → 346 MiB, dsg b1 d20 218 → 83) | [WP-18](summaries/WP-18-tensor-grid-storage.md) |
 | – | WP-05 | SG quadrature at low d: shared lazy weight table (`misc::QuadWeightTable`), CC rule in place | accepted (11-15) | cc d2 L20 1.555x (−460 ms); e2e 1.010x; **memory 0.938** (sg cc d2 862 → 310 MiB) | [WP-05](summaries/WP-05-cc-weight-table.md) |
-| – | WP-56 | SG quadrature: real FFT of length m (re-pinned hashes), eager weight table (dynamic, largest row first), TG loop guided → dynamic | accepted (11-15; commit pending) | cc d2 L20 792 → 438 ms (1.84x), equi b1 d10 L7 1.22x, mivec cc d10 1.32x; −551 ms; **memory 0.981** (cc d2 L20 323 → 195 MiB); weights \|Δ\| ≤ 4.2e-22 | [WP-56](summaries/WP-56-cc-weights-critical-path.md) |
+| – | WP-56 | SG quadrature: real FFT of length m (re-pinned hashes), eager weight table (dynamic, largest row first), TG loop guided → dynamic | accepted (11-15) | cc d2 L20 792 → 438 ms (1.84x), equi b1 d10 L7 1.22x, mivec cc d10 1.32x; −551 ms; **memory 0.981** (cc d2 L20 323 → 195 MiB); weights \|Δ\| ≤ 4.2e-22 | [WP-56](summaries/WP-56-cc-weights-critical-path.md) |
+| – | WP-62 | Dimension-adaptive refinement: exploration + implementation plan (owner's request) | accepted (11-17) | GG + profit 8.5–42x fewer evaluations than the complete CT (d10); d100 L2 CT 4.0e-3 vs. adaptive 7.5e-8 (2e5 evals); bookkeeping 10.5–47.5 ns/eval; judged suite unchanged | [WP-62](summaries/WP-62-dimension-adaptive-exploration.md) |
+| – | WP-63 … 72 | Dimension-adaptive CT implementation (A1 nestedness + std CC growth, A2 core, A3 quad driver, A4 non-nested / vector, A5 interp, A6 Python, B1 lazy, B2 buffering, C1 stored values, C2 resume) | needs decision (D1–D9) · **unranked** (owner places them) | | PLAN.md |
 | 1 | WP-49 | DSG linear interpolation: global slot weights (0.15–0.25 s) + serial d2 call (≈ 0.07 s) | in progress (prompt 11-15) | | |
 | 2 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-5: 0.1–0.15 s) | ready | | |
 | 3 | WP-59 | Global interpolation: TG loop `guided` → `dynamic` (est. 0–0.2 s) | ready | | |
@@ -86,13 +90,16 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13, RP-5 11-15 (RP-0 
 
 ## Next action
 
-**WP-56 accepted** (11-15); the owner commits it — tree clean before WP-49. **WP-49 in progress**
-(prompt 11-15). Next master start: process the WP-49 summary (2nd accepted optimization since
-RP-5 → RP-6 before the next WP), then WP-21. Hygiene findings → **Code-hygiene backlog** (end of
+**WP-49 in progress**: the owner runs the existing 11-15 prompt next (unchanged; commit WP-62
+first so the tree is clean). Next master start: process the WP-49 summary (if accepted: 2nd
+accepted optimization since RP-5 → **RP-6** before the next optimization WP), then WP-21.
+Adaptive WPs 63–72 wait for the owner (D1–D9 + placement). Hygiene findings → **Code-hygiene backlog** (end of
 PLAN.md) → WP-54 → WP-55 → clean-up WPs.
 
 ## Open decisions for the owner
 
+- **WP-62 D1–D9** (plan `results/WP-62/plan.md` §5; recommendations in PLAN.md WP-62) and the
+  placement of WP-63 … 72 — owner decides later (11-17).
 - WP-09 (after its summary): adopt the proposed interface or not.
 - CC weights with `-ffp-contract=off` (bitwise build-independent weights; ≤ 6.7e-16/m): **not now** (11-15).
 - Placement of WP-54 / WP-55 (hygiene; may move up); WP-35 up (time-seeded test hit in several sessions).
@@ -156,6 +163,11 @@ PLAN.md) → WP-54 → WP-55 → clean-up WPs.
   shifted domains); flat node buffer (serial zero fill, d2 L20 27 → 81 ms) → per-row `DataVector`s;
   view holding `const NodeTable*` → raw row pointers; lin-interp views by value (+15 % at d2) →
   const&; DSG kernel reading all nodes from the table (row_loop b0 d7 0.75) → copy the row dim only.
+- WP-62 (adaptive defaults): GG safeguard w = 0.999 (4–6x the evaluations on the interaction case);
+  fixed bulk batches without threshold (up to 7.6x at small budgets); per-step rebuild of
+  `SparseGrid` (73.7 ms at d100) / public-API loop (147–369 µs per index); `CachedSourceFunc` as
+  the driver's value store (+170–480 ns per point vs. 9–73 ns); prediction geo-mean / max / min
+  identical → one variant.
 - RP-4 `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows`: 0.994x → the WP-52 −1 % is not
   recoverable this way.
 
@@ -168,6 +180,11 @@ measurement WPs count only if a group changes ≥ 1.3x or a hot-spot ranking shi
 
 ## Log
 
+- 2026-11-17 WP-62 summary processed: **accepted** (commit pending). Plan → WP-63 … 72 (needs
+  decision, unranked); D1–D9 recorded as recommendations, open. WP-49 not run yet: owner reuses
+  the 11-15 prompt. Counter unchanged (1; WP-62 does not count).
+- 2026-11-17 WP-56 committed (14c1e3d16). New **WP-62** (owner: dimension-adaptive refinement
+  exploration + plan, few restrictions, Fable 5.2 autonomous) → prompt issued; WP-49 still running.
 - 2026-11-15 WP-56 summary processed: **accepted** by the owner (commit pending). cc d2 L20 1.84x,
   −551 ms over 26 cases, memory 0.981; slabs dropped due to code complexity (owner, in-session); new WP-59 (interp TG loop
   dynamic), WP-60 (DSG weight rows), WP-61 (bitwise SG quadrature reduction; owner: plan low);
@@ -187,4 +204,4 @@ measurement WPs count only if a group changes ≥ 1.3x or a hot-spot ranking shi
   rejected 326cef0f0. 11-08 owner's mid-term quad benchmark (b1d062e75 / 9b3088335; low-d slope =
   pre-phase CC weights). 11-11 WP-36 c3cc48360, WP-08 6df60cb50. 11-12 WP-47 7d04b5dbc (cases
   6138b8b9e), WP-45 8665bba7b (cases 007cf530f), WP-50 266193bc6. 11-13 WP-06 85106468a, WP-52
-  6ac45a05d, RP-4 cf698f31d. 11-15 WP-18 14cf31e23, WP-05 3261399ec, RP-5 d426bddcf.
+  6ac45a05d, RP-4 cf698f31d. 11-15 WP-18 14cf31e23, WP-05 3261399ec, RP-5 d426bddcf, WP-56 14c1e3d16.

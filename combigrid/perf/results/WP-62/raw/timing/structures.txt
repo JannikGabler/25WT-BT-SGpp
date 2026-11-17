@@ -1,0 +1,36 @@
+=== d=10 threads=16
+# d=10, 2109 multi-indices, boundary offset 1; times in ms (median)
+     nMI      nTG     coeffs  instr+red         SG        DSG     quadSG    quadDSG   quadDSG2     pointsSG    pointsDSG
+     100       93      0.055      0.086      0.090      0.087      5.992      5.911      5.996         3593         1937
+     300      268      0.182      0.297      0.291      0.287      5.992      5.711      5.999        37532        17201
+     900      804      0.622      0.860      0.864      0.853      1.700      1.334      1.053       500592       172929
+    2109     1885      0.183      1.484      1.526      1.542     12.199      4.796      4.708      3735677       999841
+# per-candidate loop with the public API (single-MI instruction + SparseGrid + quadrature): 170.84 us per multi-index over the first 2000 (1962.8 points per multi-index on average, checksum 1.408829e+02)
+=== d=10 threads=1
+# d=10, 2109 multi-indices, boundary offset 1; times in ms (median)
+     nMI      nTG     coeffs  instr+red         SG        DSG     quadSG    quadDSG   quadDSG2     pointsSG    pointsDSG
+     100       93      0.054      0.084      0.089      0.086      0.204      0.273      0.235         3593         1937
+     300      268      0.158      0.236      0.220      0.214      1.916      1.544      1.405        37532        17201
+     900      804      0.550      0.843      0.855      0.839     25.044     11.559     11.238       500592       172929
+    2109     1885      1.403      2.450      2.486      2.481    186.194     59.512     59.488      3735677       999841
+# per-candidate loop with the public API (single-MI instruction + SparseGrid + quadrature): 146.89 us per multi-index over the first 2000 (1962.8 points per multi-index on average, checksum 1.408829e+02)
+=== d=100 threads=16
+# d=100, 15950 multi-indices, boundary offset 1; times in ms (median)
+     nMI      nTG     coeffs  instr+red         SG        DSG     quadSG    quadDSG   quadDSG2     pointsSG    pointsDSG
+     100      100      2.585      2.729      3.001      2.999      0.176      1.887      0.495          496          397
+     300      293      7.620      8.123      8.821      8.824      0.120      2.375      2.614         6185         3753
+     900      881     23.028     24.672     26.038     26.081      0.375      7.305      8.143        24717        14837
+    2700     2656      5.924     12.888     13.252     13.158      1.127     15.339     18.414        81720        48665
+    8100     7849     18.276     38.282     38.807     38.740      7.271     30.928     34.542       583893       288889
+   15950    15285     36.946     71.893     73.656     75.556     26.662    103.953    122.652      2205181       999977
+# per-candidate loop with the public API (single-MI instruction + SparseGrid + quadrature): 368.93 us per multi-index over the first 2000 (31.1 points per multi-index on average, checksum 2.557833e-08)
+=== d=100 threads=1
+# d=100, 15950 multi-indices, boundary offset 1; times in ms (median)
+     nMI      nTG     coeffs  instr+red         SG        DSG     quadSG    quadDSG   quadDSG2     pointsSG    pointsDSG
+     100      100      2.597      2.723      2.763      2.749      0.151      0.865      0.732          496          397
+     300      293      7.596      8.130      8.235      8.240      1.326      4.795      5.075         6185         3753
+     900      881     23.055     24.950     25.046     25.031      4.947     16.490     17.341        24717        14837
+    2700     2656     74.288     79.861     80.574     80.216     15.340     46.358     49.058        81720        48665
+    8100     7849    234.345    251.856    252.560    252.876    109.038    197.552    200.289       583893       288889
+   15950    15285    469.545    510.328    513.500    513.447    413.502    621.301    639.528      2205181       999977
+# per-candidate loop with the public API (single-MI instruction + SparseGrid + quadrature): 303.20 us per multi-index over the first 2000 (31.1 points per multi-index on average, checksum 2.557833e-08)

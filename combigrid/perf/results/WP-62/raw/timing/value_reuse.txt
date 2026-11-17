@@ -1,0 +1,12 @@
+d=10  store=delta        threads=1  nI=4878 evals=3990257 tgPoints=21458738 wall=0.2237s eval=0.1945s book=0.0291s storeMB=31.9 
+d=10  store=delta        threads=16 nI=4878 evals=3990257 tgPoints=21458738 wall=0.3364s eval=0.3037s book=0.0326s storeMB=31.9 
+d=10  store=tg           threads=1  nI=2024 evals=3997372 tgPoints=3997372 wall=0.1235s eval=0.1137s book=0.0098s storeMB=0.0 
+d=10  store=tg           threads=16 nI=2024 evals=3997372 tgPoints=3997372 wall=0.2453s eval=0.2340s book=0.0113s storeMB=0.0 
+d=10  store=tg cache=1   threads=1  nI=2024 evals=3997372 tgPoints=3997372 wall=0.8026s eval=0.7921s book=0.0105s storeMB=0.0 cache: 930625 function calls for 3997372 tensor-grid points 
+d=10  store=tg cache=1   threads=16 nI=2024 evals=3997372 tgPoints=3997372 wall=0.8518s eval=0.8400s book=0.0119s storeMB=0.0 cache: 930625 function calls for 3997372 tensor-grid points 
+d=100 store=delta        threads=1  nI=44673 evals=3999969 tgPoints=10257457 wall=0.8841s eval=0.7496s book=0.1344s storeMB=32.0 
+d=100 store=delta        threads=16 nI=44673 evals=3999969 tgPoints=10257457 wall=0.9144s eval=0.7697s book=0.1447s storeMB=32.0 
+d=100 store=tg           threads=1  nI=23181 evals=3999705 tgPoints=3999705 wall=0.7232s eval=0.6612s book=0.0620s storeMB=0.0 
+d=100 store=tg           threads=16 nI=23181 evals=3999705 tgPoints=3999705 wall=0.7636s eval=0.6909s book=0.0727s storeMB=0.0 
+d=100 store=tg cache=1   threads=1  nI=23181 evals=3999705 tgPoints=3999705 wall=2.6572s eval=2.5653s book=0.0918s storeMB=0.0 cache: 1653985 function calls for 3999705 tensor-grid points 
+d=100 store=tg cache=1   threads=16 nI=23181 evals=3999705 tgPoints=3999705 wall=2.6687s eval=2.5773s book=0.0914s storeMB=0.0 cache: 1653985 function calls for 3999705 tensor-grid points 
