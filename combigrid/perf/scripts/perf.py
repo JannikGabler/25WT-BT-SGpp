@@ -563,6 +563,26 @@ def fmt_mem(kib):
     return "-" if kib is None else f"{kib / 1024:.1f} MiB"
 
 
+# e2e case groups, summed separately (owner, WP-76): the cheap suite ranks the work packages; the
+# expensive source functions (expensive/, absolute seconds depend on the chosen cost level) and
+# their cached variants are reported beside it.
+CASE_GROUPS = ("suite", "expensive/", "expensive/ cached")
+
+
+def case_group(case):
+    if not case.startswith("expensive/"):
+        return "suite"
+    return "expensive/ cached" if case.endswith("-cached") else "expensive/"
+
+
+def group_sum_lines(sums_by_group, fmt_line):
+    """One line per group present; a lone cheap suite keeps the historical single line."""
+    present = [g for g in CASE_GROUPS if g in sums_by_group]
+    if present == ["suite"]:
+        return [fmt_line("", sums_by_group["suite"])]
+    return [fmt_line(f", group {g}", sums_by_group[g]) for g in present]
+
+
 def cmd_run(args):
     require_env(args)
     bins, lib = snapshot_paths(args.snapshot)
@@ -604,6 +624,12 @@ def cmd_run(args):
               "|---|---|---|---|---|---|")
     print("\n".join(rows))
     if args.suite == "e2e":
+        sums = {}
+        for rec in records:
+            n, total = sums.get(case_group(rec["case"]), (0, 0.0))
+            sums[case_group(rec["case"])] = (n + 1, total + statistics.median(rec["metrics"]["total"]))
+        print("\n" + "\n".join(group_sum_lines(
+            sums, lambda label, v: f"Sum of medians (total{label}): {fmt_time(v[1])} ({v[0]} cases)")))
         print(f"\npeak RSS: max resident set size of the case's process (one process per case, "
               f"measured outside it by GNU time); process floor (`{EXES['e2e']} --list`, libraries "
               f"only): {fmt_mem(floor)}")
@@ -773,7 +799,7 @@ def cmd_ab(args):
              "",
              "| case | metric | A | B | speedup | 95% CI | verdict |",
              "|---|---|---|---|---|---|---|"]
-    total_a = total_b = 0.0
+    totals = {}  # group -> [sum of medians A, sum of medians B]
     result_dev = []
     for case in common:
         recs_a, recs_b = data[("A", case)], data[("B", case)]
@@ -786,8 +812,9 @@ def cmd_ab(args):
             med_a = statistics.median([x for r in sa for x in r])
             med_b = statistics.median([x for r in sb for x in r])
             if metric in ("total", "call"):
-                total_a += med_a
-                total_b += med_b
+                group = totals.setdefault(case_group(case) if suite == "e2e" else "suite", [0.0, 0.0])
+                group[0] += med_a
+                group[1] += med_b
             lines.append(f"| {case} | {metric} | {fmt_time(med_a)} | {fmt_time(med_b)} | "
                          f"{point:.3f} | [{lo:.3f}, {hi:.3f}] | {verdict(lo, hi)} |")
         if suite == "e2e":
@@ -802,10 +829,12 @@ def cmd_ab(args):
         lines.append(f"| {case} | {key} | (not in A) | {fmt_time(med_b)} | - | - | new case |")
     for case in only_a:
         lines.append(f"| {case} | - | present | (not in B) | - | - | removed case |")
-    if total_b > 0:
-        lines += ["", f"Sum of medians ({'call' if suite == 'micro' else 'total'}, common cases): "
-                      f"A = {fmt_time(total_a)}, B = {fmt_time(total_b)}, saved = "
-                      f"{fmt_time(total_a - total_b)} ({total_a / total_b:.3f}x)"]
+    totals = {g: v for g, v in totals.items() if v[1] > 0}
+    if totals:
+        metric_name = "call" if suite == "micro" else "total"
+        lines += [""] + group_sum_lines(totals, lambda label, v: (
+            f"Sum of medians ({metric_name}, common cases{label}): A = {fmt_time(v[0])}, "
+            f"B = {fmt_time(v[1])}, saved = {fmt_time(v[0] - v[1])} ({v[0] / v[1]:.3f}x)"))
     if result_dev:
         worst = max(result_dev, key=lambda t: t[2] / max(t[1], 1e-300))
         lines.append(f"Result sanity (rel. error vs exact): worst growth in `{worst[0]}`: "

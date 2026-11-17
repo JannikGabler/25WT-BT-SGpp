@@ -1,4 +1,154 @@
 {
+ "expensive/interp/dsg/cc-exp/b1/d10/L3/p8/c100us": {
+  "generation": 0.0677792126073644,
+  "operator": 0.00187670037918822,
+  "setup": 0.19795852328980207,
+  "total": 0.0019161012771399994
+ },
+ "expensive/interp/dsg/cc-exp/b1/d10/L4/p16/c1us": {
+  "generation": 0.06568026944809272,
+  "operator": 0.00370893061777567,
+  "setup": 0.16171011542959196,
+  "total": 0.007209157539264142
+ },
+ "expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us": {
+  "generation": 0.09845110342380681,
+  "operator": 0.01114153926966792,
+  "setup": 0.38333222801297945,
+  "total": 0.011151231735828958
+ },
+ "expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us-cached": {
+  "generation": 0.04839993305037952,
+  "operator": 0.001119556736655542,
+  "setup": 0.06629497535027522,
+  "total": 0.0007053341116497439
+ },
+ "expensive/interp/sg/cc-exp/b1/d10/L4/p16/c1us": {
+  "generation": 0.2332751811713634,
+  "operator": 0.1558466790606825,
+  "setup": 0.20410306969985437,
+  "total": 0.1603504211977704
+ },
+ "expensive/interp/sg/cc-exp/b1/d7/L3/p8/c100us-ramp": {
+  "generation": 0.15417522950346313,
+  "operator": 0.005764854927907323,
+  "setup": 0.22677802780683115,
+  "total": 0.005779576062798591
+ },
+ "expensive/interplin/dsg/equi-exp/b1/d10/L4/p16/c1us": {
+  "generation": 0.8823319204942123,
+  "operator": 0.00554698870677471,
+  "setup": 0.2580841536374357,
+  "total": 0.00850539796602848
+ },
+ "expensive/interplin/dsg/equi-exp/b1/d5/L5/p16/c100us": {
+  "generation": 0.05703283866505046,
+  "operator": 0.001945453182905867,
+  "setup": 0.16847423435693262,
+  "total": 0.001965499939427533
+ },
+ "expensive/interplin/sg/equi-exp/b1/d10/L4/p16/c1us": {
+  "generation": 0.10539956169187477,
+  "operator": 0.09848334357964104,
+  "setup": 0.1977128197518015,
+  "total": 0.09773678767336942
+ },
+ "expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us": {
+  "generation": 0.08881139837535565,
+  "operator": 0.022234582078482057,
+  "setup": 0.01878713715595979,
+  "total": 0.02223250429687924
+ },
+ "expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-cached": {
+  "generation": 0.12100910993213375,
+  "operator": 0.0741567416569606,
+  "setup": 0.3007311670109517,
+  "total": 0.07422451283388429
+ },
+ "expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-ramp": {
+  "generation": 0.07273003335802902,
+  "operator": 0.025937035873600266,
+  "setup": 0.09181148259535063,
+  "total": 0.025945501142251273
+ },
+ "expensive/interplin/sg/equi-exp/b1/d8/L4/p32/c1us-cached": {
+  "generation": 0.031405274253891044,
+  "operator": 0.01889107620903818,
+  "setup": 0.09532799606782885,
+  "total": 0.022996391332666084
+ },
+ "expensive/mivec/dsg/cc-exp/b1/d15/S6/n300/c100us": {
+  "generation": 0.02817946693581514,
+  "operator": 0.0011867683210666944,
+  "setup": 0.08143648653924387,
+  "total": 0.0012687693193697471
+ },
+ "expensive/mivec/dsg/cc-exp/b1/d20/S10/n300/c1us": {
+  "generation": 0.005424577225934504,
+  "operator": 0.00074648735178668,
+  "setup": 0.02018348842894474,
+  "total": 0.0003447711802903507
+ },
+ "expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us": {
+  "generation": 0.013253790227402982,
+  "operator": 0.0011705315348731625,
+  "setup": 0.05794560961172625,
+  "total": 0.001151561412327726
+ },
+ "expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us-ramp": {
+  "generation": 0.006701699429508268,
+  "operator": 0.0010032449108093714,
+  "setup": 0.027736248629137893,
+  "total": 0.0010004655672592082
+ },
+ "expensive/mivec/sg/cc-exp/b1/d20/S10/n300/c1us": {
+  "generation": 0.01643933367783034,
+  "operator": 0.01931548280457909,
+  "setup": 0.02983846149738505,
+  "total": 0.019223413687525177
+ },
+ "expensive/quad/dsg/cc-exp/b1/d10/L4/c100us": {
+  "generation": 0.2578349303327013,
+  "operator": 0.0019124516848023534,
+  "setup": 0.101172781597035,
+  "total": 0.004229039307742313
+ },
+ "expensive/quad/dsg/cc-exp/b1/d15/L5/c1us": {
+  "generation": 0.04827483697861356,
+  "operator": 0.0024178535277669857,
+  "setup": 0.10502586264095315,
+  "total": 0.006818222886056583
+ },
+ "expensive/quad/dsg/cc-exp/b1/d20/L3/c100us": {
+  "generation": 0.6463046209914853,
+  "operator": 0.0165779142358225,
+  "setup": 0.2672739474798714,
+  "total": 0.019828567801820296
+ },
+ "expensive/quad/sg/cc-exp/b1/d10/L4/c100us": {
+  "generation": 0.2893100719577607,
+  "operator": 0.005812969843594696,
+  "setup": 0.5393069764252918,
+  "total": 0.006053551786538928
+ },
+ "expensive/quad/sg/cc-exp/b1/d10/L4/c100us-cached": {
+  "generation": 0.10363116574665139,
+  "operator": 0.0013390384494477926,
+  "setup": 0.33496092118956705,
+  "total": 0.0011101445908453362
+ },
+ "expensive/quad/sg/cc-exp/b1/d15/L5/c1us": {
+  "generation": 0.02192332576227426,
+  "operator": 0.016593764111034692,
+  "setup": 0.3883444435887172,
+  "total": 0.01655926221393227
+ },
+ "expensive/quad/sg/cc-exp/b1/d20/L3/c100us": {
+  "generation": 0.08161412361545184,
+  "operator": 0.011268180768603753,
+  "setup": 0.06146519381243584,
+  "total": 0.011730002329585654
+ },
  "interp/sg/cc/b0/d10/L2/p8": {
   "generation": 0.045313384154123316,
   "operator": 0.004130221703747272,

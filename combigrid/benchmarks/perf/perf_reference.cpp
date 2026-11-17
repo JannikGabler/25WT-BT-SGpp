@@ -34,6 +34,7 @@
 #include <optional>
 #include <regex>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -55,6 +56,7 @@
 #include "perf_harness.hpp"
 #include "perf_problems.hpp"
 
+using sgpp::combigrid::CachedSourceFunc;
 using sgpp::combigrid::CompleteSGGenInstr;
 using sgpp::combigrid::CTCoeffType;
 using sgpp::combigrid::DeltasSparseGrid;
@@ -281,6 +283,137 @@ CaseFunc interpCase(const std::string& name, const bool linear, const std::strin
   };
 }
 
+/// MIVecSGGenInstr from the MI set of the expensive/mivec e2e cases (unit cube), quadrature of
+/// an expensive perf::expSum on a (deltas) sparse grid.
+template <typename Grid>
+CaseFunc expensiveMivecCase(const std::string& name, const LvlType maxSum, const size_t nDim,
+                            const size_t nMI, const Integrand& integrand) {
+  return [=]() {
+    const HyperCubeArea domain = perf::unitDomain(nDim);
+    const LvlMIVec mis = perf::anisotropicMIs(nDim, nMI, maxSum, 2000 + nDim);
+    MIVecSGGenInstr genInstr(mis);
+    perf::configure(genInstr, "cc", 1, domain);
+    const Grid grid(genInstr);
+    const CountingFunc counting{integrand.func};
+
+    Record record;
+    record.name = name;
+    record.op = "quad";
+    record.values.push_back(quadrature(counting.sourceFunc(), grid));
+    record.exact.push_back(integrand.exact(domain));
+    record.magnitude = std::abs(record.exact[0]);
+    addStructure(record, grid);
+    record.info.emplace_back("nEvals", static_cast<double>(counting.count->load()));
+    return record;
+  };
+}
+
+/// Quadrature with a CachedSourceFunc (default configuration): info cacheInserts = number of
+/// distinct points (concurrent misses of one point may evaluate it twice, so the evaluation count
+/// would depend on the timing).
+CaseFunc cachedQuadCase(const std::string& name, const size_t nDim, const LvlType maxLvl,
+                        const Integrand& integrand) {
+  return [=]() {
+    const HyperCubeArea domain = perf::unitDomain(nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, "cc", 1, domain);
+    const SparseGrid grid(genInstr);
+    const CachedSourceFunc cachedFunc(integrand.func);
+
+    Record record;
+    record.name = name;
+    record.op = "quad";
+    record.values.push_back(quadrature(cachedFunc, grid));
+    record.exact.push_back(integrand.exact(domain));
+    record.magnitude = std::abs(record.exact[0]);
+    addStructure(record, grid);
+    record.info.emplace_back("cacheInserts", static_cast<double>(cachedFunc.statistics().inserts));
+    return record;
+  };
+}
+
+/// Interpolation of an expensive perf::expSum on [0, 1]^d (boundary offset 1) at 8 fixed points.
+template <typename Grid>
+CaseFunc expensiveInterpCase(const std::string& name, const bool linear, const std::string& nodes,
+                             const size_t nDim, const LvlType maxLvl,
+                             double (*func)(const DataVector&)) {
+  return [=]() {
+    const HyperCubeArea domain = perf::unitDomain(nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, nodes, 1, domain);
+    const Grid grid(genInstr);
+    const CountingFunc counting{func};
+    const SourceFunc sourceFunc = counting.sourceFunc();
+
+    Record record;
+    record.name = name;
+    record.op = linear ? "interplin" : "interp";
+    for (const DataVector& point : perf::randomPoints(domain, 8, 4000 + nDim)) {
+      record.values.push_back(linear ? interpolateLinear(sourceFunc, point, grid)
+                                     : interpolate(sourceFunc, point, grid));
+      record.exact.push_back(perf::expSum(point));
+    }
+    record.magnitude = std::exp(0.5 * static_cast<double>(nDim));  // max of expSum
+    addStructure(record, grid);
+    record.info.emplace_back("nEvals", static_cast<double>(counting.count->load()));
+    return record;
+  };
+}
+
+using perf::CostShape;
+const Integrand EXP_UNIT_1US{
+    "exp-unit-c1us", perf::expensive<perf::expSum, perf::COST_1US_ITERATIONS, CostShape::uniform>,
+    perf::expSumIntegral, false};
+const Integrand EXP_UNIT_1US_RAMP{
+    "exp-unit-c1us-ramp", perf::expensive<perf::expSum, perf::COST_1US_ITERATIONS, CostShape::ramp>,
+    perf::expSumIntegral, false};
+
+/// Group expensive/ (the configurations of the expensive e2e cases at reduced sizes, with the
+/// 1 us integrands; values equal the cheap functions' values bitwise), quadrature and MI vectors.
+void addExpensiveQuadCases(std::vector<std::pair<std::string, CaseFunc>>& cases) {
+  auto add = [&](const std::string& name, CaseFunc func) { cases.emplace_back(name, func); };
+  for (const auto& [nDim, maxLvl] : std::vector<std::pair<size_t, LvlType>>{{10, 3}, {20, 2}}) {
+    const std::string cfgName = cfg("cc", 1, nDim, maxLvl) + "/" + EXP_UNIT_1US.name;
+    add("expensive/quad/sg/" + cfgName,
+        quadCase<SparseGrid>("expensive/quad/sg/" + cfgName, "cc", 1, nDim, maxLvl, EXP_UNIT_1US));
+    add("expensive/quad/dsg/" + cfgName,
+        quadCase<DeltasSparseGrid>("expensive/quad/dsg/" + cfgName, "cc", 1, nDim, maxLvl,
+                                   EXP_UNIT_1US));
+  }
+  const std::string cachedName =
+      "expensive/quad/sg/" + cfg("cc", 1, 10, 3) + "/exp-unit-c1us-cached";
+  add(cachedName, cachedQuadCase(cachedName, 10, 3, EXP_UNIT_1US));
+  const std::string mivec = "cc/b1/d15/S5/n300/";
+  add("expensive/mivec/sg/" + mivec + EXP_UNIT_1US.name,
+      expensiveMivecCase<SparseGrid>("expensive/mivec/sg/" + mivec + EXP_UNIT_1US.name, 5, 15, 300,
+                                     EXP_UNIT_1US));
+  add("expensive/mivec/dsg/" + mivec + EXP_UNIT_1US.name,
+      expensiveMivecCase<DeltasSparseGrid>("expensive/mivec/dsg/" + mivec + EXP_UNIT_1US.name, 5,
+                                           15, 300, EXP_UNIT_1US));
+  add("expensive/mivec/sg/" + mivec + EXP_UNIT_1US_RAMP.name,
+      expensiveMivecCase<SparseGrid>("expensive/mivec/sg/" + mivec + EXP_UNIT_1US_RAMP.name, 5, 15,
+                                     300, EXP_UNIT_1US_RAMP));
+}
+
+/// Group expensive/, interpolation: global (cc) and multilinear (equi) at d5 L4.
+void addExpensiveInterpCases(std::vector<std::pair<std::string, CaseFunc>>& cases) {
+  auto add = [&](const std::string& name, CaseFunc func) { cases.emplace_back(name, func); };
+  auto exp1us = perf::expensive<perf::expSum, perf::COST_1US_ITERATIONS, CostShape::uniform>;
+  auto exp1usRamp = perf::expensive<perf::expSum, perf::COST_1US_ITERATIONS, CostShape::ramp>;
+  for (const bool linear : {false, true}) {
+    const std::string nodes = linear ? "equi" : "cc";
+    const std::string prefix = std::string("expensive/") + (linear ? "interplin" : "interp");
+    const std::string config = cfg(nodes, 1, 5, 4) + "/exp-unit-c1us";
+    add(prefix + "/sg/" + config,
+        expensiveInterpCase<SparseGrid>(prefix + "/sg/" + config, linear, nodes, 5, 4, exp1us));
+    add(prefix + "/dsg/" + config, expensiveInterpCase<DeltasSparseGrid>(
+                                       prefix + "/dsg/" + config, linear, nodes, 5, 4, exp1us));
+    add(prefix + "/sg/" + config + "-ramp",
+        expensiveInterpCase<SparseGrid>(prefix + "/sg/" + config + "-ramp", linear, nodes, 5, 4,
+                                        exp1usRamp));
+  }
+}
+
 std::vector<std::pair<std::string, CaseFunc>> allCases() {
   std::vector<std::pair<std::string, CaseFunc>> cases;
   auto add = [&](const std::string& name, CaseFunc func) { cases.emplace_back(name, func); };
@@ -344,6 +477,8 @@ std::vector<std::pair<std::string, CaseFunc>> allCases() {
       }
     }
   }
+  addExpensiveQuadCases(cases);
+  addExpensiveInterpCases(cases);
   return cases;
 }
 

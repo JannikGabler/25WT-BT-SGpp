@@ -24,12 +24,23 @@
  * All grids use the doubling level-to-grid-point-count function. Sizes are chosen such that one
  * pipeline takes about 0.1-4 s with 16 threads on the benchmarking machine (Ryzen 7 5825U).
  *
+ * Group expensive/ (expensive source functions, perf::expensive): the same pipelines with
+ * integrands that burn a fixed amount of work per evaluation (nominal 1 us or 100 us at 2.0 GHz)
+ * beside the exact value of a cheap function, so that evaluation counts, the load balance of the
+ * evaluation loops and caching dominate. Names:
+ * expensive/<operator>/<grid>/<nodes>-<integrand>/b<b>/d<dim>/<L<level> | S<sum>/n<MIs>>
+ * [/p<points>]/c<cost>[-ramp | -cached] with integrand exp (perf::expSum on the unit cube; all
+ * operators), cost c1us / c100us, -ramp: cost factor 0.1-2.8 rising with x_0 (mean 1), -cached:
+ * CachedSourceFunc with the default configuration (new cache per pipeline run).
+ *
  * Usage: see perf_harness.hpp, normally driven by combigrid/perf/scripts/perf.py.
  */
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -48,6 +59,7 @@
 #include "perf_harness.hpp"
 #include "perf_problems.hpp"
 
+using sgpp::combigrid::CachedSourceFunc;
 using sgpp::combigrid::CompleteSGGenInstr;
 using sgpp::combigrid::DeltasSparseGrid;
 using sgpp::combigrid::HyperCubeArea;
@@ -223,6 +235,174 @@ void addMIVec(Suite& suite, const std::string& nodes, const LvlType boundary, co
                     });
 }
 
+/*******************************************************************************
+Group expensive/: expensive source functions
+*******************************************************************************/
+
+/// An expensive integrand: the cheap function's value plus burned work (perf::expensive).
+struct ExpensiveFunc {
+  const char* name;                   // value function: "exp" (perf::expSum)
+  const char* cost;                   // "c1us", "c100us", optionally with "-ramp"
+  double (*func)(const DataVector&);  // perf::expensive<...>
+  bool cached;                        // wrap in a CachedSourceFunc (name suffix "-cached")
+};
+
+std::string expensiveName(const std::string& op, const std::string& grid, const std::string& nodes,
+                          const ExpensiveFunc& f, const LvlType boundary, const size_t nDim,
+                          const std::string& level) {
+  return "expensive/" + caseName(op, grid, nodes + "-" + f.name, boundary, nDim, level) + "/" +
+         f.cost + (f.cached ? "-cached" : "");
+}
+
+std::unique_ptr<SourceFunc> makeSourceFunc(const ExpensiveFunc& f) {
+  if (f.cached) return std::make_unique<CachedSourceFunc>(f.func);
+  return std::make_unique<SourceFunc>(f.func);
+}
+
+/// Quadrature of perf::expSum (expensive) over [0, 1]^d on a complete (deltas) sparse grid.
+template <typename Grid>
+void addExpensiveQuadrature(Suite& suite, const std::string& gridName, const std::string& nodes,
+                            const ExpensiveFunc& f, const LvlType boundary, const size_t nDim,
+                            const LvlType maxLvl) {
+  suite.addPipeline(
+      expensiveName("quad", gridName, nodes, f, boundary, nDim, "L" + std::to_string(maxLvl)),
+      [=](PipelineRun& run) {
+        std::unique_ptr<SourceFunc> sourceFunc;
+        std::optional<CompleteSGGenInstr> genInstr;
+        std::optional<Grid> grid;
+        double result = 0.0;
+
+        run.phase("setup", [&]() {
+          sourceFunc = makeSourceFunc(f);
+          genInstr.emplace(maxLvl, nDim);
+          perf::configure(*genInstr, nodes, boundary, perf::unitDomain(nDim));
+        });
+        run.phase("generation", [&]() { grid.emplace(*genInstr); });
+        run.phase("operator", [&]() { result = quadrature(*sourceFunc, *grid); });
+
+        run.setResult(result, perf::expSumIntegral(perf::unitDomain(nDim)));
+        run.setCounter("nTG", static_cast<double>(grid->nTG()));
+        run.setCounter("sumGP", static_cast<double>(sumOfGridPoints(*grid)));
+      });
+}
+
+/// MIVecSGGenInstr from an anisotropic, not downwards-closed MI set, then a (deltas) sparse grid
+/// and a quadrature of perf::expSum (expensive) over [0, 1]^d.
+template <typename Grid>
+void addExpensiveMIVec(Suite& suite, const std::string& gridName, const std::string& nodes,
+                       const ExpensiveFunc& f, const LvlType boundary, const size_t nDim,
+                       const LvlType maxSum, const size_t nMI) {
+  suite.addPipeline(expensiveName("mivec", gridName, nodes, f, boundary, nDim,
+                                  "S" + std::to_string(maxSum) + "/n" + std::to_string(nMI)),
+                    [=](PipelineRun& run) {
+                      std::unique_ptr<SourceFunc> sourceFunc;
+                      std::optional<LvlMIVec> mis;
+                      std::optional<MIVecSGGenInstr> genInstr;
+                      std::optional<Grid> grid;
+                      double result = 0.0;
+
+                      run.phase("setup", [&]() {
+                        sourceFunc = makeSourceFunc(f);
+                        mis.emplace(perf::anisotropicMIs(nDim, nMI, maxSum, 2000 + nDim));
+                        genInstr.emplace(*mis);
+                        perf::configure(*genInstr, nodes, boundary, perf::unitDomain(nDim));
+                      });
+                      run.phase("generation", [&]() { grid.emplace(*genInstr); });
+                      run.phase("operator", [&]() { result = quadrature(*sourceFunc, *grid); });
+
+                      run.setResult(result, perf::expSumIntegral(perf::unitDomain(nDim)));
+                      run.setCounter("nTG", static_cast<double>(grid->nTG()));
+                      run.setCounter("sumGP", static_cast<double>(sumOfGridPoints(*grid)));
+                    });
+}
+
+/// Global (or multilinear) interpolation of perf::expSum (expensive) on [0, 1]^d at fixed points.
+template <typename Grid>
+void addExpensiveInterpolation(Suite& suite, const bool linear, const std::string& gridName,
+                               const std::string& nodes, const ExpensiveFunc& f,
+                               const LvlType boundary, const size_t nDim, const LvlType maxLvl,
+                               const size_t nPoints) {
+  suite.addPipeline(
+      expensiveName(linear ? "interplin" : "interp", gridName, nodes, f, boundary, nDim,
+                    "L" + std::to_string(maxLvl) + "/p" + std::to_string(nPoints)),
+      [=](PipelineRun& run) {
+        const HyperCubeArea domain = perf::unitDomain(nDim);
+        std::unique_ptr<SourceFunc> sourceFunc;
+        std::optional<CompleteSGGenInstr> genInstr;
+        std::optional<Grid> grid;
+        std::vector<DataVector> points;
+        double sum = 0.0;
+
+        run.phase("setup", [&]() {
+          sourceFunc = makeSourceFunc(f);
+          genInstr.emplace(maxLvl, nDim);
+          perf::configure(*genInstr, nodes, boundary, domain);
+          points = perf::randomPoints(domain, nPoints, 1000 + nDim);
+        });
+        run.phase("generation", [&]() { grid.emplace(*genInstr); });
+        run.phase("operator", [&]() {
+          for (const DataVector& point : points) {
+            sum += linear ? interpolateLinear(*sourceFunc, point, *grid)
+                          : interpolate(*sourceFunc, point, *grid);
+          }
+        });
+
+        double exact = 0.0;
+        for (const DataVector& point : points) exact += perf::expSum(point);
+        run.setResult(sum, exact);
+        run.setCounter("nTG", static_cast<double>(grid->nTG()));
+        run.setCounter("sumGP", static_cast<double>(sumOfGridPoints(*grid)));
+      });
+}
+
+using perf::CostShape;
+constexpr uint64_t C1 = perf::COST_1US_ITERATIONS;
+constexpr uint64_t C100 = perf::COST_100US_ITERATIONS;
+
+const ExpensiveFunc EXP_1US{"exp", "c1us", perf::expensive<perf::expSum, C1, CostShape::uniform>,
+                            false};
+const ExpensiveFunc EXP_100US{"exp", "c100us",
+                              perf::expensive<perf::expSum, C100, CostShape::uniform>, false};
+const ExpensiveFunc EXP_100US_RAMP{"exp", "c100us-ramp",
+                                   perf::expensive<perf::expSum, C100, CostShape::ramp>, false};
+
+ExpensiveFunc cached(ExpensiveFunc f) {
+  f.cached = true;
+  return f;
+}
+
+void addExpensiveCases(Suite& suite) {
+  // 100 us per evaluation: evaluation-bound (counts, load balance), SG / DSG pairs
+  addExpensiveQuadrature<SparseGrid>(suite, "sg", "cc", EXP_100US, 1, 10, 4);
+  addExpensiveQuadrature<DeltasSparseGrid>(suite, "dsg", "cc", EXP_100US, 1, 10, 4);
+  addExpensiveQuadrature<SparseGrid>(suite, "sg", "cc", EXP_100US, 1, 20, 3);
+  addExpensiveQuadrature<DeltasSparseGrid>(suite, "dsg", "cc", EXP_100US, 1, 20, 3);
+  addExpensiveMIVec<SparseGrid>(suite, "sg", "cc", EXP_100US, 1, 15, 6, 300);
+  addExpensiveMIVec<DeltasSparseGrid>(suite, "dsg", "cc", EXP_100US, 1, 15, 6, 300);
+  addExpensiveInterpolation<SparseGrid>(suite, false, "sg", "cc", EXP_100US, 1, 10, 3, 8);
+  addExpensiveInterpolation<DeltasSparseGrid>(suite, false, "dsg", "cc", EXP_100US, 1, 10, 3, 8);
+  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", EXP_100US, 1, 5, 5, 16);
+  addExpensiveInterpolation<DeltasSparseGrid>(suite, true, "dsg", "equi", EXP_100US, 1, 5, 5, 16);
+  // 100 us with a cost rising along x_0 (load balance of the scheduling)
+  addExpensiveMIVec<SparseGrid>(suite, "sg", "cc", EXP_100US_RAMP, 1, 15, 6, 300);
+  addExpensiveInterpolation<SparseGrid>(suite, false, "sg", "cc", EXP_100US_RAMP, 1, 7, 3, 8);
+  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", EXP_100US_RAMP, 1, 5, 5, 16);
+  // 1 us per evaluation: evaluations and operator overhead both matter
+  addExpensiveQuadrature<SparseGrid>(suite, "sg", "cc", EXP_1US, 1, 15, 5);
+  addExpensiveQuadrature<DeltasSparseGrid>(suite, "dsg", "cc", EXP_1US, 1, 15, 5);
+  addExpensiveMIVec<SparseGrid>(suite, "sg", "cc", EXP_1US, 1, 20, 10, 300);
+  addExpensiveMIVec<DeltasSparseGrid>(suite, "dsg", "cc", EXP_1US, 1, 20, 10, 300);
+  addExpensiveInterpolation<SparseGrid>(suite, false, "sg", "cc", EXP_1US, 1, 10, 4, 16);
+  addExpensiveInterpolation<DeltasSparseGrid>(suite, false, "dsg", "cc", EXP_1US, 1, 10, 4, 16);
+  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", EXP_1US, 1, 10, 4, 16);
+  addExpensiveInterpolation<DeltasSparseGrid>(suite, true, "dsg", "equi", EXP_1US, 1, 10, 4, 16);
+  // Cached source functions (CachedSourceFunc, default configuration; reported separately)
+  addExpensiveQuadrature<SparseGrid>(suite, "sg", "cc", cached(EXP_100US), 1, 10, 4);
+  addExpensiveInterpolation<SparseGrid>(suite, false, "sg", "cc", cached(EXP_100US), 1, 10, 3, 8);
+  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", cached(EXP_100US), 1, 5, 5, 16);
+  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", cached(EXP_1US), 1, 8, 4, 32);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -286,6 +466,9 @@ int main(int argc, char** argv) {
   addMIVec(suite, "cc", 1, 10, 12, 1000);
   addMIVec(suite, "cc", 1, 15, 10, 300);
   addMIVec(suite, "cc", 1, 20, 7, 300);
+
+  // Expensive source functions (group expensive/)
+  addExpensiveCases(suite);
 
   return suite.main(argc, argv);
 }

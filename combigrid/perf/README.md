@@ -27,8 +27,10 @@ combigrid/perf/
   .work/             git-ignored: snapshots, logs, raw runs, profiles, build stamp
 combigrid/benchmarks/perf/   (SCons builds them with the configuration flags, never runs them)
   perf_harness.hpp   [protected] dependency-free harness (sampling, calibration, JSON output)
-  perf_problems.hpp  [protected] integrands with exact integrals, points, multi-index sets
+  perf_problems.hpp  [protected] integrands with exact integrals, points, multi-index sets,
+                     expensive source functions (perf::expensive, burnChain; WP-76)
   perf_e2e.cpp       [protected] L3 end-to-end pipelines with L2 phase timings, public API only
+                     (incl. the group expensive/)
   perf_reference.cpp [protected] reference outputs, public API only
   perf_micro.cpp     L1 micro-benchmarks of internals (extended/adapted by work packages)
   perf_cache_proto.hpp    micro/cache/...: WP-25 references (hash xxh3, table sol, flat-file disk
@@ -101,16 +103,47 @@ with operators `quad` (quadrature), `interp` (global interpolation at `pN` point
 (multilinear), `mivec` (`MIVecSGGenInstr` from `nN` anisotropic multi-indices with 1-norm ≤ `S`,
 then quadrature); grids `sg` (`SparseGrid`), `dsg` (`DeltasSparseGrid`); integrands `exp`
 (cheap: one `exp` per evaluation, exposes framework overhead), `uq` (forward-UQ integrand of the
-thesis, Chapter 7), `sin` (product of sines, as the older benchmarks). All grids use the doubling
-growth. Sizes (chosen with boost on): 0.05–7 s per pipeline at 16 threads with boost off; one
+thesis, Chapter 7), `sin` (product of sines, as the older benchmarks); the group `expensive/`
+(below) prefixes these names. All grids use the doubling growth. Sizes (chosen with boost on): 0.05–7 s per pipeline at 16 threads with boost off; one
 pass over all 38 cases ≈ 70 s at baseline, ≈ 38 s since RP-3 (2026-10-30). **High
 dimensions have priority** (they run longest): rank by absolute time saved.
 
-The e2e and reference suites are protected and unchanged since the setup: they use plain
-`SourceFunc` (no caching, no vector values), so the judged numbers measure the operators only.
+The e2e and reference suites are protected. Apart from the group `expensive/` they use plain
+`SourceFunc` (no caching, no vector values) with cheap integrands (17–230 ns per evaluation), so
+those judged numbers measure the operators' own work.
 
-**Micro suite composition**: `perf_micro --list` has 305 cases (WP-40, 2026-11-02; 827 before
-the decided WP-24 / WP-25 prototypes were removed, their results stay in `results/WP-24..26/`):
+**Group `expensive/`** (WP-76, owner 2026-11-17): 25 e2e cases with expensive source functions,
+`expensive/<operator>/<grid>/<nodes>-exp/b1/d<dim>/<L<level> | S<sum>/n<MIs>>[/p<points>]/c<cost>[-ramp | -cached]`.
+- Integrand `perf::expensive<perf::expSum, …>` (`perf_problems.hpp`): returns exactly `expSum`
+  (exact references stay valid) and burns a dependent FMA chain beside it. The cost is fixed work
+  (4 cycles per iteration), not time, and does not depend on the compiler: `c1us` = 490
+  iterations (0.90 µs per evaluation at 1 thread, `micro/expensive/integrand/...`), `c100us` =
+  49 000 (99.8 µs). `-ramp`: cost factor 0.1 + 2.7 x₀² (mean 1).
+- `-cached`: `CachedSourceFunc` (default configuration, new cache per run).
+- Unit cube, boundary offset 1 (b0 is infeasible at high d). Operators and grids:
+  - quadrature: SG / DSG at d10 L4 and d20 L3 (c100us), d15 L5 (c1us);
+  - `mivec` (SG / DSG from `MIVecSGGenInstr`): d15 S6 (c100us), d20 S10 (c1us);
+  - global interpolation (cc): d10 L3 p8 (c100us), d10 L4 p16 (c1us);
+  - multilinear interpolation (equi): d5 L5 p16 (c100us), d10 L4 p16 (c1us);
+  - `-ramp` on mivec/sg d15, interp/sg d7 L3 p8 and interplin/sg d5;
+  - 4 `-cached` SG cases.
+- Each case takes 0.1–2.5 s; the 21 judged cases sum to ≈ 17.8 s and the 4 cached cases to
+  ≈ 1.05 s. Run-to-run spread ≤ 1 %.
+- They judge what the cheap suite cannot: evaluation counts (SG evaluates Σ nGP, DSG the distinct
+  points), the load balance of the evaluation loops, and caching.
+- **Reported separately**: `run` / `ab` print one sum line per group (suite, `expensive/`,
+  `expensive/ cached`). The ranking stays "absolute time saved on the suite, d ≥ 7 first"; the
+  `expensive/` saving is reported beside it and ranks WPs that target evaluation counts or load
+  balance; cached cases are not ranked.
+- Filters: `'^(?!expensive/)'` = the suite as before, `'^expensive/'` = the group. Existing
+  filters such as `^quad/sg/` do not match the group.
+- No baseline values (absolute reporting). The history over baseline / RP-1 … RP-5 / HEAD is in
+  `results/WP-76/history/`.
+- Details: `results/WP-76/plan.md`, `judged-cases.md`.
+
+**Micro suite composition**: `perf_micro --list` had 305 cases at WP-40 (2026-11-02; 827 before
+the decided WP-24 / WP-25 prototypes were removed, their results stay in `results/WP-24..26/`),
+406 before WP-76 and 416 since (later WPs added cases at their spots); the groups:
 - 46 classic hot-spot cases (`micro/{quad,dsg,interp,interplin,quadrule,gen,mivec,tg,
   sourcefunc,sol}/...` without the `_vec` / `_scalar_x_m` variants);
 - 130 vector-valued production cases `*_vec` / `*_scalar_x_m` (WP-29);
@@ -122,11 +155,15 @@ the decided WP-24 / WP-25 prototypes were removed, their results stay in `result
   `disk/{flat_write,flat_write_sync,flat_load,pread_hit}/...` (for an append-only log). The
   production cases are registered only if Boost ≥ 1.81 and xxHash ≥ 0.8 are found, the disk
   store and storage-policy cases only with LMDB; the disk cases write files in
-  `$SGPP_PERF_CACHE_DIR`, else `/var/tmp`, and delete them.
+  `$SGPP_PERF_CACHE_DIR`, else `/var/tmp`, and delete them;
+- 10 `micro/expensive/...` cases (WP-76): `integrand/exp/d10/{c1us,c100us}` (cost per evaluation
+  of the e2e group `expensive/`: 0.90 / 99.8 µs; a drift shows up here first) and
+  `quad_{vec,scalar_x_m}/{sg,dsg}/cc/b1/{d7/L4/m4/c1us,d5/L3/m4/c100us}` (vector-valued expensive
+  functions: one evaluation for m outputs vs. m scalar functions; up to 1 s per call).
 
 **Always pass `--filter`** to `run micro` / `ab micro`: the unfiltered suite runs long and its sum
 of medians is dominated by the caching cases. All 46 classic cases:
-`--filter '^micro/(?!cache/)(?!.*(_vec|_scalar_x_m)/)'` (Python `re.search`; for snapshots before
+`--filter '^micro/(?!cache/|expensive/)(?!.*(_vec|_scalar_x_m)/)'` (Python `re.search`; for snapshots before
 WP-40, which still have `micro/vec/`: `'^micro/(?!vec/|cache/)(?!.*(_vec|_scalar_x_m)/)'`); a 30-case
 cross-section for runtime-neutral changes was used by WP-11/13/14 and the WP-28 re-check
 (`results/WP-28/recheck/micro.md`).
@@ -200,9 +237,11 @@ waited-for grandchildren).
 
 ## Reference check
 
-`perf_reference` computes 104 cases (all operators; node families equi/cc/cheb1; boundary
-offsets 0/1; unit and shifted domains; d = 1–10; complete, deltas and MIVec grids) with exact
-solutions. `perf.py refcheck` compares a build against `reference/reference.jsonl` (recorded on
+`perf_reference` computes 146 cases (all operators; node families equi/cc/cheb1; boundary
+offsets 0/1; unit and shifted domains; d = 1–20; complete, deltas and MIVec grids) with exact
+solutions: 104 since the setup, 28 DSG interpolation cases (WP-45 / WP-47) and 14 `expensive/`
+cases (WP-76: the group's configurations at reduced sizes with the c1us integrands; the cached case
+records `cacheInserts` instead of `nEvals`, which varies with concurrent misses). `perf.py refcheck` compares a build against `reference/reference.jsonl` (recorded on
 the unoptimized code) at 1 and 16 threads, using `reference/tolerances.json`:
 
 - the **error against the exact solution** may not grow: `|new − exact| ≤ 1.1·|ref − exact| + noise`

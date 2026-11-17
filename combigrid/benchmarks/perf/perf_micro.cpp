@@ -1202,6 +1202,70 @@ void addCTCoeffs(Suite& suite, const size_t nDim, const LvlType maxSum, const si
 
 }  // namespace
 
+/*******************************************************************************
+Expensive source functions (e2e group expensive/)
+*******************************************************************************/
+
+/**
+ * Cost monitor of the expensive integrands of the e2e group expensive/: time per evaluation of
+ * perf::expensive<perf::expSum, ITERATIONS> through SourceFunc at d = 10. Nominal 1 us / 100 us at
+ * the benchmarking machine's 2.0 GHz; a drift (compiler, code placement, clock) shows up here.
+ */
+template <uint64_t ITERATIONS>
+void addExpensiveIntegrand(Suite& suite, const std::string& cost) {
+  suite.addMicro("micro/expensive/integrand/exp/d10/" + cost, [](MicroRun& run) {
+    const std::vector<DataVector> points = perf::randomPoints(perf::unitDomain(10), 64, 77);
+    const SourceFunc f(perf::expensive<perf::expSum, ITERATIONS, perf::CostShape::uniform>);
+    size_t i = 0;
+    run.setItems(1.0);
+    run.measure([&]() { doNotOptimize(f.evaluate(points[i++ % points.size()])); });
+  });
+}
+
+/**
+ * Vector-valued expensive source function, quadrature operator (time per call): one
+ * VectorSourceFunc whose evaluation burns the cost once and returns m outputs expSumK (a simulation
+ * with m quantities of interest), micro/expensive/quad_vec/<grid>/<cfg>/m<m>/<cost>, vs. m scalar
+ * expensive functions (m times the cost), micro/expensive/quad_scalar_x_m/... Grid:
+ * Clenshaw-Curtis, boundary offset 1, [0, 1]^d (as the e2e group expensive/).
+ */
+template <typename Grid, uint64_t ITERATIONS>
+void addExpensiveVectorQuad(Suite& suite, const std::string& gridName, const size_t nDim,
+                            const LvlType maxLvl, const size_t m, const std::string& cost) {
+  const std::string name =
+      gridName + "/" + cfg("cc", 1, nDim, maxLvl) + "/m" + std::to_string(m) + "/" + cost;
+  auto makeGrid = [=]() {
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, "cc", 1, perf::unitDomain(nDim));
+    return Grid(genInstr);
+  };
+
+  suite.addMicro("micro/expensive/quad_scalar_x_m/" + name, [=](MicroRun& run) {
+    const Grid grid = makeGrid();
+    std::vector<SourceFunc> funcs;
+    for (size_t k = 0; k < m; k++) {
+      funcs.emplace_back([k](const DataVector& x) {
+        perf::burnChain(x[0], ITERATIONS);
+        return expSumK(x, k);
+      });
+    }
+    run.measure([&]() {
+      for (const SourceFunc& f : funcs) doNotOptimize(quadrature(f, grid));
+    });
+  });
+
+  suite.addMicro("micro/expensive/quad_vec/" + name, [=](MicroRun& run) {
+    const Grid grid = makeGrid();
+    const cg::VectorSourceFunc f(
+        [](const DataVector& x, std::span<double> out) {
+          perf::burnChain(x[0], ITERATIONS);
+          for (size_t k = 0; k < out.size(); k++) out[k] = expSumK(x, k);
+        },
+        m);
+    run.measure([&]() { doNotOptimize(quadrature(f, grid)); });
+  });
+}
+
 int main(int argc, char** argv) {
   Suite suite("micro", 5, 0);  // the batch calibration doubles as warm-up
 
@@ -1357,6 +1421,16 @@ int main(int argc, char** argv) {
   // WP-26: the production source-function cache (micro/cache/.../production...)
   perf::cache_production::addCacheProductionCases(suite);
 #endif
+
+  // Expensive source functions (e2e group expensive/): integrand cost, vector-valued functions
+  addExpensiveIntegrand<perf::COST_1US_ITERATIONS>(suite, "c1us");
+  addExpensiveIntegrand<perf::COST_100US_ITERATIONS>(suite, "c100us");
+  addExpensiveVectorQuad<SparseGrid, perf::COST_1US_ITERATIONS>(suite, "sg", 7, 4, 4, "c1us");
+  addExpensiveVectorQuad<DeltasSparseGrid, perf::COST_1US_ITERATIONS>(suite, "dsg", 7, 4, 4,
+                                                                      "c1us");
+  addExpensiveVectorQuad<SparseGrid, perf::COST_100US_ITERATIONS>(suite, "sg", 5, 3, 4, "c100us");
+  addExpensiveVectorQuad<DeltasSparseGrid, perf::COST_100US_ITERATIONS>(suite, "dsg", 5, 3, 4,
+                                                                        "c100us");
 
   return suite.main(argc, argv);
 }

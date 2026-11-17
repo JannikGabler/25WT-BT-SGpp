@@ -1,0 +1,205 @@
+{
+ "suite": "micro",
+ "snapshot": "WP-76-after",
+ "threads": 1,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-43-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "9.75",
+   "7.66",
+   "6.66"
+  ]
+ },
+ "records": [
+  {
+   "suite": "micro",
+   "case": "micro/expensive/integrand/exp/d10/c1us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     9.019691117958537e-07,
+     9.003811888593053e-07
+    ]
+   },
+   "items": 1,
+   "batch": 66854,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/integrand/exp/d10/c100us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     9.982326289517471e-05,
+     9.976481031613977e-05
+    ]
+   },
+   "items": 1,
+   "batch": 601,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/quad_scalar_x_m/sg/cc/b1/d7/L4/m4/c1us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.212834689,
+     0.212675731
+    ]
+   },
+   "items": 1,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/quad_vec/sg/cc/b1/d7/L4/m4/c1us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.061064999,
+     0.061061298
+    ]
+   },
+   "items": 1,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/quad_scalar_x_m/dsg/cc/b1/d7/L4/m4/c1us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.079469531,
+     0.079253373
+    ]
+   },
+   "items": 1,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/quad_vec/dsg/cc/b1/d7/L4/m4/c1us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.022287706,
+     0.022341273999999998
+    ]
+   },
+   "items": 1,
+   "batch": 3,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/quad_scalar_x_m/sg/cc/b1/d5/L3/m4/c100us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     1.022178976,
+     1.021647907
+    ]
+   },
+   "items": 1,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/quad_vec/sg/cc/b1/d5/L3/m4/c100us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.256034677,
+     0.255755663
+    ]
+   },
+   "items": 1,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/quad_scalar_x_m/dsg/cc/b1/d5/L3/m4/c100us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.480003256,
+     0.480154601
+    ]
+   },
+   "items": 1,
+   "batch": 1,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/expensive/quad_vec/dsg/cc/b1/d5/L3/m4/c100us",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.120338093,
+     0.120334182
+    ]
+   },
+   "items": 1,
+   "batch": 1,
+   "counters": {}
+  }
+ ],
+ "process_floor_kib": null
+}

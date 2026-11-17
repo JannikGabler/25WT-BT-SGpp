@@ -1,0 +1,535 @@
+{
+ "suite": "e2e",
+ "snapshot": "hist-rp-1",
+ "threads": 16,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-43-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "15.60",
+   "15.12",
+   "14.77"
+  ]
+ },
+ "records": [
+  {
+   "suite": "e2e",
+   "case": "expensive/quad/sg/cc-exp/b1/d10/L4/c100us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     1.568143589
+    ],
+    "setup": [
+     1.0057e-05
+    ],
+    "generation": [
+     0.00251434
+    ],
+    "operator": [
+     1.565349606
+    ]
+   },
+   "result": 13.51703147952594,
+   "exact": 13.517031865363135,
+   "counters": {
+    "nTG": 1001,
+    "sumGP": 244361
+   },
+   "peak_rss_kib": 12796
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/quad/dsg/cc-exp/b1/d10/L4/c100us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.57180455
+    ],
+    "setup": [
+     9.638e-06
+    ],
+    "generation": [
+     0.002202641
+    ],
+    "operator": [
+     0.56937807
+    ]
+   },
+   "result": 13.51703147953106,
+   "exact": 13.517031865363135,
+   "counters": {
+    "nTG": 1001,
+    "sumGP": 90561
+   },
+   "peak_rss_kib": 13516
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/quad/sg/cc-exp/b1/d20/L3/c100us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     1.039893404
+    ],
+    "setup": [
+     8.171e-06
+    ],
+    "generation": [
+     0.002108076
+    ],
+    "operator": [
+     1.037375012
+    ]
+   },
+   "result": 182.7012834375455,
+   "exact": 182.7101504492424,
+   "counters": {
+    "nTG": 1771,
+    "sumGP": 164971
+   },
+   "peak_rss_kib": 13244
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/quad/dsg/cc-exp/b1/d20/L3/c100us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.524942523
+    ],
+    "setup": [
+     7.613e-06
+    ],
+    "generation": [
+     0.002105702
+    ],
+    "operator": [
+     0.522488385
+    ]
+   },
+   "result": 182.70128343664078,
+   "exact": 182.7101504492424,
+   "counters": {
+    "nTG": 1771,
+    "sumGP": 82401
+   },
+   "peak_rss_kib": 14760
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     2.231337066
+    ],
+    "setup": [
+     0.000119218
+    ],
+    "generation": [
+     0.171924652
+    ],
+    "operator": [
+     2.059156586
+    ]
+   },
+   "result": 49.52089799177844,
+   "exact": 49.69606549564766,
+   "counters": {
+    "nTG": 224,
+    "sumGP": 145512
+   },
+   "peak_rss_kib": 12364
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/mivec/dsg/cc-exp/b1/d15/S6/n300/c100us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     1.085408131
+    ],
+    "setup": [
+     0.000111186
+    ],
+    "generation": [
+     0.202726495
+    ],
+    "operator": [
+     0.882247156
+    ]
+   },
+   "result": 49.52089799177904,
+   "exact": 49.69606549564766,
+   "counters": {
+    "nTG": 611,
+    "sumGP": 87789
+   },
+   "peak_rss_kib": 13064
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     1.0732128
+    ],
+    "setup": [
+     1.0965e-05
+    ],
+    "generation": [
+     0.000127599
+    ],
+    "operator": [
+     1.072958858
+    ]
+   },
+   "result": 125.15504707879676,
+   "exact": 125.55890088482913,
+   "counters": {
+    "nTG": 286,
+    "sumGP": 20486
+   },
+   "peak_rss_kib": 12388
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.823170033
+    ],
+    "setup": [
+     1.2362e-05
+    ],
+    "generation": [
+     9.9733e-05
+    ],
+    "operator": [
+     0.822983628
+    ]
+   },
+   "result": 56.53397058806602,
+   "exact": 56.53265144355893,
+   "counters": {
+    "nTG": 251,
+    "sumGP": 72315
+   },
+   "peak_rss_kib": 12104
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us-ramp",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     2.569990139
+    ],
+    "setup": [
+     0.000132139
+    ],
+    "generation": [
+     0.171911871
+    ],
+    "operator": [
+     2.397785285
+    ]
+   },
+   "result": 49.520897991778355,
+   "exact": 49.69606549564766,
+   "counters": {
+    "nTG": 224,
+    "sumGP": 145512
+   },
+   "peak_rss_kib": 12436
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/interp/sg/cc-exp/b1/d7/L3/p8/c100us-ramp",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.397673416
+    ],
+    "setup": [
+     4.1486e-05
+    ],
+    "generation": [
+     4.3302e-05
+    ],
+    "operator": [
+     0.39754491
+    ]
+   },
+   "result": 54.82018827855376,
+   "exact": 54.82611391338764,
+   "counters": {
+    "nTG": 120,
+    "sumGP": 7008
+   },
+   "peak_rss_kib": 12160
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-ramp",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     1.288138537
+    ],
+    "setup": [
+     1.0197e-05
+    ],
+    "generation": [
+     9.9593e-05
+    ],
+    "operator": [
+     1.287953039
+    ]
+   },
+   "result": 56.53397058806622,
+   "exact": 56.53265144355893,
+   "counters": {
+    "nTG": 251,
+    "sumGP": 72315
+   },
+   "peak_rss_kib": 12124
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/quad/sg/cc-exp/b1/d15/L5/c1us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     1.196623618
+    ],
+    "setup": [
+     8.451e-06
+    ],
+    "generation": [
+     0.004920917
+    ],
+    "operator": [
+     1.189019834
+    ]
+   },
+   "result": 49.69606524099072,
+   "exact": 49.69606549564766,
+   "counters": {
+    "nTG": 15504,
+    "sumGP": 17984096
+   },
+   "peak_rss_kib": 23980
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/quad/dsg/cc-exp/b1/d15/L5/c1us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.422584742
+    ],
+    "setup": [
+     1.1384e-05
+    ],
+    "generation": [
+     0.002962858
+    ],
+    "operator": [
+     0.416023892
+    ]
+   },
+   "result": 49.69606521568812,
+   "exact": 49.69606549564766,
+   "counters": {
+    "nTG": 15504,
+    "sumGP": 5235393
+   },
+   "peak_rss_kib": 32596
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/mivec/sg/cc-exp/b1/d20/S10/n300/c1us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     31.384865374
+    ],
+    "setup": [
+     0.000143453
+    ],
+    "generation": [
+     30.632426878
+    ],
+    "operator": [
+     0.751917973
+    ]
+   },
+   "result": 178.0077763439607,
+   "exact": 182.7101504492424,
+   "counters": {
+    "nTG": 692,
+    "sumGP": 7679632
+   },
+   "peak_rss_kib": 13352
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/mivec/dsg/cc-exp/b1/d20/S10/n300/c1us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     30.621230272
+    ],
+    "setup": [
+     0.000167828
+    ],
+    "generation": [
+     30.28693813
+    ],
+    "operator": [
+     0.333192218
+    ]
+   },
+   "result": 178.00777634395962,
+   "exact": 182.7101504492424,
+   "counters": {
+    "nTG": 4778,
+    "sumGP": 4767673
+   },
+   "peak_rss_kib": 19240
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/interp/sg/cc-exp/b1/d10/L4/p16/c1us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     0.279821232
+    ],
+    "setup": [
+     1.1873e-05
+    ],
+    "generation": [
+     0.002179104
+    ],
+    "operator": [
+     0.277398871
+    ]
+   },
+   "result": 243.41145669776995,
+   "exact": 243.4427679283338,
+   "counters": {
+    "nTG": 1001,
+    "sumGP": 244361
+   },
+   "peak_rss_kib": 13256
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/interplin/sg/equi-exp/b1/d10/L4/p16/c1us",
+   "kind": "pipeline",
+   "threads": 16,
+   "samples": 1,
+   "warmups": 1,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     1.173707436
+    ],
+    "setup": [
+     1.0755e-05
+    ],
+    "generation": [
+     0.003613635
+    ],
+    "operator": [
+     1.169853059
+    ]
+   },
+   "result": 243.47918595865093,
+   "exact": 243.4427679283338,
+   "counters": {
+    "nTG": 1001,
+    "sumGP": 244361
+   },
+   "peak_rss_kib": 12940
+  }
+ ],
+ "process_floor_kib": 10540
+}

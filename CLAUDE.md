@@ -175,7 +175,7 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - Source-function cache: one `SourceFuncCache` per function (m fixed by the first cached function,
   another m throws; points of another d bypass it, with the storage policies the operator then
   throws); NaN values are not stored; it only pays for functions ≳ 0.3 µs (the judged suite uses
-  plain `SourceFunc`); the disk tier only for much more expensive ones (LMDB writes ≈ 1–5 µs per
+  plain `SourceFunc`, except the unranked `expensive/…-cached` e2e cases); the disk tier only for much more expensive ones (LMDB writes ≈ 1–5 µs per
   new point, serialized). A persistent file is identified by d and m only (no function id), locked
   exclusively, never corrupted by program crashes; damaged / mismatching files throw
   `base::file_exception` (`CacheFileException`: base exceptions keep only the `const char*`,

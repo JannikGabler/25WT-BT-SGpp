@@ -1,0 +1,562 @@
+diff --git a/combigrid/benchmarks/perf/perf_e2e.cpp b/combigrid/benchmarks/perf/perf_e2e.cpp
+index 09fc4d5fd..a652c5e13 100644
+--- a/combigrid/benchmarks/perf/perf_e2e.cpp
++++ b/combigrid/benchmarks/perf/perf_e2e.cpp
+@@ -24,12 +24,23 @@
+  * All grids use the doubling level-to-grid-point-count function. Sizes are chosen such that one
+  * pipeline takes about 0.1-4 s with 16 threads on the benchmarking machine (Ryzen 7 5825U).
+  *
++ * Group expensive/ (expensive source functions, perf::expensive): the same pipelines with
++ * integrands that burn a fixed amount of work per evaluation (nominal 1 us or 100 us at 2.0 GHz)
++ * beside the exact value of a cheap function, so that evaluation counts, the load balance of the
++ * evaluation loops and caching dominate. Names:
++ * expensive/<operator>/<grid>/<nodes>-<integrand>/b<b>/d<dim>/<L<level> | S<sum>/n<MIs>>
++ * [/p<points>]/c<cost>[-ramp | -cached] with integrand exp (perf::expSum on the unit cube; all
++ * operators), cost c1us / c100us, -ramp: cost factor 0.1-2.8 rising with x_0 (mean 1), -cached:
++ * CachedSourceFunc with the default configuration (new cache per pipeline run).
++ *
+  * Usage: see perf_harness.hpp, normally driven by combigrid/perf/scripts/perf.py.
+  */
+ 
+ #include <cstddef>
++#include <memory>
+ #include <optional>
+ #include <sgpp/base/datatypes/DataVector.hpp>
++#include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+ #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
+@@ -48,6 +59,7 @@
+ #include "perf_harness.hpp"
+ #include "perf_problems.hpp"
+ 
++using sgpp::combigrid::CachedSourceFunc;
+ using sgpp::combigrid::CompleteSGGenInstr;
+ using sgpp::combigrid::DeltasSparseGrid;
+ using sgpp::combigrid::HyperCubeArea;
+@@ -223,6 +235,174 @@ void addMIVec(Suite& suite, const std::string& nodes, const LvlType boundary, co
+                     });
+ }
+ 
++/*******************************************************************************
++Group expensive/: expensive source functions
++*******************************************************************************/
++
++/// An expensive integrand: the cheap function's value plus burned work (perf::expensive).
++struct ExpensiveFunc {
++  const char* name;                   // value function: "exp" (perf::expSum)
++  const char* cost;                   // "c1us", "c100us", optionally with "-ramp"
++  double (*func)(const DataVector&);  // perf::expensive<...>
++  bool cached;                        // wrap in a CachedSourceFunc (name suffix "-cached")
++};
++
++std::string expensiveName(const std::string& op, const std::string& grid, const std::string& nodes,
++                          const ExpensiveFunc& f, const LvlType boundary, const size_t nDim,
++                          const std::string& level) {
++  return "expensive/" + caseName(op, grid, nodes + "-" + f.name, boundary, nDim, level) + "/" +
++         f.cost + (f.cached ? "-cached" : "");
++}
++
++std::unique_ptr<SourceFunc> makeSourceFunc(const ExpensiveFunc& f) {
++  if (f.cached) return std::make_unique<CachedSourceFunc>(f.func);
++  return std::make_unique<SourceFunc>(f.func);
++}
++
++/// Quadrature of perf::expSum (expensive) over [0, 1]^d on a complete (deltas) sparse grid.
++template <typename Grid>
++void addExpensiveQuadrature(Suite& suite, const std::string& gridName, const std::string& nodes,
++                            const ExpensiveFunc& f, const LvlType boundary, const size_t nDim,
++                            const LvlType maxLvl) {
++  suite.addPipeline(
++      expensiveName("quad", gridName, nodes, f, boundary, nDim, "L" + std::to_string(maxLvl)),
++      [=](PipelineRun& run) {
++        std::unique_ptr<SourceFunc> sourceFunc;
++        std::optional<CompleteSGGenInstr> genInstr;
++        std::optional<Grid> grid;
++        double result = 0.0;
++
++        run.phase("setup", [&]() {
++          sourceFunc = makeSourceFunc(f);
++          genInstr.emplace(maxLvl, nDim);
++          perf::configure(*genInstr, nodes, boundary, perf::unitDomain(nDim));
++        });
++        run.phase("generation", [&]() { grid.emplace(*genInstr); });
++        run.phase("operator", [&]() { result = quadrature(*sourceFunc, *grid); });
++
++        run.setResult(result, perf::expSumIntegral(perf::unitDomain(nDim)));
++        run.setCounter("nTG", static_cast<double>(grid->nTG()));
++        run.setCounter("sumGP", static_cast<double>(sumOfGridPoints(*grid)));
++      });
++}
++
++/// MIVecSGGenInstr from an anisotropic, not downwards-closed MI set, then a (deltas) sparse grid
++/// and a quadrature of perf::expSum (expensive) over [0, 1]^d.
++template <typename Grid>
++void addExpensiveMIVec(Suite& suite, const std::string& gridName, const std::string& nodes,
++                       const ExpensiveFunc& f, const LvlType boundary, const size_t nDim,
++                       const LvlType maxSum, const size_t nMI) {
++  suite.addPipeline(expensiveName("mivec", gridName, nodes, f, boundary, nDim,
++                                  "S" + std::to_string(maxSum) + "/n" + std::to_string(nMI)),
++                    [=](PipelineRun& run) {
++                      std::unique_ptr<SourceFunc> sourceFunc;
++                      std::optional<LvlMIVec> mis;
++                      std::optional<MIVecSGGenInstr> genInstr;
++                      std::optional<Grid> grid;
++                      double result = 0.0;
++
++                      run.phase("setup", [&]() {
++                        sourceFunc = makeSourceFunc(f);
++                        mis.emplace(perf::anisotropicMIs(nDim, nMI, maxSum, 2000 + nDim));
++                        genInstr.emplace(*mis);
++                        perf::configure(*genInstr, nodes, boundary, perf::unitDomain(nDim));
++                      });
++                      run.phase("generation", [&]() { grid.emplace(*genInstr); });
++                      run.phase("operator", [&]() { result = quadrature(*sourceFunc, *grid); });
++
++                      run.setResult(result, perf::expSumIntegral(perf::unitDomain(nDim)));
++                      run.setCounter("nTG", static_cast<double>(grid->nTG()));
++                      run.setCounter("sumGP", static_cast<double>(sumOfGridPoints(*grid)));
++                    });
++}
++
++/// Global (or multilinear) interpolation of perf::expSum (expensive) on [0, 1]^d at fixed points.
++template <typename Grid>
++void addExpensiveInterpolation(Suite& suite, const bool linear, const std::string& gridName,
++                               const std::string& nodes, const ExpensiveFunc& f,
++                               const LvlType boundary, const size_t nDim, const LvlType maxLvl,
++                               const size_t nPoints) {
++  suite.addPipeline(
++      expensiveName(linear ? "interplin" : "interp", gridName, nodes, f, boundary, nDim,
++                    "L" + std::to_string(maxLvl) + "/p" + std::to_string(nPoints)),
++      [=](PipelineRun& run) {
++        const HyperCubeArea domain = perf::unitDomain(nDim);
++        std::unique_ptr<SourceFunc> sourceFunc;
++        std::optional<CompleteSGGenInstr> genInstr;
++        std::optional<Grid> grid;
++        std::vector<DataVector> points;
++        double sum = 0.0;
++
++        run.phase("setup", [&]() {
++          sourceFunc = makeSourceFunc(f);
++          genInstr.emplace(maxLvl, nDim);
++          perf::configure(*genInstr, nodes, boundary, domain);
++          points = perf::randomPoints(domain, nPoints, 1000 + nDim);
++        });
++        run.phase("generation", [&]() { grid.emplace(*genInstr); });
++        run.phase("operator", [&]() {
++          for (const DataVector& point : points) {
++            sum += linear ? interpolateLinear(*sourceFunc, point, *grid)
++                          : interpolate(*sourceFunc, point, *grid);
++          }
++        });
++
++        double exact = 0.0;
++        for (const DataVector& point : points) exact += perf::expSum(point);
++        run.setResult(sum, exact);
++        run.setCounter("nTG", static_cast<double>(grid->nTG()));
++        run.setCounter("sumGP", static_cast<double>(sumOfGridPoints(*grid)));
++      });
++}
++
++using perf::CostShape;
++constexpr uint64_t C1 = perf::COST_1US_ITERATIONS;
++constexpr uint64_t C100 = perf::COST_100US_ITERATIONS;
++
++const ExpensiveFunc EXP_1US{"exp", "c1us", perf::expensive<perf::expSum, C1, CostShape::uniform>,
++                            false};
++const ExpensiveFunc EXP_100US{"exp", "c100us",
++                              perf::expensive<perf::expSum, C100, CostShape::uniform>, false};
++const ExpensiveFunc EXP_100US_RAMP{"exp", "c100us-ramp",
++                                   perf::expensive<perf::expSum, C100, CostShape::ramp>, false};
++
++ExpensiveFunc cached(ExpensiveFunc f) {
++  f.cached = true;
++  return f;
++}
++
++void addExpensiveCases(Suite& suite) {
++  // 100 us per evaluation: evaluation-bound (counts, load balance), SG / DSG pairs
++  addExpensiveQuadrature<SparseGrid>(suite, "sg", "cc", EXP_100US, 1, 10, 4);
++  addExpensiveQuadrature<DeltasSparseGrid>(suite, "dsg", "cc", EXP_100US, 1, 10, 4);
++  addExpensiveQuadrature<SparseGrid>(suite, "sg", "cc", EXP_100US, 1, 20, 3);
++  addExpensiveQuadrature<DeltasSparseGrid>(suite, "dsg", "cc", EXP_100US, 1, 20, 3);
++  addExpensiveMIVec<SparseGrid>(suite, "sg", "cc", EXP_100US, 1, 15, 6, 300);
++  addExpensiveMIVec<DeltasSparseGrid>(suite, "dsg", "cc", EXP_100US, 1, 15, 6, 300);
++  addExpensiveInterpolation<SparseGrid>(suite, false, "sg", "cc", EXP_100US, 1, 10, 3, 8);
++  addExpensiveInterpolation<DeltasSparseGrid>(suite, false, "dsg", "cc", EXP_100US, 1, 10, 3, 8);
++  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", EXP_100US, 1, 5, 5, 16);
++  addExpensiveInterpolation<DeltasSparseGrid>(suite, true, "dsg", "equi", EXP_100US, 1, 5, 5, 16);
++  // 100 us with a cost rising along x_0 (load balance of the scheduling)
++  addExpensiveMIVec<SparseGrid>(suite, "sg", "cc", EXP_100US_RAMP, 1, 15, 6, 300);
++  addExpensiveInterpolation<SparseGrid>(suite, false, "sg", "cc", EXP_100US_RAMP, 1, 7, 3, 8);
++  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", EXP_100US_RAMP, 1, 5, 5, 16);
++  // 1 us per evaluation: evaluations and operator overhead both matter
++  addExpensiveQuadrature<SparseGrid>(suite, "sg", "cc", EXP_1US, 1, 15, 5);
++  addExpensiveQuadrature<DeltasSparseGrid>(suite, "dsg", "cc", EXP_1US, 1, 15, 5);
++  addExpensiveMIVec<SparseGrid>(suite, "sg", "cc", EXP_1US, 1, 20, 10, 300);
++  addExpensiveMIVec<DeltasSparseGrid>(suite, "dsg", "cc", EXP_1US, 1, 20, 10, 300);
++  addExpensiveInterpolation<SparseGrid>(suite, false, "sg", "cc", EXP_1US, 1, 10, 4, 16);
++  addExpensiveInterpolation<DeltasSparseGrid>(suite, false, "dsg", "cc", EXP_1US, 1, 10, 4, 16);
++  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", EXP_1US, 1, 10, 4, 16);
++  addExpensiveInterpolation<DeltasSparseGrid>(suite, true, "dsg", "equi", EXP_1US, 1, 10, 4, 16);
++  // Cached source functions (CachedSourceFunc, default configuration; reported separately)
++  addExpensiveQuadrature<SparseGrid>(suite, "sg", "cc", cached(EXP_100US), 1, 10, 4);
++  addExpensiveInterpolation<SparseGrid>(suite, false, "sg", "cc", cached(EXP_100US), 1, 10, 3, 8);
++  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", cached(EXP_100US), 1, 5, 5, 16);
++  addExpensiveInterpolation<SparseGrid>(suite, true, "sg", "equi", cached(EXP_1US), 1, 8, 4, 32);
++}
++
+ }  // namespace
+ 
+ int main(int argc, char** argv) {
+@@ -287,5 +467,8 @@ int main(int argc, char** argv) {
+   addMIVec(suite, "cc", 1, 15, 10, 300);
+   addMIVec(suite, "cc", 1, 20, 7, 300);
+ 
++  // Expensive source functions (group expensive/)
++  addExpensiveCases(suite);
++
+   return suite.main(argc, argv);
+ }
+diff --git a/combigrid/benchmarks/perf/perf_problems.hpp b/combigrid/benchmarks/perf/perf_problems.hpp
+index cc41a996e..f2ce4bd64 100644
+--- a/combigrid/benchmarks/perf/perf_problems.hpp
++++ b/combigrid/benchmarks/perf/perf_problems.hpp
+@@ -185,6 +185,66 @@ inline std::vector<DataVector> randomPoints(const HyperCubeArea& domain, const s
+   return points;
+ }
+ 
++/*******************************************************************************
++Expensive source functions (value of a cheap function + a fixed amount of burned work)
++*******************************************************************************/
++
++/**
++ * @brief Iterations of @ref burnChain for a nominal cost of 1 us and 100 us per evaluation.
++ *
++ * One iteration is one dependent FMA: its latency (4 cycles on Zen 3, Skylake and later) at the
++ * benchmarking machine's fixed 2.0 GHz gives 2.04 ns per iteration. Measured per evaluation of
++ * perf::expSum at d = 10 in a loop, 1 thread: 0.90 us (consecutive evaluations overlap out of
++ * order by about 100 ns) and 99.8 us; 16 threads with SMT: +1.5 % at 100 us. The cost is work,
++ * not time: it scales with the clock like real code and does not depend on the compiler (a
++ * latency chain cannot be reordered or vectorized).
++ */
++inline constexpr uint64_t COST_1US_ITERATIONS = 490;
++inline constexpr uint64_t COST_100US_ITERATIONS = 49000;
++
++/**
++ * @brief Burns @p iterations steps of a dependent FMA chain starting at @p seed.
++ *
++ * The empty asm statement makes every intermediate value opaque to the compiler, so the chain is
++ * neither folded, vectorized, reassociated nor removed; @c noinline keeps the loop identical in
++ * every caller. Requires an FMA instruction (-mfma / -march=native), else std::fma is a libm call.
++ */
++[[gnu::noinline]] inline void burnChain(double seed, const uint64_t iterations) {
++  for (uint64_t i = 0; i < iterations; i++) {
++    seed = std::fma(seed, 0.99999999, 1e-9);
++#if defined(__x86_64__) || defined(__i386__)
++    asm volatile("" : "+x"(seed));
++#elif defined(__aarch64__)
++    asm volatile("" : "+w"(seed));
++#else
++    asm volatile("" : "+r,m"(seed));
++#endif
++  }
++}
++
++/// @brief Distribution of the cost over the domain.
++enum class CostShape {
++  uniform,  ///< every evaluation burns the same work
++  ramp      ///< factor 0.1 + 2.7 x_0^2 on the unit cube (mean 1, range 0.1-2.8)
++};
++
++/**
++ * @brief Expensive source function on the unit cube: returns exactly @p F(x) (so the exact
++ * integrals and values of the cheap function stay valid) and burns @p ITERATIONS iterations of
++ * @ref burnChain beside it, scaled by the cost shape.
++ */
++template <double (*F)(const DataVector&), uint64_t ITERATIONS, CostShape SHAPE>
++double expensive(const DataVector& x) {
++  const double value = F(x);
++  uint64_t iterations = ITERATIONS;
++  if constexpr (SHAPE == CostShape::ramp) {
++    const double t = std::clamp(x[0], 0.0, 1.0);
++    iterations = static_cast<uint64_t>(static_cast<double>(ITERATIONS) * (0.1 + 2.7 * t * t));
++  }
++  burnChain(x[0], iterations);
++  return value;
++}
++
+ /*******************************************************************************
+ Multi-index sets for MIVecSGGenInstr (adaptive-like, not downwards closed)
+ *******************************************************************************/
+diff --git a/combigrid/benchmarks/perf/perf_reference.cpp b/combigrid/benchmarks/perf/perf_reference.cpp
+index 51d5c9541..8d9cbedb4 100644
+--- a/combigrid/benchmarks/perf/perf_reference.cpp
++++ b/combigrid/benchmarks/perf/perf_reference.cpp
+@@ -34,6 +34,7 @@
+ #include <optional>
+ #include <regex>
+ #include <sgpp/base/datatypes/DataVector.hpp>
++#include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+ #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
+@@ -55,6 +56,7 @@
+ #include "perf_harness.hpp"
+ #include "perf_problems.hpp"
+ 
++using sgpp::combigrid::CachedSourceFunc;
+ using sgpp::combigrid::CompleteSGGenInstr;
+ using sgpp::combigrid::CTCoeffType;
+ using sgpp::combigrid::DeltasSparseGrid;
+@@ -281,6 +283,137 @@ CaseFunc interpCase(const std::string& name, const bool linear, const std::strin
+   };
+ }
+ 
++/// MIVecSGGenInstr from the MI set of the expensive/mivec e2e cases (unit cube), quadrature of
++/// an expensive perf::expSum on a (deltas) sparse grid.
++template <typename Grid>
++CaseFunc expensiveMivecCase(const std::string& name, const LvlType maxSum, const size_t nDim,
++                            const size_t nMI, const Integrand& integrand) {
++  return [=]() {
++    const HyperCubeArea domain = perf::unitDomain(nDim);
++    const LvlMIVec mis = perf::anisotropicMIs(nDim, nMI, maxSum, 2000 + nDim);
++    MIVecSGGenInstr genInstr(mis);
++    perf::configure(genInstr, "cc", 1, domain);
++    const Grid grid(genInstr);
++    const CountingFunc counting{integrand.func};
++
++    Record record;
++    record.name = name;
++    record.op = "quad";
++    record.values.push_back(quadrature(counting.sourceFunc(), grid));
++    record.exact.push_back(integrand.exact(domain));
++    record.magnitude = std::abs(record.exact[0]);
++    addStructure(record, grid);
++    record.info.emplace_back("nEvals", static_cast<double>(counting.count->load()));
++    return record;
++  };
++}
++
++/// Quadrature with a CachedSourceFunc (default configuration): info cacheInserts = number of
++/// distinct points (concurrent misses of one point may evaluate it twice, so the evaluation count
++/// would depend on the timing).
++CaseFunc cachedQuadCase(const std::string& name, const size_t nDim, const LvlType maxLvl,
++                        const Integrand& integrand) {
++  return [=]() {
++    const HyperCubeArea domain = perf::unitDomain(nDim);
++    CompleteSGGenInstr genInstr(maxLvl, nDim);
++    perf::configure(genInstr, "cc", 1, domain);
++    const SparseGrid grid(genInstr);
++    const CachedSourceFunc cachedFunc(integrand.func);
++
++    Record record;
++    record.name = name;
++    record.op = "quad";
++    record.values.push_back(quadrature(cachedFunc, grid));
++    record.exact.push_back(integrand.exact(domain));
++    record.magnitude = std::abs(record.exact[0]);
++    addStructure(record, grid);
++    record.info.emplace_back("cacheInserts", static_cast<double>(cachedFunc.statistics().inserts));
++    return record;
++  };
++}
++
++/// Interpolation of an expensive perf::expSum on [0, 1]^d (boundary offset 1) at 8 fixed points.
++template <typename Grid>
++CaseFunc expensiveInterpCase(const std::string& name, const bool linear, const std::string& nodes,
++                             const size_t nDim, const LvlType maxLvl,
++                             double (*func)(const DataVector&)) {
++  return [=]() {
++    const HyperCubeArea domain = perf::unitDomain(nDim);
++    CompleteSGGenInstr genInstr(maxLvl, nDim);
++    perf::configure(genInstr, nodes, 1, domain);
++    const Grid grid(genInstr);
++    const CountingFunc counting{func};
++    const SourceFunc sourceFunc = counting.sourceFunc();
++
++    Record record;
++    record.name = name;
++    record.op = linear ? "interplin" : "interp";
++    for (const DataVector& point : perf::randomPoints(domain, 8, 4000 + nDim)) {
++      record.values.push_back(linear ? interpolateLinear(sourceFunc, point, grid)
++                                     : interpolate(sourceFunc, point, grid));
++      record.exact.push_back(perf::expSum(point));
++    }
++    record.magnitude = std::exp(0.5 * static_cast<double>(nDim));  // max of expSum
++    addStructure(record, grid);
++    record.info.emplace_back("nEvals", static_cast<double>(counting.count->load()));
++    return record;
++  };
++}
++
++using perf::CostShape;
++const Integrand EXP_UNIT_1US{
++    "exp-unit-c1us", perf::expensive<perf::expSum, perf::COST_1US_ITERATIONS, CostShape::uniform>,
++    perf::expSumIntegral, false};
++const Integrand EXP_UNIT_1US_RAMP{
++    "exp-unit-c1us-ramp", perf::expensive<perf::expSum, perf::COST_1US_ITERATIONS, CostShape::ramp>,
++    perf::expSumIntegral, false};
++
++/// Group expensive/ (the configurations of the expensive e2e cases at reduced sizes, with the
++/// 1 us integrands; values equal the cheap functions' values bitwise), quadrature and MI vectors.
++void addExpensiveQuadCases(std::vector<std::pair<std::string, CaseFunc>>& cases) {
++  auto add = [&](const std::string& name, CaseFunc func) { cases.emplace_back(name, func); };
++  for (const auto& [nDim, maxLvl] : std::vector<std::pair<size_t, LvlType>>{{10, 3}, {20, 2}}) {
++    const std::string cfgName = cfg("cc", 1, nDim, maxLvl) + "/" + EXP_UNIT_1US.name;
++    add("expensive/quad/sg/" + cfgName,
++        quadCase<SparseGrid>("expensive/quad/sg/" + cfgName, "cc", 1, nDim, maxLvl, EXP_UNIT_1US));
++    add("expensive/quad/dsg/" + cfgName,
++        quadCase<DeltasSparseGrid>("expensive/quad/dsg/" + cfgName, "cc", 1, nDim, maxLvl,
++                                   EXP_UNIT_1US));
++  }
++  const std::string cachedName =
++      "expensive/quad/sg/" + cfg("cc", 1, 10, 3) + "/exp-unit-c1us-cached";
++  add(cachedName, cachedQuadCase(cachedName, 10, 3, EXP_UNIT_1US));
++  const std::string mivec = "cc/b1/d15/S5/n300/";
++  add("expensive/mivec/sg/" + mivec + EXP_UNIT_1US.name,
++      expensiveMivecCase<SparseGrid>("expensive/mivec/sg/" + mivec + EXP_UNIT_1US.name, 5, 15, 300,
++                                     EXP_UNIT_1US));
++  add("expensive/mivec/dsg/" + mivec + EXP_UNIT_1US.name,
++      expensiveMivecCase<DeltasSparseGrid>("expensive/mivec/dsg/" + mivec + EXP_UNIT_1US.name, 5,
++                                           15, 300, EXP_UNIT_1US));
++  add("expensive/mivec/sg/" + mivec + EXP_UNIT_1US_RAMP.name,
++      expensiveMivecCase<SparseGrid>("expensive/mivec/sg/" + mivec + EXP_UNIT_1US_RAMP.name, 5, 15,
++                                     300, EXP_UNIT_1US_RAMP));
++}
++
++/// Group expensive/, interpolation: global (cc) and multilinear (equi) at d5 L4.
++void addExpensiveInterpCases(std::vector<std::pair<std::string, CaseFunc>>& cases) {
++  auto add = [&](const std::string& name, CaseFunc func) { cases.emplace_back(name, func); };
++  auto exp1us = perf::expensive<perf::expSum, perf::COST_1US_ITERATIONS, CostShape::uniform>;
++  auto exp1usRamp = perf::expensive<perf::expSum, perf::COST_1US_ITERATIONS, CostShape::ramp>;
++  for (const bool linear : {false, true}) {
++    const std::string nodes = linear ? "equi" : "cc";
++    const std::string prefix = std::string("expensive/") + (linear ? "interplin" : "interp");
++    const std::string config = cfg(nodes, 1, 5, 4) + "/exp-unit-c1us";
++    add(prefix + "/sg/" + config,
++        expensiveInterpCase<SparseGrid>(prefix + "/sg/" + config, linear, nodes, 5, 4, exp1us));
++    add(prefix + "/dsg/" + config, expensiveInterpCase<DeltasSparseGrid>(
++                                       prefix + "/dsg/" + config, linear, nodes, 5, 4, exp1us));
++    add(prefix + "/sg/" + config + "-ramp",
++        expensiveInterpCase<SparseGrid>(prefix + "/sg/" + config + "-ramp", linear, nodes, 5, 4,
++                                        exp1usRamp));
++  }
++}
++
+ std::vector<std::pair<std::string, CaseFunc>> allCases() {
+   std::vector<std::pair<std::string, CaseFunc>> cases;
+   auto add = [&](const std::string& name, CaseFunc func) { cases.emplace_back(name, func); };
+@@ -344,6 +477,8 @@ std::vector<std::pair<std::string, CaseFunc>> allCases() {
+       }
+     }
+   }
++  addExpensiveQuadCases(cases);
++  addExpensiveInterpCases(cases);
+   return cases;
+ }
+ 
+diff --git a/combigrid/perf/reference/reference.jsonl b/combigrid/perf/reference/reference.jsonl
+index 3e17cc6dd..e863ae324 100644
+--- a/combigrid/perf/reference/reference.jsonl
++++ b/combigrid/perf/reference/reference.jsonl
+@@ -130,3 +130,17 @@
+ {"case":"interplin/dsg/cc/b1/d3/L5/cos-shifted","op":"interplin","values":[-0.25205803739118848,-0.11380355170452786,-0.26369833318033281,0.87843106727402409,0.096804921321877901,0.16957851004099755,-0.057366980494415881,0.005246104686016162],"exact":[-0.25221250324226957,-0.11422612451938521,-0.26403794633351912,0.88074266127657208,0.0970102988155261,0.17001054855332826,-0.057488620402428948,0.0052680729481205408],"magnitude":1,"sumAbsCoeffs":61,"sumGP":1985,"ints":{"nTG":"56","sumGP":"1985","tgHash":"4c7c20db3619bbeb"},"floats":{"nodeChecksum":2635.7702973665387},"info":{"nEvals":1024}}
+ {"case":"interplin/sg/cc/b1/d5/L4/cos-shifted","op":"interplin","values":[0.04408256611327363,-0.311563650997428,-0.040813881228296989,-0.13249572908110452,0.35603889762232921,0.021807600284780904,-0.032975457972602762,-0.22330779436728809],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":321,"sumGP":15106,"ints":{"nTG":"126","sumGP":"15106","tgHash":"76baf7761fd746cc"},"floats":{"nodeChecksum":13160.681395970041},"info":{"nEvals":32256}}
+ {"case":"interplin/dsg/cc/b1/d5/L4/cos-shifted","op":"interplin","values":[0.044082566113273498,-0.31156365099742711,-0.040813881228296406,-0.13249572908110602,0.35603889762232327,0.021807600284781598,-0.032975457972603067,-0.22330779436728648],"exact":[0.045461633538043701,-0.31366299429805367,-0.041807808693857085,-0.13596218239277763,0.35785258142192938,0.022070822084396893,-0.033702568266269703,-0.22475799693345039],"magnitude":1,"sumAbsCoeffs":321,"sumGP":5281,"ints":{"nTG":"126","sumGP":"5281","tgHash":"76baf7761fd746cc"},"floats":{"nodeChecksum":7381.9901138675277},"info":{"nEvals":8016}}
++{"case":"expensive/quad/sg/cc/b1/d10/L3/exp-unit-c1us","op":"quad","values":[13.517000978082281],"exact":[13.517031865363135],"magnitude":13.517031865363135,"sumAbsCoeffs":1159,"sumGP":20486,"ints":{"nTG":"286","sumGP":"20486","tgHash":"6588d4c9e994a217"},"floats":{"nodeChecksum":48221.833197097032},"info":{"nEvals":20486}}
++{"case":"expensive/quad/dsg/cc/b1/d10/L3/exp-unit-c1us","op":"quad","values":[13.517000978093431],"exact":[13.517031865363135],"magnitude":13.517031865363135,"sumAbsCoeffs":1159,"sumGP":10001,"ints":{"nTG":"286","sumGP":"10001","tgHash":"6588d4c9e994a217"},"floats":{"nodeChecksum":31362.464164538109},"info":{"nEvals":10001}}
++{"case":"expensive/quad/sg/cc/b1/d20/L2/exp-unit-c1us","op":"quad","values":[182.50824728430305],"exact":[182.71015044924241],"magnitude":182.71015044924241,"sumAbsCoeffs":761,"sumGP":5031,"ints":{"nTG":"231","sumGP":"5031","tgHash":"4e4b77e639dfb5bd"},"floats":{"nodeChecksum":68560.189498964653},"info":{"nEvals":5031}}
++{"case":"expensive/quad/dsg/cc/b1/d20/L2/exp-unit-c1us","op":"quad","values":[182.50824728419815],"exact":[182.71015044924241],"magnitude":182.71015044924241,"sumAbsCoeffs":761,"sumGP":3201,"ints":{"nTG":"231","sumGP":"3201","tgHash":"4e4b77e639dfb5bd"},"floats":{"nodeChecksum":52216.128053631277},"info":{"nEvals":3201}}
++{"case":"expensive/quad/sg/cc/b1/d10/L3/exp-unit-c1us-cached","op":"quad","values":[13.517000978082281],"exact":[13.517031865363135],"magnitude":13.517031865363135,"sumAbsCoeffs":1159,"sumGP":20486,"ints":{"nTG":"286","sumGP":"20486","tgHash":"6588d4c9e994a217"},"floats":{"nodeChecksum":48221.833197097032},"info":{"cacheInserts":10001}}
++{"case":"expensive/mivec/sg/cc/b1/d15/S5/n300/exp-unit-c1us","op":"quad","values":[49.487611262104728],"exact":[49.696065495647659],"magnitude":49.696065495647659,"sumAbsCoeffs":301,"sumGP":59016,"ints":{"nTG":"188","sumGP":"59016","tgHash":"3947dab7ea029274"},"floats":{"nodeChecksum":33799.376744565867},"info":{"nEvals":59016}}
++{"case":"expensive/mivec/dsg/cc/b1/d15/S5/n300/exp-unit-c1us","op":"quad","values":[49.487611262104309],"exact":[49.696065495647659],"magnitude":49.696065495647659,"sumAbsCoeffs":301,"sumGP":36133,"ints":{"nTG":"401","sumGP":"36133","tgHash":"48cd53904793baff"},"floats":{"nodeChecksum":59476.697661502425},"info":{"nEvals":36133}}
++{"case":"expensive/mivec/sg/cc/b1/d15/S5/n300/exp-unit-c1us-ramp","op":"quad","values":[49.487611262104728],"exact":[49.696065495647659],"magnitude":49.696065495647659,"sumAbsCoeffs":301,"sumGP":59016,"ints":{"nTG":"188","sumGP":"59016","tgHash":"3947dab7ea029274"},"floats":{"nodeChecksum":33799.376744565867},"info":{"nEvals":59016}}
++{"case":"expensive/interp/sg/cc/b1/d5/L4/exp-unit-c1us","op":"interp","values":[2.7309453893374016,5.6209744276024747,2.5012610826813182,3.5286252330752519,2.8845942989351943,3.1469803922638038,4.3544120118737251,2.1087038176507811],"exact":[2.7309503387637974,5.6212267452188174,2.5012563681112421,3.5286230380989796,2.8836631344859502,3.1468862562298132,4.3543986968611863,2.1093845243915315],"magnitude":12.182493960703473,"sumAbsCoeffs":321,"sumGP":15106,"ints":{"nTG":"126","sumGP":"15106","tgHash":"76baf7761fd746cc"},"floats":{"nodeChecksum":13160.681395970041},"info":{"nEvals":120848}}
++{"case":"expensive/interp/dsg/cc/b1/d5/L4/exp-unit-c1us","op":"interp","values":[2.7309453893374376,5.6209744276024951,2.501261082681201,3.5286252330751235,2.8845942989351356,3.1469803922638748,4.3544120118737677,2.1087038176508188],"exact":[2.7309503387637974,5.6212267452188174,2.5012563681112421,3.5286230380989796,2.8836631344859502,3.1468862562298132,4.3543986968611863,2.1093845243915315],"magnitude":12.182493960703473,"sumAbsCoeffs":321,"sumGP":5281,"ints":{"nTG":"126","sumGP":"5281","tgHash":"76baf7761fd746cc"},"floats":{"nodeChecksum":7381.9901138675277},"info":{"nEvals":42248}}
++{"case":"expensive/interp/sg/cc/b1/d5/L4/exp-unit-c1us-ramp","op":"interp","values":[2.7309453893374016,5.6209744276024747,2.5012610826813182,3.5286252330752519,2.8845942989351943,3.1469803922638038,4.3544120118737251,2.1087038176507811],"exact":[2.7309503387637974,5.6212267452188174,2.5012563681112421,3.5286230380989796,2.8836631344859502,3.1468862562298132,4.3543986968611863,2.1093845243915315],"magnitude":12.182493960703473,"sumAbsCoeffs":321,"sumGP":15106,"ints":{"nTG":"126","sumGP":"15106","tgHash":"76baf7761fd746cc"},"floats":{"nodeChecksum":13160.681395970041},"info":{"nEvals":120848}}
++{"case":"expensive/interplin/sg/equi/b1/d5/L4/exp-unit-c1us","op":"interplin","values":[2.7311802989460472,5.6218397604166865,2.5014893335386015,3.528962352899625,2.8839631729482633,3.1473131842170723,4.3548415904497135,2.1095268591383873],"exact":[2.7309503387637974,5.6212267452188174,2.5012563681112421,3.5286230380989796,2.8836631344859502,3.1468862562298132,4.3543986968611863,2.1093845243915315],"magnitude":12.182493960703473,"sumAbsCoeffs":321,"sumGP":15106,"ints":{"nTG":"126","sumGP":"15106","tgHash":"76baf7761fd746cc"},"floats":{"nodeChecksum":12948.75},"info":{"nEvals":32256}}
++{"case":"expensive/interplin/dsg/equi/b1/d5/L4/exp-unit-c1us","op":"interplin","values":[2.7311802989460721,5.6218397604168455,2.5014893335386104,3.5289623528995175,2.8839631729482909,3.1473131842170297,4.3548415904498441,2.1095268591384424],"exact":[2.7309503387637974,5.6212267452188174,2.5012563681112421,3.5286230380989796,2.8836631344859502,3.1468862562298132,4.3543986968611863,2.1093845243915315],"magnitude":12.182493960703473,"sumAbsCoeffs":321,"sumGP":5281,"ints":{"nTG":"126","sumGP":"5281","tgHash":"76baf7761fd746cc"},"floats":{"nodeChecksum":7189.21875},"info":{"nEvals":8016}}
++{"case":"expensive/interplin/sg/equi/b1/d5/L4/exp-unit-c1us-ramp","op":"interplin","values":[2.7311802989460472,5.6218397604166865,2.5014893335386015,3.528962352899625,2.8839631729482633,3.1473131842170723,4.3548415904497135,2.1095268591383873],"exact":[2.7309503387637974,5.6212267452188174,2.5012563681112421,3.5286230380989796,2.8836631344859502,3.1468862562298132,4.3543986968611863,2.1093845243915315],"magnitude":12.182493960703473,"sumAbsCoeffs":321,"sumGP":15106,"ints":{"nTG":"126","sumGP":"15106","tgHash":"76baf7761fd746cc"},"floats":{"nodeChecksum":12948.75},"info":{"nEvals":32256}}
+diff --git a/combigrid/perf/scripts/perf.py b/combigrid/perf/scripts/perf.py
+index 265c0d07e..4bab86615 100644
+--- a/combigrid/perf/scripts/perf.py
++++ b/combigrid/perf/scripts/perf.py
+@@ -563,6 +563,26 @@ def fmt_mem(kib):
+     return "-" if kib is None else f"{kib / 1024:.1f} MiB"
+ 
+ 
++# e2e case groups, summed separately (owner, WP-76): the cheap suite ranks the work packages; the
++# expensive source functions (expensive/, absolute seconds depend on the chosen cost level) and
++# their cached variants are reported beside it.
++CASE_GROUPS = ("suite", "expensive/", "expensive/ cached")
++
++
++def case_group(case):
++    if not case.startswith("expensive/"):
++        return "suite"
++    return "expensive/ cached" if case.endswith("-cached") else "expensive/"
++
++
++def group_sum_lines(sums_by_group, fmt_line):
++    """One line per group present; a lone cheap suite keeps the historical single line."""
++    present = [g for g in CASE_GROUPS if g in sums_by_group]
++    if present == ["suite"]:
++        return [fmt_line("", sums_by_group["suite"])]
++    return [fmt_line(f", group {g}", sums_by_group[g]) for g in present]
++
++
+ def cmd_run(args):
+     require_env(args)
+     bins, lib = snapshot_paths(args.snapshot)
+@@ -604,6 +624,12 @@ def cmd_run(args):
+               "|---|---|---|---|---|---|")
+     print("\n".join(rows))
+     if args.suite == "e2e":
++        sums = {}
++        for rec in records:
++            n, total = sums.get(case_group(rec["case"]), (0, 0.0))
++            sums[case_group(rec["case"])] = (n + 1, total + statistics.median(rec["metrics"]["total"]))
++        print("\n" + "\n".join(group_sum_lines(
++            sums, lambda label, v: f"Sum of medians (total{label}): {fmt_time(v[1])} ({v[0]} cases)")))
+         print(f"\npeak RSS: max resident set size of the case's process (one process per case, "
+               f"measured outside it by GNU time); process floor (`{EXES['e2e']} --list`, libraries "
+               f"only): {fmt_mem(floor)}")
+@@ -773,7 +799,7 @@ def cmd_ab(args):
+              "",
+              "| case | metric | A | B | speedup | 95% CI | verdict |",
+              "|---|---|---|---|---|---|---|"]
+-    total_a = total_b = 0.0
++    totals = {}  # group -> [sum of medians A, sum of medians B]
+     result_dev = []
+     for case in common:
+         recs_a, recs_b = data[("A", case)], data[("B", case)]
+@@ -786,8 +812,9 @@ def cmd_ab(args):
+             med_a = statistics.median([x for r in sa for x in r])
+             med_b = statistics.median([x for r in sb for x in r])
+             if metric in ("total", "call"):
+-                total_a += med_a
+-                total_b += med_b
++                group = totals.setdefault(case_group(case) if suite == "e2e" else "suite", [0.0, 0.0])
++                group[0] += med_a
++                group[1] += med_b
+             lines.append(f"| {case} | {metric} | {fmt_time(med_a)} | {fmt_time(med_b)} | "
+                          f"{point:.3f} | [{lo:.3f}, {hi:.3f}] | {verdict(lo, hi)} |")
+         if suite == "e2e":
+@@ -802,10 +829,12 @@ def cmd_ab(args):
+         lines.append(f"| {case} | {key} | (not in A) | {fmt_time(med_b)} | - | - | new case |")
+     for case in only_a:
+         lines.append(f"| {case} | - | present | (not in B) | - | - | removed case |")
+-    if total_b > 0:
+-        lines += ["", f"Sum of medians ({'call' if suite == 'micro' else 'total'}, common cases): "
+-                      f"A = {fmt_time(total_a)}, B = {fmt_time(total_b)}, saved = "
+-                      f"{fmt_time(total_a - total_b)} ({total_a / total_b:.3f}x)"]
++    totals = {g: v for g, v in totals.items() if v[1] > 0}
++    if totals:
++        metric_name = "call" if suite == "micro" else "total"
++        lines += [""] + group_sum_lines(totals, lambda label, v: (
++            f"Sum of medians ({metric_name}, common cases{label}): A = {fmt_time(v[0])}, "
++            f"B = {fmt_time(v[1])}, saved = {fmt_time(v[0] - v[1])} ({v[0] / v[1]:.3f}x)"))
+     if result_dev:
+         worst = max(result_dev, key=lambda t: t[2] / max(t[1], 1e-300))
+         lines.append(f"Result sanity (rel. error vs exact): worst growth in `{worst[0]}`: "

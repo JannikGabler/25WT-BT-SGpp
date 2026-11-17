@@ -186,6 +186,66 @@ inline std::vector<DataVector> randomPoints(const HyperCubeArea& domain, const s
 }
 
 /*******************************************************************************
+Expensive source functions (value of a cheap function + a fixed amount of burned work)
+*******************************************************************************/
+
+/**
+ * @brief Iterations of @ref burnChain for a nominal cost of 1 us and 100 us per evaluation.
+ *
+ * One iteration is one dependent FMA: its latency (4 cycles on Zen 3, Skylake and later) at the
+ * benchmarking machine's fixed 2.0 GHz gives 2.04 ns per iteration. Measured per evaluation of
+ * perf::expSum at d = 10 in a loop, 1 thread: 0.90 us (consecutive evaluations overlap out of
+ * order by about 100 ns) and 99.8 us; 16 threads with SMT: +1.5 % at 100 us. The cost is work,
+ * not time: it scales with the clock like real code and does not depend on the compiler (a
+ * latency chain cannot be reordered or vectorized).
+ */
+inline constexpr uint64_t COST_1US_ITERATIONS = 490;
+inline constexpr uint64_t COST_100US_ITERATIONS = 49000;
+
+/**
+ * @brief Burns @p iterations steps of a dependent FMA chain starting at @p seed.
+ *
+ * The empty asm statement makes every intermediate value opaque to the compiler, so the chain is
+ * neither folded, vectorized, reassociated nor removed; @c noinline keeps the loop identical in
+ * every caller. Requires an FMA instruction (-mfma / -march=native), else std::fma is a libm call.
+ */
+[[gnu::noinline]] inline void burnChain(double seed, const uint64_t iterations) {
+  for (uint64_t i = 0; i < iterations; i++) {
+    seed = std::fma(seed, 0.99999999, 1e-9);
+#if defined(__x86_64__) || defined(__i386__)
+    asm volatile("" : "+x"(seed));
+#elif defined(__aarch64__)
+    asm volatile("" : "+w"(seed));
+#else
+    asm volatile("" : "+r,m"(seed));
+#endif
+  }
+}
+
+/// @brief Distribution of the cost over the domain.
+enum class CostShape {
+  uniform,  ///< every evaluation burns the same work
+  ramp      ///< factor 0.1 + 2.7 x_0^2 on the unit cube (mean 1, range 0.1-2.8)
+};
+
+/**
+ * @brief Expensive source function on the unit cube: returns exactly @p F(x) (so the exact
+ * integrals and values of the cheap function stay valid) and burns @p ITERATIONS iterations of
+ * @ref burnChain beside it, scaled by the cost shape.
+ */
+template <double (*F)(const DataVector&), uint64_t ITERATIONS, CostShape SHAPE>
+double expensive(const DataVector& x) {
+  const double value = F(x);
+  uint64_t iterations = ITERATIONS;
+  if constexpr (SHAPE == CostShape::ramp) {
+    const double t = std::clamp(x[0], 0.0, 1.0);
+    iterations = static_cast<uint64_t>(static_cast<double>(ITERATIONS) * (0.1 + 2.7 * t * t));
+  }
+  burnChain(x[0], iterations);
+  return value;
+}
+
+/*******************************************************************************
 Multi-index sets for MIVecSGGenInstr (adaptive-like, not downwards closed)
 *******************************************************************************/
 

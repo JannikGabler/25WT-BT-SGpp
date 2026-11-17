@@ -1,0 +1,13 @@
+TSC 1.9962 GHz
+chain: 2.0423 ns per iteration (1 t)
+  chain      1 us target: iters      489 | 1 t     901.6 ns | 8 t    1014.5 ns-thread (eff 0.889) | 16 t    1029.7 ns-thread (eff 0.876, speedup vs 1 t 14.01x)
+  chain     10 us target: iters     4896 | 1 t    9900.1 ns | 8 t   10009.2 ns-thread (eff 0.989) | 16 t   10135.2 ns-thread (eff 0.977, speedup vs 1 t 15.63x)
+  chain    100 us target: iters    48963 | 1 t   99911.4 ns | 8 t   99963.2 ns-thread (eff 0.999) | 16 t  101410.2 ns-thread (eff 0.985, speedup vs 1 t 15.76x)
+mix: 12.5207 ns per iteration (1 t)
+  mix      1 us target: iters       79 | 1 t     830.7 ns | 8 t    1031.6 ns-thread (eff 0.805) | 16 t    1037.2 ns-thread (eff 0.801, speedup vs 1 t 12.81x)
+  mix     10 us target: iters      798 | 1 t    9828.8 ns | 8 t   10118.0 ns-thread (eff 0.971) | 16 t   10241.5 ns-thread (eff 0.960, speedup vs 1 t 15.36x)
+  mix    100 us target: iters     7986 | 1 t   99780.4 ns | 8 t  100884.9 ns-thread (eff 0.989) | 16 t  101828.8 ns-thread (eff 0.980, speedup vs 1 t 15.68x)
+spin: 0.5009 ns per iteration (1 t)
+  spin      1 us target: iters     1996 | 1 t    1104.1 ns | 8 t    1127.2 ns-thread (eff 0.980) | 16 t    1140.6 ns-thread (eff 0.968, speedup vs 1 t 15.49x)
+  spin     10 us target: iters    19962 | 1 t   10240.5 ns | 8 t   10225.2 ns-thread (eff 1.001) | 16 t   10375.8 ns-thread (eff 0.987, speedup vs 1 t 15.79x)
+  spin    100 us target: iters   199624 | 1 t  100190.5 ns | 8 t  100299.9 ns-thread (eff 0.999) | 16 t  101537.0 ns-thread (eff 0.987, speedup vs 1 t 15.79x)
