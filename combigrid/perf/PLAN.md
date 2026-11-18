@@ -155,8 +155,8 @@ interp/dsg 0.83 s · interplin/dsg 1.17 s. Peak memory geomean baseline → rp-5
 | – | WP-49 | DSG linear interpolation: global slot weights by sum factorization over the closure fibers (marking derived from the weight pass, thread-count-independent chunked sum) + small-call gate 256 → 640 visits (from WP-47) | accepted (2026-11-17, 59f2899e4; DSG `grid_storage_pinning` hashes re-pinned, owner) | measured: `interplin/dsg` d10 430 → 272 ms (1.58x), d8 1.54x, d5 1.50x, d2 1.13x; `^interplin/` 4.670 → 4.307 s (−0.363 s); memory geomean 0.995 (d10 MEM+ 15.3 → 15.9 MiB, d8 MEM− 12.8 → 12.3); refcheck WARN (known); evaluation set unchanged |
 | – | WP-76 | Judged suite: cases with expensive source functions — plan with open decisions → owner decides in-session → implementation (protected files: patch, owner applies + rehashes) (owner 2026-11-17; benchmark / measurement) | accepted (2026-11-17; commit pending; owner applied the patch + `noise-expensive.json` into `baseline/noise_e2e.json`) | measured: new group `expensive/` (D3: own sum line, ranking unchanged): 21 judged cases 17.77 s + 4 cached (not ranked) 1.05 s per pass (suite 36.65 → ≈ 55.5 s); 8-round A/A within noise; refcheck 145 OK + known WARN (reference 132 → 146); old cases A/A 1.008x (binary placement), memory 1.011; no baseline values (D4: history baseline / RP-1…5 / HEAD: 17 common cases 73.97 → 16.60 s, all from WP-03 generation; evaluation-bound operators ±1 %) |
 | – | WP-73 | Cross-call operator data cache: clear / read-only view on `SparseGridBase`, per-operator flags (`useCrossCallOperatorDataCache` + operator-specific options, defaults per operator) (owner 2026-11-17; feature / API) | accepted (2026-11-18; concurrency variant (a); owner: DSG quadrature default on → WP-82) | judged 0.999x, `expensive/` 1.001x, memory 1.005; repeated calls (flag on, 16 t): SG quad cc d2 L20 1.19x, DSG quad 1.03–1.15x; DSG `interplin` parallel-region bug fixed |
-| – | WP-82 | DSG quadrature: `QuadratureOptions` default on for `DeltasSparseGrid` (owner 2026-11-18; behavior change agreed) | in progress (prompt 2026-11-18; before RP-6) | judged neutral (one call per process; memory +0.4–2 MiB retained per grid at most); repeated DSG quad calls 1.03–1.15x at 16 t |
-| – | RP-6 | Re-profiling after WP-56 / WP-49 (+ WP-73 state; cumulative memory; SG interp basis-value share; first profile of the `expensive/` group: load balance, WP-56 shift on mivec/sg; re-rank) | ready (after WP-82; rule 7: 2 accepted optimizations since RP-5, interplin/dsg ≥ 1.3x) | – |
+| – | WP-82 | DSG quadrature: cross-call cache on by default via the new `DeltasSparseGridQuadratureOptions` (`QuadratureOptions` = `SparseGrid` only) (owner 2026-11-18; behavior / API change agreed) | accepted (2026-11-18; large-index retention: owner option (a), keep as documented) | measured: judged 1.000x, `expensive/` 0.999x, memory 1.004 (0 flags); repeated DSG quad calls 16 t 1.04–1.31x (equi d3 L14 1.311x, b1 d15 L5 1.308x, cc d5 L10 1.043x); retained index 0.9–17.8 MiB on e2e grids, cc d2 L20 64 MiB |
+| – | RP-6 | Re-profiling after WP-56 / WP-49 (+ WP-73 / WP-82 state; cumulative memory; SG interp basis-value share; first profile of the `expensive/` group: load balance, WP-56 shift on mivec/sg; re-rank) | in progress (prompt 2026-11-18; rule 7: 2 accepted optimizations since RP-5, interplin/dsg ≥ 1.3x) | – |
 | – | WP-79 | Textbook operator variants: naive per-TG CT for `quadrature`, `interpolate`, `interpolateLinear` on `SparseGrid` (standard 1D / tensor-product solvers, no optimizations; no DSG variants; scalar / vector decided in-session, one core per operator; helpers in the operator's `.cpp`; naming decided in-session; C++ + Python) (owner 2026-11-17; feature / API) | ready (owner 2026-11-17: after RP-6, before the next optimization WP) | none (understandability; test oracles); judged neutral |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point of a `SparseGrid` / `DeltasSparseGrid` (cache warm-up, testing; any source function; name, result form, dedup mechanism decided in-session; C++ + Python) (owner 2026-11-17; feature / API) | ready · unranked (owner places it) | none judged; warm-up avoids the SG operators' duplicate first-call evaluations |
 | – | WP-81 | Explanation / visualization foundations: exploration — information helpers, string representations (console / Jupyter), plots (TGs, SGs, TG tableaus with CT coefficients, source functions and operator results on TGs / SGs); requirements worked out with the owner in-session → plan + implementation WPs (owner 2026-11-17) | ready · unranked (owner places it) | none (exploration; no library change) |
@@ -317,6 +317,10 @@ cache-default WP. New WP-77 (SG / mivec TG-loop load balance, rank 3, RP-6 sizes
 (cache overhead at 1 µs × 16 t, owner places it); WP-59 also covers the SG `interplin` schedule;
 WP-74 gets the `interplin/dsg` d5 efficiency (0.48). WP-73 next, then RP-6. A 5-round A/B of the
 group ≈ 7 min (full e2e A/B now ≈ 25–30 min).
+After WP-73 / WP-82 (accepted 2026-11-18; features / defaults, judged 0.999x / 1.000x, do not count
+for rule 7): cross-call cache defaults SG quad off, DSG quad + DSG interpolations on (DSG quad via
+`DeltasSparseGridQuadratureOptions`); large DSG quad indices stay retained (owner (a)). WP-60 also
+covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP-6, then WP-79.
 
 ---
 
@@ -2975,6 +2979,11 @@ group ≈ 7 min (full e2e A/B now ≈ 25–30 min).
   1D weights + `CTCoeffTrie`), built through `tools::cross_call::getOperatorData` and cacheable via
   `QuadratureOptions` (default on after WP-82) → the shared weight rows go into that index; with the
   cache on, the gain applies to first calls only. `memoryBytes()` must stay correct.
+- **From WP-82** (accepted 2026-11-18): the DSG option type is now `DeltasSparseGridQuadratureOptions`
+  (default on). The serial index build is ≈ 20 % of a 16 t call on equi d3 L14 / b1 d15 L5 (4 ms;
+  first calls and the `off` path) → also parallelize `comp1DWeights` per (dim, level). The index keeps
+  the full 1D rule of every level (cc d2 L20: 64 MiB retained; owner: keep, documented) → sharing rows
+  with the unit table also reduces retained memory; report `getCrossCallOperatorDataCacheBytes()`.
 - **Dependencies**: WP-56 accepted. **Status**: ready (low).
 
 ## WP-61 — SG quadrature: bitwise thread-count-independent results (ordered per-TG sums) (from WP-56)
@@ -3412,7 +3421,7 @@ the judged suite.
   benchmark-binary placement caveat (WP-76 A/A of the old cases 1.008x, `exp` quad / mivec up to
   1.080).
 - **Memory**: cumulative baseline → rp-6 per case; largest remaining peaks.
-- **Dependencies**: WP-49, WP-73 and WP-82 accepted and committed. **Status**: ready (after WP-82).
+- **Dependencies**: WP-49, WP-73 and WP-82 accepted and committed. **Status**: in progress (prompt 2026-11-18).
 
 ## WP-74 — DSG linear interpolation: fused evaluation + vectorized fiber transform (from WP-49)
 - **Source**: WP-49 summary, profile shift / follow-ups.
@@ -3635,8 +3644,8 @@ the judged suite.
 - **Location**: `operators/quadrature/quadrature_options.hpp` (`QuadratureOptions`, today one struct
   with `useCrossCallOperatorDataCache = false` for both grid types), DSG quadrature overloads
   (`operators/quadrature/deltas_sparse_grid_quadrature.{hpp,cpp}`), SWIG defaults (`combigrid.i`),
-  Doxygen `@note`s, `module-reference.md`, CLAUDE.md §2 (cache paragraph: "`QuadratureOptions`
-  default off"), `python-bindings.md`, WP-73 tests that assert the defaults
+  Doxygen `@note`s, `module-reference.md` (cross-call cache paragraph: defaults),
+  `python-bindings.md`, WP-73 tests that assert the defaults
   (`tests/operators/cross_call_operator_data_test.cpp`).
 - **Work**: make the default **on for `DeltasSparseGrid` quadrature, off for `SparseGrid`
   quadrature** (SG weight table: cc d2 L20 = 32 MiB retained → stays off). The mechanism is the
@@ -3657,7 +3666,8 @@ the judged suite.
   (or the full suite if quick enough), memory reported; refcheck = before.
 - **Functional change**: agreed (owner 2026-11-18: DSG quadrature retains its per-grid data by
   default). Anything beyond → BLOCKED with options.
-- **Dependencies**: WP-73 accepted and committed. **Status**: in progress (prompt 2026-11-18; before RP-6).
+- **Dependencies**: WP-73 accepted and committed. **Status**: accepted (2026-11-18; owner: large-index
+  retention (cc d2 L20 64 MiB) kept as documented, option (a); no cap / dimension rule).
 
 ## Code-hygiene backlog (owner 2026-11-15; input of WP-55, then clean-up WPs)
 Every reported, not yet completed hygiene / clean-up finding goes here (the master appends new ones
@@ -3725,6 +3735,8 @@ from summaries; WP-55 verifies them; no piecemeal fixes before the clean-up WPs)
   (call `getTensorGrids`, removed by WP-18; results only, not code); `TODO: Document` in
   `operators/quadrature/quadrature.hpp` / `miscellaneous/data_contexts/quadrature_context.hpp`
   (one removed by WP-73; → G).
+- **J. From WP-82**: stale `results/WP-73/python_checks.py` / `results/WP-73/tsan_driver.cpp` pass
+  `QuadratureOptions` to the DSG quadrature (now `DeltasSparseGridQuadratureOptions`; results only).
 - **E. Owner files / docs outdated** (report to the owner; STATUS): CLAUDE.md §5 banner claim (B1);
   ANALYSIS.md WP-29c symbol names; SG++ install docs (optional Boost ≥ 1.81 / xxHash ≥ 0.8, LMDB, CI
   `liblmdb-dev`).

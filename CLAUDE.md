@@ -8,7 +8,7 @@ Read on demand:
 
 | Topic | File |
 |---|---|
-| Directory layout, key classes, design rationale, vocabulary, base dependencies, known limitations, thesis discrepancies | [combigrid/claude/module-reference.md](combigrid/claude/module-reference.md) |
+| Directory layout, key classes (incl. DSG operators, cross-call operator data cache, source-function caching), design rationale, vocabulary, base dependencies, known limitations, thesis discrepancies | [combigrid/claude/module-reference.md](combigrid/claude/module-reference.md) |
 | SCons internals, flag sources, optional deps (Eigen/Armadillo/Dakota), test options, CI matrix, other pointers | [combigrid/claude/build-and-ci.md](combigrid/claude/build-and-ci.md) |
 | Python bindings (pysgpp) | [combigrid/claude/python-bindings.md](combigrid/claude/python-bindings.md) |
 | Thesis (math, proofs, algorithms, benchmarks) | [combigrid/claude/bachelor-thesis/README.md](combigrid/claude/bachelor-thesis/README.md) |
@@ -40,34 +40,25 @@ for custom / adaptive MI sets) → `SparseGrid` (struct of arrays in `SparseGrid
 [0,1]; tensor grid i is a view `TensorGridCTDataView {mi, coefficient, tensorGrid}` with domain or unit
 nodes: `getDomainTensorGrid(i)` / `getUnitTensorGrid(i)`, ranges `domainTensorGrids()` /
 `unitTensorGrids()`, no default iteration; `toTensorGridCTData()` copies)
-→ operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid`
-(nested nodes only; Python-bound with its operators since WP-50) + its `quadrature` overload
-evaluates every grid point once; its `interpolateLinear` overloads (WP-47) every distinct corner
-once per call (WP-49: corner weights by sum factorization over the closure, thread-count
-independent); its `interpolate` overloads (WP-45) every grid point
-once per call, weighted with global weights from the 1D basis values
-(`InterpolationMethod::basisValues`) through the weighted-sum kernel it shares with the DSG
-quadrature (`tools::dsg_weighted_sum`; thread-count independent). Cross-call operator data cache
-(WP-73, `SparseGridBase`): query-independent operator data kept across calls, controlled per
-call by the operator's options (last, defaulted argument: `QuadratureOptions` default off,
-`GlobalInterpolationOptions` / `LinearInterpolationOptions` for the DSG interpolations default
-on; field `useCrossCallOperatorDataCache`; SG interpolations keep nothing); public
-`clearCrossCallOperatorDataCache()`, `getCrossCallOperatorDataCacheEntries()`,
-`getCrossCallOperatorDataCacheBytes()` (also Python). User functions are wrapped in
-`SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators on both grid types, also in Python);
-weights, basis values and interpolation cells live on [0,1]^d (`getUnitNodeTable()`); the source
-function is evaluated at the domain nodes (`getDomainNodeTable()`: the unit nodes mapped onto the
-`setDomain()` domain with `tools::mapToDomain` = `std::fma`, bitwise the points of all operators). Optional caching (WP-26): `CachedSourceFunc`
-/ `CachedVectorSourceFunc` (a `SourceFunc` / `VectorSourceFunc` whose callable looks every point up
-in a shared `SourceFuncCache`; `SourceFuncCacheConfig{.memoryLimit, .nShards, .policy, .file,
-.storageSpaceLimit}`, `statistics()`, `flush()`, `clear(deletePersistentFile)`; Python too); always
-compiled, but works only if Boost ≥ 1.81 and xxHash ≥ 0.8 are found at build time, else its
-constructors throw `base::dependency_exception`. Policies (WP-28): `CachePolicy::MemoryOnly`
-(default), `TemporaryStorage` (values beyond memory go to an unnamed LMDB file, deleted with the
-process), `PersistentStorage` (LMDB file `file` loaded at creation, written at every operator end);
-both need LMDB (linked by SCons if found). `CachePolicy::Adaptive` (WP-27) switches itself between
-None / MemoryOnly (start) / TemporaryStorage from sampled costs (`CacheStatistics::adaptiveMode`;
-factors and windows `ADAPTIVE_*` in `constants.hpp`; internals `miscellaneous/caching/adaptive/`).
+→ operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid` (nested nodes
+only) has its own overloads of all three operators that evaluate every grid point / distinct corner
+once per call (thread-count independent); the `SparseGrid` operators implement the standard CT.
+User functions are wrapped in `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`); weights, basis values
+and interpolation cells live on [0,1]^d (`getUnitNodeTable()`), the source function is evaluated at
+the domain nodes (`getDomainNodeTable()`, mapped with `tools::mapToDomain`, bitwise the points of
+all operators). Everything public is also in Python. Details of the following in the module
+reference:
+- **Cross-call operator data cache** (`SparseGridBase`): per-grid operator data kept across calls,
+  controlled by the operator's options (last, defaulted argument, field
+  `useCrossCallOperatorDataCache`; default on for the three DSG operators, off for `SparseGrid`
+  quadrature: `QuadratureOptions` vs. `DeltasSparseGridQuadratureOptions`; SG interpolations keep
+  nothing); public `clearCrossCallOperatorDataCache()`,
+  `getCrossCallOperatorDataCacheEntries()`, `getCrossCallOperatorDataCacheBytes()`.
+- **Source-function caching**: `CachedSourceFunc` / `CachedVectorSourceFunc` look points up in a
+  shared `SourceFuncCache` (`SourceFuncCacheConfig`; policies `MemoryOnly` (default),
+  `TemporaryStorage` / `PersistentStorage` (LMDB), `Adaptive`). Needs Boost ≥ 1.81 + xxHash ≥ 0.8 at
+  build time (LMDB for the storage policies), else the constructors throw
+  `base::dependency_exception`.
 
 ```cpp
 CompleteSGGenInstr genInstr(/*maxLvl=*/10, /*nDim=*/3);
@@ -158,7 +149,7 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - **Declarations / definitions** (guideline): documented declaration in the header, definition in
   the `.cpp` (comments explain complex parts, not a copy of the docs). Header-inline only where
   measurably faster even with LTO.
-- **One type per file** avoid multiple or nested structs, classes, etc. in a single file. 
+- **One type per file** avoid multiple or nested structs, classes, etc. in a single file.
 - **Methods > 30 lines** get decomposed (rare exceptions for optimization).
 - **Errors**: `assert` for internal invariants; otherwise throw an exception
 - **Parallelism**: OpenMP in the operator drivers and internally (gated by `constants.hpp`).
@@ -174,48 +165,25 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - Zero-coefficient tensor grids are never stored in a `SparseGrid` (`CompleteSGGenInstr` and
   `MIVecSGGenInstr`); a `DeltasSparseGrid` keeps every MI of the downwards closure.
 - `SparseGrid::operator==` is O(nTG²) — avoid in loops.
-- Cross-call operator data cache (`misc::CrossCallOperatorDataCache`, internal accessor
-  `getCrossCallOperatorDataCache()`): operators touch it only with their option on (off = data
-  built per call, cache neither read nor written; no lock on that path); entries keyed by (type,
-  key string), stored types report `memoryBytes()`; a new operator with per-grid data goes through
-  `tools::cross_call::getOperatorData` (counts builds for tests). Results must not depend on the
-  option. Objects are handed out as `shared_ptr` (a concurrent clear keeps them alive): hold the
-  pointer for the whole call.
+- Cross-call operator data cache: an operator touches it only with its option on (off = no read,
+  no write, no lock); per-grid data of a new operator goes through
+  `tools::cross_call::getOperatorData` and reports `memoryBytes()`; results must not depend on the
+  option; hold the returned `shared_ptr` for the whole call.
 - Orphaned OpenMP worksharing (`#pragma omp for` outside the function's own `parallel`) must not
-  run on a serial path that skips the operator's parallel region: it would bind to a parallel
-  region of the caller and split the call's work across the caller's team (DSG
-  `interpolateLinear` had this bug until WP-73).
+  run on a serial path that skips the operator's parallel region: it would bind to a caller's
+  parallel region and split the call's work across the caller's team.
 - `.lint` / `.os` / `.gcda` files without a matching source are stale artifacts — do not resurrect
   sources from them.
 - Combigrid is only built in CI's **linux-full** job.
 - The thesis predates refactors: never copy its code without checking the API (code wins).
-- Source-function cache: one `SourceFuncCache` per function (m fixed by the first cached function,
-  another m throws; points of another d bypass it, with the storage policies the operator then
-  throws); NaN values are not stored; it only pays for functions ≳ 0.3 µs (the judged suite uses
-  plain `SourceFunc`, except the unranked `expensive/…-cached` e2e cases); the disk tier only for much more expensive ones (LMDB writes ≈ 1–5 µs per
-  new point, serialized). A persistent file is identified by d and m only (no function id), locked
-  exclusively, never corrupted by program crashes; damaged / mismatching files throw
-  `base::file_exception` (`CacheFileException`: base exceptions keep only the `const char*`,
-  so composed messages need it). Its keys are the user-domain bit
-  patterns: any new unit → domain mapping must use `tools::mapToDomain`. The end-of-operator hook
-  is the virtual `finishOperatorCall()` of `SourceFunc` / `VectorSourceFunc` (virtual destructors).
-  Copying a subclass object into the base class (slicing: would lose the override) does not
-  compile (deleted constrained converting constructor / assignment, `tools::StrictSubclassOf`);
-  pass cached functions by reference. These special members are hidden from SWIG (`#ifndef SWIG`).
-- Optional libraries are detected only in
-  [tools/defines/dependencies_defines.hpp](combigrid/src/sgpp/combigrid/tools/defines/dependencies_defines.hpp)
-  (`__has_include` + version macros; the only SCons code is `detectLMDB`, which links LMDB and
-  defines `SGPP_COMBIGRID_LMDB_LINKED`): code that needs them tests its macro
-  (`SGPP_COMBIGRID_COMPILE_BOOST_POINT_VALUE_TABLE`, `SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE`,
-  only in `.cpp` / internal files: it includes `xxhash.h` / `lmdb.h`; else `..._EXCEPTION` holds the
-  reason). Public classes stay unconditional and throw without the library; public headers only
-  forward-declare the table / store (no library header, no configuration-dependent layout; check:
-  `combigrid/perf/results/WP-40/check_public_headers.sh`). Force the fallbacks with
-  `CPPFLAGS=-DSGPP_COMBIGRID_DISABLE_BOOST_POINT_TABLE` / `-DSGPP_COMBIGRID_DISABLE_LMDB_STORE`.
-- Adaptive cache policy: the mode word is read per evaluation; None leaves only by probes at the
-  end-of-operator hook; one point in P is timed with `misc::adaptive_caching::CostTimer` (rdtscp;
-  `steady_clock` costs 1.9 µs on the owner's laptop: HPET clocksource). Tests force timing of every
-  evaluation with `CostTimer::overrideSamplingShift(0)` and test the rules with injected costs.
+- Source-function cache: keys are the user-domain bit patterns → any new unit → domain mapping
+  must use `tools::mapToDomain`; every operator calls the virtual `finishOperatorCall()` of its
+  source function once at its end; cached functions are passed by reference (slicing into the base
+  class does not compile). It pays only for functions ≳ 0.3 µs.
+- Optional libraries (Boost.Unordered, xxHash, LMDB) are detected only in
+  [tools/defines/dependencies_defines.hpp](combigrid/src/sgpp/combigrid/tools/defines/dependencies_defines.hpp);
+  public classes stay unconditional and throw without them, public headers include no library
+  header (details, fallback flags and the header check: build-and-ci.md).
 - Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
   on `MIVecSGGenInstr`), dimension-wise boundary offsets, Leja nodes.
 

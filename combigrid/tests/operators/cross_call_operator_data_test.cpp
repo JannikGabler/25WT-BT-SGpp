@@ -47,6 +47,7 @@ using sgpp::base::DataVector;
 using sgpp::combigrid::CompleteSGGenInstr;
 using sgpp::combigrid::CrossCallOperatorDataInfo;
 using sgpp::combigrid::DeltasSparseGrid;
+using sgpp::combigrid::DeltasSparseGridQuadratureOptions;
 using sgpp::combigrid::GlobalInterpolationOptions;
 using sgpp::combigrid::LinearInterpolationOptions;
 using sgpp::combigrid::QuadratureOptions;
@@ -95,6 +96,7 @@ std::vector<uint64_t> cachedOperatorResults(const SparseGrid& sg, const DeltasSp
   const VectorSourceFunc vecFunc(vectorFunc, 2);
   const DataVector point = queryPoint(sg.nDim());
   const QuadratureOptions quad{.useCrossCallOperatorDataCache = useCache};
+  const DeltasSparseGridQuadratureOptions dsgQuad{.useCrossCallOperatorDataCache = useCache};
   const GlobalInterpolationOptions interp{.useCrossCallOperatorDataCache = useCache};
   const LinearInterpolationOptions lin{.useCrossCallOperatorDataCache = useCache};
   std::vector<uint64_t> results;
@@ -104,8 +106,8 @@ std::vector<uint64_t> cachedOperatorResults(const SparseGrid& sg, const DeltasSp
 
   results.push_back(bits(sgpp::combigrid::quadrature(func, sg, quad)));
   addAll(sgpp::combigrid::quadrature(vecFunc, sg, quad));
-  results.push_back(bits(sgpp::combigrid::quadrature(func, dsg, quad)));
-  addAll(sgpp::combigrid::quadrature(vecFunc, dsg, quad));
+  results.push_back(bits(sgpp::combigrid::quadrature(func, dsg, dsgQuad)));
+  addAll(sgpp::combigrid::quadrature(vecFunc, dsg, dsgQuad));
   results.push_back(bits(sgpp::combigrid::interpolate(func, point, dsg, interp)));
   addAll(sgpp::combigrid::interpolate(vecFunc, point, dsg, interp));
   results.push_back(bits(sgpp::combigrid::interpolateLinear(func, point, dsg, lin)));
@@ -137,24 +139,44 @@ class OneThread {
 
 BOOST_AUTO_TEST_SUITE(cross_call_operator_data)
 
-BOOST_AUTO_TEST_CASE(Defaults_Keep_Only_The_DSG_Interpolation_Indices) {
+BOOST_AUTO_TEST_CASE(Defaults_Keep_Only_The_DSG_Operator_Data) {
+  // The option types carry the defaults: SparseGrid quadrature off, DSG operators on
+  BOOST_CHECK(!QuadratureOptions().useCrossCallOperatorDataCache);
+  BOOST_CHECK(DeltasSparseGridQuadratureOptions().useCrossCallOperatorDataCache);
+  BOOST_CHECK(GlobalInterpolationOptions().useCrossCallOperatorDataCache);
+  BOOST_CHECK(LinearInterpolationOptions().useCrossCallOperatorDataCache);
+
   const CompleteSGGenInstr genInstr = makeGenInstr(true, 3, 4);
   const SparseGrid sg(genInstr);
   const DeltasSparseGrid dsg(genInstr);
   const SourceFunc func(scalarFunc);
+  const VectorSourceFunc vecFunc(vectorFunc, 2);
   const DataVector point = queryPoint(3);
 
   sgpp::combigrid::quadrature(func, sg);
+  sgpp::combigrid::quadrature(vecFunc, sg);
   sgpp::combigrid::interpolate(func, point, sg);
   sgpp::combigrid::interpolateLinear(func, point, sg);
   BOOST_CHECK(sg.getCrossCallOperatorDataCacheEntries().empty());
   BOOST_CHECK_EQUAL(sg.getCrossCallOperatorDataCacheBytes(), 0u);
 
+  // DSG quadrature: one build shared by repeated scalar and vector-valued calls
+  const size_t before = nOperatorDataBuilds();
   sgpp::combigrid::quadrature(func, dsg);
-  BOOST_CHECK(dsg.getCrossCallOperatorDataCacheEntries().empty());
+  sgpp::combigrid::quadrature(func, dsg);
+  sgpp::combigrid::quadrature(vecFunc, dsg);
+  std::vector<double> span(2);
+  sgpp::combigrid::quadrature(vecFunc, dsg, std::span<double>(span));
+  BOOST_CHECK_EQUAL(nOperatorDataBuilds() - before, 1u);
+  const std::vector<std::string> quadOnly{"quadrature (DeltasSparseGrid)"};
+  const std::vector<std::string> afterQuad = operatorNames(dsg);
+  BOOST_CHECK_EQUAL_COLLECTIONS(afterQuad.begin(), afterQuad.end(), quadOnly.begin(),
+                                quadOnly.end());
+
   sgpp::combigrid::interpolate(func, point, dsg);
   sgpp::combigrid::interpolateLinear(func, point, dsg);
-  const std::vector<std::string> expected{"interpolate (DeltasSparseGrid)",
+  const std::vector<std::string> expected{"quadrature (DeltasSparseGrid)",
+                                          "interpolate (DeltasSparseGrid)",
                                           "interpolateLinear (DeltasSparseGrid)"};
   const std::vector<std::string> names = operatorNames(dsg);
   BOOST_CHECK_EQUAL_COLLECTIONS(names.begin(), names.end(), expected.begin(), expected.end());
@@ -227,6 +249,35 @@ BOOST_AUTO_TEST_CASE(Results_Bitwise_Equal_With_And_Without_Reuse) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(DSG_Quadrature_Default_Equals_Both_Option_Values) {
+  // Repeated DSG quadrature calls with the default options (scalar and vector-valued) give
+  // bitwise the results of explicit calls with reuse off and on, on boundary offsets 0 and 1.
+  const OneThread oneThread;
+  const SourceFunc func(scalarFunc);
+  const VectorSourceFunc vecFunc(vectorFunc, 2);
+  for (const sgpp::combigrid::LvlType boundary : {0, 1}) {
+    for (const size_t nDim : {1, 3}) {
+      CompleteSGGenInstr genInstr = makeGenInstr(true, nDim, 4);
+      genInstr.setBoundaryLevelOffset(boundary);
+      const DeltasSparseGrid dsg(genInstr);
+      const DeltasSparseGrid offGrid(genInstr);
+      const uint64_t off = bits(
+          sgpp::combigrid::quadrature(func, offGrid, {.useCrossCallOperatorDataCache = false}));
+      const DataVector offVec =
+          sgpp::combigrid::quadrature(vecFunc, offGrid, {.useCrossCallOperatorDataCache = false});
+      for (int call = 0; call < 3; call++) {
+        BOOST_CHECK_EQUAL(bits(sgpp::combigrid::quadrature(func, dsg)), off);
+        BOOST_CHECK_EQUAL(
+            bits(sgpp::combigrid::quadrature(func, dsg, {.useCrossCallOperatorDataCache = true})),
+            off);
+        const DataVector vec = sgpp::combigrid::quadrature(vecFunc, dsg);
+        BOOST_REQUIRE_EQUAL(vec.size(), 2u);
+        for (size_t k = 0; k < 2; k++) BOOST_CHECK_EQUAL(bits(vec[k]), bits(offVec[k]));
+      }
+    }
+  }
+}
+
 BOOST_AUTO_TEST_CASE(Clear_Frees_And_Next_Call_Rebuilds) {
   const CompleteSGGenInstr genInstr = makeGenInstr(true, 3, 3);
   const SparseGrid sg(genInstr);
@@ -259,18 +310,24 @@ BOOST_AUTO_TEST_CASE(Equality_Ignores_The_Cache) {
 }
 
 BOOST_AUTO_TEST_CASE(Concurrent_Calls_Clears_And_Views) {
-  // Operator calls (DSG interpolation, cached index) while other threads clear and view the cache:
-  // every result equals the serial one (the DSG interpolations do not depend on the number of
-  // threads); the sanitizers check that no index is freed while a call uses it.
+  // Operator calls (DSG interpolations and quadrature, cached index) while other threads clear and
+  // view the cache: every result equals the serial one (the DSG interpolations do not depend on the
+  // number of threads, the quadrature up to round-off); the sanitizers check that no index is
+  // freed while a call uses it.
   const CompleteSGGenInstr genInstr = makeGenInstr(false, 3, 4);
   const DeltasSparseGrid dsg(genInstr);
   const SourceFunc func(scalarFunc);
   const DataVector point = queryPoint(3);
   const double expectedLin = sgpp::combigrid::interpolateLinear(func, point, dsg);
   const double expectedGlobal = sgpp::combigrid::interpolate(func, point, dsg);
+  const double expectedQuad = sgpp::combigrid::quadrature(func, dsg);
+  const auto close = [](const double value, const double expected) {
+    return std::abs(value - expected) <= 1e-13 * (1.0 + std::abs(expected));
+  };
   std::atomic<int> nWrong{0};
   std::atomic<int> nWrongLin{0};
   std::atomic<int> nWrongGlobal{0};
+  std::atomic<int> nWrongQuad{0};
 
 #pragma omp parallel num_threads(8)
   for (int i = 0; i < 200; i++) {
@@ -283,20 +340,21 @@ BOOST_AUTO_TEST_CASE(Concurrent_Calls_Clears_And_Views) {
         total += info.bytes;
       }
       if (total > (size_t{1} << 30)) nWrong++;
+    } else if (task >= 6) {
+      if (!close(sgpp::combigrid::quadrature(func, dsg), expectedQuad)) nWrongQuad++;
     } else if (task % 2 == 0) {
       if (bits(sgpp::combigrid::interpolateLinear(func, point, dsg)) != bits(expectedLin))
         nWrongLin++;
     } else {
-      const double value = sgpp::combigrid::interpolate(func, point, dsg);
-      if (std::abs(value - expectedGlobal) > 1e-13 * (1.0 + std::abs(expectedGlobal)))
-        nWrongGlobal++;
+      if (!close(sgpp::combigrid::interpolate(func, point, dsg), expectedGlobal)) nWrongGlobal++;
     }
   }
 
   BOOST_CHECK_EQUAL(nWrong.load(), 0);
   BOOST_CHECK_EQUAL(nWrongLin.load(), 0);
   BOOST_CHECK_EQUAL(nWrongGlobal.load(), 0);
-  BOOST_CHECK_LE(operatorNames(dsg).size(), 2u);
+  BOOST_CHECK_EQUAL(nWrongQuad.load(), 0);
+  BOOST_CHECK_LE(operatorNames(dsg).size(), 3u);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

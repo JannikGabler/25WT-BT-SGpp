@@ -1274,9 +1274,10 @@ void addExpensiveVectorQuad(Suite& suite, const std::string& gridName, const siz
  * Data that an operator builds independently of the query (per grid) and could keep across calls:
  * micro/crosscall/<operator>/build/<cfg> builds it once (counter data_heap_bytes: its heap
  * memory), micro/crosscall/<operator>/call/<cfg> is one operator call with the default options
- * (DSG interpolation: with the data kept on the grid, as after the first call) and
- * micro/crosscall/<operator>/call_flipped/<cfg> one call with useCrossCallOperatorDataCache
- * flipped (quadrature: reused from the grid; DSG interpolation: built per call). Operators:
+ * (DSG operators: with the data kept on the grid, as after the first call; SparseGrid quadrature:
+ * built per call) and micro/crosscall/<operator>/call_flipped/<cfg> one call with
+ * useCrossCallOperatorDataCache flipped (SparseGrid quadrature: reused from the grid; DSG
+ * operators: built per call). Operators:
  * quad_sg (1D weight table),
  * quad_dsg (1D weights in delta order + coefficient trie), interp_dsg / interplin_dsg (the
  * operators' indices). Integrands: perf::expSum (quadrature), perf::cosProd (interpolation).
@@ -1340,8 +1341,9 @@ void addCrossCallQuadDSG(Suite& suite, const std::string& nodes, const LvlType b
             cg::misc::CTCoeffTrie(dsg.getLevels().getView(), dsg.getCoefficients()));
       },
       [](const DeltasSparseGrid& dsg, const DataVector&, const bool flipped) {
-        return cg::quadrature(SourceFunc(perf::expSum), dsg,
-                              cg::QuadratureOptions{.useCrossCallOperatorDataCache = flipped});
+        return cg::quadrature(
+            SourceFunc(perf::expSum), dsg,
+            cg::DeltasSparseGridQuadratureOptions{.useCrossCallOperatorDataCache = !flipped});
       },
       true);
 }

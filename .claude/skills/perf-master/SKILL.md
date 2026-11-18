@@ -11,7 +11,10 @@ matters lives in files, so you can be restarted from scratch at any time.
 
 ## What you read (keep the context small)
 
-1. `combigrid/perf/STATUS.md` — always, completely.
+1. `combigrid/perf/STATUS.md` — always, completely (open WPs, next action, decisions, rules).
+   `combigrid/perf/LESSONS.md` (do-not-retry list, measurement notes) — when writing a prompt or
+   judging a summary; `combigrid/perf/HISTORY.md` (finished WPs + results, log archive) — only
+   when past results are needed.
 2. Summaries in `combigrid/perf/summaries/` newer than "Last processed" in STATUS.md — completely.
 3. `combigrid/perf/PLAN.md` — only the entries you need (the next WP, entries a summary affects).
 4. `combigrid/perf/README.md` / `ANALYSIS.md` — only sections referenced by PLAN/STATUS, rarely.
@@ -28,13 +31,14 @@ make finding them part of a work package.
    - Determine the owner's decision: ask the owner unless it is evident (e.g. the commit message
      says "accept WP-NN"; a summary committed without the code changes means rejected). Never
      assume acceptance.
-   - Accepted: WP status `accepted`, result column = headline gain (e.g. "quad/sg d10: 2.1x"),
-     plus the peak-memory change if the summary reports `MEM+`/`MEM-` cases; add the commit hash
-     to the log.
-   - Rejected: status `rejected`; add a "Do not retry" line: `WP-NN <idea>: <numbers>, <why>`.
+   - Accepted: WP status `accepted`; move its row from STATUS.md's table to HISTORY.md's table
+     with result column = headline gain (e.g. "quad/sg d10: 2.1x"), plus the peak-memory change
+     if the summary reports `MEM+`/`MEM-` cases, and the commit hash.
+   - Rejected: status `rejected` (row to HISTORY.md); add a "Do not retry" line to LESSONS.md:
+     `WP-NN <idea>: <numbers>, <why>`.
      Make sure the code was reverted (`git status --short` clean except summaries/results; the
      owner uses `perf.py reject --apply`). Remind the owner to commit the summary.
-   - Every "Attempts not kept" entry of any summary also becomes a "Do not retry" line.
+   - Every "Attempts not kept" entry of any summary also becomes a "Do not retry" line (LESSONS.md).
    - `BLOCKED`: add the decision to "Open decisions for the owner" with the options from the
      summary; status `blocked`.
    - `NO-GAIN`: as rejected once the owner confirmed.
@@ -57,10 +61,11 @@ make finding them part of a work package.
    gain) and wait. Runtime ranks the plan; peak memory (from `ab e2e` reports) is reported to the
    owner with every runtime change and weighed in decisions; memory reduction is a valid
    secondary goal.
-5. **Update the files**: STATUS.md (table, next action, open decisions, do-not-retry, re-profiling
-   counter, "Last processed", log line with date) and PLAN.md. Keep STATUS.md ≤ ~120 lines: move
-   old log lines to the bottom section "Archive" when it grows. These two files are yours;
-   do not edit anything else (no commits — the owner commits).
+5. **Update the files**: STATUS.md (open-WP table, next action, open decisions, re-profiling
+   counter, "Last processed", log line with date), HISTORY.md (finished WPs, commit hashes, old
+   log lines), LESSONS.md (do-not-retry, measurement notes) and PLAN.md. Keep STATUS.md ≤ ~130
+   lines: keep only the latest log lines there, move older ones to HISTORY.md. These four files
+   are yours; do not edit anything else (no commits — the owner commits).
 6. **Write the prompt** for the next work session (template below), print it in a single fenced
    block so the owner can copy it, and set the WP to `in progress`.
 
@@ -86,7 +91,7 @@ Work package WP-<NN>: <title>
 - L1 micro cases: <existing `micro/...` names, and/or what to add>
 - L2/L3 e2e cases (ab filter): `<regex>`
 - Dependencies / context from earlier WPs: <facts the session needs, or "none">
-- Do not retry: <relevant lines from STATUS.md, or "none">
+- Do not retry: <relevant lines from LESSONS.md, or "none">
 - Functional or interface changes: none intended. If the optimization turns out to require one
   (public API or observable behavior, numerical results beyond a refcheck WARN, compiler flags,
   build configuration, new dependencies), do not implement it: finish with status BLOCKED and

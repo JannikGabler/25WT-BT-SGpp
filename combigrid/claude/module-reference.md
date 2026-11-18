@@ -205,8 +205,10 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   data an operator builds for a grid and may keep for later calls. Operators use it only through
   their options (last, defaulted argument; field `useCrossCallOperatorDataCache`; on: reuse if
   present, else build and store; off: neither read nor written, data built per call and dropped):
-  `QuadratureOptions` (SG `QuadWeightTable`, DSG `DSGQuadIndex` = delta-order 1D weights +
-  `CTCoeffTrie`; default **off**), `GlobalInterpolationOptions` (DSG `interpolate`,
+  `QuadratureOptions` (SG `quadrature`, `QuadWeightTable`; default **off**),
+  `DeltasSparseGridQuadratureOptions` (DSG `quadrature`, `DSGQuadIndex` = delta-order 1D weights +
+  `CTCoeffTrie`; default **on** since WP-82, before WP-82 the DSG overloads took
+  `QuadratureOptions`), `GlobalInterpolationOptions` (DSG `interpolate`,
   `DSGGlobalInterpIndex`; default **on**), `LinearInterpolationOptions` (DSG `interpolateLinear`,
   `DSGLinInterpIndex`; default **on**). SG `interpolate` / `interpolateLinear` keep nothing and take
   no options. All entries depend on the grid only (key ""), so scalar and vector overloads share
@@ -220,7 +222,9 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   of the stored type (capacities; the SG weight table counts all rows, computed or not). Build
   counter for tests: `tools::cross_operator_call::nOperatorDataBuilds()`. Typical sizes (WP-73 inventory):
   SG weight table cc d2 L20 32 MiB (cached call 1.19x faster at 16 t, else ≈ 1.0); DSG quadrature
-  data 0.4–2 MiB (1.03–1.15x at 16 t); DSG interp index ≤ 0.8 MiB (off: d2 L12 2.2x slower); DSG
+  data 0.4–2 MiB in the micro cases (cached call 1.04–1.31x faster at 16 t, WP-82), 0.9–18 MiB for
+  the e2e DSG quadrature grids, 64 MiB for cc d2 L20 (weights of the full 1D rule of every level,
+  like the SG table, plus the trie); DSG interp index ≤ 0.8 MiB (off: d2 L12 2.2x slower); DSG
   lin-interp index 0.2–2 MiB (off: d2 L16 400x, d5 5x, d10 1.26x slower). Adaptive refinement
   (future) builds a new grid per step, so its caches start empty; nothing to invalidate.
 - `TensorGrid` ([grids/tensor_grid.hpp](../src/sgpp/combigrid/grids/tensor_grid.hpp)): stand-alone
@@ -303,7 +307,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   silently. `CacheStatistics`: `adaptiveMode`, `modeSwitches`, `noneOperatorCalls`,
   `functionCostNs`, `memoryHitCostNs`, `memoryMissOverheadNs`, `diskHitCostNs`,
   `diskMissOverheadNs`. Works without LMDB (never TemporaryStorage). Memory hits stay inline in
-  the callable (an out-of-line hit path cost +17 ns per evaluation).
+  the callable (an out-of-line hit path cost +17 ns per evaluation). Tests force timing of every
+  evaluation with `CostTimer::overrideSamplingShift(0)` and test the rules with injected costs.
 - `VectorSourceFunc` ([functions/source_functions/vector_source_function.hpp](../src/sgpp/combigrid/functions/source_functions/vector_source_function.hpp)):
   f: Ω → ℝ^m; wraps `std::function<void(const base::DataVector&, std::span<double>)>` + `nOutputs`
   (m ≥ 1; 0 throws `base::data_exception`); `nOutputs()`, `evaluate(point, out)`,

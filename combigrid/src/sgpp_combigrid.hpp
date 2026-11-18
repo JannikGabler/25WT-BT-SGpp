@@ -73,6 +73,7 @@
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation_options.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
+#include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature_options.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 

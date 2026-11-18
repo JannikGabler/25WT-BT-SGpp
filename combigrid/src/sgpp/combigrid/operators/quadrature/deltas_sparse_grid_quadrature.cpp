@@ -14,7 +14,7 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
-#include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
+#include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature_options.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
@@ -35,7 +35,7 @@ namespace sgpp {
 namespace combigrid {
 
 double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid,
-                  const QuadratureOptions& options) {
+                  const DeltasSparseGridQuadratureOptions& options) {
   const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
   const size_t nDim = deltasSparseGrid.nDim();
 
@@ -65,7 +65,7 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
 }
 
 void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid,
-                const std::span<double> result, const QuadratureOptions& options) {
+                const std::span<double> result, const DeltasSparseGridQuadratureOptions& options) {
   if (result.size() != sourceFunc.nOutputs()) {
     throw std::invalid_argument("quadrature: The size of the result is not the number of outputs");
   }
@@ -90,7 +90,7 @@ void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& delt
 
 base::DataVector quadrature(const VectorSourceFunc& sourceFunc,
                             const DeltasSparseGrid& deltasSparseGrid,
-                            const QuadratureOptions& options) {
+                            const DeltasSparseGridQuadratureOptions& options) {
   base::DataVector result(sourceFunc.nOutputs());
   quadrature(sourceFunc, deltasSparseGrid, result, options);
   return result;

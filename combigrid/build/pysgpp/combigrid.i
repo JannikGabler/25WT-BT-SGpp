@@ -335,7 +335,7 @@ COMBIGRID_SPARSE_GRID_BASE_METHODS(DeltasSparseGrid)
                                            const SparseGrid&, std::span<double>);
 %ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const DeltasSparseGrid&,
                                     std::span<double>,
-                                    const QuadratureOptions& options = QuadratureOptions());
+                                    const DeltasSparseGridQuadratureOptions& options = DeltasSparseGridQuadratureOptions());
 %ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
                                      const DeltasSparseGrid&, std::span<double>,
                                      const GlobalInterpolationOptions& options = GlobalInterpolationOptions());
@@ -346,6 +346,7 @@ COMBIGRID_SPARSE_GRID_BASE_METHODS(DeltasSparseGrid)
 // Options of the operators (whether they keep data in the grid's cross-call operator data cache;
 // the last, defaulted argument, as in C++)
 %include "combigrid/src/sgpp/combigrid/operators/quadrature/quadrature_options.hpp"
+%include "combigrid/src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature_options.hpp"
 %include "combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation_options.hpp"
 %include "combigrid/src/sgpp/combigrid/operators/linear_interpolation/linear_interpolation_options.hpp"
 

@@ -1,0 +1,18 @@
+python_checks (OMP_NUM_THREADS=1): OK
+python_checks (OMP_NUM_THREADS=16): OK
+example cached_func_full_sg_quadrature_interpolation.py: exit 0
+example extended_const_func_full_sg_interpolation.py: exit 0
+example extended_const_func_full_sg_quadrature.py: exit 0
+example simple_const_func_full_sg_interpolation.py: exit 0
+example simple_const_func_full_sg_quadrature.py: exit 0
+example sin_func_deltas_sg_quadrature_interpolation.py: exit 0
+example sin_func_full_sg_interpolation.py: exit 0
+example sin_func_full_sg_quadrature.py: exit 0
+example sin_func_multiindex_vector_sg_interpolation.py: exit 0
+example sin_func_multiindex_vector_sg_quadrature.py: exit 0
+example vector_func_full_sg_quadrature_interpolation.py: exit 0
+    sgpp::combigrid::quadrature(sgpp::combigrid::SourceFunc const &,sgpp::combigrid::DeltasSparseGrid const &,sgpp::combigrid::DeltasSparseGridQuadratureOptions const &)
+    sgpp::combigrid::quadrature(sgpp::combigrid::SourceFunc const &,sgpp::combigrid::DeltasSparseGrid const &)
+    sgpp::combigrid::quadrature(sgpp::combigrid::VectorSourceFunc const &,sgpp::combigrid::DeltasSparseGrid const &,sgpp::combigrid::DeltasSparseGridQuadratureOptions const &)
+    sgpp::combigrid::quadrature(sgpp::combigrid::VectorSourceFunc const &,sgpp::combigrid::DeltasSparseGrid const &)
+
