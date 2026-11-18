@@ -3,11 +3,14 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
+#include <memory>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <stdexcept>
@@ -16,16 +19,20 @@ using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;
 using sgpp::combigrid::misc::QuadWeightTable;
 using sgpp::combigrid::tools::quadrature::combineTensorGrids;
+using sgpp::combigrid::tools::quadrature::getWeightTable;
 using sgpp::combigrid::tools::quadrature::processTensorGrid;
 
 namespace sgpp {
 namespace combigrid {
 
-double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
+double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
+                  const QuadratureOptions& options) {
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const size_t nDim = sparseGrid.nDim();
 
-  const QuadWeightTable weightTable(sparseGrid);
+  const std::shared_ptr<const QuadWeightTable> table =
+      getWeightTable(sparseGrid, options.useCrossCallOperatorDataCache);
+  const QuadWeightTable& weightTable = *table;
   const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = weightTable};
 
   double result = 0;
@@ -49,14 +56,15 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
 }
 
 void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
-                const std::span<double> result) {
+                const std::span<double> result, const QuadratureOptions& options) {
   if (result.size() != sourceFunc.nOutputs()) {
     throw std::invalid_argument("quadrature: The size of the result is not the number of outputs");
   }
 
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const QuadWeightTable weightTable(sparseGrid);
-  const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = weightTable};
+  const std::shared_ptr<const QuadWeightTable> weightTable =
+      getWeightTable(sparseGrid, options.useCrossCallOperatorDataCache);
+  const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = *weightTable};
 
   combineTensorGrids(context, sourceFunc, result);
 
@@ -68,9 +76,10 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
   sourceFunc.finishOperatorCall();
 }
 
-base::DataVector quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid) {
+base::DataVector quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
+                            const QuadratureOptions& options) {
   base::DataVector result(sourceFunc.nOutputs());
-  quadrature(sourceFunc, sparseGrid, result);
+  quadrature(sourceFunc, sparseGrid, result, options);
   return result;
 }
 

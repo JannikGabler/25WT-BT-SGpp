@@ -11,10 +11,11 @@
 
 #include <cstddef>
 #include <ranges>
+#include <sgpp/combigrid/grids/cross_call_operator_data_info.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
+#include <sgpp/combigrid/miscellaneous/cross_call_operator_data_cache/cross_call_operator_data_cache.hpp>
 #include <sgpp/combigrid/miscellaneous/iterators/tensor_grid_ct_data_iterator.hpp>
-#include <sgpp/combigrid/miscellaneous/operator_data_cache/operator_data_cache.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -125,11 +126,45 @@ class SparseGridBase {
   size_t getMaxTGSumOverGPCntsPerDim() const noexcept { return maxTGSumOverGPCntsPerDim_; }
 
   /**
-   * @brief Returns the cache of query-independent data that operators build on their first call
-   * on this grid (e.g. the index of the linear interpolation on a deltas sparse grid); internal
-   * to the operators.
+   * @brief Returns the cross-call operator data cache of the grid (see
+   * @ref getCrossCallOperatorDataCacheEntries); internal to the operators.
    */
-  misc::OperatorDataCache& getOperatorData() const noexcept { return operatorData; }
+  misc::CrossCallOperatorDataCache& getCrossCallOperatorDataCache() const noexcept {
+    return crossCallOperatorDataCache_;
+  }
+
+  /// @}
+
+  /// @name Cross-call operator data cache
+  /// Query-independent data that operators build for this grid and keep for their later calls.
+  /// An operator stores and reuses such data only if its options ask for it
+  /// (@c useCrossCallOperatorDataCache; the default depends on the operator, see its
+  /// documentation): the indices of @c interpolate and @c interpolateLinear on a
+  /// @c DeltasSparseGrid (default: kept), the weight tables of @c quadrature (default: not kept).
+  /// Results do not depend on whether the data is reused. The cache belongs to this grid object
+  /// (grids are not copyable) and is ignored by @ref operator==. All methods are thread-safe,
+  /// also concurrently with operator calls on the grid.
+  /// @{
+
+  /**
+   * @brief Removes all data from the cross-call operator data cache: frees its memory and makes
+   * the next operator call that uses the cache build its data anew.
+   *
+   * Operator calls running concurrently keep the data they use until they return; data whose
+   * build started before the clear is not stored.
+   */
+  void clearCrossCallOperatorDataCache() const;
+
+  /**
+   * @brief Returns the descriptions of the entries of the cross-call operator data cache (which
+   * operator stored what, under which reuse conditions, and its memory), in the order of their
+   * creation.
+   */
+  std::vector<CrossCallOperatorDataInfo> getCrossCallOperatorDataCacheEntries() const;
+
+  /// @brief Returns the total memory of the cross-call operator data cache in bytes (the sum over
+  /// @ref getCrossCallOperatorDataCacheEntries).
+  size_t getCrossCallOperatorDataCacheBytes() const;
 
   /// @}
 
@@ -201,8 +236,9 @@ class SparseGridBase {
   size_t maxTGGPCnt_ = 0;                ///< See @ref getMaxTGGPCnt.
   size_t maxTGSumOverGPCntsPerDim_ = 0;  ///< See @ref getMaxTGSumOverGPCntsPerDim.
 
-  /// Lazily built operator data (see @ref getOperatorData): only by operators that need it.
-  mutable misc::OperatorDataCache operatorData;
+  /// Operator data kept across calls (see @ref getCrossCallOperatorDataCacheEntries). Declared
+  /// last: destroyed first, its data may refer to the members above.
+  mutable misc::CrossCallOperatorDataCache crossCallOperatorDataCache_;
 };
 
 }  // namespace combigrid

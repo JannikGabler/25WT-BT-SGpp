@@ -382,8 +382,39 @@ BOOST_AUTO_TEST_CASE(Concurrent_First_Calls_Share_One_Index) {
     const double expected = interpolateLinear(SourceFunc(testFunc), points[i % points.size()], sg);
     BOOST_CHECK_SMALL(results[i] - expected, 1e-12 * (1.0 + std::abs(expected)));
   }
-  BOOST_CHECK_EQUAL(&tools::dsg_lin_interpolation::getIndex(dsg),
-                    &tools::dsg_lin_interpolation::getIndex(dsg));
+  BOOST_CHECK_EQUAL(tools::dsg_lin_interpolation::getIndex(dsg, true).get(),
+                    tools::dsg_lin_interpolation::getIndex(dsg, true).get());
+}
+
+BOOST_AUTO_TEST_CASE(Calls_From_A_Parallel_Region_Equal_Serial_Calls) {
+  // Every thread of a parallel region of the caller interpolates on its own: the operator's loops
+  // must not be shared with the caller's team (small grids: no parallel region of the operator;
+  // large grids: a nested region). Results are independent of the threads, so bitwise equal.
+  for (const Config& config :
+       {Config{"equi", 1, false, 3, false, 4}, Config{"cc", 0, true, 2, false, 6},
+        Config{"equi", 1, true, 8, false, 4}}) {
+    LvlMIVec miVec(config.nDim, 0);
+    const std::unique_ptr<SGGenInstr> genInstr = makeGenInstr(config, miVec);
+    const DeltasSparseGrid dsg(*genInstr);
+    const std::vector<DataVector> points = testPoints(genInstr->getDomain());
+    std::vector<double> expected(points.size());
+    for (size_t i = 0; i < points.size(); i++) {
+      expected[i] = interpolateLinear(SourceFunc(testFunc), points[i], dsg);
+    }
+    std::vector<int> nWrong(4, 0);
+
+#pragma omp parallel num_threads(4)
+    for (size_t i = 0; i < points.size(); i++) {
+      const double value = interpolateLinear(SourceFunc(testFunc), points[i], dsg);
+      if (std::bit_cast<uint64_t>(value) != std::bit_cast<uint64_t>(expected[i])) {
+        nWrong[omp_get_thread_num()]++;
+      }
+    }
+
+    BOOST_TEST_CONTEXT(config.nodes << " d" << config.nDim) {
+      for (const int n : nWrong) BOOST_CHECK_EQUAL(n, 0);
+    }
+  }
 }
 
 BOOST_AUTO_TEST_CASE(Index_Slots_Of_Doubling_Growth) {
@@ -395,7 +426,7 @@ BOOST_AUTO_TEST_CASE(Index_Slots_Of_Doubling_Growth) {
     genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
     genInstr.setBoundaryLevelOffset(boundary);
     const DeltasSparseGrid dsg(genInstr);
-    const misc::DSGLinInterpIndex& index = tools::dsg_lin_interpolation::getIndex(dsg);
+    const misc::DSGLinInterpIndex& index = *tools::dsg_lin_interpolation::getIndex(dsg, true);
 
     BOOST_CHECK_EQUAL(index.nLeaves(), dsg.nTG());
     size_t expectedSlots = 0;

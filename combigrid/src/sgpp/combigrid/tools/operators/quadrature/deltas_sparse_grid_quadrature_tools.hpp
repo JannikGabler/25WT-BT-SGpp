@@ -12,8 +12,10 @@
  */
 #pragma once
 
+#include <memory>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_quadrature_index.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <span>
@@ -47,6 +49,14 @@ misc::FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSpars
  */
 void combineDeltaTensorGrids(const misc::GenericDSGOperatorContext& context,
                              const VectorSourceFunc& sourceFunc, std::span<double> result);
+
+/**
+ * @brief Returns the query-independent data of the quadrature on @p deltasSparseGrid (1D weights,
+ * coefficient trie): from the grid's cross-call operator data cache if @p useCache (stored there
+ * on the first call), else built for the caller.
+ */
+std::shared_ptr<const misc::DSGQuadIndex> getIndex(const DeltasSparseGrid& deltasSparseGrid,
+                                                   bool useCache);
 
 }  // namespace dsg_quadrature
 }  // namespace tools

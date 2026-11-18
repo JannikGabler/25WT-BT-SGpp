@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
@@ -35,6 +36,8 @@
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
@@ -63,6 +66,7 @@
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "perf_cache.hpp"
@@ -1266,6 +1270,111 @@ void addExpensiveVectorQuad(Suite& suite, const std::string& gridName, const siz
   });
 }
 
+/**
+ * Data that an operator builds independently of the query (per grid) and could keep across calls:
+ * micro/crosscall/<operator>/build/<cfg> builds it once (counter data_heap_bytes: its heap
+ * memory), micro/crosscall/<operator>/call/<cfg> is one operator call with the default options
+ * (DSG interpolation: with the data kept on the grid, as after the first call) and
+ * micro/crosscall/<operator>/call_flipped/<cfg> one call with useCrossCallOperatorDataCache
+ * flipped (quadrature: reused from the grid; DSG interpolation: built per call). Operators:
+ * quad_sg (1D weight table),
+ * quad_dsg (1D weights in delta order + coefficient trie), interp_dsg / interplin_dsg (the
+ * operators' indices). Integrands: perf::expSum (quadrature), perf::cosProd (interpolation).
+ */
+template <typename Grid, typename Build, typename Call>
+void addCrossCall(Suite& suite, const std::string& op, const std::string& nodes,
+                  const LvlType boundary, const size_t nDim, const LvlType maxLvl, Build build,
+                  Call call, const bool withCall) {
+  const std::string config = cfg(nodes, boundary, nDim, maxLvl);
+  suite.addMicro("micro/crosscall/" + op + "/build/" + config, [=](MicroRun& run) {
+    const HyperCubeArea domain = perf::shiftedDomain(nDim);
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, nodes, boundary, domain);
+    const Grid grid(genInstr);
+    const double before = heapBytesInUse();
+    {
+      const auto data = build(grid);
+      run.setCounter("data_heap_bytes", heapBytesInUse() - before);
+    }
+    run.setItems(static_cast<double>(grid.nTG()));
+    run.measure([&]() { doNotOptimize(build(grid)); });
+  });
+  if (!withCall) return;
+  for (const bool flipped : {false, true}) {
+    suite.addMicro("micro/crosscall/" + op + (flipped ? "/call_flipped/" : "/call/") + config,
+                   [=](MicroRun& run) {
+                     const HyperCubeArea domain = perf::shiftedDomain(nDim);
+                     CompleteSGGenInstr genInstr(maxLvl, nDim);
+                     perf::configure(genInstr, nodes, boundary, domain);
+                     const Grid grid(genInstr);
+                     const DataVector point = perf::randomPoints(domain, 1, 97)[0];
+                     run.setItems(static_cast<double>(grid.nTG()));
+                     run.measure([&]() { doNotOptimize(call(grid, point, flipped)); });
+                   });
+  }
+}
+
+void addCrossCallQuadSG(Suite& suite, const std::string& nodes, const LvlType boundary,
+                        const size_t nDim, const LvlType maxLvl, const bool withCall) {
+  addCrossCall<SparseGrid>(
+      suite, "quad_sg", nodes, boundary, nDim, maxLvl,
+      [](const SparseGrid& sg) {
+        auto table = std::make_unique<cg::misc::QuadWeightTable>(sg);
+        table->computeAllRows();
+        return table;
+      },
+      [](const SparseGrid& sg, const DataVector&, const bool flipped) {
+        return cg::quadrature(SourceFunc(perf::expSum), sg,
+                              cg::QuadratureOptions{.useCrossCallOperatorDataCache = flipped});
+      },
+      withCall);
+}
+
+void addCrossCallQuadDSG(Suite& suite, const std::string& nodes, const LvlType boundary,
+                         const size_t nDim, const LvlType maxLvl) {
+  addCrossCall<DeltasSparseGrid>(
+      suite, "quad_dsg", nodes, boundary, nDim, maxLvl,
+      [](const DeltasSparseGrid& dsg) {
+        return std::make_pair(
+            cg::tools::dsg_quadrature::comp1DWeights(dsg),
+            cg::misc::CTCoeffTrie(dsg.getLevels().getView(), dsg.getCoefficients()));
+      },
+      [](const DeltasSparseGrid& dsg, const DataVector&, const bool flipped) {
+        return cg::quadrature(SourceFunc(perf::expSum), dsg,
+                              cg::QuadratureOptions{.useCrossCallOperatorDataCache = flipped});
+      },
+      true);
+}
+
+void addCrossCallInterpDSG(Suite& suite, const std::string& nodes, const size_t nDim,
+                           const LvlType maxLvl, const bool withCall) {
+  addCrossCall<DeltasSparseGrid>(
+      suite, "interp_dsg", nodes, 0, nDim, maxLvl,
+      [](const DeltasSparseGrid& dsg) {
+        return std::make_unique<cg::misc::DSGGlobalInterpIndex>(dsg);
+      },
+      [](const DeltasSparseGrid& dsg, const DataVector& point, const bool flipped) {
+        return cg::interpolate(
+            SourceFunc(perf::cosProd), point, dsg,
+            cg::GlobalInterpolationOptions{.useCrossCallOperatorDataCache = !flipped});
+      },
+      withCall);
+}
+
+void addCrossCallInterpLinDSG(Suite& suite, const size_t nDim, const LvlType maxLvl) {
+  addCrossCall<DeltasSparseGrid>(
+      suite, "interplin_dsg", "equi", 1, nDim, maxLvl,
+      [](const DeltasSparseGrid& dsg) {
+        return std::make_unique<cg::misc::DSGLinInterpIndex>(dsg);
+      },
+      [](const DeltasSparseGrid& dsg, const DataVector& point, const bool flipped) {
+        return cg::interpolateLinear(
+            SourceFunc(perf::cosProd), point, dsg,
+            cg::LinearInterpolationOptions{.useCrossCallOperatorDataCache = !flipped});
+      },
+      true);
+}
+
 int main(int argc, char** argv) {
   Suite suite("micro", 5, 0);  // the batch calibration doubles as warm-up
 
@@ -1431,6 +1540,21 @@ int main(int argc, char** argv) {
   addExpensiveVectorQuad<SparseGrid, perf::COST_100US_ITERATIONS>(suite, "sg", 5, 3, 4, "c100us");
   addExpensiveVectorQuad<DeltasSparseGrid, perf::COST_100US_ITERATIONS>(suite, "dsg", 5, 3, 4,
                                                                         "c100us");
+
+  // Per-grid operator data: build cost and memory vs. one call (inventory of cross-call data)
+  addCrossCallQuadSG(suite, "cc", 0, 2, 20, true);
+  addCrossCallQuadSG(suite, "cc", 0, 5, 10, true);
+  addCrossCallQuadSG(suite, "equi", 1, 20, 4, true);
+  addCrossCallQuadDSG(suite, "cc", 0, 5, 10);
+  addCrossCallQuadDSG(suite, "equi", 1, 15, 5);
+  addCrossCallQuadDSG(suite, "equi", 0, 3, 14);
+  addCrossCallInterpDSG(suite, "cc", 7, 4, true);
+  addCrossCallInterpDSG(suite, "cc", 2, 12, true);
+  addCrossCallInterpDSG(suite, "equi", 3, 5, true);
+  addCrossCallInterpDSG(suite, "cc", 10, 2, true);
+  addCrossCallInterpLinDSG(suite, 2, 16);
+  addCrossCallInterpLinDSG(suite, 10, 5);
+  addCrossCallInterpLinDSG(suite, 5, 8);
 
   return suite.main(argc, argv);
 }

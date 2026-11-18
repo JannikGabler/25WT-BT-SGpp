@@ -15,6 +15,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/global_interpolation_options.hpp>
 #include <span>
 
 namespace sgpp {
@@ -40,9 +41,9 @@ namespace combigrid {
  *
  * Per call, the operator computes the basis values of every (dimension, level) and, per delta
  * tensor grid, the projected sub-trie of the deltas sparse grid quadrature (memory: one double
- * per node of every level, plus the per-thread scratch of the quadrature). On its first call on a
- * grid, it builds and keeps an index of the grid (the trie of the combination coefficients and
- * the nodes of every level; thread-safe). Grids with fewer than
+ * per node of every level, plus the per-thread scratch of the quadrature). It needs an index of the
+ * grid (the trie of the combination coefficients and the nodes of every level), which it keeps
+ * across calls by default (see the note). Grids with fewer than
  * @c constants::global_interpolation::DSG_PARALLEL_MIN_GRID_POINTS grid points are processed on
  * the calling thread.
  *
@@ -50,14 +51,23 @@ namespace combigrid {
  * makes the result non-finite (points with a global weight of 0 enter as well), also if
  * @p point lies on a node.
  *
+ * @note Data kept across calls (@c GlobalInterpolationOptions::useCrossCallOperatorDataCache,
+ * default on): the index of the grid, built on the first call on the grid (thread-safe:
+ * concurrent first calls build it once) and stored in its cross-call operator data cache (about
+ * one double per 1D node plus a few words per tensor grid; e.g. 0.75 MiB for 2 dimensions with
+ * Clenshaw-Curtis nodes of level 12), shared with the vector-valued overloads. With the option
+ * off, every call builds the index and drops it. The results do not depend on the option.
+ *
  * @param sourceFunc       Black-box source function to interpolate.
  * @param point            Evaluation point (in the domain of the grid's generation instruction);
  *                         must have @c size() == deltasSparseGrid.nDim().
  * @param deltasSparseGrid Deltas sparse grid (nested nodes) to interpolate on.
+ * @param options          Options (see @c GlobalInterpolationOptions).
  * @return Interpolated value (0 for a grid without dimensions).
  */
 double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
-                   const DeltasSparseGrid& deltasSparseGrid);
+                   const DeltasSparseGrid& deltasSparseGrid,
+                   const GlobalInterpolationOptions& options = GlobalInterpolationOptions());
 
 /**
  * @brief Vector-valued counterpart of
@@ -71,10 +81,12 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
  * @param point            Evaluation point; must have @c size() == deltasSparseGrid.nDim().
  * @param deltasSparseGrid Deltas sparse grid (nested nodes) to interpolate on.
  * @param result           Output: the m interpolated values.
+ * @param options          Options (see @c GlobalInterpolationOptions).
  * @throws std::invalid_argument if the size of @p result is not m.
  */
 void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                 const DeltasSparseGrid& deltasSparseGrid, std::span<double> result);
+                 const DeltasSparseGrid& deltasSparseGrid, std::span<double> result,
+                 const GlobalInterpolationOptions& options = GlobalInterpolationOptions());
 
 /**
  * @brief Variant of the @c std::span overload for a @c VectorSourceFunc that returns the m
@@ -83,10 +95,13 @@ void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& poi
  * @param sourceFunc       Vector-valued source function.
  * @param point            Evaluation point; must have @c size() == deltasSparseGrid.nDim().
  * @param deltasSparseGrid Deltas sparse grid (nested nodes) to interpolate on.
+ * @param options          Options (see @c GlobalInterpolationOptions).
  * @return The m interpolated values.
  */
-base::DataVector interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                             const DeltasSparseGrid& deltasSparseGrid);
+base::DataVector interpolate(
+    const VectorSourceFunc& sourceFunc, const base::DataVector& point,
+    const DeltasSparseGrid& deltasSparseGrid,
+    const GlobalInterpolationOptions& options = GlobalInterpolationOptions());
 
 }  // namespace combigrid
 }  // namespace sgpp

@@ -73,6 +73,13 @@ class QuadWeightTable {
    */
   void computeAllRows() const;
 
+  /**
+   * @brief Returns the memory of the table in bytes once all rows are computed (the object, its
+   * per-row bookkeeping and one double per node of every row). Independent of the rows computed
+   * so far, so it may be called concurrently with @ref weights.
+   */
+  size_t memoryBytes() const noexcept;
+
  private:
   /// @brief Computes the weights of (dimension @p dim, level @p lvl) once (see @ref weights) and
   /// returns them.

@@ -1,7 +1,7 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-76 (2026-11-17; accepted, commit pending) ·
-Next free WP number: 80 ·
+Last processed: WP-73 (2026-11-18; accepted, commit pending) ·
+Next free WP number: 83 ·
 Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13, RP-5 11-15 (RP-0 = setup)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC 15.2,
@@ -69,10 +69,13 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13, RP-5 11-15 (RP-0 
 | – | WP-62 | Dimension-adaptive refinement: exploration + implementation plan (owner's request) | accepted (11-17) | GG + profit 8.5–42x fewer evaluations than the complete CT (d10); d100 L2 CT 4.0e-3 vs. adaptive 7.5e-8 (2e5 evals); bookkeeping 10.5–47.5 ns/eval; judged suite unchanged | [WP-62](summaries/WP-62-dimension-adaptive-exploration.md) |
 | – | WP-63 … 72 | Dimension-adaptive CT implementation (A1 nestedness + std CC growth, A2 core, A3 quad driver, A4 non-nested / vector, A5 interp, A6 Python, B1 lazy, B2 buffering, C1 stored values, C2 resume) | needs decision (D1–D9) · **unranked** (owner places them) | | PLAN.md |
 | – | WP-49 | DSG lin. interp.: slot weights by sum factorization over closure fibers, thread-count independent; gate 640 visits | accepted (11-17, 59f2899e4; DSG pinning hashes re-pinned) | interplin/dsg d10 1.58x, d8 1.54x, d5 1.50x, d2 1.13x; −0.363 s; memory 0.995 (d10 MEM+ 15.3 → 15.9 MiB, d8 MEM−) | [WP-49](summaries/WP-49-dsg-interplin-slot-weights.md) |
-| – | WP-76 | Judged suite: cases with expensive source functions (group `expensive/`, owner's D1–D6; protected files by patch) | accepted (11-17; commit pending) | 21 judged cases 17.77 s + 4 cached 1.05 s per pass (suite ≈ 55.5 s); A/A within noise; refcheck OK (146 refs); old cases 1.008x (placement), memory 1.011; efficiency mivec SG 0.42 / DSG 0.62, interplin/dsg d5 0.48 | [WP-76](summaries/WP-76-expensive-source-function-cases.md) |
-| – | WP-73 | Cross-call operator data cache: clear / read-only view on `SparseGridBase`, per-operator flags + defaults (owner's request) | **in progress** (prompt reissued 11-17) | | |
-| – | RP-6 | Re-profiling after WP-56 / WP-49 (+ WP-73 state) | ready (after WP-73) | | |
+| – | WP-76 | Judged suite: cases with expensive source functions (group `expensive/`, owner's D1–D6; protected files by patch) | accepted (11-17, 76a83f06b) | 21 judged cases 17.77 s + 4 cached 1.05 s per pass (suite ≈ 55.5 s); A/A within noise; refcheck OK (146 refs); old cases 1.008x (placement), memory 1.011; efficiency mivec SG 0.42 / DSG 0.62, interplin/dsg d5 0.48 | [WP-76](summaries/WP-76-expensive-source-function-cases.md) |
+| – | WP-73 | Cross-call operator data cache: clear / entries / bytes on `SparseGridBase`, options per operator (`useCrossCallOperatorDataCache`), concurrency (a); DSG `interplin` parallel-region bug fix (owner's request) | accepted (11-18; commit pending) | judged 0.999x, `expensive/` 1.001x, memory 1.005; repeated calls flag on 16 t: SG quad cc d2 L20 1.19x, DSG quad 1.03–1.15x | [WP-73](summaries/WP-73-operator-data-cache-control.md) |
+| – | WP-82 | DSG quadrature: cross-call cache **on by default** (SG quadrature stays off; owner 11-18) | **in progress** (prompt 11-18) | | |
+| – | RP-6 | Re-profiling after WP-56 / WP-49 (+ WP-73 / WP-82 state) | ready (after WP-82) | | |
 | – | WP-79 | Textbook operator variants (naive per-TG CT on `SparseGrid`, all three operators; no DSG; one core per operator; helpers in its `.cpp`; naming + scalar / vector in-session; owner's request) | ready (after RP-6) | | |
+| – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point (cache warm-up, testing; name / result / dedup in-session; owner's request) | ready · **unranked** (owner places it) | | |
+| – | WP-81 | Explanation / visualization foundations: exploration + requirements with the owner in-session (info helpers, strings, plots) → implementation WPs | ready · **unranked** (owner places it) | | |
 | 1 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-5: 0.1–0.15 s) | ready | | |
 | 2 | WP-59 | Global interpolation: TG loop `guided` → `dynamic` (est. 0–0.2 s) + SG interplin schedule (WP-76 `-ramp`) | ready | | |
 | 3 | WP-77 | SG quad / mivec: TG-loop load balance under expensive functions (WP-76: mivec c100us SG 0.42 / DSG 0.62; RP-6 sizes it) | planned | | |
@@ -104,8 +107,8 @@ Re-profilings: RP-1 10-28, RP-2 10-29, RP-3 10-30, RP-4 11-13, RP-5 11-15 (RP-0 
 
 ## Next action
 
-**WP-73 in progress** (prompt reissued 11-17 after WP-76; neutrality check incl. `expensive/`). The
-owner commits WP-76 first (then `perf.py verify`). Next master start: process WP-73, then **RP-6**
+**WP-82 in progress** (prompt 11-18: DSG quadrature default on, owner's WP-73 decision). The owner
+commits WP-73 first (then `perf.py verify`). Next master start: process WP-82, then **RP-6**
 (2 accepted optimizations since RP-5: WP-56, WP-49; interplin/dsg ≥ 1.3x; first profile of the
 `expensive/` group: mivec load balance, WP-56 shift; sizes WP-77, the SG `interp` basis-value share,
 WP-74, WP-75), then **WP-79** (textbook variants; owner: after RP-6), then the next optimization WP
@@ -119,6 +122,7 @@ backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
   placement of WP-63 … 72 — owner decides later (11-17).
 - WP-09 (after its summary): adopt the proposed interface or not.
 - WP-78 (caching overhead at 1 µs × 16 t, caching callers only): placement.
+- WP-80 (grid-evaluation operator), WP-81 (visualization exploration): placement.
 - CC weights with `-ffp-contract=off` (bitwise build-independent weights; ≤ 6.7e-16/m): **not now** (11-15).
 - Placement of WP-54 / WP-55 (hygiene; may move up); WP-35 up (time-seeded test hit in several sessions).
 - WP-33 (after WP-32): drop / restrict / align large allocations only / keep base's `operator new`
@@ -195,34 +199,32 @@ backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
   (+30 % at c1us × 16 t) → counts only in the reference suite.
 - SG operators: deduplicated evaluations / caching by default (WP-76: quad/sg d10 L4 c100us 1.535 vs.
   DSG 0.571 s): owner 11-17 — SG operators keep the standard CT; use the DSG variants.
+- WP-73 cache synchronization (owner 11-18: variant (a), mutex + scan + `shared_ptr`): (b)
+  unsynchronized (6 vs. 25 ns per lookup, drops shared first calls), (c) raw pointers (clear / view
+  only without concurrent calls), (a-snap) `atomic<shared_ptr>` snapshot (8924 ns at 16 t nonstop);
+  no difference on real calls. (a-rw) `shared_mutex` only if call rates ever matter.
 - RP-4 `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows`: 0.994x → the WP-52 −1 % is not
   recoverable this way.
 
 ## Re-profiling
 
 Last: RP-5 (2026-11-15; rp-5 = 3261399ec; accepted). Accepted optimizations since: **2** (WP-56;
-WP-49 with interplin/dsg 1.50–1.58x) → **RP-6 due** before the next optimization WP; WP-73 (feature,
-owner) runs first; WP-76 (suite extension) does not count. Rule: features / refactorings / measurement WPs count only if a group changes ≥
+WP-49 with interplin/dsg 1.50–1.58x) → **RP-6 due** before the next optimization WP; WP-82 (default flip)
+runs first; WP-76 (suite extension) and WP-73 (feature, judged 0.999x) do not count. Rule: features / refactorings / measurement WPs count only if a group changes ≥
 1.3x or a hot-spot ranking shifts. The `interp/dsg`, `interplin/dsg` and `expensive/` cases have no
 baseline values (reported absolutely; `expensive/` history in `results/WP-76/history/`).
 
 ## Log
 
-- 2026-11-17 Owner: new **WP-79** (textbook operator variants: naive per-TG CT with standard
-  solvers, understandability first, naming + scalar / vector decided in-session; no DSG variants; one
-  core per operator; helpers in the operator's `.cpp`, not `tools/`) → after RP-6.
-- 2026-11-17 WP-76 summary processed: **accepted** by the owner (commit pending; owner applied the
-  patch, rehashed, added `noise-expensive.json` to `baseline/noise_e2e.json`). Group `expensive/`
-  (D1–D6; ranking unchanged). Owner: SG operators keep the standard CT (no dedup WP). New WP-77
-  (SG / mivec load balance, rank 3), WP-78 (cache overhead, owner places it); WP-59 + SG interplin;
-  RP-6 profiles `expensive/`. WP-73 prompt reissued.
-- 2026-11-17 WP-49 summary processed: **accepted** by the owner incl. the re-pinned DSG
-  `grid_storage_pinning` hashes (commit pending). interplin/dsg d10 1.58x … d2 1.13x, −0.363 s, memory
-  0.995 (d10 MEM+ +0.6 MiB). New WP-74 (fused evaluation / vectorized transform), WP-75 (byte-type
-  stores); RP-6 entry; ranks −1. Counter 2 → RP-6 due; WP-73 prompt issued (owner: before RP-6).
-- 2026-11-17 Owner: new **WP-76** (judged suite + expensive source functions; plan with open decisions,
-  owner decides in-session, then implementation) before the next regular WP → prompt issued; WP-73
-  back to ready (its prompt is superseded, reissue after WP-76).
+- 2026-11-18 WP-73 summary processed: **accepted** by the owner (commit pending): API as built,
+  concurrency variant (a), DSG `interpolateLinear` parallel-region bug fix; defaults: SG quad off, DSG
+  interpolations on, **DSG quad on** (owner; not built) → new **WP-82** before RP-6, prompt issued.
+  Judged 0.999x, `expensive/` 1.001x, memory 1.005 (0 flags). Notes added to WP-60 (`DSGQuadIndex`),
+  WP-07 (cacheable entry), backlog I. WP-76 committed as 76a83f06b.
+- 2026-11-17 Owner: new WP-79 (textbook variants, after RP-6), WP-80 (grid-evaluation operator),
+  WP-81 (visualization exploration) → WP-80 / 81 unranked. WP-76 accepted (D1–D6, `expensive/` own sum
+  line; SG operators keep the standard CT); WP-49 accepted (re-pinned DSG hashes); WP-74 / 75 / 77 / 78
+  added. Details in the Archive.
 - Test failures (→ WP-35; report recurrences): time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (WP-29a 2 of 16, WP-28 1 of ≈ 15, WP-47 1); `{equidistant,clenshaw_curtis}_nodes/linear_func_unit_cube_1D`
   (WP-47 once, WP-52 2 of ≈ 50; pre-existing).
@@ -241,4 +243,6 @@ baseline values (reported absolutely; `expensive/` history in `results/WP-76/his
   6ac45a05d, RP-4 cf698f31d. 11-15 WP-18 14cf31e23, WP-05 3261399ec, RP-5 d426bddcf, WP-56 14c1e3d16.
   11-17 WP-62 0c5071770 (owner's question on weight tables → WP-60 / WP-07 / RP-6), WP-73 defined
   (owner: cross-call data only with significant gain; transparency + consistency), WP-49 59f2899e4,
-  WP-76 (commit pending).
+  WP-76 76a83f06b (D1–D6; owner: SG operators keep the standard CT; WP-77 / 78 new; WP-73 prompt
+  reissued), WP-79 / 80 / 81 defined (owner; WP-80 one-core rule + `tools/` placement confirmed).
+  11-18 WP-73 accepted (commit pending; WP-82 from the owner's default decision).

@@ -43,11 +43,17 @@ nodes: `getDomainTensorGrid(i)` / `getUnitTensorGrid(i)`, ranges `domainTensorGr
 → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid`
 (nested nodes only; Python-bound with its operators since WP-50) + its `quadrature` overload
 evaluates every grid point once; its `interpolateLinear` overloads (WP-47) every distinct corner
-once per call (index built on the first call; WP-49: corner weights by sum factorization over the
-closure, thread-count independent); its `interpolate` overloads (WP-45) every grid point
+once per call (WP-49: corner weights by sum factorization over the closure, thread-count
+independent); its `interpolate` overloads (WP-45) every grid point
 once per call, weighted with global weights from the 1D basis values
 (`InterpolationMethod::basisValues`) through the weighted-sum kernel it shares with the DSG
-quadrature (`tools::dsg_weighted_sum`; thread-count independent). User functions are wrapped in
+quadrature (`tools::dsg_weighted_sum`; thread-count independent). Cross-call operator data cache
+(WP-73, `SparseGridBase`): query-independent operator data kept across calls, controlled per
+call by the operator's options (last, defaulted argument: `QuadratureOptions` default off,
+`GlobalInterpolationOptions` / `LinearInterpolationOptions` for the DSG interpolations default
+on; field `useCrossCallOperatorDataCache`; SG interpolations keep nothing); public
+`clearCrossCallOperatorDataCache()`, `getCrossCallOperatorDataCacheEntries()`,
+`getCrossCallOperatorDataCacheBytes()` (also Python). User functions are wrapped in
 `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`, all operators on both grid types, also in Python);
 weights, basis values and interpolation cells live on [0,1]^d (`getUnitNodeTable()`); the source
 function is evaluated at the domain nodes (`getDomainNodeTable()`: the unit nodes mapped onto the
@@ -168,6 +174,17 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - Zero-coefficient tensor grids are never stored in a `SparseGrid` (`CompleteSGGenInstr` and
   `MIVecSGGenInstr`); a `DeltasSparseGrid` keeps every MI of the downwards closure.
 - `SparseGrid::operator==` is O(nTG²) — avoid in loops.
+- Cross-call operator data cache (`misc::CrossCallOperatorDataCache`, internal accessor
+  `getCrossCallOperatorDataCache()`): operators touch it only with their option on (off = data
+  built per call, cache neither read nor written; no lock on that path); entries keyed by (type,
+  key string), stored types report `memoryBytes()`; a new operator with per-grid data goes through
+  `tools::cross_call::getOperatorData` (counts builds for tests). Results must not depend on the
+  option. Objects are handed out as `shared_ptr` (a concurrent clear keeps them alive): hold the
+  pointer for the whole call.
+- Orphaned OpenMP worksharing (`#pragma omp for` outside the function's own `parallel`) must not
+  run on a serial path that skips the operator's parallel region: it would bind to a parallel
+  region of the caller and split the call's work across the caller's team (DSG
+  `interpolateLinear` had this bug until WP-73).
 - `.lint` / `.os` / `.gcda` files without a matching source are stale artifacts — do not resurrect
   sources from them.
 - Combigrid is only built in CI's **linux-full** job.

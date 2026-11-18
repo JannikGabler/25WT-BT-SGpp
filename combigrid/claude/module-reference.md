@@ -29,8 +29,10 @@ grids/
   node_table             NodeTable: 1D node lists once per (dim, level); dims with the same nodes /
                          counts (and, on the domain, interval) share rows (WP-18)
   sparse_grid_base       common base, struct of arrays: levels (LvlMIVec), coefficients, two
-                         NodeTables (domain, unit), cached maxima, OperatorDataCache; proxy
-                         iterator (not SWIG-wrapped)
+                         NodeTables (domain, unit), cached maxima, cross-call operator data
+                         cache (public clear / entries / bytes); proxy iterator (not SWIG-wrapped)
+  cross_call_operator_data_info  CrossCallOperatorDataInfo {operatorName, description, key, bytes}:
+                         read-only description of one cache entry (WP-73)
   sparse_grid            CT sparse grid (+ optional shared SGGenInstr)
   deltas_sparse_grid     delta representation for the DSG quadrature, global and linear interpolation
                          (every grid point in exactly one delta tensor grid; public, Python-bound
@@ -42,10 +44,12 @@ miscellaneous/         (namespace misc)
   iterators/             tensor_grid_ct_data_iterator: random-access proxy iterator of the grids
   ct_coefficient_trie/   CTCoeffTrie: prefix tree over the tensor grids' level MIs (DSG quadrature
                          and global interpolation)
-  operator_data_cache/   OperatorDataCache: thread-safe, type-keyed store of lazily built
-                         query-independent operator data of a grid (SparseGridBase::
-                         getOperatorData; e.g. DSGLinInterpIndex, DSGGlobalInterpIndex), so the
-                         grid's header names no operator type
+  cross_call_operator_data_cache/  CrossCallOperatorDataCache (+ Entry, Descriptor): thread-safe
+                         store of query-independent operator data of a grid, one object per
+                         (type, key string), build-once per key outside the cache lock, objects
+                         handed out as shared_ptr (clear drops only the cache's references);
+                         SparseGridBase::getCrossCallOperatorDataCache (internal), so the grid's
+                         header names no operator type (WP-73)
   closure_trie/          ClosureTrie: trie over a downwards-closed MI set, MI -> dense rank by one
                          lookup per dimension (DSG linear interpolation; reusable for other DSG
                          operators)
@@ -166,13 +170,16 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   overloads; [deltas_sparse_grid_linear_interpolation.hpp](../src/sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp))
   evaluates every distinct corner of the combination tensor grids once per call (WP-47): a corner
   coordinate is identified by the level at which it first brackets the query coordinate, a corner
-  by a slot (one block per closure MI, `DSGLinInterpIndex`, built on the first call and kept in
-  the grid, with the fibers of every dimension). Per call (WP-49), one global weight per slot,
+  by a slot (one block per closure MI, `DSGLinInterpIndex`, with the fibers of every dimension;
+  by default built on the first call and kept in the grid's cross-call operator data cache, see
+  below). Per call (WP-49), one global weight per slot,
   `W = Σ_ℓ c_ℓ Π_j v_j(ℓ_j; id_j)`, by sum factorization: d in-place 1D transforms along the fibers
   (each level adds its input to the 2 ids bracketing x_j there, ascending), O(d · slots), with a
   reach flag ("or" instead of sum) that marks exactly the corners of the combination TGs; then the
   reached slots are evaluated and Σ W·f summed per fixed chunk of 16 leaves, chunks added in order
-  (thread-count independent). Serial below `DSG_PARALLEL_MIN_CORNER_VISITS` (640). Per-TG / per-MI
+  (thread-count independent). Serial below `DSG_PARALLEL_MIN_CORNER_VISITS` (640): then plain
+  loops, no `omp for` (an orphaned worksharing loop would bind to a parallel region of the caller;
+  fixed in WP-73). Per-TG / per-MI
   contributions are not formed (refinement indicators would need them, e.g. by the transposed
   transform).
   `interpolate(const SourceFunc&, const DataVector&, const DeltasSparseGrid&)` (+ vector overloads;
@@ -181,7 +188,7 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `Σ_p W_p(x) f(p)` with `W_p = Σ_{ℓ ≥ m(p)} c_ℓ Π_k L_{k,ℓ_k,p_k}(x_k)`, i.e. the DSG quadrature's
   global weights with the 1D quadrature weights replaced by the 1D basis values at x
   (`InterpolationMethod::basisValues`: barycentric formulas O(n) per row, user methods O(n²) by
-  probing). Per grid (`DSGGlobalInterpIndex`, first call): `CTCoeffTrie`, per (dim, level) the
+  probing). Per grid (`DSGGlobalInterpIndex`, kept by default): `CTCoeffTrie`, per (dim, level) the
   regular nodes, method and delta order. Per call, one parallel region: basis values per row
   (largest first), then `dsg_weighted_sum::processDeltaTensorGrid` per delta TG (largest first;
   the DSG quadrature's kernel with the basis values as 1D weights);
@@ -192,7 +199,30 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   The grid keeps the tensor grids of the whole downwards closure, including those with
   coefficient 0 (unlike `SparseGrid`). The class and all its operators (scalar and
   `DataVector`-returning vector overloads, cached functions) are public and bound in Python
-  (WP-50); `getOperatorData()` (internal) and the `std::span` overloads are not bound.
+  (WP-50); `getCrossCallOperatorDataCache()` (internal) and the `std::span` overloads are not
+  bound.
+- **Cross-call operator data cache** (WP-73; `SparseGridBase`, both grid types): query-independent
+  data an operator builds for a grid and may keep for later calls. Operators use it only through
+  their options (last, defaulted argument; field `useCrossCallOperatorDataCache`; on: reuse if
+  present, else build and store; off: neither read nor written, data built per call and dropped):
+  `QuadratureOptions` (SG `QuadWeightTable`, DSG `DSGQuadIndex` = delta-order 1D weights +
+  `CTCoeffTrie`; default **off**), `GlobalInterpolationOptions` (DSG `interpolate`,
+  `DSGGlobalInterpIndex`; default **on**), `LinearInterpolationOptions` (DSG `interpolateLinear`,
+  `DSGLinInterpIndex`; default **on**). SG `interpolate` / `interpolateLinear` keep nothing and take
+  no options. All entries depend on the grid only (key ""), so scalar and vector overloads share
+  them. User side: `clearCrossCallOperatorDataCache()`, `getCrossCallOperatorDataCacheEntries()`
+  (vector of `CrossCallOperatorDataInfo`), `getCrossCallOperatorDataCacheBytes()` (all `const`,
+  thread-safe, also in Python). Results are bitwise independent of the option (same computations);
+  `operator==` ignores the cache; grids are not copyable (no copy semantics to define); a throwing
+  build stores nothing. Concurrency: lookups take one mutex + scan + `shared_ptr` copy (≈ 25 ns at
+  1 thread); concurrent first calls of a key build once (per-entry build lock, other keys
+  proceed); a clear during a call leaves the call's data alive. Memory per entry: `memoryBytes()`
+  of the stored type (capacities; the SG weight table counts all rows, computed or not). Build
+  counter for tests: `tools::cross_operator_call::nOperatorDataBuilds()`. Typical sizes (WP-73 inventory):
+  SG weight table cc d2 L20 32 MiB (cached call 1.19x faster at 16 t, else ≈ 1.0); DSG quadrature
+  data 0.4–2 MiB (1.03–1.15x at 16 t); DSG interp index ≤ 0.8 MiB (off: d2 L12 2.2x slower); DSG
+  lin-interp index 0.2–2 MiB (off: d2 L16 400x, d5 5x, d10 1.26x slower). Adaptive refinement
+  (future) builds a new grid per step, so its caches start empty; nothing to invalidate.
 - `TensorGrid` ([grids/tensor_grid.hpp](../src/sgpp/combigrid/grids/tensor_grid.hpp)): stand-alone
   tensor grid, per-dim counts + flat per-dim node lists, first-dimension-fastest linear indexing,
   grid-point iterators; not stored in sparse grids (`TensorGridView::toTensorGrid()` copies).

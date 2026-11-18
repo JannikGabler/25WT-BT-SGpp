@@ -13,7 +13,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <span>
 #include <vector>
 
 namespace sgpp {
@@ -101,6 +100,9 @@ class ClosureTrie {
    * @param mi Multi-index with d components.
    */
   size_t findLeaf(LvlMIView mi) const;
+
+  /// @brief Returns the heap memory of the trie in bytes.
+  size_t heapBytes() const noexcept;
 
  private:
   /// @brief Appends the children of the inner node @p node, whose multi-indices are

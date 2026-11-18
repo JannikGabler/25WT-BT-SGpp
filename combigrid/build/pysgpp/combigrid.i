@@ -279,6 +279,18 @@ namespace std {
 
   bool operator==(const sgpp::combigrid::Class& other) const { return *$self == other; }
 
+  // Cross-call operator data cache (SparseGridBase methods)
+  void clearCrossCallOperatorDataCache() const { $self->clearCrossCallOperatorDataCache(); }
+
+  std::vector<sgpp::combigrid::CrossCallOperatorDataInfo> getCrossCallOperatorDataCacheEntries()
+      const {
+    return $self->getCrossCallOperatorDataCacheEntries();
+  }
+
+  size_t getCrossCallOperatorDataCacheBytes() const {
+    return $self->getCrossCallOperatorDataCacheBytes();
+  }
+
   %pythoncode %{
     def __len__(self):
         return self.nTG()
@@ -286,13 +298,18 @@ namespace std {
 }
 %enddef
 
+// Read-only descriptions of the entries of a grid's cross-call operator data cache (returned by
+// getCrossCallOperatorDataCacheEntries; the cache itself and its data are internal).
+%include "combigrid/src/sgpp/combigrid/grids/cross_call_operator_data_info.hpp"
+namespace std {
+  %template(CrossCallOperatorDataInfoVector) vector<sgpp::combigrid::CrossCallOperatorDataInfo>;
+}
+
 COMBIGRID_SPARSE_GRID_BASE_METHODS(SparseGrid)
 %include "combigrid/src/sgpp/combigrid/grids/sparse_grid.hpp"
 
 // DeltasSparseGrid: the same methods as SparseGrid. The constructor raises RuntimeError for
-// non-nested nodes (std::invalid_argument). getOperatorData returns the grid's cache of operator
-// data (misc::OperatorDataCache, not wrapped), which only the operators use.
-%ignore sgpp::combigrid::DeltasSparseGrid::getOperatorData;
+// non-nested nodes (std::invalid_argument).
 COMBIGRID_SPARSE_GRID_BASE_METHODS(DeltasSparseGrid)
 %include "combigrid/src/sgpp/combigrid/grids/deltas_sparse_grid.hpp"
 
@@ -308,18 +325,29 @@ COMBIGRID_SPARSE_GRID_BASE_METHODS(DeltasSparseGrid)
 // (SourceFunc -> float, VectorSourceFunc -> DataVector) and the grid (unrelated proxy classes, as
 // SparseGridBase is not wrapped).
 // Vector-valued source functions: the overloads writing the m results to a std::span (no typemap)
-// are hidden; Python gets the overloads returning a DataVector.
-%ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&, std::span<double>);
+// are hidden; Python gets the overloads returning a DataVector. The %ignores spell out the default
+// argument of the options, so that the overloads SWIG generates for it are ignored too.
+%ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const SparseGrid&, std::span<double>,
+                                    const QuadratureOptions& options = QuadratureOptions());
 %ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
                                      const SparseGrid&, std::span<double>);
 %ignore sgpp::combigrid::interpolateLinear(const VectorSourceFunc&, const base::DataVector&,
                                            const SparseGrid&, std::span<double>);
 %ignore sgpp::combigrid::quadrature(const VectorSourceFunc&, const DeltasSparseGrid&,
-                                    std::span<double>);
+                                    std::span<double>,
+                                    const QuadratureOptions& options = QuadratureOptions());
 %ignore sgpp::combigrid::interpolate(const VectorSourceFunc&, const base::DataVector&,
-                                     const DeltasSparseGrid&, std::span<double>);
+                                     const DeltasSparseGrid&, std::span<double>,
+                                     const GlobalInterpolationOptions& options = GlobalInterpolationOptions());
 %ignore sgpp::combigrid::interpolateLinear(const VectorSourceFunc&, const base::DataVector&,
-                                           const DeltasSparseGrid&, std::span<double>);
+                                           const DeltasSparseGrid&, std::span<double>,
+                                           const LinearInterpolationOptions& options = LinearInterpolationOptions());
+
+// Options of the operators (whether they keep data in the grid's cross-call operator data cache;
+// the last, defaulted argument, as in C++)
+%include "combigrid/src/sgpp/combigrid/operators/quadrature/quadrature_options.hpp"
+%include "combigrid/src/sgpp/combigrid/operators/global_interpolation/global_interpolation_options.hpp"
+%include "combigrid/src/sgpp/combigrid/operators/linear_interpolation/linear_interpolation_options.hpp"
 
 // Re-raise exceptions of Python source functions after the operator returns (see SourceFunc.i);
 // applies to the scalar and the vector overloads.

@@ -3,12 +3,15 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 #include <cassert>
+#include <memory>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
+#include <sgpp/combigrid/tools/operators/cross_call/cross_call_operator_data_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -110,6 +113,17 @@ void getWeights(const QuadratureContext& context, const TensorGridView tg,
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
     weightsOfDim[dim] = context.weightTable.weights(dim, lvls[dim]);
   }
+}
+
+std::shared_ptr<const misc::QuadWeightTable> getWeightTable(const SparseGrid& sparseGrid,
+                                                            const bool useCache) {
+  static constexpr misc::CrossCallOperatorDataDescriptor DESCRIPTOR{
+      .operatorName = "quadrature (SparseGrid)",
+      .description = "1D quadrature weights per (dimension, level) row of the unit node table",
+      .key = ""};
+  return cross_operator_call::getOperatorData<misc::QuadWeightTable>(
+      sparseGrid, useCache, DESCRIPTOR,
+      [&]() { return std::make_unique<misc::QuadWeightTable>(sparseGrid); });
 }
 
 }  // namespace quadrature

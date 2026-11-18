@@ -12,6 +12,7 @@
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/miscellaneous/closure_trie/closure_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
+#include <sgpp/combigrid/tools/collections/vector_bytes.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -95,6 +96,14 @@ DSGLinInterpIndex::DSGLinInterpIndex(const DeltasSparseGrid& deltasSparseGrid)
  * point; the corners are mapped onto the domain with tools::mapToDomain, as the domain nodes of
  * the grid).
  */
+size_t DSGLinInterpIndex::memoryBytes() const noexcept {
+  using tools::vectorBytes;
+  return sizeof(*this) + trie_.heapBytes() + vectorBytes(rowOffset_) + vectorBytes(nodeOffset) +
+         vectorBytes(nodes) + vectorBytes(maxNewCoords_) + vectorBytes(slotOffset_) +
+         vectorBytes(ctTGs) + vectorBytes(leafCoeffs_) + vectorBytes(dimFiberBegin_) +
+         vectorBytes(fiberBegin_) + vectorBytes(fiberBlocks_) + vectorBytes(fiberShift_);
+}
+
 void DSGLinInterpIndex::collectDeltaNodes(const DeltasSparseGrid& deltasSparseGrid) {
   const NodeTable& unitNodeTable = deltasSparseGrid.getUnitNodeTable();
 

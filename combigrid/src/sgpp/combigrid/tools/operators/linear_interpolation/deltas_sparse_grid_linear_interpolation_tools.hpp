@@ -46,6 +46,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_context.hpp>
@@ -63,11 +64,13 @@ namespace tools {
 namespace dsg_lin_interpolation {
 
 /**
- * @brief Returns the index of the linear interpolation on @p deltasSparseGrid, built on the first
- * call (thread-safe) and kept in the grid's operator data (@c SparseGridBase::getOperatorData).
+ * @brief Returns the index of the linear interpolation on @p deltasSparseGrid: from the grid's
+ * cross-call operator data cache if @p useCache (built on the first call, thread-safe), else
+ * built for the caller.
  * @throws std::invalid_argument if the grid has no dimensions.
  */
-const misc::DSGLinInterpIndex& getIndex(const DeltasSparseGrid& deltasSparseGrid);
+std::shared_ptr<const misc::DSGLinInterpIndex> getIndex(const DeltasSparseGrid& deltasSparseGrid,
+                                                        bool useCache);
 
 /**
  * @brief Returns whether a call runs its passes in parallel: the number of corner visits (number
@@ -128,25 +131,31 @@ void transformFiber(const misc::DSGLinInterpIndex& index, const misc::DSGLinInte
                     misc::DSGLinInterpSlotScratch& slots, size_t dim, size_t fiber);
 
 /**
- * @brief Transform of dimension @p dim along all its fibers (work-shared loop, binds to the
- * enclosing parallel region; ends with its barrier). After the transforms of the dimensions
- * 0, ..., d - 1 in this order, @c slots.slotWeights and @c slots.reached are set for every slot.
+ * @brief Transform of dimension @p dim along all its fibers. After the transforms of the
+ * dimensions 0, ..., d - 1 in this order, @c slots.slotWeights and @c slots.reached are set for
+ * every slot.
+ *
+ * @param parallel Whether the caller runs it in its own parallel region (every thread of the
+ *                 region calls it): then a work-shared loop that ends with its barrier, else a
+ *                 plain loop of the calling thread (which must not bind to a parallel region of
+ *                 the operator's caller).
  */
 void transformDimension(const misc::DSGLinInterpIndex& index,
                         const misc::DSGLinInterpContext& context,
-                        misc::DSGLinInterpSlotScratch& slots, size_t dim);
+                        misc::DSGLinInterpSlotScratch& slots, size_t dim, bool parallel);
 
 /**
  * @brief Evaluates the source function at the reached slots and sums the values times the slot
  * weights per chunk of @c constants::lin_interpolation::DSG_SUM_CHUNK_LEAVES leaves into
- * @c slots.chunkSums (work-shared loop over the chunks without barrier).
+ * @c slots.chunkSums: with @p parallel (see @ref transformDimension), a work-shared loop over the
+ * chunks without barrier, else a plain loop of the calling thread.
  *
  * @tparam ValueType @c misc::ScalarValues or @c misc::VectorValues (buffer of @p scratch).
  */
 template <typename ValueType>
 void evaluateChunks(ValueType values, const misc::DSGLinInterpIndex& index,
                     const misc::DSGLinInterpContext& context, misc::DSGLinInterpSlotScratch& slots,
-                    misc::DSGLinInterpScratch& scratch);
+                    misc::DSGLinInterpScratch& scratch, bool parallel);
 
 /**
  * @brief Adds the m sums of the chunks in chunk order to @p result (m values).

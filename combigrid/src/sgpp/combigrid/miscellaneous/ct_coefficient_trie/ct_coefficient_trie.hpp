@@ -116,6 +116,11 @@ class CTCoeffTrie {
     return nodes[depth][idx].childEnd;
   }
 
+  /// @brief Returns the heap memory of the trie in bytes.
+  size_t heapBytes() const noexcept {
+    return nodes.heapBytes() + leafCoeffs_.capacity() * sizeof(double);
+  }
+
   /// @}
 
  private:

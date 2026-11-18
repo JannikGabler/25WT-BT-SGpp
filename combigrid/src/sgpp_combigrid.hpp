@@ -56,6 +56,7 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 
 // Grids
+#include <sgpp/combigrid/grids/cross_call_operator_data_info.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -67,10 +68,13 @@
 // Operators (SparseGrid and DeltasSparseGrid overloads)
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
+#include <sgpp/combigrid/operators/global_interpolation/global_interpolation_options.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
+#include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation_options.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 
 // Tools
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>

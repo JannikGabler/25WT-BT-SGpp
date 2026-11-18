@@ -19,6 +19,7 @@
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/operators/cross_call/cross_call_operator_data_tools.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/deltas_sparse_grid_global_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
 #include <span>
@@ -87,8 +88,16 @@ void runPasses(const DSGGlobalInterpIndex& index, const DeltasSparseGrid& deltas
 
 }  // namespace
 
-const DSGGlobalInterpIndex& getIndex(const DeltasSparseGrid& deltasSparseGrid) {
-  return deltasSparseGrid.getOperatorData().get<DSGGlobalInterpIndex>(
+std::shared_ptr<const DSGGlobalInterpIndex> getIndex(const DeltasSparseGrid& deltasSparseGrid,
+                                                     const bool useCache) {
+  static constexpr misc::CrossCallOperatorDataDescriptor DESCRIPTOR{
+      .operatorName = "interpolate (DeltasSparseGrid)",
+      .description =
+          "index: trie of the combination coefficients, regular 1D nodes, "
+          "interpolation methods and delta orders per (dimension, level)",
+      .key = ""};
+  return cross_operator_call::getOperatorData<DSGGlobalInterpIndex>(
+      deltasSparseGrid, useCache, DESCRIPTOR,
       [&]() { return std::make_unique<DSGGlobalInterpIndex>(deltasSparseGrid); });
 }
 

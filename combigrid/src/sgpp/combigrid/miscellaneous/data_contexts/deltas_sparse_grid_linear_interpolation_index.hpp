@@ -144,6 +144,9 @@ class DSGLinInterpIndex {
   /// of their slots (if it has one) and the number of bits below it.
   uint8_t fiberShift(const size_t fiber) const noexcept { return fiberShift_[fiber]; }
 
+  /// @brief Returns the memory of the index in bytes (the object and its heap memory).
+  size_t memoryBytes() const noexcept;
+
  private:
   /// @brief Sets the rows and copies the sorted unit delta nodes of every (dimension, level) of
   /// @p deltasSparseGrid.

@@ -21,13 +21,13 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 #include <span>
 
 namespace sgpp {
 namespace combigrid {
 
 /**
- * TODO: Document (update)
  * @brief Approximates @f$\int_\Omega f(\vec{x})\,\mathrm{d}\vec{x}@f$ on
  * the domain attached to @p sparseGrid using its combination-technique
  * structure.
@@ -37,11 +37,19 @@ namespace combigrid {
  * estimates are combined via the stored coefficients and finally scaled
  * by the volume of the domain.
  *
+ * @note Data kept across calls (@c QuadratureOptions::useCrossCallOperatorDataCache, default
+ * off): the 1D quadrature weight table of the grid (one double per node of every (dimension,
+ * level) row of the unit node table; e.g. 32 MiB for 2 dimensions with Clenshaw-Curtis nodes of
+ * level 20), shared with the vector-valued overloads. Without it, every call computes the
+ * table. The results do not depend on the option.
+ *
  * @param sourceFunc Source function to integrate.
  * @param sparseGrid Sparse grid with attached generation instruction.
+ * @param options    Options (see @c QuadratureOptions).
  * @return Approximated integral value.
  */
-double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
+double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
+                  const QuadratureOptions& options = QuadratureOptions());
 
 /**
  * @brief Vector-valued counterpart of @ref quadrature(const SourceFunc&, const SparseGrid&):
@@ -53,10 +61,11 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
  * @param sourceFunc Vector-valued source function to integrate (m = @c sourceFunc.nOutputs()).
  * @param sparseGrid Sparse grid with attached generation instruction.
  * @param result     Output: the m approximated integrals.
+ * @param options    Options (see @c QuadratureOptions).
  * @throws std::invalid_argument if the size of @p result is not m.
  */
 void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
-                std::span<double> result);
+                std::span<double> result, const QuadratureOptions& options = QuadratureOptions());
 
 /**
  * @brief Variant of @ref quadrature(const VectorSourceFunc&, const SparseGrid&, std::span<double>)
@@ -64,9 +73,11 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
  *
  * @param sourceFunc Vector-valued source function to integrate.
  * @param sparseGrid Sparse grid with attached generation instruction.
+ * @param options    Options (see @c QuadratureOptions).
  * @return The m approximated integrals.
  */
-base::DataVector quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid);
+base::DataVector quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
+                            const QuadratureOptions& options = QuadratureOptions());
 
 }  // namespace combigrid
 }  // namespace sgpp

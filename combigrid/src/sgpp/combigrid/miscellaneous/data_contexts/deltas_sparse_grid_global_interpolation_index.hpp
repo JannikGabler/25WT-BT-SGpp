@@ -104,6 +104,9 @@ class DSGGlobalInterpIndex {
   /// @brief Returns the number of grid points of the deltas sparse grid.
   size_t nGridPoints() const noexcept { return nGridPoints_; }
 
+  /// @brief Returns the memory of the index in bytes (the object and its heap memory).
+  size_t memoryBytes() const noexcept;
+
  private:
   /// @brief Sets the row offsets (the maximum levels of the dimensions).
   void setRowOffsets(const DeltasSparseGrid& deltasSparseGrid);

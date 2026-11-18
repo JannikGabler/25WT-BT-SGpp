@@ -4,16 +4,17 @@
 // sgpp.sparsegrids.org
 
 #include <cassert>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
-#include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_quadrature_index.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
-#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
@@ -23,27 +24,26 @@
 #include <span>
 #include <stdexcept>
 
-using sgpp::combigrid::misc::CTCoeffTrie;
 using sgpp::combigrid::misc::DeltaWeightedSumScratch;
-using sgpp::combigrid::misc::FlatNestedVec;
+using sgpp::combigrid::misc::DSGQuadIndex;
 using sgpp::combigrid::misc::GenericDSGOperatorContext;
 using sgpp::combigrid::tools::dsg_quadrature::combineDeltaTensorGrids;
-using sgpp::combigrid::tools::dsg_quadrature::comp1DWeights;
+using sgpp::combigrid::tools::dsg_quadrature::getIndex;
 using sgpp::combigrid::tools::dsg_weighted_sum::processDeltaTensorGrid;
 
 namespace sgpp {
 namespace combigrid {
 
-double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid) {
+double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid,
+                  const QuadratureOptions& options) {
   const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
   const size_t nDim = deltasSparseGrid.nDim();
 
-  const FlatNestedVec<double, 3> weights1D = comp1DWeights(deltasSparseGrid);
-  const CTCoeffTrie coeffTrie(deltasSparseGrid.getLevels().getView(),
-                              deltasSparseGrid.getCoefficients());
-
-  const GenericDSGOperatorContext context{
-      .deltasSparseGrid = deltasSparseGrid, .weights1D = weights1D, .coeffTrie = coeffTrie};
+  const std::shared_ptr<const DSGQuadIndex> index =
+      getIndex(deltasSparseGrid, options.useCrossCallOperatorDataCache);
+  const GenericDSGOperatorContext context{.deltasSparseGrid = deltasSparseGrid,
+                                          .weights1D = index->weights1D(),
+                                          .coeffTrie = index->coeffTrie()};
 
   double result = 0.0;
 
@@ -51,9 +51,7 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
   {
     DeltaWeightedSumScratch scratch(nDim, deltasSparseGrid.getMaxTGSumOverGPCntsPerDim());
 
-    // The delta tensor grids differ in size by orders of magnitude. Dynamic scheduling was up to
-    // 20% faster than guided scheduling for large sparse grids.
-    // Processing them largest-first gave no further gain.
+    // The delta tensor grids differ in size by orders of magnitude -> Dynamic scheduling
 #pragma omp for schedule(dynamic) nowait
     for (size_t tgIdx = 0; tgIdx < deltasSparseGrid.nTG(); tgIdx++) {
       result += processDeltaTensorGrid(context, sourceFunc,
@@ -67,19 +65,18 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
 }
 
 void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid,
-                const std::span<double> result) {
+                const std::span<double> result, const QuadratureOptions& options) {
   if (result.size() != sourceFunc.nOutputs()) {
     throw std::invalid_argument("quadrature: The size of the result is not the number of outputs");
   }
 
   const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
 
-  const FlatNestedVec<double, 3> weights1D = comp1DWeights(deltasSparseGrid);
-  const CTCoeffTrie coeffTrie(deltasSparseGrid.getLevels().getView(),
-                              deltasSparseGrid.getCoefficients());
-
-  const GenericDSGOperatorContext context{
-      .deltasSparseGrid = deltasSparseGrid, .weights1D = weights1D, .coeffTrie = coeffTrie};
+  const std::shared_ptr<const DSGQuadIndex> index =
+      getIndex(deltasSparseGrid, options.useCrossCallOperatorDataCache);
+  const GenericDSGOperatorContext context{.deltasSparseGrid = deltasSparseGrid,
+                                          .weights1D = index->weights1D(),
+                                          .coeffTrie = index->coeffTrie()};
 
   combineDeltaTensorGrids(context, sourceFunc, result);
 
@@ -92,9 +89,10 @@ void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& delt
 }
 
 base::DataVector quadrature(const VectorSourceFunc& sourceFunc,
-                            const DeltasSparseGrid& deltasSparseGrid) {
+                            const DeltasSparseGrid& deltasSparseGrid,
+                            const QuadratureOptions& options) {
   base::DataVector result(sourceFunc.nOutputs());
-  quadrature(sourceFunc, deltasSparseGrid, result);
+  quadrature(sourceFunc, deltasSparseGrid, result, options);
   return result;
 }
 

@@ -31,6 +31,8 @@ namespace combigrid {
  * instruction and are normalized to @f$[0,1]^d@f$ internally before each
  * tensor-grid evaluation.
  *
+ * @note Keeps no data across calls (nothing in the grid's cross-call operator data cache).
+ *
  * @param sourceFunc Black-box source function to interpolate.
  * @param point      Evaluation point; must have @c size() == sparseGrid.nDim().
  * @param sparseGrid Sparse grid to interpolate on. Must have an attached

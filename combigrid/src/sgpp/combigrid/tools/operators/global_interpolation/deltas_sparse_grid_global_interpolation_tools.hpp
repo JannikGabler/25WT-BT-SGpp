@@ -25,6 +25,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
@@ -35,14 +36,17 @@
 
 namespace sgpp {
 namespace combigrid {
+
 namespace tools {
 namespace dsg_global_interpolation {
 
 /**
- * @brief Returns the index of the global interpolation on @p deltasSparseGrid, built on the first
- * call (thread-safe) and kept in the grid's operator data (@c SparseGridBase::getOperatorData).
+ * @brief Returns the index of the global interpolation on @p deltasSparseGrid: from the grid's
+ * cross-call operator data cache if @p useCache (built on the first call, thread-safe), else
+ * built for the caller.
  */
-const misc::DSGGlobalInterpIndex& getIndex(const DeltasSparseGrid& deltasSparseGrid);
+std::shared_ptr<const misc::DSGGlobalInterpIndex> getIndex(const DeltasSparseGrid& deltasSparseGrid,
+                                                           bool useCache);
 
 /**
  * @brief Returns whether a call runs in parallel: the grid has at least
@@ -113,5 +117,6 @@ void evaluateInterpolant(const misc::DSGGlobalInterpIndex& index,
 
 }  // namespace dsg_global_interpolation
 }  // namespace tools
+
 }  // namespace combigrid
 }  // namespace sgpp

@@ -14,6 +14,7 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 #include <span>
 
 namespace sgpp {
@@ -30,11 +31,19 @@ namespace combigrid {
  * times the product of the 1D quadrature weights). Requires nested nodes (guaranteed by the
  * construction of the @c DeltasSparseGrid).
  *
+ * @note Data kept across calls (@c QuadratureOptions::useCrossCallOperatorDataCache, default
+ * off): the 1D quadrature weights of every (dimension, level) in delta order and the trie of the
+ * combination coefficients (about one double per 1D node plus a few words per tensor grid; e.g.
+ * 2 MiB for 3 dimensions at level 14), shared with the vector-valued overloads. Without it,
+ * every call builds them. The results do not depend on the option.
+ *
  * @param sourceFunc       Black-box source function to integrate.
  * @param deltasSparseGrid Deltas sparse grid with attached generation instruction.
+ * @param options          Options (see @c QuadratureOptions).
  * @return Approximated integral.
  */
-double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid);
+double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid,
+                  const QuadratureOptions& options = QuadratureOptions());
 
 /**
  * @brief Vector-valued counterpart of
@@ -48,10 +57,11 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
  *                         sourceFunc.nOutputs()).
  * @param deltasSparseGrid Deltas sparse grid with attached generation instruction.
  * @param result           Output: the m approximated integrals.
+ * @param options          Options (see @c QuadratureOptions).
  * @throws std::invalid_argument if the size of @p result is not m.
  */
 void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid,
-                std::span<double> result);
+                std::span<double> result, const QuadratureOptions& options = QuadratureOptions());
 
 /**
  * @brief Variant of
@@ -60,10 +70,12 @@ void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& delt
  *
  * @param sourceFunc       Vector-valued source function to integrate.
  * @param deltasSparseGrid Deltas sparse grid with attached generation instruction.
+ * @param options          Options (see @c QuadratureOptions).
  * @return The m approximated integrals.
  */
 base::DataVector quadrature(const VectorSourceFunc& sourceFunc,
-                            const DeltasSparseGrid& deltasSparseGrid);
+                            const DeltasSparseGrid& deltasSparseGrid,
+                            const QuadratureOptions& options = QuadratureOptions());
 
 }  // namespace combigrid
 }  // namespace sgpp

@@ -9,6 +9,7 @@
 #include <limits>
 #include <numeric>
 #include <sgpp/combigrid/miscellaneous/closure_trie/closure_trie.hpp>
+#include <sgpp/combigrid/tools/collections/vector_bytes.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
@@ -103,6 +104,11 @@ void ClosureTrie::addChildren(const size_t node, const size_t depth,
 
   firstChild_[node] = static_cast<uint32_t>(first);
   nChildren_[node] = nGroups;
+}
+
+size_t ClosureTrie::heapBytes() const noexcept {
+  return tools::vectorBytes(firstChild_) + tools::vectorBytes(nChildren_) +
+         tools::vectorBytes(leafItems);
 }
 
 size_t ClosureTrie::findLeaf(const LvlMIView mi) const {

@@ -21,7 +21,6 @@
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <span>
-#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -41,6 +40,9 @@ namespace combigrid {
  * (e.g. if a coordinate of @p point is a node, the other nodes of that dimension have the
  * weight 0). So a non-finite value (inf, NaN) of @p sourceFunc at any grid point makes the
  * result non-finite, also if @p point lies on a node.
+ *
+ * @note Keeps no data across calls (nothing in the grid's cross-call operator data cache): the
+ * 1D basis values are computed per tensor grid and call.
  *
  * @param sourceFunc Black-box source function.
  * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().

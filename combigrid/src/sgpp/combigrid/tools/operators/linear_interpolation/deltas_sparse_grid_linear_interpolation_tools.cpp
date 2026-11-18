@@ -22,6 +22,7 @@
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
+#include <sgpp/combigrid/tools/operators/cross_call/cross_call_operator_data_tools.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -148,8 +149,16 @@ void transformDim0Fiber(const DSGLinInterpIndex& index, const DSGLinInterpContex
 
 }  // namespace
 
-const DSGLinInterpIndex& getIndex(const DeltasSparseGrid& deltasSparseGrid) {
-  return deltasSparseGrid.getOperatorData().get<DSGLinInterpIndex>(
+std::shared_ptr<const DSGLinInterpIndex> getIndex(const DeltasSparseGrid& deltasSparseGrid,
+                                                  const bool useCache) {
+  static constexpr misc::CrossCallOperatorDataDescriptor DESCRIPTOR{
+      .operatorName = "interpolateLinear (DeltasSparseGrid)",
+      .description =
+          "index: trie over the multi-indices, sorted 1D delta nodes, fibers per "
+          "dimension and combination coefficients",
+      .key = ""};
+  return cross_operator_call::getOperatorData<DSGLinInterpIndex>(
+      deltasSparseGrid, useCache, DESCRIPTOR,
       [&]() { return std::make_unique<DSGLinInterpIndex>(deltasSparseGrid); });
 }
 
@@ -273,10 +282,19 @@ void transformFiber(const DSGLinInterpIndex& index, const DSGLinInterpContext& c
 }
 
 void transformDimension(const DSGLinInterpIndex& index, const DSGLinInterpContext& context,
-                        DSGLinInterpSlotScratch& slots, const size_t dim) {
+                        DSGLinInterpSlotScratch& slots, const size_t dim, const bool parallel) {
+  const size_t begin = index.firstFiber(dim);
+  const size_t end = index.firstFiber(dim + 1);
+  if (parallel) {
 #pragma omp for schedule(dynamic, 16)
-  for (size_t fiber = index.firstFiber(dim); fiber < index.firstFiber(dim + 1); fiber++) {
-    transformFiber(index, context, slots, dim, fiber);
+    for (size_t fiber = begin; fiber < end; fiber++) {
+      transformFiber(index, context, slots, dim, fiber);
+    }
+  } else {
+    // A work-shared loop here would bind to a parallel region of the operator's caller
+    for (size_t fiber = begin; fiber < end; fiber++) {
+      transformFiber(index, context, slots, dim, fiber);
+    }
   }
 }
 
@@ -319,18 +337,24 @@ void evaluateBlock(const ValueType values, const DSGLinInterpIndex& index,
 template <typename ValueType>
 void evaluateChunks(const ValueType values, const DSGLinInterpIndex& index,
                     const DSGLinInterpContext& context, DSGLinInterpSlotScratch& slots,
-                    DSGLinInterpScratch& scratch) {
+                    DSGLinInterpScratch& scratch, const bool parallel) {
   const size_t chunkLeaves = constants::lin_interpolation::DSG_SUM_CHUNK_LEAVES;
   const size_t nChunks = DSGLinInterpSlotScratch::nChunks(index);
-
-#pragma omp for schedule(dynamic, 1) nowait
-  for (size_t chunk = 0; chunk < nChunks; chunk++) {
+  const auto evaluateChunk = [&](const size_t chunk) {
     typename ValueType::Acc acc = values.zeroAcc(DSGLinInterpScratch::CHUNK_ACC);
     const size_t end = std::min(index.nLeaves(), (chunk + 1) * chunkLeaves);
     for (size_t leaf = chunk * chunkLeaves; leaf < end; leaf++) {
       evaluateBlock(values, index, context, slots, leaf, scratch, acc);
     }
     values.store(acc, slots.chunkSums.data() + chunk * values.nOutputs());
+  };
+
+  if (parallel) {
+#pragma omp for schedule(dynamic, 1) nowait
+    for (size_t chunk = 0; chunk < nChunks; chunk++) evaluateChunk(chunk);
+  } else {
+    // A work-shared loop here would bind to a parallel region of the operator's caller
+    for (size_t chunk = 0; chunk < nChunks; chunk++) evaluateChunk(chunk);
   }
 }
 
@@ -347,10 +371,10 @@ void sumChunks(const DSGLinInterpIndex& index, const DSGLinInterpSlotScratch& sl
 
 template void evaluateChunks(misc::ScalarValues, const DSGLinInterpIndex&,
                              const DSGLinInterpContext&, DSGLinInterpSlotScratch&,
-                             DSGLinInterpScratch&);
+                             DSGLinInterpScratch&, bool);
 template void evaluateChunks(misc::VectorValues, const DSGLinInterpIndex&,
                              const DSGLinInterpContext&, DSGLinInterpSlotScratch&,
-                             DSGLinInterpScratch&);
+                             DSGLinInterpScratch&, bool);
 
 }  // namespace dsg_lin_interpolation
 }  // namespace tools

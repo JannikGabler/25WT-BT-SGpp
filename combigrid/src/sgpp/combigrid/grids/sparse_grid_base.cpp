@@ -5,7 +5,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <sgpp/combigrid/constants.hpp>
+#include <sgpp/combigrid/grids/cross_call_operator_data_info.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -23,6 +25,19 @@ SparseGridBase::const_iterator SparseGridBase::getDomainTensorGrid(
 SparseGridBase::const_iterator SparseGridBase::getUnitTensorGrid(
     const LvlMIView& mi) const noexcept {
   return findTensorGrid(unitTensorGrids(), mi);
+}
+
+void SparseGridBase::clearCrossCallOperatorDataCache() const {
+  crossCallOperatorDataCache_.clear();
+}
+
+std::vector<CrossCallOperatorDataInfo> SparseGridBase::getCrossCallOperatorDataCacheEntries()
+    const {
+  return crossCallOperatorDataCache_.entries();
+}
+
+size_t SparseGridBase::getCrossCallOperatorDataCacheBytes() const {
+  return crossCallOperatorDataCache_.memoryBytes();
 }
 
 SparseGridBase::const_iterator SparseGridBase::findTensorGrid(const TensorGridRange range,

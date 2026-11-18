@@ -349,7 +349,7 @@ BOOST_AUTO_TEST_CASE(Serial_Path_Equals_Parallel_Path) {
     LvlMIVec miVec(config.nDim, 0);
     const std::unique_ptr<SGGenInstr> genInstr = makeGenInstr(config, miVec);
     const DeltasSparseGrid dsg(*genInstr);
-    const misc::DSGGlobalInterpIndex& index = tools::dsg_global_interpolation::getIndex(dsg);
+    const misc::DSGGlobalInterpIndex& index = *tools::dsg_global_interpolation::getIndex(dsg, true);
 
     for (const DataVector& point : testPoints(genInstr->getDomain())) {
       const DataVector normPoint = tools::normalizeDataVector(point, genInstr->getDomain());
@@ -405,8 +405,8 @@ BOOST_AUTO_TEST_CASE(Concurrent_First_Calls_Share_One_Index) {
     const double expected = interpolate(SourceFunc(testFunc), point, sg);
     BOOST_CHECK_SMALL(results[i] - expected, tolerance(sg, point));
   }
-  BOOST_CHECK_EQUAL(&tools::dsg_global_interpolation::getIndex(dsg),
-                    &tools::dsg_global_interpolation::getIndex(dsg));
+  BOOST_CHECK_EQUAL(tools::dsg_global_interpolation::getIndex(dsg, true).get(),
+                    tools::dsg_global_interpolation::getIndex(dsg, true).get());
 }
 
 BOOST_AUTO_TEST_CASE(Index_Rows_Match_Quadrature_Layout) {
@@ -418,7 +418,8 @@ BOOST_AUTO_TEST_CASE(Index_Rows_Match_Quadrature_Layout) {
       LvlMIVec miVec(config.nDim, 0);
       const std::unique_ptr<SGGenInstr> genInstr = makeGenInstr(config, miVec);
       const DeltasSparseGrid dsg(*genInstr);
-      const misc::DSGGlobalInterpIndex& index = tools::dsg_global_interpolation::getIndex(dsg);
+      const misc::DSGGlobalInterpIndex& index =
+          *tools::dsg_global_interpolation::getIndex(dsg, true);
       const misc::FlatNestedVec<double, 3> weights = tools::dsg_quadrature::comp1DWeights(dsg);
       const misc::FlatNestedVec<double, 3> basisValues =
           tools::dsg_global_interpolation::compBasisValues(index, DataVector(3, 0.37));

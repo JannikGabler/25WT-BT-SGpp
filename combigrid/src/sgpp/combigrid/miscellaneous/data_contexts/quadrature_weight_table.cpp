@@ -12,6 +12,7 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/collections/vector_bytes.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
@@ -46,6 +47,16 @@ void QuadWeightTable::computeAllRows() const {
   for (size_t i = 0; i < rowsBySize_.size(); i++) {
     weights(rowsBySize_[i].first, rowsBySize_[i].second);
   }
+}
+
+size_t QuadWeightTable::memoryBytes() const noexcept {
+  size_t bytes = sizeof(*this) + tools::vectorBytes(rowsBySize_) + tools::vectorBytes(rows_) +
+                 published_.capacity() * sizeof(std::atomic<const double*>) +
+                 onceFlags_.capacity() * sizeof(std::once_flag);
+  for (const auto& [dim, lvl] : rowsBySize_) {
+    bytes += unitNodeTable_.nNodes(dim, lvl) * sizeof(double);
+  }
+  return bytes;
 }
 
 const double* QuadWeightTable::weights(const size_t dim, const LvlType lvl) const {

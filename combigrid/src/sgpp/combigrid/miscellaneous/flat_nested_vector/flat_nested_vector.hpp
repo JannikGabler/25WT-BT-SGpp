@@ -199,6 +199,14 @@ class FlatNestedVec {
   size_type size() const noexcept { return data_.size(); }
   /// @brief Returns @c true iff there are no elements (there may be empty sub-vectors).
   bool empty() const noexcept { return data_.empty(); }
+
+  /// @brief Returns the heap memory of the container in bytes (elements and offset arrays, by
+  /// capacity).
+  size_t heapBytes() const noexcept {
+    size_t bytes = data_.capacity() * sizeof(T);
+    for (const std::vector<Index>& off : offsets_) bytes += off.capacity() * sizeof(Index);
+    return bytes;
+  }
   /// @brief Returns the number of elements that fit without reallocation.
   size_type capacity() const noexcept { return data_.capacity(); }
 

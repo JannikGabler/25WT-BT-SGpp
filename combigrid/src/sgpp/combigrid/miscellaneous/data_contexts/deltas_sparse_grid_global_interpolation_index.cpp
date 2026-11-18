@@ -14,6 +14,7 @@
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/collections/vector_bytes.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -48,6 +49,16 @@ DSGGlobalInterpIndex::DSGGlobalInterpIndex(const DeltasSparseGrid& deltasSparseG
   std::iota(tgsBySize_.begin(), tgsBySize_.end(), size_t{0});
   std::ranges::stable_sort(tgsBySize_,
                            [&](const size_t a, const size_t b) { return nGP[a] > nGP[b]; });
+}
+
+size_t DSGGlobalInterpIndex::memoryBytes() const noexcept {
+  using tools::vectorBytes;
+  size_t bytes = sizeof(*this) + coeffTrie_.heapBytes() + vectorBytes(rowOffset_) +
+                 vectorBytes(rowDim_) + vectorBytes(rowsBySize_) + vectorBytes(tgsBySize_) +
+                 vectorBytes(rowNodes) + vectorBytes(rowMethods) + vectorBytes(deltaOrder_) +
+                 vectorBytes(weightStart_) + weightLayout_.heapBytes();
+  for (const std::vector<double>& nodes : rowNodes) bytes += vectorBytes(nodes);
+  return bytes;
 }
 
 void DSGGlobalInterpIndex::setRowOffsets(const DeltasSparseGrid& deltasSparseGrid) {

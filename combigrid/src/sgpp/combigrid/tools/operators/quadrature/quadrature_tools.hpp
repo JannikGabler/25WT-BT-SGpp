@@ -11,11 +11,13 @@
  */
 #pragma once
 
+#include <memory>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
+#include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <span>
 
@@ -92,6 +94,13 @@ void prepareTensorGrid(const misc::QuadratureContext& context, TensorGridView tg
  */
 void getWeights(const misc::QuadratureContext& context, TensorGridView tg,
                 misc::QuadratureScratch& scratch);
+
+/**
+ * @brief Returns the 1D quadrature weight table of @p sparseGrid: from the grid's cross-call
+ * operator data cache if @p useCache (stored there on the first call), else a new table.
+ */
+std::shared_ptr<const misc::QuadWeightTable> getWeightTable(const SparseGrid& sparseGrid,
+                                                            bool useCache);
 
 }  // namespace quadrature
 }  // namespace tools
