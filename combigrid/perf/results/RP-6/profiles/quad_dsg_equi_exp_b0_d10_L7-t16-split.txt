@@ -1,0 +1,51 @@
+samples: 261192
+
+## per dso
+ 45.04 %  libsgppcombigrid.so
+ 29.64 %  libm.so.6
+ 21.86 %  perf_e2e
+  2.05 %  libc.so.6
+  0.66 %  [unknown]
+  0.38 %  libopenblasp-r0.3.32.so
+  0.37 %  libgomp.so.1.0.0
+  0.00 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 44.37 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  [libsgppcombigrid.so]
+ 18.61 %  sgpp::combigrid::perf::expSum  [perf_e2e]
+ 17.02 %  __ieee754_exp_fma  [libm.so.6]
+ 11.45 %  exp@@GLIBC_2.29  [libm.so.6]
+  2.05 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  1.85 %  exp@plt  [perf_e2e]
+  1.40 %  std::_Function_handler<double   [perf_e2e]
+  1.17 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.66 %  [unknown]  [[unknown]]
+  0.41 %  memset@plt  [libsgppcombigrid.so]
+  0.38 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.37 %  [unknown]  [libgomp.so.1.0.0]
+  0.11 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  [libsgppcombigrid.so]
+  0.06 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::appendProjectedChildren  [libsgppcombigrid.so]
+  0.04 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::allocBlock  [libsgppcombigrid.so]
+  0.03 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  [libsgppcombigrid.so]
+  0.02 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::childBlock  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::TensorGridView::nGP  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::misc::CTCoeffTrie::CTCoeffTrie  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::blockWidth  [libsgppcombigrid.so]
+  0.00 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.00 %  sgpp::combigrid::tools::dsg_weighted_sum::prepareDeltaTensorGrid  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::quadrature  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::SparseGridBase::computeMetaValues  [libsgppcombigrid.so]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  strcmp  [ld-linux-x86-64.so.2]
+  0.00 %  std::__cxx11::to_string  [perf_e2e]
+  0.00 %  unlink_chunk.isra.0  [libc.so.6]
+  0.00 %  id::MI<unsigned int> sgpp::combigrid::tools::computeComponentWiseMaxParallel<unsigned int>  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+ 14.57 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::updateCoeffSums
+ 12.27 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::tools::dsg_weighted_sum::compRowWeights
+ 10.28 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::
+  5.13 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.53 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.58 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  <=  sgpp::combigrid::misc::ScalarValues::evaluate

@@ -1,0 +1,55 @@
+samples: 21290
+
+## per dso
+ 47.44 %  libm.so.6
+ 18.34 %  libgomp.so.1.0.0
+ 15.80 %  libsgppcombigrid.so
+ 10.22 %  perf_e2e
+  4.85 %  libopenblasp-r0.3.32.so
+  2.82 %  [unknown]
+  0.51 %  libc.so.6
+  0.02 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 47.44 %  __cos_fma  [libm.so.6]
+ 18.31 %  [unknown]  [libgomp.so.1.0.0]
+  9.31 %  sgpp::combigrid::tools::dsg_lin_interpolation::transformFiber  [libsgppcombigrid.so]
+  8.55 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  5.86 %  mbigrid::tools::dsg_lin_interpolation::evaluateChunks<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  4.85 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.82 %  [unknown]  [[unknown]]
+  1.45 %  cos@plt  [perf_e2e]
+  0.48 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.41 %  sgpp::combigrid::tools::dsg_lin_interpolation::  [libsgppcombigrid.so]
+  0.21 %  std::_Function_handler<double   [perf_e2e]
+  0.16 %  sgpp::combigrid::tools::dsg_lin_interpolation::transformDimension  [libsgppcombigrid.so]
+  0.02 %  GOMP_loop_ull_nonmonotonic_dynamic_start  [libgomp.so.1.0.0]
+  0.02 %  memset@plt  [libsgppcombigrid.so]
+  0.01 %  void sgpp::combigrid::  [libsgppcombigrid.so]
+  0.01 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.01 %  _mid_memalign  [libc.so.6]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.00 %  ::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string  [perf_e2e]
+  0.00 %  _int_memalign  [libc.so.6]
+  0.00 %  __printf_buffer_write  [libc.so.6]
+  0.00 %  er<std::ranges::__detail::__make_comp_proj<sgpp::combigrid::misc::ClosureTrie::ClosureTrie  [libsgppcombigrid.so]
+  0.00 %  arena_get2  [libc.so.6]
+  0.00 %  GOMP_loop_end_nowait@plt  [libsgppcombigrid.so]
+  0.00 %  operator new  [libsgppbase.so]
+  0.00 %  sgpp::combigrid::misc::DSGLinInterpIndex::computeSlotOffsets  [libsgppcombigrid.so]
+  0.00 %  __ctype_init  [libc.so.6]
+  0.00 %  sgpp::combigrid::misc::DSGLinInterpIndex::collectFibers  [libsgppcombigrid.so]
+  0.00 %  _int_malloc  [libc.so.6]
+  0.00 %  sgpp::combigrid::perf::randomPoints  [perf_e2e]
+
+## per symbol / innermost helper (combigrid + base only)
+  4.82 %  mbigrid::tools::dsg_lin_interpolation::evaluateChunks<sgpp::combigrid::misc::ScalarValues>  <=  ombigrid::tools::dsg_lin_interpolation::evaluateBlock<sgpp::combigrid::misc::ScalarValues>
+  4.51 %  sgpp::combigrid::tools::dsg_lin_interpolation::transformFiber  <=  sgpp::combigrid::tools::dsg_lin_interpolation::transformFiber
+  3.82 %  sgpp::combigrid::tools::dsg_lin_interpolation::transformFiber  <=  pushToIds
+  0.70 %  mbigrid::tools::dsg_lin_interpolation::evaluateChunks<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.36 %  sgpp::combigrid::tools::dsg_lin_interpolation::transformFiber  <=  sgpp::combigrid::misc::DSGLinInterpIndex::fiberBlocks
+  0.30 %  mbigrid::tools::dsg_lin_interpolation::evaluateChunks<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.28 %  sgpp::combigrid::tools::dsg_lin_interpolation::  <=  sgpp::combigrid::tools::dsg_lin_interpolation::
+  0.23 %  sgpp::combigrid::tools::dsg_lin_interpolation::transformFiber  <=  transformDim0Fiber

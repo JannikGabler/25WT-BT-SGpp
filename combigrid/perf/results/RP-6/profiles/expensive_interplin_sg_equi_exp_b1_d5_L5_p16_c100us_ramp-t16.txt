@@ -1,0 +1,8 @@
+profile of `^expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-ramp$` (e2e, 16 threads, self time)
+    86.63%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::burnChain
+     4.68%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     3.01%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     2.26%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     1.52%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+
+samples per process: 1 warm-up + 1

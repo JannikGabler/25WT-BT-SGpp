@@ -1,0 +1,4 @@
+threads 16
+end of call 1 per thread (s): first 5.452, median 5.470, last 5.510; spread 58.1 ms
+mean idle before the last thread finishes: 41.5 ms = 0.75 % of a 5.51 s call
+earliest restart (call 2) at 5.511 s

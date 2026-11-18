@@ -1,0 +1,27 @@
+samples: 39180
+
+## per dso
+ 86.48 %  perf_e2e
+  9.78 %  libgomp.so.1.0.0
+  2.56 %  libopenblasp-r0.3.32.so
+  1.12 %  [unknown]
+  0.04 %  libm.so.6
+  0.02 %  libsgppcombigrid.so
+  0.01 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 86.44 %  sgpp::combigrid::perf::burnChain  [perf_e2e]
+  9.78 %  [unknown]  [libgomp.so.1.0.0]
+  2.56 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.12 %  [unknown]  [[unknown]]
+  0.04 %  double sgpp::combigrid::perf::expensive<&sgpp::combigrid::perf::expSum, 49000ul,   [perf_e2e]
+  0.02 %  __ieee754_exp_fma  [libm.so.6]
+  0.01 %  exp@@GLIBC_2.29  [libm.so.6]
+  0.01 %  sgpp::combigrid::tools::lin_interpolation::prepareCorners  [libsgppcombigrid.so]
+  0.01 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  0.01 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  memset@plt  [perf_e2e]
+  0.00 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+
+## per symbol / innermost helper (combigrid + base only)

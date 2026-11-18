@@ -1,0 +1,14 @@
+profile of `^interplin/dsg/equi/b1/d8/L5/p256$` (e2e, 16 threads, self time)
+    48.15%  perf_e2e  libm.so.6                [.] __cos_fma
+     9.48%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::tools::dsg_lin_interpolation::transformFiber
+     8.67%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::cosProd
+     7.79%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     5.97%  perf_e2e  libsgppcombigrid.so      [.] void sgpp::combigrid::tools::dsg_lin_interpolation::evaluateChunks<sgpp::combigrid::misc::ScalarValues>
+     5.29%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+     4.17%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     2.52%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c72
+     1.46%  perf_e2e  perf_e2e                 [.] cos@plt
+     0.83%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026a8b
+     0.77%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c70
+
+samples per process: 1 warm-up + 4

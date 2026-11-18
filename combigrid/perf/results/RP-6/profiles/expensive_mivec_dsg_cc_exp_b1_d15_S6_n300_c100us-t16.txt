@@ -1,0 +1,7 @@
+profile of `^expensive/mivec/dsg/cc-exp/b1/d15/S6/n300/c100us$` (e2e, 16 threads, self time)
+    91.28%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::burnChain
+     4.69%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     0.74%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     0.53%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+
+samples per process: 1 warm-up + 1

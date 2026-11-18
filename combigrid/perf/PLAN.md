@@ -12,11 +12,23 @@ the "From RP-k" lines carry the re-profiling numbers; the table's expected savin
 (snapshot `rp-3` = 0c6ecfc4b, ANALYSIS.md "Re-profiling RP-3", `results/RP-3/`; shares unchanged
 since RP-2).
 
-**Ranking rule**: expected absolute time saved on the e2e suite, cases with d ≥ 7 first (they
-run longest and the owner prioritizes high dimensions), then all cases; ties broken by operator
-weight quadrature (SG, DSG) > global interpolation > linear interpolation > generation. WPs that
-need a functional/interface/flag change are marked **needs decision** and are not scheduled
-before the owner decided. Re-rank after every re-profiling (rule 7).
+**Ranking rule** (owner 2026-11-18; replaces "absolute saving on the cheap suite, d ≥ 7 first,
+operator weights"): the master ranks by judgement over all available information, **without a
+weighting formula** (procedure: skill `perf-master`, step 4). Inputs per WP, kept in the table
+"Ranking inputs" below: gain per case group (cheap suite, `expensive/`, cached; absolute and
+relative), confidence (measured / modelled / guessed), effort (sessions), lasting complexity
+(S/M/L), dependencies / interactions (better order), memory, owner priority, and the sessions'
+recommendations (re-profilings, explorations). Principles: no case type is prioritized in general;
+lasting complexity weighs more than effort; interacting WPs are sequenced for the best total;
+uncertain large gains are measured first; high dimensions are a mild preference when gains are
+similar; the owner's priority overrides. Ranks change only with new evidence, with a logged
+reason. WPs that need a functional/interface/flag change are marked **needs decision** and are not
+scheduled before the owner decided. Re-rank after every re-profiling (rule 7).
+**Case realism** (owner 2026-11-18): "If sessions notice that certain gains only pay for rather
+unlikely or unrealistic cases (e.g. very high levels) or the opposite that sessions notice that
+there are realistic cases that are not tracked by cases in the suite, then should feel free to
+report that to me or the master session at any time." The master copies this note into every
+prompt (prompt template) and weighs such reports in the ranking; suite changes need the owner.
 **Memory** (owner 2026-10-28): runtime stays the ranking metric; peak memory (max RSS per e2e
 process, from WP-15 on) is monitored, reported with every runtime change and weighed in
 decisions. Memory reduction is a valid secondary goal where profiles show potential.
@@ -106,6 +118,35 @@ of 48 cases 37.44 s): quad/sg 8.62 s (23 %) · quad/dsg **17.83 s (47.6 %**; b0 
 integrand 8.6, row loop 5.72 s) · interp/sg 4.22 s · interplin/sg 3.51 s · mivec 1.27 s ·
 interp/dsg 0.83 s · interplin/dsg 1.17 s. Peak memory geomean baseline → rp-5 **0.724**
 (ANALYSIS.md "Re-profiling RP-5", `results/RP-5/`).
+At RP-6 (rp-6 = 37a84e1af; 38 common cases 69.89 → 34.70 s, **2.014x**, d ≥ 7 1.99x, 0 SLOWER;
+suite of 48 cases 36.33 s): quad/sg 8.13 s (22.4 %) · quad/dsg **17.70 s (48.7 %**; b0 d7/d10
+14.86 s: integrand 8.48, row loop 5.74 s) · interp/sg 4.23 s · interplin/sg 3.54 s · mivec 1.09 s ·
+interp/dsg 0.83 s · interplin/dsg 0.79 s; `expensive/` 17.77 s (cached 1.04 s). Peak memory geomean
+baseline → rp-6 **0.716** (ANALYSIS.md "Re-profiling RP-6", `results/RP-6/`). Since RP-6 the
+`expensive/` effects stay outside the ranking (owner D3, 2026-11-17) but are listed with every WP.
+
+### Ranking inputs (owner 2026-11-18; judgement-based ranking, no formula)
+
+Group totals at rp-6 (16 t): quad/sg 8.13 s · quad/dsg 17.70 · interp/sg 4.23 · interplin/sg 3.54 ·
+mivec 1.09 · interp/dsg 0.83 · interplin/dsg 0.79 · `expensive/` 17.77 · cached 1.04 s. Confidence:
+**meas.** = measured, **model** = modelled, **guess** = estimated. Complexity = lasting (S/M/L).
+Rows: the ranked optimization WPs up to rank 8 and owner-placed WPs with a master recommendation;
+lower ranks are low / unsized (see their entries).
+
+| Rank | WP | Cheap suite | `expensive/` / cached | Conf. | Effort | Complexity | Dependencies / interactions | Memory | Owner priority | Reason for the rank |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | WP-61 | ≈ 0 runtime; SG quadrature bitwise thread-count independent | – | meas. (cost ≈ 0 expected) | < 1 | S | **before WP-77**: ordered per-TG sums make WP-77's reordering of the SG quadrature bitwise neutral (one re-pinning instead of two, simpler verification) | + nTG × 8 B | agreed 11-15 (low) | small, agreed, and gives the best total with WP-77 |
+| 2 | WP-77 | 0.25–0.4 s (mivec ≈ 10 %, sg d2 L20 cases 5–10 %, interp/sg 1–2 %, quad/dsg ≈ 0.7 %) | 1.1–1.6 s (6–9 % of the group; mivec/sg c100us −28 %, mivec/dsg −38 %); split variant −0.65 s more | model (reproduces mivec/sg exactly) | 1 | S (order) · M (split) | after WP-61; before WP-51 / WP-44 / WP-21 (less per-point work makes imbalance count more) | ≈ 0 | split = optional variant (11-18) | largest gain on both the cheap and the expensive group, high confidence, small complexity |
+| 3 | WP-74 | 0.05–0.08 s (interplin/dsg 6–10 %) | ≈ 0.15 s (interplin/dsg d5 −45 %) | meas. + model (chunk model 0.489 = 0.49) | 1 | M | none | ≈ 0 | – | largest relative gain on a whole group, plus an expensive case |
+| 4 | WP-21 | 0.1–0.15 s (b1 d15 / d20 ≈ 5–10 %; < 1 % of quad/dsg) | not sized | meas. (DFS share, 42–44 % rejected iterations) | 1 | S (slack `break`) · M (per-set cache) | same files as WP-44 / WP-51 | per-set cache may raise the b1 peak | – | high d, measured, the first lever is small; one group only |
+| 5 | WP-51 | ≤ 0.04 s (dsg d3, interp/dsg cc d2) | not sized | guess | 1 | M | after WP-77 (re-measure first) | – | – | small, uncertain → measure first |
+| 6 | WP-57 | ≈ 0 | – | meas. | < 1 | S | same session as WP-60 possible | dsg b0 d3 −19 % RSS | – | memory, cheap |
+| 7 | WP-60 | ≤ 0.02 s | – | meas. | < 1 | S | with WP-57; reduces retained cross-call cache bytes | ↓ retained index | – | small, cheap |
+| 8 | WP-58 | ≈ 0 | – | meas. (heaptrack) | 1 | M (shared rows, lifetimes; growth for adaptive) | adaptive-refinement note | −33.5 MB sg d2 L20 | – | memory only, moderate complexity |
+| 24 | WP-44 | 0.2–0.3 s (quad/dsg b0 d7 / d10 ≈ 1.5–2 %) | small (integrand-bound) | meas. (instructions, not e2e) | < 1 | S (+≈ 5 lines) | after WP-77; same files as WP-21 / WP-51 | – | **owner places it** | master's view: ≈ rank 5 (cheap change, largest absolute DSG lever) |
+| 23 | WP-78 | – | cached c1us × 16 t efficiency 0.20 → large relative potential, unsized | guess | 1 | M | – | – | **owner places it** | master's view: size it soon; cached cases now count like the others |
+| 13 | WP-48 | ≈ 0.02 s; results independent of LTO inlining | – | meas. | < 1 | S | changes result bits of all operators → schedule next to WP-61 / WP-77 to re-pin together | – | – | small; position by its re-pinning interaction |
+| 9 | WP-09 | judged 0; new-API callers 6–10x | – | meas. | 1–2 | L (API) | – | – | proposal; owner decides | realistic many-point use is not tracked by the suite (case realism) |
 
 | Rank | ID | Title | Status | Expected saving (e2e) |
 |---|---|---|---|---|
@@ -156,18 +197,20 @@ interp/dsg 0.83 s · interplin/dsg 1.17 s. Peak memory geomean baseline → rp-5
 | – | WP-76 | Judged suite: cases with expensive source functions — plan with open decisions → owner decides in-session → implementation (protected files: patch, owner applies + rehashes) (owner 2026-11-17; benchmark / measurement) | accepted (2026-11-17; commit pending; owner applied the patch + `noise-expensive.json` into `baseline/noise_e2e.json`) | measured: new group `expensive/` (D3: own sum line, ranking unchanged): 21 judged cases 17.77 s + 4 cached (not ranked) 1.05 s per pass (suite 36.65 → ≈ 55.5 s); 8-round A/A within noise; refcheck 145 OK + known WARN (reference 132 → 146); old cases A/A 1.008x (binary placement), memory 1.011; no baseline values (D4: history baseline / RP-1…5 / HEAD: 17 common cases 73.97 → 16.60 s, all from WP-03 generation; evaluation-bound operators ±1 %) |
 | – | WP-73 | Cross-call operator data cache: clear / read-only view on `SparseGridBase`, per-operator flags (`useCrossCallOperatorDataCache` + operator-specific options, defaults per operator) (owner 2026-11-17; feature / API) | accepted (2026-11-18; concurrency variant (a); owner: DSG quadrature default on → WP-82) | judged 0.999x, `expensive/` 1.001x, memory 1.005; repeated calls (flag on, 16 t): SG quad cc d2 L20 1.19x, DSG quad 1.03–1.15x; DSG `interplin` parallel-region bug fixed |
 | – | WP-82 | DSG quadrature: cross-call cache on by default via the new `DeltasSparseGridQuadratureOptions` (`QuadratureOptions` = `SparseGrid` only) (owner 2026-11-18; behavior / API change agreed) | accepted (2026-11-18; large-index retention: owner option (a), keep as documented) | measured: judged 1.000x, `expensive/` 0.999x, memory 1.004 (0 flags); repeated DSG quad calls 16 t 1.04–1.31x (equi d3 L14 1.311x, b1 d15 L5 1.308x, cc d5 L10 1.043x); retained index 0.9–17.8 MiB on e2e grids, cc d2 L20 64 MiB |
-| – | RP-6 | Re-profiling after WP-56 / WP-49 (+ WP-73 / WP-82 state; cumulative memory; SG interp basis-value share; first profile of the `expensive/` group: load balance, WP-56 shift on mivec/sg; re-rank) | in progress (prompt 2026-11-18; rule 7: 2 accepted optimizations since RP-5, interplin/dsg ≥ 1.3x) | – |
-| – | WP-79 | Textbook operator variants: naive per-TG CT for `quadrature`, `interpolate`, `interpolateLinear` on `SparseGrid` (standard 1D / tensor-product solvers, no optimizations; no DSG variants; scalar / vector decided in-session, one core per operator; helpers in the operator's `.cpp`; naming decided in-session; C++ + Python) (owner 2026-11-17; feature / API) | ready (owner 2026-11-17: after RP-6, before the next optimization WP) | none (understandability; test oracles); judged neutral |
+| – | RP-6 | Re-profiling after WP-56 / WP-49 (+ WP-73 / WP-82 state; cumulative memory; SG interp basis-value share; first profile of the `expensive/` group; re-rank) | accepted (2026-11-18) | measured: baseline → rp-6 (38 cases) 69.89 → 34.70 s (**2.014x**; d ≥ 7 1.99x), 0 SLOWER; suite (48) 36.33 s, rp-5 → rp-6 1.031x (≈ 0.30 s benchmark binary, 0.81 s WP-56 + WP-49); `expensive/` 17.77 s (0.999x); memory geomean **0.716**; new lever: largest-first TG order (→ WP-77) |
+| – | WP-79 | Textbook operator variants: naive per-TG CT for `quadrature`, `interpolate`, `interpolateLinear` on `SparseGrid` (standard 1D / tensor-product solvers, no optimizations; no DSG variants; scalar / vector decided in-session, one core per operator; helpers in the operator's `.cpp`; naming decided in-session; C++ + Python) (owner 2026-11-17; feature / API) | in progress (prompt 2026-11-18; owner 2026-11-17: after RP-6, before the next optimization WP) | none (understandability; test oracles); judged neutral |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point of a `SparseGrid` / `DeltasSparseGrid` (cache warm-up, testing; any source function; name, result form, dedup mechanism decided in-session; C++ + Python) (owner 2026-11-17; feature / API) | ready · unranked (owner places it) | none judged; warm-up avoids the SG operators' duplicate first-call evaluations |
 | – | WP-81 | Explanation / visualization foundations: exploration — information helpers, string representations (console / Jupyter), plots (TGs, SGs, TG tableaus with CT coefficients, source functions and operator results on TGs / SGs); requirements worked out with the owner in-session → plan + implementation WPs (owner 2026-11-17) | ready · unranked (owner places it) | none (exploration; no library change) |
-| 1 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | RP-5: 0.1–0.15 s (builder 0.245 s: d20 0.146, d15 0.099 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
-| 2 | WP-59 | Global interpolation: TG loop `schedule(guided)` → `schedule(dynamic)` (SG + vector `combineTensorGrids`) (from WP-56) | ready | estimate 0–0.2 s on `^interp/sg/` (WP-56 quadrature: dynamic vs. guided equi b1 d10 L7 1.19x, mivec d10 1.10x); cheap A/B; + SG `interplin` TG schedule (WP-76: `-ramp` interplin/sg 0.84 → 1.29 s vs. uniform; efficiency c1us 0.65–0.88) |
-| 3 | WP-77 | SG quadrature / mivec: TG-loop load balance under expensive source functions (largest TGs first / split large TGs; WP-56 `dynamic` shift) (from WP-76) | planned (RP-6 sizes the cheap-suite share; expensive group reported separately, D3) | WP-76: mivec c100us efficiency SG **0.42** / DSG **0.62** (SG d20 S10 2.16 s, bound ≈ 0.91 s); WP-56 shift rp-5 → HEAD mivec/sg c100us +4.6 %, ramp +3.2 %, c1us −14 %; cheap suite unknown |
-| 4 | WP-51 | DSG row loop at low d: split the rows of large delta TGs across threads + largest-first delta-TG order for the DSG quadrature (from WP-45) | ready (low; measure first) | RP-4: ≤ 0.02–0.04 s (dsg equi d3 6.4x, interp/dsg cc d2 6.5x at 16 t) |
-| 5 | WP-57 | Per-thread scratch without zero fill of the max TG size: `DeltaWeightedSumScratch::rowWeights` (one row length used), `GlobalInterpScratch::basisValues` (from WP-05) | ready (low; memory) | judged ≈ 0 (suite DSG d ≥ 3: ≤ 1–2 MiB/thread); 16 MiB/thread at DSG d2 L20; SG interp d2 page faults; RP-5: dsg b0 d3 L16 `DeltaWeightedSumScratch` 8.4 of 22 MB heap → ≈ −19 % RSS (judged memory target) |
-| 6 | WP-58 | Domain node table shares the unit table's rows when the domain mapping is the identity ([0, 1]^d) (from RP-5; memory) | ready (low; memory) | RP-5: −33.5 MB on both sg d2 L20 cases (equi ≈ −30 % RSS, cc ≈ −11 %); generation −(a few) ms; runtime ≈ 0 |
+| – | WP-59 | Global interpolation: TG loop `schedule(guided)` → `schedule(dynamic)` (from WP-56) | dropped (2026-11-18): merged into WP-77 (RP-6) | RP-6 model: plain guided → dynamic loses on interp/sg (d10 L2 0.934 → 0.830, d2 0.595 → 0.706); interp order + SG interplin schedule → WP-77 |
+| – | WP-75 | Strict aliasing: `char` / `uint8_t` stores in hot loops → `bool` (from WP-49) | dropped (2026-11-18): RP-6 found no candidates (`DSGLinInterpIndex` byte arrays are written only at index build) | – |
+| 1 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG results summed in TG order instead of `reduction(+)`) (from WP-56; owner 2026-11-15: low) | ready (low; functional: agreed) | runtime ≈ 0 (cost to measure); reproducibility 1 t == 16 t |
+| 2 | WP-77 | TG-loop load balance: largest-first TG order (cost ∝ TG points) in SG quadrature / mivec, DSG quadrature (delta TGs), SG global interpolation + SG `interplin` TG loop static → chunked dynamic; optional second variant: split TGs above the balanced share (owner 2026-11-18) (from WP-76 / RP-6; absorbs WP-59 and WP-51's order part) | ready | RP-6: suite **≈ 0.25–0.4 s** (mivec ≈ 0.11, DSG b0 d3–d7 ≈ 0.13, sg d2 L20 ≈ 0.05–0.1, quad/sg b0 ≤ 0.05, interp/sg ≈ 0.03–0.08 s); `expensive/` ≈ 1.1–1.6 s (mivec/sg c100us 2.16 → 1.56 s; split → bound 0.91 s) |
+| 3 | WP-74 | DSG linear interpolation: fused last transform (−1 of d + 1 barriers) + vectorized fiber transform (d ≥ 8) + evaluation chunks by reached slots / 1–4 leaves (from WP-49 / RP-6) | ready (low) | RP-6: ≈ 0.05–0.08 s on the suite (barrier ≈ 14 ms, transform ≈ 30 ms, chunks ≈ 0.03 s); `expensive/interplin/dsg` d5 0.345 → ≈ 0.19 s |
+| 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | RP-6: 0.1–0.15 s (builder 0.241 s: d20 0.143, d15 0.098 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
+| 5 | WP-51 | DSG row loop at low d: split the rows of large delta TGs across threads (order part → WP-77) (from WP-45) | ready (low; measure first) | RP-6: ≤ 0.04 s (dsg d3 libgomp 23 %, interp/dsg cc d2 39 %); re-measure after WP-77 |
+| 6 | WP-57 | Per-thread scratch without zero fill of the max TG size: `DeltaWeightedSumScratch::rowWeights` (one row length used), `GlobalInterpScratch::basisValues` (from WP-05) | ready (low; memory) | judged ≈ 0 (suite DSG d ≥ 3: ≤ 1–2 MiB/thread); 16 MiB/thread at DSG d2 L20; SG interp d2 page faults; RP-5: dsg b0 d3 L16 `DeltaWeightedSumScratch` 8.4 of 22 MB heap → ≈ −19 % RSS (judged memory target) |
 | 7 | WP-60 | DSG quadrature: share 1D weight rows via the unit node table (parallel shared weight table as WP-56) (from WP-56) | ready (low) | ≤ 0.02 s judged (a few ms at dsg cc d5 L12) |
-| 8 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG results summed in TG order instead of `reduction(+)`) (from WP-56; owner 2026-11-15: low) | ready (low; functional: agreed) | runtime ≈ 0 (cost to measure); reproducibility 1 t == 16 t |
+| 8 | WP-58 | Domain node table shares the unit table's rows when the domain mapping is the identity ([0, 1]^d) (from RP-5; memory) | ready (low; memory) | RP-5: −33.5 MB on both sg d2 L20 cases (equi ≈ −30 % RSS, cc ≈ −11 %); generation −(a few) ms; runtime ≈ 0 |
 | 9 | WP-09 | Multi-point interpolation API (proposal; owner 2026-11-11: acceptance depends on gains and complexity) | ready (proposal) | judged 0; new-API callers cc 6.3–10.6x (+ dedup 7.6–12.9x), generic 19.5–58.8x with WP-07 |
 | 10 | WP-32 | Cache-line-align combigrid's per-thread scratch and shared query data (from WP-23) | ready (rank confirmed by RP-3) | judged build ≈ 0 (base's 64-byte `operator new` protects today); removes the false-sharing risk without it (WP-23 variant: interplin d8 +20–45 % in 3/5 rounds; MinGW builds); prerequisite of WP-33 |
 | 11 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
@@ -186,8 +229,6 @@ interp/dsg 0.83 s · interplin/dsg 1.17 s. Peak memory geomean baseline → rp-5
 | 23 | WP-78 | Caching: overhead of `CachedSourceFunc` at ≈ 1 µs functions × 16 t (shard contention / insert path) (from WP-76) | planned (owner places it; caching callers only) | WP-76: `expensive/...-cached` interplin/sg d8 c1us efficiency 0.20; quad/sg d10 L4 c100us cached 0.576 s ≈ DSG 0.571 s (cache works at 100 µs) |
 | 24 | WP-44 | DSG row loop light: single-pass row weights + header-inline `compRowWeights`, no blocks / pragmas (from WP-04) | planned (owner places it; WP-17 rejected 2026-11-04 → row loop unchanged) | ≈ 1/3 of WP-04's instruction gain (≈ −5 of 227 instr/point, ≈ 0.2–0.3 s; not measured e2e); RP-4: 0.2–0.3 s at b0 d7/d10 (trie work 3.21 s), ≈ 1.5–2 % of quad/dsg b0 |
 | 25 | WP-07 | Generic barycentric formula: cache the weights | ready (demoted by RP-4: ≈ 0 judged) | RP-4: ≈ 0.003 s judged (cheb1 d5 generic weights 1.1 % of 117 ms; dsg equi d3 ≈ 13 % of 6.5 ms); value only for generic-family users at higher levels; may merge into WP-09 |
-| 26 | WP-74 | DSG linear interpolation: fuse the evaluation into the last dimension's transform (−1 barrier, −1 pass) + vectorize the fiber transform over the inner index (d ≥ 8) (from WP-49) | planned (low; RP-6 sizes it) | WP-49: 16 t d5 transform 17 %, libgomp + OpenBLAS ≈ 40 % (d + 1 barriers); 1 t d10 transform 1.8 % → est. ≤ 0.03–0.05 s |
-| 27 | WP-75 | Strict aliasing: `char` / `uint8_t` stores in hot loops force pointer reloads → `bool` / non-char types (from WP-49) | planned (low; RP-6 lists candidates) | WP-49: d2 9.6 → 9.1 µs (5 %) for one byte array; other loops unknown |
 | last | WP-43 | Final clean-up: phase references out of code documentation + phase leftovers | ready (always the last WP of the phase; owner 2026-11-03) | e2e nil (comments / dead code only); code docs readable without the phase's files |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
@@ -1452,6 +1493,9 @@ covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP
   **Expected 0.1–0.2 s** (builder ≈ 0.31 s). Status: ready.
 - **From RP-5** (accepted 2026-11-15): builder 0.245 s (d20 0.146, d15 0.099 s) → **0.1–0.15 s**;
   quad/dsg b1 row loop 0.56 s. Status: ready (rank 3).
+- **From RP-6** (accepted 2026-11-18): builder 0.241 s (d20 0.143, d15 0.098 s) → 0.1–0.15 s
+  unchanged. Status: ready (rank 2). **Re-ranking 2026-11-18**: rank 4 (one group, < 1 % of quad/dsg;
+  WP-74's relative gain is larger).
 
 ## WP-22 — Tensor grids of a sparse grid as struct of arrays (owner's idea; dropped: merged into WP-18)
 - **Status**: dropped 2026-10-29 — merged into WP-18 (RP-2: runtime ≈ 0.03–0.07 s, memory
@@ -2030,6 +2074,9 @@ covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP
 - **From RP-5** (accepted 2026-11-15): b0 d7/d10 row loop 5.72 s (RP-4 5.50): `updateCoeffSums`
   1.88, `compRowWeights` 1.57, evaluate + `addScaled` 0.97, row / advance / dispatch 1.30 s →
   0.2–0.3 s unchanged (RP-5 ranks it second by saving; the owner places it).
+- **From RP-6** (accepted 2026-11-18): row loop 5.74 s (`updateCoeffSums` 1.87, `compRowWeights`
+  1.56, evaluate + `addScaled` 0.97, rest 1.34 s) → 0.2–0.3 s unchanged; second by saving after
+  WP-77 (the owner places it).
 
 ## WP-29 — Vector-valued source functions: implementation (WP-29a–d)
 - **Source**: owner, 2026-10-29; design decided 2026-10-30 on WP-24 (design **T**).
@@ -2553,7 +2600,8 @@ covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP
 - **Risk**: (1) changes bits once (refcheck OK/WARN; the equi d2 Lebesgue case WARNs on FMA
   changes in `BarycentricFormula`, not in the drivers); all operators (quadrature SG / DSG, interp,
   interplin, scalar + vector). (2) threshold tuning; generalize only if other small cases gain.
-- **E2E filter**: all (1), `^interplin/` (2). **Status**: ready (low).
+- **E2E filter**: all (1), `^interplin/` (2).
+- **From RP-6** (2026-11-18): interplin d2 SG 0.112 vs. DSG 0.155 s; (2) ≈ 0.02 s. **Status**: ready (low).
 
 ## WP-49 — DSG linear interpolation: global slot weights instead of per-TG gathers (from WP-47)
 - **Source**: WP-47 summary, profile shift / follow-up 1; planned by the owner 2026-11-12 (the d2
@@ -2664,6 +2712,9 @@ covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP
 - **E2E filter**: `^(quad/dsg|interp/dsg)/` · **Functional change**: none.
 - **Dependencies**: WP-45 accepted; independent of WP-19 (SG analogue).
 - **From RP-5**: ≤ 0.04 s unchanged (dsg equi d3 libgomp 23 %, interp/dsg cc d2 40 %).
+- **From RP-6** (2026-11-18): the largest-first delta-TG order moves to WP-77; what remains is the
+  row split of large delta TGs at low d: ≤ 0.04 s (dsg d3 libgomp 23 %, interp/dsg cc d2 39 %).
+  Re-measure after WP-77.
 - **Status**: ready (rank 4; low).
 
 ## WP-52 — Shared weighted-sum kernels: operator-neutral names and place (owner 2026-11-13)
@@ -2921,6 +2972,7 @@ covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP
 - **From RP-5** (accepted 2026-11-15): judged memory target: on `quad/dsg/equi-exp/b0/d3/L16`
   (RSS 44 MiB, heap 22 MB) `DeltaWeightedSumScratch` takes 8.4 MB (16 × 512 KiB) → ≈ −19 % RSS.
   Runtime ≈ 0. Rank 5.
+- **From RP-6** (2026-11-18): dsg b0 d3 L16 peak 44.3 MiB, −8 MB target unchanged. Rank 5.
 
 ## WP-58 — Domain node table shares the unit table's rows for the identity mapping (from RP-5; memory)
 - **Source**: RP-5 summary, follow-up 7.
@@ -2962,7 +3014,11 @@ covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP
   non-uniform cost (`expensive/` `-ramp`) interplin/sg rises 0.84 → 1.29 s vs. uniform, c1us
   efficiency 0.65–0.88 → include the SG `interplin` TG schedule (and the `expensive/` filter) in the
   A/B: `^(interp|interplin)/sg/|^expensive/(interp|interplin)/sg`.
-- **Functional change**: none. **Dependencies**: WP-56 accepted. **Status**: ready (rank 2).
+- **Functional change**: none. **Dependencies**: WP-56 accepted.
+- **From RP-6** (2026-11-18): plain guided → dynamic is predicted to lose on interp/sg (model d10 L2
+  0.934 → 0.830, d2 0.595 → 0.706; net ≈ −0.05…−0.1 s) → the interp part becomes WP-77's
+  largest-first order, the SG `interplin` schedule moves into WP-77. **Status**: dropped (merged
+  into WP-77).
 
 ## WP-60 — DSG quadrature: share 1D weight rows via the unit node table (from WP-56)
 - **Source**: WP-56 summary, follow-up 3.
@@ -3000,7 +3056,12 @@ covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP
   re-pinning → report). **Tests**: new test 1 t == 2 t == 16 t bitwise (scalar, vector, b0 / b1,
   cc / equi); quadrature pinning. **E2E filter**: `^(quad/sg|mivec)/`.
 - **Functional change**: agreed by the owner (2026-11-15: plan as a low WP) — results become
-  thread-count independent. **Dependencies**: WP-56 accepted. **Status**: ready (low).
+  thread-count independent. **Dependencies**: WP-56 accepted.
+- **Re-ranking 2026-11-18** (new ranking rule): rank 1, **before WP-77**. With per-TG results summed
+  in TG order, WP-77's largest-first order leaves the SG quadrature / mivec results bitwise
+  unchanged → one re-pinning (here) instead of one per WP, and WP-77 can verify bitwise. Check the
+  per-TG result buffer against WP-77's order (index by TG, not by processing position).
+  **Status**: ready (rank 1).
 
 ## WP-62 — Dimension-adaptive refinement: exploration + implementation plan (owner's request)
 - **Source**: owner, 2026-11-17 (header note "Future feature: dimension-adaptive refinement",
@@ -3421,7 +3482,9 @@ the judged suite.
   benchmark-binary placement caveat (WP-76 A/A of the old cases 1.008x, `exp` quad / mivec up to
   1.080).
 - **Memory**: cumulative baseline → rp-6 per case; largest remaining peaks.
-- **Dependencies**: WP-49, WP-73 and WP-82 accepted and committed. **Status**: in progress (prompt 2026-11-18).
+- **Dependencies**: WP-49, WP-73 and WP-82 accepted and committed. **Status**: accepted (2026-11-18;
+  2.014x, memory 0.716; re-ranking: WP-77 extended to rank 1, WP-59 merged into it, WP-74 extended,
+  WP-75 dropped, interp/sg basis-value table: no WP).
 
 ## WP-74 — DSG linear interpolation: fused evaluation + vectorized fiber transform (from WP-49)
 - **Source**: WP-49 summary, profile shift / follow-ups.
@@ -3439,7 +3502,15 @@ the judged suite.
 - **Risk**: chunk order must stay fixed (bitwise thread-count independence, WP-49 test);
   evaluation set unchanged.
 - **Do not retry** (WP-49): pull formulation; register accumulation of the bracketing ids.
-- **Status**: planned (low; RP-6 sizes it).
+- **From RP-6** (accepted 2026-11-18; `results/RP-6/chunk-balance.md`): 16 t d5 / d8 / d10: libgomp
+  28.9 / 18.3 / 12.1 % (35 / 43 / 33 ms), `transformFiber` 20.1 / 9.3 / 5.8 % (24 / 22 / 16 ms),
+  evaluation pass 7 / 14 / 16 ms; d2 serial. New third part: the evaluation pass hands out 16-leaf
+  chunks (efficiency 0.865 / 0.901 / 0.913; 1-leaf chunks 0.97–0.99) → **chunks by reached slots /
+  1–4 leaves** (fixed chunk order keeps results thread-count independent); `expensive/interplin/dsg`
+  d5 has 16 chunks for 16 threads (model 0.489 = measured 0.49). Expected: fused last transform
+  (−1 of d + 1 barriers ≈ 14 ms) + vectorized fiber transform (≈ −30 ms) + chunks (≈ −0.03 s) ≈
+  **0.05–0.08 s** on the suite, `expensive/` d5 0.345 → ≈ 0.19 s.
+- **Status**: ready (rank 3; low).
 
 ## WP-75 — Strict aliasing: byte-type stores in hot loops (from WP-49)
 - **Source**: WP-49 summary (follow-ups).
@@ -3447,7 +3518,9 @@ the judged suite.
   other pointers after each store (WP-49 reach flags `uint8_t` → `bool`: d2 9.6 → 9.1 µs, 5 %).
 - **Work**: find combigrid hot loops that store into byte-type arrays (RP-6 lists candidates), switch
   to `bool` / non-char types where the A/B shows a gain.
-- **Expected gain**: unknown (likely small). **Status**: planned (low; after RP-6).
+- **Expected gain**: unknown (likely small).
+- **From RP-6** (2026-11-18): no byte-type stores left in hot loops (the `uint8_t` arrays of
+  `DSGLinInterpIndex` are written only at index build). **Status**: dropped (no candidates).
 
 ## WP-77 — SG quadrature / mivec: TG-loop load balance under expensive source functions (from WP-76)
 - **Source**: WP-76 summary, profile shift / follow-ups 1 and 4.
@@ -3466,7 +3539,33 @@ the judged suite.
 - **Risk**: result bits change with the reduction order (SG quadrature is not thread-count
   independent today, WP-61); refcheck must stay OK.
 - **Tests**: quadrature pinning, `vector_*` quadrature tests. **E2E filter**: `^(quad|mivec)/sg/|^expensive/(quad|mivec)/`.
-- **Functional change**: none. **Dependencies**: RP-6 (sizes it). **Status**: planned (rank 3).
+- **Functional change**: none. **Dependencies**: RP-6 (sizes it).
+- **From RP-6** (accepted 2026-11-18; `results/RP-6/schedule-sim.md`, `tg-sizes.jsonl`): extended to
+  the **largest-first TG order** in all TG loops with non-uniform TG cost. Makespan model (cost of a
+  TG = its points) reproduces `expensive/mivec/sg` c100us exactly (dynamic 2.157 vs. measured 2.156 s;
+  guided 2.060 = rp-5). Scope:
+  - SG quadrature / mivec TG loop (`dynamic` in TG order today) → largest first;
+  - DSG quadrature delta-TG loop (absorbs WP-51's order part; the d10 tail is 0.75 % = 41 ms per call);
+  - SG global interpolation TG loop (`guided` today; absorbs WP-59: plain guided → dynamic is
+    predicted to **lose**, d10 L2 0.934 → 0.830, d2 0.595 → 0.706; largest-first 0.908 at d10 L2);
+  - SG `interpolateLinear` TG loop `static` → chunked dynamic (uniform cost 2^d corners per TG, so
+    no size order; suite ≈ 0, `expensive/` `-ramp` 1.29 → ≈ 1.06 s; from WP-59 / WP-76).
+  Implementation hint: one per-grid size order (e.g. O(nTG) counting sort by ⌊log2 nGP⌋, or a
+  permutation computed at generation / kept with the grid); reduction order changes (SG quadrature
+  is not thread-count independent today, WP-61); DSG results must stay bitwise thread-count
+  independent (ordered sums).
+  **Optional second variant (owner 2026-11-18)**: split TGs above the balanced share into row ranges
+  (ordered combination of the partial sums). Measured as a separate variant on top of the order; the
+  owner decides on the summary (WP-19's slabs had been dropped 2026-11-15; new evidence:
+  `expensive/mivec/sg` c100us order 2.16 → 1.56 s, split → bound 0.91 s; cheap suite: only mivec d15
+  S10, largest TG 1.36x balanced, and sg d2).
+  **Expected**: suite ≈ 0.25–0.4 s (mivec d10 / d5 ≈ 0.11, DSG b0 d7–d3 ≈ 0.13, sg d2 L20 ×2 ≈
+  0.05–0.1, quad/sg b0 ≤ 0.05, interp/sg ≈ 0.03–0.08 s); `expensive/` ≈ 1.1–1.6 s (mivec sg c100us
+  −0.6, dsg c100us 0.88 → 0.55, sg c1us −0.18 s, ramp similar).
+  **E2E filter**: `^(quad|mivec|interp|interplin)/sg/|^quad/dsg/|^expensive/`.
+- **Re-ranking 2026-11-18**: rank 2, after WP-61 (SG quadrature results then stay bitwise under the
+  new order; the DSG operators are ordered already; check whether SG `interpolate` is bitwise
+  thread-count independent and keep its current property). **Status**: ready (rank 2).
 
 ## WP-78 — Caching: `CachedSourceFunc` overhead at ≈ 1 µs functions × 16 threads (from WP-76)
 - **Source**: WP-76 summary, follow-up "cache overhead at c1us × 16 t".
@@ -3528,7 +3627,7 @@ the judged suite.
 - **Risk**: low–medium (public API surface + Python; tolerances of the comparisons).
 - **Functional change**: agreed (owner 2026-11-17: new public textbook operators); naming decided
   in-session. Changes to existing operators → BLOCKED with options.
-- **Status**: ready (after RP-6).
+- **Status**: in progress (prompt 2026-11-18, after RP-6).
 
 ## WP-80 — Grid-evaluation operator: evaluate a source function on all grid points (owner 2026-11-17; feature / API)
 - **Source**: owner 2026-11-17: "an 'evaluation' operator. It should simply evaluate a given source

@@ -1,0 +1,34 @@
+samples: 35698
+
+## per dso
+ 87.55 %  perf_e2e
+  3.94 %  libm.so.6
+  2.85 %  libopenblasp-r0.3.32.so
+  2.43 %  libsgppcombigrid.so
+  1.85 %  libgomp.so.1.0.0
+  1.37 %  [unknown]
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libc.so.6
+
+## per symbol
+ 78.19 %  sgpp::combigrid::perf::burnChain  [perf_e2e]
+  8.36 %  double sgpp::combigrid::perf::expensive<&sgpp::combigrid::perf::expSum, 490ul,   [perf_e2e]
+  2.85 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.35 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  2.15 %  __ieee754_exp_fma  [libm.so.6]
+  1.85 %  [unknown]  [libgomp.so.1.0.0]
+  1.39 %  exp@@GLIBC_2.29  [libm.so.6]
+  1.37 %  [unknown]  [[unknown]]
+  0.59 %  exp@plt  [perf_e2e]
+  0.40 %  std::_Function_handler<double   [perf_e2e]
+  0.40 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.08 %  sgpp::combigrid::tools::lin_interpolation::prepareCorners  [libsgppcombigrid.so]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  snprintf  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  0.84 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.77 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+  0.57 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::lin_interpolation::moveToCorner

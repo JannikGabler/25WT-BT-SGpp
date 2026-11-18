@@ -44,6 +44,8 @@ make finding them part of a work package.
    - `NO-GAIN`: as rejected once the owner confirmed.
    - Follow-ups / profile shift: add new WPs to PLAN.md (fields as the existing entries,
      "Source: WP-NN summary") or adjust expected gains / ranks of existing ones.
+   - Case-realism notes (gains only for unrealistic cases; realistic cases the suite misses):
+     pass them to the owner and take them into the ranking; suite changes need the owner.
 3. **Re-profiling check** (rule 7 of the phase): schedule the re-profiling package `RP-k`
    before the next optimization WP if any of the following holds:
    - 2 accepted optimizations since the last re-profiling,
@@ -54,13 +56,30 @@ make finding them part of a work package.
    baseline rp-k` (cumulative progress incl. peak memory), `perf.py profile` of the top cases (by absolute time,
    high d first), micro runs of the hot spots, then append a section "Re-profiling RP-k" to
    ANALYSIS.md and propose re-ranked/new WPs in its summary. RP packages change no source code.
-4. **Choose the next WP**: highest expected absolute time saving with priority on high-dimensional
-   cases, operator weighting quadrature (SG, DSG) > global interpolation > linear interpolation >
-   generation, status `ready`, dependencies accepted. A WP marked "needs decision" is only
-   scheduled after the owner decided — present the decision first (2–4 lines, options + expected
-   gain) and wait. Runtime ranks the plan; peak memory (from `ab e2e` reports) is reported to the
-   owner with every runtime change and weighed in decisions; memory reduction is a valid
-   secondary goal.
+4. **Rank and choose the next WP** (owner 2026-11-18: judgement-based, no weighting formula).
+   - **Inputs** (kept per WP in PLAN.md's table "Ranking inputs"): expected gain per case group
+     (cheap suite, `expensive/`, cached; absolute s and relative to the group), confidence
+     (measured / modelled / guessed), effort (sessions), lasting complexity (S/M/L: new concepts,
+     code size, API surface, maintenance), dependencies (hard) and interactions (soft, with the
+     better order), memory effect, owner priority. Recommendations of the sessions, especially of
+     re-profilings and explorations, are inputs too.
+   - **Principles**: gains count on every case type; no type (e.g. cheap integrands) is
+     prioritized in general. Gains that only pay for unrealistic cases count less; realistic
+     cases the suite does not track count too (owner's realism note). Lasting complexity weighs
+     more than effort (the owner rejected WP-04 at 1.047x for complexity; generic designs over
+     special-case lists). Interacting WPs are planned as a sequence in the order that gives the
+     best total (e.g. shared files / re-pinning, one WP leaving more potential for another).
+     Uncertain large gains get a cheap measurement first. High dimensions are a mild preference
+     when gains are otherwise similar. The owner's priority overrides everything; feature WPs are
+     placed by the owner.
+   - **Consistency**: each of the top ~5 ranks gets a one-line reason in the table. Ranks change
+     only with new evidence (summary, re-profiling, owner decision); log each change with its
+     reason and report it to the owner.
+   - Schedule the best-ranked WP with status `ready` whose dependencies are accepted. A WP marked
+     "needs decision" is only scheduled after the owner decided — present the decision first
+     (2–4 lines, options + expected gain) and wait. Peak memory (from `ab e2e` reports) is
+     reported to the owner with every runtime change and weighed in decisions; memory reduction
+     is a valid secondary goal.
 5. **Update the files**: STATUS.md (open-WP table, next action, open decisions, re-profiling
    counter, "Last processed", log line with date), HISTORY.md (finished WPs, commit hashes, old
    log lines), LESSONS.md (do-not-retry, measurement notes) and PLAN.md. Keep STATUS.md ≤ ~130
@@ -96,6 +115,10 @@ Work package WP-<NN>: <title>
   (public API or observable behavior, numerical results beyond a refcheck WARN, compiler flags,
   build configuration, new dependencies), do not implement it: finish with status BLOCKED and
   describe the options with their expected gains.<or: the agreed change, quoting the owner's decision>
+- Case realism (owner 2026-11-18): if you notice that certain gains only pay for rather unlikely or
+  unrealistic cases (e.g. very high levels), or that realistic cases are not tracked by cases in the
+  suite, feel free to report that to the owner or the master session at any time (in the summary:
+  section "Profile shift / follow-ups", or directly in the conversation).
 
 Deliverables: summary combigrid/perf/summaries/WP-<NN>-<slug>.md (from TEMPLATE.md), reports in
 combigrid/perf/results/WP-<NN>/, snapshots WP-<NN>-before / WP-<NN>-after. End with a short

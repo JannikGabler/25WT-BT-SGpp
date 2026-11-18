@@ -1,0 +1,12 @@
+profile of `^expensive/interplin/sg/equi-exp/b1/d10/L4/p16/c1us$` (e2e, 16 threads, self time)
+    78.53%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::burnChain
+     8.42%  perf_e2e  perf_e2e                 [.] double sgpp::combigrid::perf::expensive<&sgpp::combigrid::perf::expSum, 490ul, 
+     2.46%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+     2.36%  perf_e2e  libsgppcombigrid.so      [.] sgpp::combigrid::misc::ScalarValues::Acc sgpp::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+     2.16%  perf_e2e  libm.so.6                [.] __ieee754_exp_fma
+     1.40%  perf_e2e  libm.so.6                [.] exp@@GLIBC_2.29
+     0.77%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c7b
+     0.60%  perf_e2e  perf_e2e                 [.] exp@plt
+     0.51%  perf_e2e  libgomp.so.1.0.0         [.] 0x0000000000026c76
+
+samples per process: 1 warm-up + 1

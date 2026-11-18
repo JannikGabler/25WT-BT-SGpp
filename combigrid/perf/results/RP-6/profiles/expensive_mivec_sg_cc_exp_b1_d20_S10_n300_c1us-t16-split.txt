@@ -1,0 +1,44 @@
+samples: 26344
+
+## per dso
+ 81.62 %  perf_e2e
+  6.16 %  libgomp.so.1.0.0
+  6.02 %  libm.so.6
+  3.97 %  libopenblasp-r0.3.32.so
+  1.15 %  [unknown]
+  1.05 %  libsgppcombigrid.so
+  0.03 %  libc.so.6
+  0.02 %  ld-linux-x86-64.so.2
+  0.00 %  libstdc++.so.6.0.35
+
+## per symbol
+ 74.32 %  sgpp::combigrid::perf::burnChain  [perf_e2e]
+  6.82 %  double sgpp::combigrid::perf::expensive<&sgpp::combigrid::perf::expSum, 490ul,   [perf_e2e]
+  6.16 %  [unknown]  [libgomp.so.1.0.0]
+  4.18 %  __ieee754_exp_fma  [libm.so.6]
+  3.97 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.44 %  exp@@GLIBC_2.29  [libm.so.6]
+  1.15 %  [unknown]  [[unknown]]
+  0.95 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  0.39 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.39 %  exp@plt  [perf_e2e]
+  0.09 %  sgpp::combigrid::tools::computeCTCoeffs  [libsgppcombigrid.so]
+  0.08 %  std::_Function_handler<double   [perf_e2e]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  __printf_buffer  [libc.so.6]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  memcpy@plt  [libsgppcombigrid.so]
+  0.00 %  __once_proxy  [libstdc++.so.6.0.35]
+  0.00 %  sgpp::combigrid::tools::weighted_sum::setUpIterDims  [libsgppcombigrid.so]
+  0.00 %  void sgpp::combigrid::tools::appendClosurePart<unsigned int>  [libsgppcombigrid.so]
+  0.00 %  _int_malloc  [libc.so.6]
+  0.00 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.00 %  _int_free_merge_chunk  [libc.so.6]
+  0.00 %  sgpp::combigrid::TensorGridView::nGP  [libsgppcombigrid.so]
+  0.00 %  sgpp::combigrid::MIVec<unsigned int>::lookup  [libsgppcombigrid.so]
+  0.00 %  _int_free_chunk  [libc.so.6]
+  0.00 %  _mid_memalign  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  0.36 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  0.33 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate

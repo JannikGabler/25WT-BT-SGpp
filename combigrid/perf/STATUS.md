@@ -1,7 +1,7 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-82 (2026-11-18; accepted, commit pending) · Next free WP number: 83 ·
-Last re-profiling: RP-5 (2026-11-15) · Finished WPs, results, archive: [HISTORY.md](HISTORY.md) ·
+Last processed: RP-6 (2026-11-18; accepted, commit pending) · Next free WP number: 83 ·
+Last re-profiling: RP-6 (2026-11-18) · Finished WPs, results, archive: [HISTORY.md](HISTORY.md) ·
 Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 
 - **Judged**: `perf.py build normal` (= compileNormal.sh + `USE_EIGEN=1 USE_ARMADILLO=1`), GCC 15.2,
@@ -10,8 +10,8 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
   Toolchain variants (Clang 21 + libomp + lld): `perf/scripts/toolchain.py`.
 - **Baseline**: setup commit **fed2cdb4e**, snapshot `baseline` (if cleaned: `perf.py snapshot
   baseline --commit fed2cdb4e`), built with its own flags (flag changes count as progress); never
-  re-recorded. Latest re-profiling snapshot **`rp-5` = 3261399ec** (**1.973x**, memory 0.724; others
-  in HISTORY.md).
+  re-recorded. Latest re-profiling snapshot **`rp-6` = 37a84e1af** (**2.014x**, memory 0.716; suite of 48
+  cases 36.33 s, `expensive/` 17.77 s; others in HISTORY.md).
 - **Memory** (WP-15): e2e reports give each process's peak RSS (floor ≈ 10.2–10.5 MiB); `MEM±` =
   |B/A − 1| > 3 % without overlap of the rounds.
 - **Machine**: a reboot re-enables boost (`envcheck` fails → ask the owner). Full e2e A/B ≈ 25–30 min.
@@ -29,6 +29,16 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
   - Expensive group (WP-76, 11-17): `expensive/` (c1us / c100us FMA-chain integrands, `-ramp`,
     `-cached` unranked) has its own sum line; **ranking unchanged** (cheap-suite savings), its effects
     are reported separately; no baseline values (history in `results/WP-76/history/`).
+  - TG split (11-18): WP-77 implements the largest-first order; splitting TGs above the balanced
+    share is measured as an optional second variant, the owner decides on its summary.
+  - **Ranking (11-18)**: judgement-based, no weighting formula (skill `perf-master` step 4; inputs
+    table + principles in PLAN.md): gains on every case type (cheap, `expensive/`, cached) count, no
+    type is prioritized in general; confidence, effort, lasting complexity, dependencies /
+    interactions, memory, sessions' recommendations; high d = mild preference; owner overrides.
+    Ranks change only with new evidence (logged reason). Replaces "cheap-suite seconds, d ≥ 7 first,
+    operator weights" and the ranking part of the expensive-group decision (11-17).
+  - **Case realism (11-18)**: sessions may report at any time gains that only pay for unrealistic
+    cases (e.g. very high levels) or realistic cases the suite does not track (note in every prompt).
   - Standard CT (11-17): operators on a plain `SparseGrid` implement the standard CT — optimizable,
     but their core stays; duplicate evaluations are intended (no more than the standard CT needs);
     the DSG variants are the performance alternative and may deviate.
@@ -45,18 +55,17 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 | Rank | ID | Title | Status |
 |---|---|---|---|
 | – | WP-63 … 72 | Dimension-adaptive CT implementation (A1 nestedness + std CC growth, A2 core, A3 quad driver, A4 non-nested / vector, A5 interp, A6 Python, B1 lazy, B2 buffering, C1 stored values, C2 resume) | needs decision (D1–D9) · **unranked** (owner places them) |
-| – | RP-6 | Re-profiling after WP-56 / WP-49 (+ WP-73 / WP-82 state) | **in progress** (prompt 11-18) |
-| – | WP-79 | Textbook operator variants (naive per-TG CT on `SparseGrid`, all three operators; no DSG; one core per operator; helpers in its `.cpp`; naming + scalar / vector in-session; owner's request) | ready (after RP-6) |
+| – | WP-79 | Textbook operator variants (naive per-TG CT on `SparseGrid`, all three operators; no DSG; one core per operator; helpers in its `.cpp`; naming + scalar / vector in-session; owner's request) | **in progress** (prompt 11-18) |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point (cache warm-up, testing; name / result / dedup in-session; owner's request) | ready · **unranked** (owner places it) |
 | – | WP-81 | Explanation / visualization foundations: exploration + requirements with the owner in-session (info helpers, strings, plots) → implementation WPs | ready · **unranked** (owner places it) |
-| 1 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-5: 0.1–0.15 s) | ready |
-| 2 | WP-59 | Global interpolation: TG loop `guided` → `dynamic` (est. 0–0.2 s) + SG interplin schedule (WP-76 `-ramp`) | ready |
-| 3 | WP-77 | SG quad / mivec: TG-loop load balance under expensive functions (WP-76: mivec c100us SG 0.42 / DSG 0.62; RP-6 sizes it) | planned |
-| 4 | WP-51 | DSG row loop at low d: split large delta TGs (≤ 0.04 s) | ready (low; measure first) |
-| 5 | WP-57 | Per-thread scratch without zero-filled max-TG buffers (dsg b0 d3 L16 ≈ −19 % RSS) | ready (low; memory) |
-| 6 | WP-58 | Domain node table shares the unit table's rows on [0, 1] (−33.5 MB on sg d2 L20) | ready (low; memory) |
+| 1 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG sums in TG order); **before WP-77** (its reordering then stays bitwise, one re-pinning) | ready (next optimization WP; functional: agreed 11-15) |
+| 2 | WP-77 | TG-loop load balance: largest-first TG order (SG quad / mivec, DSG quad, SG interp) + SG interplin dynamic; optional TG split variant (RP-6: suite 0.25–0.4 s, `expensive/` 1.1–1.6 s; absorbs WP-59) | ready (after WP-61) |
+| 3 | WP-74 | DSG lin. interp.: fused last transform + vectorized fiber transform + 1–4-leaf evaluation chunks (RP-6: 0.05–0.08 s = 6–10 % of interplin/dsg; `expensive/` d5 −45 %) | ready (low) |
+| 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-6: 0.1–0.15 s, b1 d15 / d20 only) | ready |
+| 5 | WP-51 | DSG row loop at low d: split large delta TGs (≤ 0.04 s; order part → WP-77) | ready (low; measure first) |
+| 6 | WP-57 | Per-thread scratch without zero-filled max-TG buffers (dsg b0 d3 L16 ≈ −19 % RSS) | ready (low; memory; session with WP-60) |
 | 7 | WP-60 | DSG quadrature: share 1D weight rows via the unit node table (≤ 0.02 s) | ready (low) |
-| 8 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG sums in TG order) | ready (low; functional: agreed 11-15) |
+| 8 | WP-58 | Domain node table shares the unit table's rows on [0, 1] (−33.5 MB on sg d2 L20) | ready (low; memory) |
 | 9 | WP-09 | Multi-point interpolation API (proposal: gains vs. complexity) | ready |
 | 10 | WP-32 | Cache-line-align per-thread scratch / shared query data | ready (≈ 0 judged) |
 | 11 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) |
@@ -71,23 +80,19 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 | 20 | WP-39 | Disk tier: append-only log write path + parallel load | planned (owner places it) |
 | 21 | WP-41 | Adaptive caching: disk rule weighted by active threads | planned (late) |
 | 22 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions | planned (late) |
-| 23 | WP-78 | Caching: `CachedSourceFunc` overhead at 1 µs × 16 t (WP-76: cached interplin/sg d8 efficiency 0.20) | planned (owner places it) |
-| 24 | WP-44 | DSG row loop light: single-pass row weights + inline `compRowWeights` (0.2–0.3 s at b0 d7/d10) | planned (owner places it) |
+| 23 | WP-78 | Caching: `CachedSourceFunc` overhead at 1 µs × 16 t (WP-76: cached interplin/sg d8 efficiency 0.20) | planned (owner places it; master: size it soon, cached cases now count) |
+| 24 | WP-44 | DSG row loop light: single-pass row weights + inline `compRowWeights` (RP-6: 0.2–0.3 s at b0 d7/d10 ≈ 1.5–2 % of quad/dsg; S) | planned (owner places it; master: ≈ rank 5) |
 | 25 | WP-07 | Generic barycentric weights cache (≈ 0.003 s judged; may merge into WP-09) | ready (low) |
-| 26 | WP-74 | DSG lin. interp.: fused evaluation (−1 barrier) + vectorized fiber transform (est. ≤ 0.03–0.05 s) | planned (low; RP-6 sizes it) |
-| 27 | WP-75 | Strict aliasing: byte-type stores in hot loops → `bool` (WP-49: 5 % at d2) | planned (low; after RP-6) |
 | last | WP-43 | Final clean-up: phase references out of code docs + phase leftovers | ready (always last) |
 
 ## Next action
 
-**RP-6 in progress** (prompt 11-18; 2 accepted optimizations since RP-5: WP-56, WP-49; interplin/dsg
-≥ 1.3x; first profile of the `expensive/` group: mivec load balance, WP-56 shift; sizes WP-77, the SG
-`interp` basis-value share, WP-74, WP-75; cross-call cache bytes per DSG quad case). WP-82 accepted
-(owner commits "Accept WP-82: …" before RP-6 starts: RP-6 snapshots HEAD). Next master start: process
-RP-6 (re-rank), then **WP-79** (textbook variants; owner: after RP-6), then the next optimization WP
-by RP-6's ranking (today WP-21).
-Adaptive WPs 63–72 wait for the owner (D1–D9 + placement). Hygiene findings → **Code-hygiene
-backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
+**WP-79 in progress** (prompt 11-18; owner: after RP-6, before the next optimization WP; naming and
+scalar / vector decided with the owner in-session). Owner commits "Accept RP-6" (ANALYSIS.md,
+`results/RP-6/`, summary, STATUS / PLAN / HISTORY / LESSONS) before WP-79 starts. Next master start:
+process WP-79, then **WP-61** (rank 1 under the new ranking rule: makes WP-77 bitwise neutral),
+then **WP-77** (largest-first TG order; TG split as optional variant). Adaptive WPs 63–72 wait for the owner (D1–D9 + placement). Hygiene findings →
+**Code-hygiene backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
 
 ## Open decisions for the owner
 
@@ -103,7 +108,8 @@ backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
 - WP-04 `TrieNode` 24 → 16 B (optional; `results/WP-04/*.patch`): −3 MiB per b0 case for b0 0.982x.
 - WP-37: base's Python `DataVector` iteration (segfault today) — base API change, placement.
 - WP-34: placement + mechanism (Python callables 1 t 0.78 vs. 16 t 25.1 µs ≈ 32x; e.g. serial
-  operator or `OMP_NUM_THREADS=1` hint). WP-39: placement. WP-44: placement (largest remaining DSG lever).
+  operator or `OMP_NUM_THREADS=1` hint). WP-39: placement. WP-44: placement (largest remaining DSG lever;
+  RP-6: 0.2–0.3 s, S; master recommends ≈ rank 5). WP-78: placement (master: size it soon).
 - Adaptive as the default `CachePolicy` (not planned): cheap functions 0.57–0.91x of plain instead
   of 0.07–0.30x; expensive pay ≈ 3–7 ns per hit.
 - WP-06 option (B) (only if asked): fix dimensions with unit-vector basis values (on-node queries).
@@ -112,16 +118,18 @@ backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
 
 ## Re-profiling
 
-Last: RP-5 (2026-11-15; rp-5 = 3261399ec; accepted). Accepted optimizations since: **2** (WP-56;
-WP-49 with interplin/dsg 1.50–1.58x) → **RP-6 in progress** (prompt 11-18); WP-82 (default flip,
-judged 1.000x) does not count; WP-76 (suite extension) and WP-73 (feature, judged 0.999x) do not count. Rule: features / refactorings / measurement WPs count only if a group changes ≥
-1.3x or a hot-spot ranking shifts. The `interp/dsg`, `interplin/dsg` and `expensive/` cases have no
-baseline values (reported absolutely; `expensive/` history in `results/WP-76/history/`).
+Last: RP-6 (2026-11-18; rp-6 = 37a84e1af; accepted). Accepted optimizations since: **0**. WP-79
+(feature) does not count. Rule: features / refactorings / measurement WPs count only if a group
+changes ≥ 1.3x or a hot-spot ranking shifts. The `interp/dsg`, `interplin/dsg` and `expensive/`
+cases have no baseline values (reported absolutely; `expensive/` history in
+`results/WP-76/history/`, rp-6 values in `results/RP-6/e2e-expensive-rp-5-vs-rp-6.md`).
 
 ## Log (newest first; older entries in HISTORY.md)
 
-- 2026-11-18 WP-82 summary processed: **accepted** by the owner (commit pending): new
-  `DeltasSparseGridQuadratureOptions` (default on), `QuadratureOptions` = SG only (off). Judged 1.000x,
-  `expensive/` 0.999x, memory 1.004 (0 flags); repeated DSG quad calls 16 t 1.04–1.31x. Large retained
-  indices (cc d2 L20 64 MiB): owner option (a), keep as documented. Serial index build → WP-60;
-  stale WP-73 scripts → backlog J. RP-6 prompt issued.
+- 2026-11-18 Owner: **new ranking rule** (judgement-based over all inputs, no formula; all case
+  types count; complexity, interactions, confidence; owner overrides) + **case-realism note** in
+  every prompt; skill `perf-master` step 4 + prompt template updated (owner's permission), PLAN.md
+  header + "Ranking inputs" table. Re-ranking: WP-61 8 → 1 (before WP-77: bitwise-neutral
+  reordering, one re-pinning), WP-77 1 → 2, WP-21 2 → 4 (one group, < 1 % of quad/dsg), WP-74 3
+  (6–10 % of interplin/dsg + expensive d5), WP-60 7 ↔ WP-58 8 (session with WP-57). Master's
+  recommendations for owner-placed WPs: WP-44 ≈ rank 5, WP-78 size soon.

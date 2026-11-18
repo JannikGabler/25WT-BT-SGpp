@@ -1,0 +1,35 @@
+samples: 75531
+
+## per dso
+ 73.20 %  libm.so.6
+ 15.82 %  perf_e2e
+  4.53 %  libgomp.so.1.0.0
+  3.71 %  libsgppcombigrid.so
+  1.39 %  [unknown]
+  1.34 %  libopenblasp-r0.3.32.so
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libc.so.6
+
+## per symbol
+ 73.20 %  __cos_fma  [libm.so.6]
+ 13.13 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  4.53 %  [unknown]  [libgomp.so.1.0.0]
+  3.71 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  2.33 %  cos@plt  [perf_e2e]
+  1.39 %  [unknown]  [[unknown]]
+  1.34 %  [unknown]  [libopenblasp-r0.3.32.so]
+  0.36 %  std::_Function_handler<double   [perf_e2e]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  strcmp  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::InterpolationMethod::hasTrivialBasisValues  [libsgppcombigrid.so]
+  0.00 %  __memmove_avx_unaligned_erms  [libc.so.6]
+  0.00 %  sgpp::combigrid::tools::weighted_sum::setUpIterDims  [libsgppcombigrid.so]
+  0.00 %  sgpp::base::DataVector::DataVector  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)
+  2.03 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  0.76 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.37 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::weighted_sum::updateWeightProducts
+  0.29 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.26 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::evaluate

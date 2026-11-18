@@ -1,0 +1,26 @@
+samples: 16886
+
+## per dso
+ 47.75 %  perf_e2e
+ 43.95 %  libgomp.so.1.0.0
+  6.25 %  libopenblasp-r0.3.32.so
+  1.97 %  [unknown]
+  0.05 %  libsgppcombigrid.so
+  0.02 %  ld-linux-x86-64.so.2
+  0.01 %  libm.so.6
+  0.01 %  libc.so.6
+
+## per symbol
+ 47.71 %  sgpp::combigrid::perf::burnChain  [perf_e2e]
+ 43.95 %  [unknown]  [libgomp.so.1.0.0]
+  6.25 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.97 %  [unknown]  [[unknown]]
+  0.04 %  sgpp::combigrid::tools::dsg_lin_interpolation::transformFiber  [libsgppcombigrid.so]
+  0.04 %  double sgpp::combigrid::perf::expensive<&sgpp::combigrid::perf::expSum, 49000ul,   [perf_e2e]
+  0.02 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  mbigrid::tools::dsg_lin_interpolation::evaluateChunks<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  0.01 %  __ieee754_exp_fma  [libm.so.6]
+  0.01 %  sgpp::combigrid::tools::dsg_lin_interpolation::  [libsgppcombigrid.so]
+  0.01 %  __cxa_finalize  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)

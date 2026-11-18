@@ -1,0 +1,30 @@
+samples: 30902
+
+## per dso
+ 94.00 %  perf_e2e
+  3.31 %  libopenblasp-r0.3.32.so
+  1.32 %  libgomp.so.1.0.0
+  1.25 %  [unknown]
+  0.08 %  libm.so.6
+  0.02 %  libsgppcombigrid.so
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 93.96 %  sgpp::combigrid::perf::burnChain  [perf_e2e]
+  3.31 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.32 %  [unknown]  [libgomp.so.1.0.0]
+  1.25 %  [unknown]  [[unknown]]
+  0.05 %  __ieee754_exp_fma  [libm.so.6]
+  0.04 %  double sgpp::combigrid::perf::expensive<&sgpp::combigrid::perf::expSum, 49000ul,   [perf_e2e]
+  0.03 %  exp@@GLIBC_2.29  [libm.so.6]
+  0.01 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  0.00 %  _dl_map_object_from_fd  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::combigrid::perf::anisotropicMIs  [perf_e2e]
+  0.00 %  sgpp::combigrid::MIVecSGGenInstr::internalGenMIVecWithCoeffs  [libsgppcombigrid.so]
+  0.00 %  exp@plt  [perf_e2e]
+  0.00 %  sgpp::combigrid::tools::computeCTCoeffs  [libsgppcombigrid.so]
+  0.00 %  __cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >::_M_erase  [libsgppbase.so]
+
+## per symbol / innermost helper (combigrid + base only)

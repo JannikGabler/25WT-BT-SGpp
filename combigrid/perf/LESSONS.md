@@ -15,7 +15,14 @@ are not in [README.md](README.md). Maintained by the master session; current sta
   identical binary (1.19–1.23 / 1.30–1.37 s per round) → A/A before trusting single d8 rounds.
   Benchmark-binary placement (RP-4): edits of the protected `perf_e2e.cpp` move the integrands →
   ±2–6 % on `exp` cases across snapshots (not pinned, WP-53 dropped) → check with a hybrid snapshot
-  (same libraries, other `perf_e2e`; RP-4 `rp-4-binWP45`).
+  (same libraries, other `perf_e2e`; RP-4 `rp-4-binWP45`). WP-76's `perf_e2e.cpp` edit: cross-snapshot
+  ratios spanning it carry ≈ 0.30 s / ±4–8 % on dsg / sg equi b0 and mivec d5 (reference:
+  `results/WP-76/e2e-aa-old.md`).
+- **Load-balance model** (RP-6, `results/RP-6/schedule_sim.py`): makespan with cost of a TG = its
+  points reproduces `expensive/mivec/sg` c100us exactly (dynamic / guided). SG `interpolateLinear`
+  has uniform per-TG cost (2^d corners) → no size-based order there.
+- **Cross-call cache in e2e**: the pipelines build a new grid per run → the cache never hits in the
+  judged suite; repeated-call gains need dedicated benchmarks (WP-73 / WP-82).
 
 ## Recurring test failures (→ WP-35; report recurrences)
 
@@ -89,5 +96,8 @@ are not in [README.md](README.md). Maintained by the master session; current sta
   unsynchronized (6 vs. 25 ns per lookup, drops shared first calls), (c) raw pointers (clear / view
   only without concurrent calls), (a-snap) `atomic<shared_ptr>` snapshot (8924 ns at 16 t nonstop);
   no difference on real calls. (a-rw) `shared_mutex` only if call rates ever matter.
+- RP-6 (model) plain `guided` → `dynamic` on the SG global-interpolation TG loop: predicted to lose
+  (d10 L2 0.934 → 0.830, d2 0.595 → 0.706 efficiency) → largest-first order instead (WP-77).
+  interp/sg per-call basis-value table: ≤ 0.07 % at d ≥ 5 (≤ 0.001 s) → no WP.
 - RP-4 `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows`: 0.994x → the WP-52 −1 % is not
   recoverable this way.

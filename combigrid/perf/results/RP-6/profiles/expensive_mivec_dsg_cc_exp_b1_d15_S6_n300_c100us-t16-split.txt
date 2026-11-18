@@ -1,0 +1,32 @@
+samples: 19314
+
+## per dso
+ 90.84 %  perf_e2e
+  5.44 %  libopenblasp-r0.3.32.so
+  2.02 %  libgomp.so.1.0.0
+  1.60 %  [unknown]
+  0.04 %  libm.so.6
+  0.02 %  ld-linux-x86-64.so.2
+  0.02 %  libsgppcombigrid.so
+  0.02 %  libc.so.6
+
+## per symbol
+ 90.83 %  sgpp::combigrid::perf::burnChain  [perf_e2e]
+  5.44 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.02 %  [unknown]  [libgomp.so.1.0.0]
+  1.60 %  [unknown]  [[unknown]]
+  0.04 %  __ieee754_exp_fma  [libm.so.6]
+  0.01 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.01 %  _dl_relocate_object_no_relro  [ld-linux-x86-64.so.2]
+  0.01 %  __sigjmp_save  [libc.so.6]
+  0.01 %  snprintf  [libc.so.6]
+  0.01 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::build  [libsgppcombigrid.so]
+  0.01 %  double sgpp::combigrid::perf::expensive<&sgpp::combigrid::perf::expSum, 49000ul,   [perf_e2e]
+  0.01 %  sgpp::combigrid::tools::computeCTCoeffs  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::ProjectedSubTrieBuilder::addChildren  [libsgppcombigrid.so]
+  0.01 %  exp@@GLIBC_2.29  [libm.so.6]
+  0.01 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.01 %  ls::dsg_weighted_sum::forEachGPWithGlobalWeight<sgpp::combigrid::tools::dsg_weighted_sum::  [libsgppcombigrid.so]
+
+## per symbol / innermost helper (combigrid + base only)

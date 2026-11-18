@@ -1,0 +1,5 @@
+profile of `^expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us$` (e2e, 16 threads, self time)
+    94.22%  perf_e2e  perf_e2e                 [.] sgpp::combigrid::perf::burnChain
+     2.86%  perf_e2e  libopenblasp-r0.3.32.so  [.] 0x0000000000a0e4c1
+
+samples per process: 1 warm-up + 1

@@ -19,6 +19,7 @@ AC, idle; e2e at 16 threads, micro at 1 thread. Raw data: `baseline/` (protected
 11. [Re-profiling RP-3](#re-profiling-rp-3) (after WP-03; mivec split, WP-29 kernel shares, OpenBLAS cold first call, peak memory)
 12. [Re-profiling RP-4](#re-profiling-rp-4) (after WP-08, WP-06, WP-52; DSG interpolation groups, benchmark-binary placement, `sumOverRows` alignment check, low-d thread scan)
 13. [Re-profiling RP-5](#re-profiling-rp-5) (after WP-18, WP-05; SG d2 critical-path timeline, CC FFT variants, WP-05's DSG placement effect, heap composition)
+14. [Re-profiling RP-6](#re-profiling-rp-6) (after WP-56, WP-49, WP-73 / WP-82; first profile of `expensive/`, TG-loop load-balance model, DSG interplin chunk balance, cross-call cache sizes)
 
 ## Measurement noise
 
@@ -1279,3 +1280,196 @@ single lever (0.3–0.4 s on sg cc d2 L20); WP-49 (0.15–0.25 s + d2 0.07 s) an
 s) confirmed; WP-05's DSG regression is gone at HEAD (no WP); WP-57: −8 MB on dsg b0 d3
 (memory only); new small memory WP: the identity domain table shares the unit rows (−33.5 MB on
 sg d2 L20).
+
+## Re-profiling RP-6
+
+Work session RP-6, 2026-11-18. Code: 37a84e1af (= `rp-6` snapshot, in-tree `perf.py build normal`,
+`perf.py test --repeat 3` passed). Since RP-5: WP-56 (CC weights: real FFT of length m, eager
+largest-first weight table, SG TG loop `guided` → `dynamic`), WP-49 (DSG multilinear interpolation
+by sum factorization), WP-76 (judged group `expensive/`, protected `perf_e2e.cpp` edited), WP-73
+(cross-call operator data cache control), WP-82 (DSG quadrature cache on by default). Judged
+configuration, boost off, `calibrate` OK (e2e 1.004 burst / 0.999 sustained, micro 1.004 / 1.002).
+Reports in `results/RP-6/`:
+- A/Bs: `e2e.md/.json` (full suite baseline → rp-6), `e2e-rp-5-vs-rp-6.md/.json` (full suite,
+  direct), `e2e-expensive-rp-5-vs-rp-6.md/.json` (`expensive/` with `hist-rp-5` = rp-5 libraries +
+  WP-76's history driver), `micro-rp-5-vs-rp-6.md/.json` (classic hot-spot filter), `e2e-t1-ramp.json`
+  (1-thread runs of 4 `expensive/` cases);
+- derived: `groups.md`, `profile-splits.md`, `profiles/` (42 top lists + splits), `schedule-sim.md`
+  (TG-loop makespan model from `tg-sizes.jsonl`), `chunk-balance.md`, `cache-bytes.md`,
+  `timeline-*.txt`;
+- scripts / probes: `groups.py`, `run_profiles.sh`, `summarize_profiles.py`, `timeline.py`,
+  `schedule_sim.py`, `tg_sizes.cpp` + `cache_bytes.cpp` (public API, `build_tg_sizes.sh`),
+  `chunk_balance.cpp` (internal headers, analysis only). Raw perf data: `.work/profiles/RP-6/`
+  and `.work/profiles/*-t16.data` (git-ignored).
+
+### Cumulative progress baseline → rp-6
+
+Full e2e A/B `ab e2e baseline rp-6` (73 cases, 38 in both, 5 rounds, foreign load ≤ 0.4 %, rounds
+262–263 s), direct `ab e2e rp-5 rp-6` (48 cases, ≤ 0.2 %) and `ab e2e hist-rp-5 rp-6 --filter
+'^expensive/'` (25 cases, ≤ 0.3 %). [RP-5 report values in brackets.]
+
+| group | baseline | rp-5 (direct A) | rp-6 | baseline → rp-6 | rp-5 → rp-6 | d ≥ 7: baseline → rp-6 | peak RSS geomean baseline → rp-6 (rp-5 → rp-6) | share of rp-6 |
+|---|---|---|---|---|---|---|---|---|
+| quad/sg (13) | 22.30 s | 8.62 s [8.62] | **8.13 s** | **2.74x** | **1.059x** | 18.49 → 6.74 s (2.74x) | **0.577** (0.971) | 22.4 % |
+| quad/dsg (9) | 26.74 s | 17.82 s [17.83] | 17.70 s | 1.51x | 1.006x | 26.14 → 17.16 s (1.52x) | 0.594 (1.001) | **48.7 %** (b0 42.4, b1 6.3) |
+| interp/sg (8) | 6.60 s | 4.22 s [4.22] | 4.23 s | 1.56x | 0.996x | 3.71 → 2.62 s (1.41x) | 0.927 (1.011) | 11.7 % |
+| interplin/sg (4) | 4.97 s | 3.51 s [3.51] | 3.54 s | 1.41x | 0.990x | 4.36 → 3.06 s (1.42x) | 0.999 (1.006) | 9.7 % |
+| mivec (4) | 9.28 s | 1.30 s [1.27] | 1.09 s | 8.49x | **1.190x** | 7.01 → 0.40 s (17.4x) | 0.945 (1.007) | 3.0 % |
+| **common (38)** | **69.89 s** | **35.46 s** [35.45] | **34.70 s** | **2.014x** | **1.021x** | 59.71 → 29.98 s (1.99x) | **0.716** (0.994) | 95.6 % |
+| interp/dsg (6) | – | 0.83 s [0.83] | 0.83 s | – | 0.998x | – | – (1.019) | 2.3 % |
+| interplin/dsg (4) | – | 1.16 s [1.17] | **0.79 s** | – | **1.479x** | – | – (1.011) | 2.2 % |
+| **suite (48)** | | **37.44 s** [37.44] | **36.33 s** | | **1.031x** (−1.11 s) | | (0.999) | 100 % |
+| `expensive/` (21) | | 17.75 s | 17.77 s | | 0.999x | | (1.015) | own line |
+| `expensive/ cached` (4) | | 1.07 s | 1.04 s | | 1.020x | | (1.009) | own line |
+
+- baseline → rp-6 verdicts: 37 faster, 1 within noise (`interplin/sg/.../d2`), 0 SLOWER. rp-5 →
+  rp-6: 18 faster, 29 noise, 1 SLOWER (`interp/dsg/cc/b0/d2` 0.992, 0.4 ms). Faster: sg cc d2 L20
+  **1.783** (792 → 441 ms), interplin/dsg d10 / d8 / d5 / d2 1.588 / 1.578 / 1.513 / 1.143, mivec
+  d10 / d5 1.330 / 1.132, sg equi b1 d10 L7 1.210 (WP-56).
+- **Benchmark-binary placement** (WP-76 edited `perf_e2e.cpp`): the remaining rp-5 → rp-6 shifts
+  on cases WP-56 / WP-49 do not touch — dsg equi b0 d3 / d5 / d7 1.016 / 1.044 / 1.038, sg equi b0
+  d5 / d7 1.053 / 1.035, mivec d5 part — match WP-76's same-library A/A of the old vs. new binary
+  (`results/WP-76/e2e-aa-old.md`: 1.038 / 1.056 / 1.039, 1.065 / 1.030, mivec d5 1.080; sum 36.758 →
+  36.454 s, −0.30 s). No hybrid snapshot needed: ≈ 0.30 s of the −1.11 s is the binary, ≈ 0.81 s
+  the libraries (WP-56 −0.55 s + WP-49 −0.36 s measured in their sessions). The cc-uq DSG cases
+  (other integrand) are neutral (1.003 / 0.998 / 1.002).
+- **WP-73 / WP-82 neutrality**: visible as neutral — quad/dsg cc b0 d5 / d7 / d10 1.002 / 0.998 /
+  1.003, b1 d15 / d20 1.008 / 1.002, interp/dsg 0.979–1.000 (all within noise except the d2 0.992
+  above). The e2e pipelines build a new grid per run, so the default-on cache never hits there.
+- Longest cases (rp-6): dsg b0 cc / equi d10 6.86 / 5.41 s (33.8 % of the suite), sg equi-sin d7
+  2.40 s, interplin/sg d10 1.86 s, interp/sg cc d10 1.61 s, dsg b0 cc / equi d7 1.45 / 1.15 s,
+  sg cc d10 1.31 s; sg cc d2 L20 now 0.43 s (gen 70 ms + operator 358 ms).
+- **Peak memory**: baseline → rp-6 geomean **0.716** [RP-5: 0.724], 25 `MEM−`, 6 `MEM+` (+0.4–1.2
+  MiB on 12–20 MiB cases; process floor 10.2 → 10.5 MiB). sg cc d2 L20 839 → **191 MiB** (rp-5
+  284), sg equi d2 L20 364 → 114 MiB, dsg b1 d20 332 → 83 MiB, d15 233 → 52 MiB, sg b1 d20 / d15
+  60 / 53 → 20 / 18.5 MiB. rp-5 → rp-6: 0.999, `MEM−` sg cc d2 L20 (0.667) and cc d3 L14 (0.868),
+  `MEM+` interplin/dsg d10 15.3 → 15.9 MiB (WP-49's fibers) and sg equi d10 12.7 → 13.1 MiB (floor).
+  Largest remaining peaks: sg cc d2 L20 191 MiB, sg equi d2 L20 114 MiB, dsg b1 d20 83 MiB,
+  `expensive/.../d8/...-cached` 59.5 MiB, dsg b1 d15 52 MiB, dsg b0 d3 L16 44 MiB.
+- Cross-call cache after one default call (`cache-bytes.md`): quad/dsg b0 d3 L16 8.0 MiB, d5 / d7 /
+  d10 1.2 / 0.9 / 1.2 MiB (equi = cc), b1 d15 9.4 MiB, d20 **17.8 MiB**; interp/dsg 0.01–0.75 MiB;
+  interplin/dsg 0.18–2.0 MiB (WP-82: 0.9–17.8 MiB).
+
+### Where the time goes (rp-6)
+
+Profiles of 42 cases (16 t, `profile-splits.md`); absolute = share × rp-6 median `total`. [RP-5
+shares in brackets.]
+
+| case (rp-6 total) | integrand | operator (inline split) | libgomp / OpenBLAS / other |
+|---|---|---|---|
+| quad/dsg/equi-exp/b0/d10/L7 (5.41 s) | 51.5 % [51.8] | row loop **44.4 %** [44.0] = `updateCoeffSums` 14.6 · `compRowWeights` 12.3 · evaluate + addScaled 7.2 · rest 10.3 | libc 2.0 |
+| quad/dsg/cc-uq/b0/d10/L7 (6.86 s) | 62.8 % [63.2] | row loop 33.8 % [33.5] = 10.8 / 9.1 / 5.8 / 8.1 | libc 1.5 |
+| quad/dsg equi / cc b0 d7 (1.15 / 1.45 s) | 47.7 / 58.1 % | row loop 44.0 / 35.4 % [43.1 / 34.6] | 1.6 / 1.4 |
+| quad/dsg/equi-exp/b1/d20/L6 (1.14 s) | 54.6 % [54.7] | row loop 22.6 % · `addChildren` 12.6 % [12.8] | 2.1 / 3.1 |
+| quad/dsg/equi-exp/b1/d15/L7 (1.16 s) | 56.5 % [56.4] | row loop 26.2 % · `addChildren` 8.4 % | 2.0 / 2.7 |
+| quad/dsg/equi-exp/b0/d3/L16 (0.094 s) | 37.7 % | row loop 27.4 % | **23.4** / 6.2 |
+| quad/sg equi-exp d10 / cc-uq d10 / equi-sin d7 / b1 d20 | 72.7 / 80.0 / 92.0 / 72.8 % | `sumOverRows` 22.6 / 16.5 / 5.9 / 15.3 % | b1 d20 5.4 / 4.2 |
+| quad/sg/cc-uq/b0/d2/L20 (0.43 s) | 60.6 % [56.4] | `sumOverRows` 10.4 · kissfft 2.7 [CC weights ≈ 10.1] | 10.9 / 9.1 |
+| quad/sg/equi-exp/b0/d2/L20 (0.32 s) | 62.7 % | `sumOverRows` 14.3 | 11.3 / 7.6 |
+| interp/sg cc d10 / d7 / d5 / d2 | 89.0 / 87.9 / 86.8 / 45.9 % | `sumOverRows` 3.7 / 4.7 / 5.8 / 5.0 %; basis values ≤ 0.07 % (d2 0.4 %) | d2 42.9 / 4.2 |
+| interp/dsg cc d10 / d7 / d5 | 82.2 / 78.8 / 73.0 % | row loop 6.9 / 10.5 / 13.7 % | 5.5 / 2.8 / 3.8 |
+| interp/dsg cc d2 / equi d3 | 39.6 / 23.5 % | row loop 10.8 / 4.1 % | **39.2 / 55.7** |
+| interplin/sg d10 / d8 / d5 | 87.3 / 84.8 / 70.6 % | `sumOverCorners` 6.7 / 7.1 / 8.3 (+ `prepareCorners` 4.0 at d5) | 3.1 / 4.8 / 11.7 |
+| interplin/dsg d10 / d8 / d5 | 68.7 / 57.6 / 32.3 % [45.2 / 37.4 / 22.3] | `transformFiber` 5.8 / 9.3 / **20.1** · `evaluateChunks` 5.9 / 5.9 / 5.4 | **12.1 / 18.3 / 28.9** · OpenBLAS 4.3 / 4.8 / 5.2 |
+| interplin/dsg d2 (0.155 s) | 7.1 % | `transformFiber` 7.2 · `evaluateChunks` 5.6 · rest ≈ 6 | 33.7 / **32.9** (serial call: pool threads spin) |
+| mivec d5 / d10 | 76.5 / 72.6 % | `sumOverRows` 16.3 / 13.1 % | 3.1 / 8.1 |
+| mivec d15 / d20 (26 / 3 ms) | 29.5 / 6.8 % | `sumOverRows` 4.3 / 1.1 % | **46.2 / 51.0** · OpenBLAS 15.4 / 34.9 (region-bound) |
+
+Absolute:
+- **quad/dsg b0 d7/d10** (14.86 s, 40.9 % of the suite): integrand 8.48 s; row loop **5.74 s**
+  [5.72] = `updateCoeffSums` 1.87 · `compRowWeights` 1.56 · evaluate + addScaled 0.97 · rest 1.34.
+  b1 d15 + d20: row loop 0.56 s, builder (`addChildren`) **0.241 s** [0.245]. Unchanged since RP-5
+  (no DSG quadrature kernel WP since).
+- **quad/sg**: integrand-bound above d2 (73–92 %); `sumOverRows` 0.20 (equi d10) + 0.22 (cc d10)
+  + 0.14 (sin d7) s. sg d2: CC weights 2.7 % kissfft (was ≈ 10 %), the rest is the TG tail (below).
+- **interp/sg, interplin/sg**: at the integrand floor (kernels 3.7–8.3 %); unchanged.
+- **interplin/dsg** after WP-49: transform 24 / 22 / 16 ms (d5 / d8 / d10), libgomp 35 / 43 / 33
+  ms, evaluation pass 7 / 14 / 16 ms; d2 serial (libgomp + OpenBLAS 67 % = pool spin, integrand
+  11 ms).
+- **WP-75 candidates** (char / `uint8_t` stores in hot loops): **none left**. The only byte arrays
+  in operator code are `DSGLinInterpIndex::maxNewCoords_` / `fiberShift_` (`uint8_t`, written once
+  at index build, read-only in the loops); WP-49's reach flags are `bool`; the cache's record copies
+  use `memcpy`; `LvlType` / `GPCntType` are `unsigned int`.
+
+### `interp/sg`: 1D basis values (owner's question 2026-11-17)
+
+`fillBasisValues` + `basisValues` + `barycentricFormulaWeights`: ≤ 0.07 % of the profile at d ≥ 5
+(cc d10 L2 p8: 0.00 %), 0.4 % at cc d2 L12 (≈ 0.5 ms of 128 ms), 0.5 % at cheb1 d5 (generic
+weights, WP-07). A per-call basis-value table shared across TGs would save ≤ 0.001 s judged (and
+nothing on `expensive/`: 100 µs evaluations vs. O(Σ n_j) basis values per TG). The per-TG cost is
+the f evaluations (Π n_j) and the row sums (`sumOverRows` 3.7–5.8 %). **No WP**; WP-07 stays ≈ 0
+judged, WP-73's cache does not apply (SG interpolation keeps nothing by design).
+
+### TG-loop load balance (`schedule-sim.md`, `timeline-*.txt`, `e2e-t1-ramp.json`)
+
+Model: cost of a TG = its grid points (= evaluations; exact for the c100us cases), 16 threads,
+chunk 1, greedy hand-out in loop order. TG sizes from the e2e grids (`tg_sizes.cpp`). The model
+reproduces the measurements:
+- `expensive/mivec/sg/.../d15/S6/c100us`: largest TG 15,625 points = **1.72x the balanced share**;
+  model `dynamic` (TG order) 21,570 evaluation slots = **2.157 s** at 99.84 µs (measured rp-6
+  **2.156 s**), model `guided` 2.060 s (measured rp-5 **2.060 s**): WP-56's guided → dynamic is the
+  +4.6 % shift. Timeline (`timeline-expensive_mivec_sg_*.txt`): 15 threads finish after ≈ 0.75 s,
+  one thread runs the largest TG to the end of the call.
+- `mivec/dsg c100us`: model 0.879 s vs. measured 0.881 s. `mivec/sg c1us d20 S10`: model guided /
+  dynamic ratio 1.139 vs. measured rp-5 → rp-6 1.128.
+
+| grid (loop today) | eff. today (model) | largest-first (LPT) | bound (largest TG / balanced) |
+|---|---|---|---|
+| `expensive/mivec/sg` d15 S6 (dynamic) | 0.724 | 1.000 = largest TG (2.16 → **1.56 s**) | largest TG 1.72x balanced → 0.91 s only with TG splitting |
+| `expensive/mivec/dsg` d15 S6 (dynamic) | 0.624 | 1.000 (0.88 → **0.55 s**) | balanced |
+| `expensive/mivec/sg` d20 S10 c1us (dynamic) | 0.718 | 1.000 (0.66 → ≈ 0.48 s) | balanced |
+| mivec/sg d10 S12 / d5 S16 / d15 S10 / d20 S7 (dynamic) | 0.778 / 0.946 / 0.682 / 0.536 | 1.000 | d15: largest 1.36x balanced |
+| quad/sg b0 d10 L4 / d7 L7 / d5 L10 (dynamic) | 0.990 / 0.994 / 0.990 | 0.998 / 1.000 / 1.000 | balanced |
+| quad/sg b1 d10–d20, `expensive/quad` (dynamic) | 0.997–1.000 | 1.000 | balanced |
+| quad/sg b0 d2 L20 (dynamic) | 0.699 | 0.931 | largest TG 0.71x balanced |
+| quad/dsg b0 d10 L7 / d7 L10 / d5 L12 / d3 L16 (dynamic) | 0.984 / 0.978 / 0.949 / 0.811 | 1.000 | balanced |
+| quad/dsg b1 d15 / d20 (dynamic) | 1.000 | 1.000 | balanced |
+| interp/sg cc b0 d10 L2 / d7 L4 / d5 L6 / d3 L9 / d2 L12 (**guided** per point) | 0.934 / 0.963 / 0.956 / 0.865 / 0.595 | 0.908 / 0.994 / 0.998 / 0.982 / 0.952 | d2: largest 1.09x balanced |
+| same grids with plain `dynamic` (WP-59 as planned) | 0.830 / 0.957 / 0.961 / 0.859 / 0.706 | | |
+
+- Cheap-suite check of the model on DSG b0 d10 (`timeline-dsg-d10-thread-ends.txt`, 1 kHz samples):
+  the threads finish call 1 between 5.452 and 5.510 s, **mean idle 41.5 ms = 0.75 %** of the call
+  (model 1.6 %: the model is an upper bound where TG costs are not proportional to points).
+- **Evaluation-cost-dependent shapes**: SG multilinear interpolation evaluates 2^d corners per TG
+  and point (uniform cost; `schedule(static)` is balanced at uniform cost: c100us efficiency 0.97).
+  The `-ramp` cases are imbalanced by position: 1-thread vs. 16-thread operator time
+  (`e2e-t1-ramp.json`) → efficiency interplin/sg ramp **0.82** (16.94 s / 16 = 1.06 s vs. 1.29 s;
+  the ramp also makes the work 1.32x larger than uniform), interp/sg ramp 0.81, mivec/sg ramp 0.42.
+
+### DSG multilinear interpolation: evaluation-pass balance (`chunk-balance.md`)
+
+WP-49's evaluation pass hands out chunks of `DSG_SUM_CHUNK_LEAVES` = 16 leaves (`dynamic, 1`; the
+chunk sums are added in order: thread-count independent). Reached slots (= evaluations) per chunk,
+operator passes replayed serially for the e2e points:
+
+| grid | leaves / chunks | evaluations / point | balanced / thread | largest chunk | eff. 16-leaf chunks | eff. 1-leaf chunks |
+|---|---|---|---|---|---|---|
+| `expensive/interplin/dsg` d5 L5 | 252 / 16 | 1,682 | 105 | **215** | **0.489** | 0.906 |
+| `expensive/interplin/dsg` d10 L4 c1us | 1,001 / 63 | 165,504 | 10,344 | 7,168 | 0.860 | 0.968 |
+| interplin/dsg d5 L8 / d8 L5 / d10 L5 | 1,287 / 81 · 1,287 / 81 · 3,003 / 188 | 5,852 / 47,264 / 370,688 | | | 0.865 / 0.901 / 0.913 | 0.973 / 0.972 / 0.986 |
+
+The expensive d5 case has as many chunks as threads; its measured efficiency 0.49 (1 t 2.69 s /
+16 vs. 0.345 s) is exactly the chunk model. Chunks sized by reached slots (or 1–4 leaves) keep the
+fixed summation order and remove it.
+
+### Micro (`micro-rp-5-vs-rp-6.md`, 1 t, classic hot-spot filter)
+
+Sum of the common cases 1.028x (3.379 → 3.288 s). Faster: `quadrule/cc_weights` n33 / n1025 /
+n32769 2.00 / 1.76 / 2.26 (WP-56), `quad/operator/cc/b0/d2/L16` 1.091, `interplin/dsg` d10 / d8 /
+d5 / d2 1.612 / 1.629 / 1.936 / 1.086 (WP-49), `dsg/process_delta_tgs/equi/b0/d10/L7/s256` 1.024.
+SLOWER (≤ 2 %, untouched code → placement band): `tg/iterate_mutable/equi/b0/d10/L4` 0.980,
+`mivec/downwards_closure` d5 / d10 0.987 / 0.992 / 0.996 (d20 1.036 faster), `mivec/ct_coeffs` 0.993.
+New since rp-5: `micro/crosscall/...` (WP-73 / WP-82), `quadrule/cc_weights/n131073` 6.26 ms,
+`n1048577` 68.3 ms.
+
+### Findings → work packages (RP-6)
+
+Re-ranking with expected savings: `summaries/RP-6-reprofiling.md` ("Profile shift / follow-ups").
+In short: suite 36.33 s (1.031x since RP-5, of which ≈ 0.30 s benchmark binary; 2.014x / memory
+0.716 since baseline on the 38 common cases); quad/dsg b0 (14.9 s, row loop 5.74 s) stays the
+largest pool; the largest single lever is now a **largest-first TG order** for the TG loops (SG
+quadrature / mivec, DSG quadrature, SG global interpolation): ≈ 0.3–0.4 s on the suite (model,
+DSG d10 tail measured) and ≈ 1.1 s on `expensive/` (WP-77 extended, absorbs WP-51's order part
+and replaces WP-59's guided → dynamic, which the model predicts to lose on interp/sg d10 L2);
+WP-74 grows by the chunk granularity of the evaluation pass (≈ 0.05–0.08 s suite, −0.15 s
+`expensive/`); WP-75 has no candidates (close); basis-value table: no WP.

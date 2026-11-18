@@ -1,0 +1,39 @@
+samples: 59527
+
+## per dso
+ 69.00 %  libm.so.6
+ 15.79 %  perf_e2e
+  7.61 %  libsgppcombigrid.so
+  4.80 %  libgomp.so.1.0.0
+  1.69 %  libopenblasp-r0.3.32.so
+  1.10 %  [unknown]
+  0.01 %  libc.so.6
+  0.01 %  ld-linux-x86-64.so.2
+  0.00 %  libsgppbase.so
+
+## per symbol
+ 69.00 %  __cos_fma  [libm.so.6]
+ 13.15 %  sgpp::combigrid::perf::cosProd  [perf_e2e]
+  7.06 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  4.80 %  [unknown]  [libgomp.so.1.0.0]
+  2.11 %  cos@plt  [perf_e2e]
+  1.69 %  [unknown]  [libopenblasp-r0.3.32.so]
+  1.10 %  [unknown]  [[unknown]]
+  0.53 %  sgpp::combigrid::tools::lin_interpolation::prepareCorners  [libsgppcombigrid.so]
+  0.52 %  std::_Function_handler<double   [perf_e2e]
+  0.02 %  sgpp::combigrid::interpolateLinear  [libsgppcombigrid.so]
+  0.01 %  __memset_avx2_unaligned_erms  [libc.so.6]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  sgpp::base::DataVector::DataVector  [libsgppbase.so]
+  0.00 %  std::__detail::_Compiler<std::__cxx11::regex_traits<char> >::_M_try_char  [perf_e2e]
+  0.00 %  _int_malloc  [libc.so.6]
+  0.00 %  _int_memalign  [libc.so.6]
+  0.00 %  __posix_memalign  [libc.so.6]
+
+## per symbol / innermost helper (combigrid + base only)
+  2.68 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>
+  2.10 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  1.82 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::tools::lin_interpolation::moveToCorner
+  0.29 %  ::combigrid::tools::lin_interpolation::sumOverCorners<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::addScaled
+  0.25 %  sgpp::combigrid::tools::lin_interpolation::prepareCorners  <=  sgpp::combigrid::tools::lin_interpolation::fillWeightTable

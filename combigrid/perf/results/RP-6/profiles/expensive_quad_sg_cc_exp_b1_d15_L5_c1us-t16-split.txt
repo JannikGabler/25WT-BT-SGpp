@@ -1,0 +1,35 @@
+samples: 38483
+
+## per dso
+ 86.73 %  perf_e2e
+  6.68 %  libm.so.6
+  2.64 %  libopenblasp-r0.3.32.so
+  2.15 %  libsgppcombigrid.so
+  1.11 %  [unknown]
+  0.69 %  libgomp.so.1.0.0
+  0.01 %  ld-linux-x86-64.so.2
+
+## per symbol
+ 79.27 %  sgpp::combigrid::perf::burnChain  [perf_e2e]
+  6.91 %  double sgpp::combigrid::perf::expensive<&sgpp::combigrid::perf::expSum, 490ul,   [perf_e2e]
+  4.72 %  __ieee754_exp_fma  [libm.so.6]
+  2.64 %  [unknown]  [libopenblasp-r0.3.32.so]
+  2.11 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  [libsgppcombigrid.so]
+  1.53 %  exp@@GLIBC_2.29  [libm.so.6]
+  1.11 %  [unknown]  [[unknown]]
+  0.69 %  [unknown]  [libgomp.so.1.0.0]
+  0.43 %  __exp_finite@GLIBC_2.15@plt  [libm.so.6]
+  0.38 %  exp@plt  [perf_e2e]
+  0.17 %  std::_Function_handler<double   [perf_e2e]
+  0.02 %  sgpp::combigrid::quadrature  [libsgppcombigrid.so]
+  0.01 %  sgpp::combigrid::tools::weighted_sum::setUpIterDims  [libsgppcombigrid.so]
+  0.01 %  do_lookup_x  [ld-linux-x86-64.so.2]
+  0.00 %  _dl_lookup_symbol_x  [ld-linux-x86-64.so.2]
+  0.00 %  raits<char>, std::allocator<char> > > > >, std::__cxx11::regex_traits<char>, true>::_M_dfs  [perf_e2e]
+  0.00 %  sgpp::combigrid::TensorGridView::nGP  [libsgppcombigrid.so]
+  0.00 %  unsigned long   [perf_e2e]
+
+## per symbol / innermost helper (combigrid + base only)
+  0.93 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>
+  0.58 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::SourceFunc::evaluate
+  0.26 %  Acc sgpp::combigrid::tools::weighted_sum::sumOverRows<sgpp::combigrid::misc::ScalarValues>  <=  sgpp::combigrid::misc::ScalarValues::evaluate

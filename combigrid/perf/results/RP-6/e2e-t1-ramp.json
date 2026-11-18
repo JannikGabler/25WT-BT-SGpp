@@ -1,0 +1,145 @@
+{
+ "suite": "e2e",
+ "snapshot": "rp-6",
+ "threads": 1,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-43-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "2.07",
+   "1.86",
+   "4.87"
+  ]
+ },
+ "records": [
+  {
+   "suite": "e2e",
+   "case": "expensive/interplin/dsg/equi-exp/b1/d5/L5/p16/c100us",
+   "kind": "pipeline",
+   "threads": 1,
+   "samples": 1,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     2.69024273
+    ],
+    "setup": [
+     1.6553e-05
+    ],
+    "generation": [
+     8.4368e-05
+    ],
+    "operator": [
+     2.690113664
+    ]
+   },
+   "result": 56.53397058806605,
+   "exact": 56.53265144355893,
+   "counters": {
+    "nTG": 252,
+    "sumGP": 19265
+   },
+   "peak_rss_kib": 11068
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us-ramp",
+   "kind": "pipeline",
+   "threads": 1,
+   "samples": 1,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     16.515075909
+    ],
+    "setup": [
+     0.000137865
+    ],
+    "generation": [
+     0.001059276
+    ],
+    "operator": [
+     16.513838679
+    ]
+   },
+   "result": 49.52089799177823,
+   "exact": 49.69606549564766,
+   "counters": {
+    "nTG": 224,
+    "sumGP": 145512
+   },
+   "peak_rss_kib": 10836
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/interp/sg/cc-exp/b1/d7/L3/p8/c100us-ramp",
+   "kind": "pipeline",
+   "threads": 1,
+   "samples": 1,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     5.178327652
+    ],
+    "setup": [
+     1.7739e-05
+    ],
+    "generation": [
+     9.638e-05
+    ],
+    "operator": [
+     5.178175539
+    ]
+   },
+   "result": 54.820188278553275,
+   "exact": 54.82611391338764,
+   "counters": {
+    "nTG": 120,
+    "sumGP": 7008
+   },
+   "peak_rss_kib": 10560
+  },
+  {
+   "suite": "e2e",
+   "case": "expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-ramp",
+   "kind": "pipeline",
+   "threads": 1,
+   "samples": 1,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "total": [
+     16.941061386
+    ],
+    "setup": [
+     1.9974e-05
+    ],
+    "generation": [
+     8.339e-05
+    ],
+    "operator": [
+     16.940935742
+    ]
+   },
+   "result": 56.53397058806581,
+   "exact": 56.53265144355893,
+   "counters": {
+    "nTG": 251,
+    "sumGP": 72315
+   },
+   "peak_rss_kib": 10736
+  }
+ ],
+ "process_floor_kib": 9920
+}
