@@ -10,7 +10,6 @@
  * tensor grid, the combination of all tensor grids, the public overloads.
  */
 
-#include <algorithm>
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
@@ -31,11 +30,12 @@ namespace combigrid {
 namespace {
 
 /**
- * Returns the Lagrange basis polynomials of the 1D @p nodes at @p x:
- * L_i(x) = product over k != i of (x - x_k) / (x_i - x_k). One node: L_0 = 1.
+ * Returns the Lagrange basis polynomials of the 1D @p nodes evaluated at @p x:
+ * L_i(x) = product over k != i of (x - x_k) / (x_i - x_k).
  */
-base::DataVector lagrangeBasis(const double x, const std::span<const double> nodes) {
+base::DataVector lagrangeBasis(const double x, const base::DataVector& nodes) {
   base::DataVector basis(nodes.size(), 1.0);
+
   for (size_t i = 0; i < nodes.size(); i++) {
     for (size_t k = 0; k < nodes.size(); k++) {
       if (k != i) {
@@ -43,6 +43,7 @@ base::DataVector lagrangeBasis(const double x, const std::span<const double> nod
       }
     }
   }
+
   return basis;
 }
 
@@ -52,42 +53,48 @@ base::DataVector lagrangeBasis(const double x, const std::span<const double> nod
  */
 double tensorProductBasis(const std::vector<base::DataVector>& basis1D, size_t idx) {
   double basisValue = 1.0;
+
   for (const base::DataVector& basisOfDim : basis1D) {
     basisValue *= basisOfDim[idx % basisOfDim.size()];
     idx /= basisOfDim.size();
   }
+
   return basisValue;
 }
 
 /**
- * Sets @p tgResult to the tensor-product Lagrange interpolant of the m outputs of @p sourceFunc
+ * Returns the tensor-product Lagrange interpolant of the m outputs of @p sourceFunc
  * on one tensor grid at the point @p unitPoint (on [0, 1]^d): sum over the grid points of
  * (product of the 1D basis values) * f(grid point). The basis uses the nodes on [0, 1]
  * (@p unitTG), the source function the grid points in domain coordinates (@p domainTG).
  */
-void interpolateTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& unitPoint,
-                           const TensorGridView& domainTG, const TensorGridView& unitTG,
-                           const std::span<double> tgResult) {
+base::DataVector interpolateTensorGrid(const VectorSourceFunc& sourceFunc,
+                                       const base::DataVector& unitPoint,
+                                       const TensorGridView& domainTG,
+                                       const TensorGridView& unitTG) {
   std::vector<base::DataVector> basis1D;
-  for (size_t dim = 0; dim < unitTG.nDim(); dim++) {
-    basis1D.push_back(lagrangeBasis(unitPoint[dim], unitTG.nodeSpanInDim(dim)));
-  }
-  base::DataVector gridPoint(domainTG.nDim());
-  std::vector<double> values(sourceFunc.nOutputs());
 
-  std::ranges::fill(tgResult, 0.0);
+  for (size_t dim = 0; dim < unitTG.nDim(); dim++) {
+    basis1D.push_back(lagrangeBasis(unitPoint[dim], unitTG.nodeVectorInDim(dim)));
+  }
+
+  base::DataVector tgResult(sourceFunc.nOutputs());
+
   for (size_t idx = 0; idx < domainTG.nGP(); idx++) {
-    domainTG.getGridPoint(idx, gridPoint);
-    sourceFunc.evaluate(gridPoint, values);
+    const base::DataVector gridPoint = domainTG.getGridPoint(idx);
+    const base::DataVector values = sourceFunc.evaluate(gridPoint);
     const double basisValue = tensorProductBasis(basis1D, idx);
+
     for (size_t k = 0; k < values.size(); k++) {
       tgResult[k] += basisValue * values[k];
     }
   }
+
+  return tgResult;
 }
 
 /**
- * Sets @p result to the combination-technique interpolant at @p point: the sum over the tensor
+ * Returns the combination-technique interpolant at @p point: the sum over the tensor
  * grids of their coefficient times their interpolant.
  *
  * This is the combination technique: the sparse-grid approximation is a linear combination of
@@ -96,25 +103,29 @@ void interpolateTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataV
  * grids; for functions with bounded mixed derivatives, the sum is nearly as accurate as the full
  * tensor grid of the highest level (up to logarithmic factors) at a fraction of its grid points.
  */
-void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                        const SparseGrid& sparseGrid, const std::span<double> result) {
+base::DataVector combineTensorGrids(const VectorSourceFunc& sourceFunc,
+                                    const base::DataVector& point, const SparseGrid& sparseGrid) {
   if (point.size() != sparseGrid.nDim()) {
-    throw std::invalid_argument(
-        "textbookInterpolate: The size of the point is not the dimensionality of the grid");
+    throw std::invalid_argument("The size of the point is not the dimensionality of the grid");
   }
+
   const base::DataVector unitPoint =
       tools::normalizeDataVector(point, sparseGrid.getGenInstr().getDomain());
-  std::vector<double> tgResult(result.size());
 
-  std::ranges::fill(result, 0.0);
+  base::DataVector result(sourceFunc.nOutputs());
+
   for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
     const TensorGridCTDataView domainTG = sparseGrid.getDomainTensorGrid(tgIdx);
     const TensorGridCTDataView unitTG = sparseGrid.getUnitTensorGrid(tgIdx);
-    interpolateTensorGrid(sourceFunc, unitPoint, domainTG.tensorGrid, unitTG.tensorGrid, tgResult);
+    const base::DataVector tgResult =
+        interpolateTensorGrid(sourceFunc, unitPoint, domainTG.tensorGrid, unitTG.tensorGrid);
+
     for (size_t k = 0; k < result.size(); k++) {
       result[k] += static_cast<double>(domainTG.coefficient) * tgResult[k];
     }
   }
+
+  return result;
 }
 
 }  // namespace
@@ -127,29 +138,20 @@ double textbookInterpolate(const SourceFunc& sourceFunc, const base::DataVector&
         out[0] = sourceFunc.evaluate(x);
       },
       1);
-  double result = 0.0;
-  combineTensorGrids(asVectorFunc, point, sparseGrid, std::span<double>(&result, 1));
+
+  const double result = combineTensorGrids(asVectorFunc, point, sparseGrid)[0];
 
   sourceFunc.finishOperatorCall();
+
   return result;
-}
-
-void textbookInterpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                         const SparseGrid& sparseGrid, const std::span<double> result) {
-  if (result.size() != sourceFunc.nOutputs()) {
-    throw std::invalid_argument(
-        "textbookInterpolate: The size of the result is not the number of outputs");
-  }
-
-  combineTensorGrids(sourceFunc, point, sparseGrid, result);
-
-  sourceFunc.finishOperatorCall();
 }
 
 base::DataVector textbookInterpolate(const VectorSourceFunc& sourceFunc,
                                      const base::DataVector& point, const SparseGrid& sparseGrid) {
-  base::DataVector result(sourceFunc.nOutputs());
-  textbookInterpolate(sourceFunc, point, sparseGrid, result);
+  const base::DataVector result = combineTensorGrids(sourceFunc, point, sparseGrid);
+
+  sourceFunc.finishOperatorCall();
+
   return result;
 }
 

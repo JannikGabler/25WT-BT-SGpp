@@ -367,13 +367,8 @@ BOOST_AUTO_TEST_CASE(argument_checks) {
   LvlMIVec miVec(2, 0);
   const SparseGrid sg = makeGrid({"cc", 2, 2, 0, true, false}, miVec);
   const SourceFunc f(scalarFunc);
-  const VectorSourceFunc vf(components, 2);
-  const DataVector point(2, 0.3), wrongPoint(3, 0.3);
-  std::vector<double> wrongResult(3);
+  const DataVector wrongPoint(3, 0.3);
 
-  BOOST_CHECK_THROW(textbookQuadrature(vf, sg, wrongResult), std::invalid_argument);
-  BOOST_CHECK_THROW(textbookInterpolate(vf, point, sg, wrongResult), std::invalid_argument);
-  BOOST_CHECK_THROW(textbookInterpolateLinear(vf, point, sg, wrongResult), std::invalid_argument);
   BOOST_CHECK_THROW(textbookInterpolate(f, wrongPoint, sg), std::invalid_argument);
   BOOST_CHECK_THROW(textbookInterpolateLinear(f, wrongPoint, sg), std::invalid_argument);
 }

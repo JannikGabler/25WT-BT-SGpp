@@ -75,7 +75,7 @@ class VectorSourceFunc {
   VectorSourceFunc& operator=(Subclass&& other) = delete;
 
   // Hidden from SWIG as well: the bindings replace the destructor by an %extend destructor
-  // (SourceFunc.i / VectorSourceFunc.i), which a declared destructor would shadow (warning 302).
+  // (SourceFunc.i / VectorSourceFunc.i), which a declared destructor would shadow.
   virtual ~VectorSourceFunc() = default;
 #endif
 
@@ -97,6 +97,12 @@ class VectorSourceFunc {
    * @param out   Function values (size @ref nOutputs).
    */
   void evaluate(const base::DataVector& point, std::span<double> out) const;
+
+  /**
+   * TODO: Document
+   * Add a note in the documentation that this function is not inplace.
+   */
+  base::DataVector evaluate(const base::DataVector& point) const;
 
   /**
    * @brief Evaluates the source function on a normalized point in @f$[0,1]^d@f$,

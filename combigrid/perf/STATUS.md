@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: RP-6 (2026-11-18; accepted, commit pending) · Next free WP number: 83 ·
+Last processed: WP-79 (2026-11-21; accepted, commit pending) · Next free WP number: 84 ·
 Last re-profiling: RP-6 (2026-11-18) · Finished WPs, results, archive: [HISTORY.md](HISTORY.md) ·
 Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 
@@ -55,10 +55,10 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 | Rank | ID | Title | Status |
 |---|---|---|---|
 | – | WP-63 … 72 | Dimension-adaptive CT implementation (A1 nestedness + std CC growth, A2 core, A3 quad driver, A4 non-nested / vector, A5 interp, A6 Python, B1 lazy, B2 buffering, C1 stored values, C2 resume) | needs decision (D1–D9) · **unranked** (owner places them) |
-| – | WP-79 | Textbook operator variants (naive per-TG CT on `SparseGrid`, all three operators; no DSG; one core per operator; helpers in its `.cpp`; naming + scalar / vector in-session; owner's request) | **in progress** (prompt 11-18) |
+| – | WP-83 | SG quadrature: cheb1 `std::terminate` fix (rules validated before the OpenMP region) + new cheb1 quadrature rule (Fejér's first rule expected; owner 11-21) | **in progress** (prompt 11-21; owner: before WP-61) |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point (cache warm-up, testing; name / result / dedup in-session; owner's request) | ready · **unranked** (owner places it) |
 | – | WP-81 | Explanation / visualization foundations: exploration + requirements with the owner in-session (info helpers, strings, plots) → implementation WPs | ready · **unranked** (owner places it) |
-| 1 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG sums in TG order); **before WP-77** (its reordering then stays bitwise, one re-pinning) | ready (next optimization WP; functional: agreed 11-15) |
+| 1 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG sums in TG order); **before WP-77** (its reordering then stays bitwise, one re-pinning); after WP-83 (same driver) | ready (next optimization WP; functional: agreed 11-15) |
 | 2 | WP-77 | TG-loop load balance: largest-first TG order (SG quad / mivec, DSG quad, SG interp) + SG interplin dynamic; optional TG split variant (RP-6: suite 0.25–0.4 s, `expensive/` 1.1–1.6 s; absorbs WP-59) | ready (after WP-61) |
 | 3 | WP-74 | DSG lin. interp.: fused last transform + vectorized fiber transform + 1–4-leaf evaluation chunks (RP-6: 0.05–0.08 s = 6–10 % of interplin/dsg; `expensive/` d5 −45 %) | ready (low) |
 | 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-6: 0.1–0.15 s, b1 d15 / d20 only) | ready |
@@ -87,11 +87,12 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 
 ## Next action
 
-**WP-79 in progress** (prompt 11-18; owner: after RP-6, before the next optimization WP; naming and
-scalar / vector decided with the owner in-session). Owner commits "Accept RP-6" (ANALYSIS.md,
-`results/RP-6/`, summary, STATUS / PLAN / HISTORY / LESSONS) before WP-79 starts. Next master start:
-process WP-79, then **WP-61** (rank 1 under the new ranking rule: makes WP-77 bitwise neutral),
-then **WP-77** (largest-first TG order; TG split as optional variant). Adaptive WPs 63–72 wait for the owner (D1–D9 + placement). Hygiene findings →
+**WP-83 in progress** (prompt 11-21; owner: before WP-61, same SG quadrature driver). Owner commits
+"Accept WP-79" (incl. the owner's staged rework: textbook operators, `source_function.hpp`,
+`vector_source_function.{hpp,cpp}`, `tensor_grid_view.hpp`; summary, `results/WP-79/`, STATUS /
+PLAN / HISTORY / LESSONS) before WP-83 starts. Next master start: process WP-83, then **WP-61**
+(rank 1: makes WP-77 bitwise neutral), then **WP-77** (largest-first TG order; TG split as optional
+variant). Adaptive WPs 63–72 wait for the owner (D1–D9 + placement). Hygiene findings →
 **Code-hygiene backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
 
 ## Open decisions for the owner
@@ -119,17 +120,17 @@ then **WP-77** (largest-first TG order; TG split as optional variant). Adaptive 
 ## Re-profiling
 
 Last: RP-6 (2026-11-18; rp-6 = 37a84e1af; accepted). Accepted optimizations since: **0**. WP-79
-(feature) does not count. Rule: features / refactorings / measurement WPs count only if a group
+(feature, judged 1.002x) and WP-83 (bug fix + feature) do not count. Rule: features / refactorings / measurement WPs count only if a group
 changes ≥ 1.3x or a hot-spot ranking shifts. The `interp/dsg`, `interplin/dsg` and `expensive/`
 cases have no baseline values (reported absolutely; `expensive/` history in
 `results/WP-76/history/`, rp-6 values in `results/RP-6/e2e-expensive-rp-5-vs-rp-6.md`).
 
 ## Log (newest first; older entries in HISTORY.md)
 
-- 2026-11-18 Owner: **new ranking rule** (judgement-based over all inputs, no formula; all case
-  types count; complexity, interactions, confidence; owner overrides) + **case-realism note** in
-  every prompt; skill `perf-master` step 4 + prompt template updated (owner's permission), PLAN.md
-  header + "Ranking inputs" table. Re-ranking: WP-61 8 → 1 (before WP-77: bitwise-neutral
-  reordering, one re-pinning), WP-77 1 → 2, WP-21 2 → 4 (one group, < 1 % of quad/dsg), WP-74 3
-  (6–10 % of interplin/dsg + expensive d5), WP-60 7 ↔ WP-58 8 (session with WP-57). Master's
-  recommendations for owner-placed WPs: WP-44 ≈ rank 5, WP-78 size soon.
+- 2026-11-21 WP-79 summary processed: **accepted** by the owner incl. the owner's staged rework
+  (commit pending): `textbookQuadrature` / `textbookInterpolate` / `textbookInterpolateLinear` (C++ +
+  Python), judged 1.002x, `expensive/` 0.999x, memory 1.008 (0 flags), refcheck = known WARN.
+  Follow-ups (owner): new **WP-83** (cheb1 SG quadrature `std::terminate` + cheb1 quadrature rule;
+  owner: before WP-61); `interpolateLinear` boundary-cell doc sentence → backlog K. Not planned
+  (owner): per-TG values variant for adaptive indicators, `CPPLINT.cfg` filter (backlog A1 stays).
+  2 "Do not retry" lines. Ranks unchanged (no new optimization evidence). WP-83 prompt issued.

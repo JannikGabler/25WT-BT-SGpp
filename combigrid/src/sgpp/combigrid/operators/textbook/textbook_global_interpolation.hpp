@@ -19,7 +19,6 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <span>
 
 namespace sgpp {
 namespace combigrid {
@@ -56,13 +55,7 @@ namespace combigrid {
  * That operator is the one to use in production: it is parallel and shares work between the grid
  * points of a tensor grid.
  *
- * @note Numerics (the formula is chosen to be read, not to be robust): for Clenshaw-Curtis and
- * Chebyshev nodes, the product formula agrees with the barycentric formula of @c interpolate to
- * about @f$10^{-14}@f$ up to 513 nodes per dimension (level 8 with the doubling growth); from
- * about 1000 nodes per dimension on (level @f$\ge@f$ 9), its partial products over- or underflow
- * and the result is wrong. Use @c interpolate there. Lagrange interpolation in equidistant nodes
- * is ill-conditioned from about 20 nodes on (Runge phenomenon) for every formula; the two
- * operators then differ by more than round-off (33 nodes: up to about @f$10^{-8}@f$ relative).
+ * @note Numerics: Instable, do not use for production.
  *
  * @param sourceFunc Source function to interpolate.
  * @param point      Evaluation point (domain coordinates); @c size() must equal
@@ -83,24 +76,11 @@ double textbookInterpolate(const SourceFunc& sourceFunc, const base::DataVector&
  * Equals the vector-valued @c interpolate on a @c SparseGrid up to round-off. Both the scalar and
  * the vector-valued variant run this computation.
  *
- * @param sourceFunc Vector-valued source function (m = @c sourceFunc.nOutputs()).
- * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().
- * @param sparseGrid Sparse grid with attached generation instruction.
- * @param result     Output: the m interpolated values.
- * @throws std::invalid_argument if the size of @p result is not m or the size of @p point is not
- *         the dimensionality of the grid.
- */
-void textbookInterpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                         const SparseGrid& sparseGrid, std::span<double> result);
-
-/**
- * @brief Variant of the @c std::span overload for a @c VectorSourceFunc that returns the m
- * interpolated values.
- *
  * @param sourceFunc Vector-valued source function.
  * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().
  * @param sparseGrid Sparse grid with attached generation instruction.
- * @return The m interpolated values.
+ * @return Interpolated values.
+ * @throws std::invalid_argument if the size of @p point is not the dimensionality of the grid.
  */
 base::DataVector textbookInterpolate(const VectorSourceFunc& sourceFunc,
                                      const base::DataVector& point, const SparseGrid& sparseGrid);

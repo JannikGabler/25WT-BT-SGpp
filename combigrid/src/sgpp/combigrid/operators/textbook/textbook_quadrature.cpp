@@ -10,7 +10,6 @@
  * public overloads.
  */
 
-#include <algorithm>
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
@@ -24,7 +23,6 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
-#include <stdexcept>
 #include <vector>
 
 namespace sgpp {
@@ -65,29 +63,31 @@ double tensorProductWeight(const std::vector<base::DataVector>& weights1D, size_
 }
 
 /**
- * Sets @p tgResult to the tensor-product quadrature of the m outputs of @p sourceFunc on the
+ * Returns the quadrature result of the m outputs of @p sourceFunc on the full
  * tensor grid @p tg (nodes in domain coordinates, weights on the unit cube):
  * sum over the grid points of (product of the 1D weights) * f(grid point).
  */
-void integrateTensorGrid(const VectorSourceFunc& sourceFunc, const TensorGridView& tg,
-                         const SGGenInstr& genInstr, const std::span<double> tgResult) {
+base::DataVector integrateTensorGrid(const VectorSourceFunc& sourceFunc, const TensorGridView& tg,
+                                     const SGGenInstr& genInstr) {
   const std::vector<base::DataVector> weights1D = quadratureWeights1D(tg, genInstr);
-  base::DataVector gridPoint(tg.nDim());
-  std::vector<double> values(sourceFunc.nOutputs());
 
-  std::ranges::fill(tgResult, 0.0);
+  base::DataVector tgResult(sourceFunc.nOutputs());
+
   for (size_t idx = 0; idx < tg.nGP(); idx++) {
-    tg.getGridPoint(idx, gridPoint);
-    sourceFunc.evaluate(gridPoint, values);
+    const base::DataVector gridPoint = tg.getGridPoint(idx);
+    const base::DataVector values = sourceFunc.evaluate(gridPoint);
     const double weight = tensorProductWeight(weights1D, idx);
+
     for (size_t k = 0; k < values.size(); k++) {
       tgResult[k] += weight * values[k];
     }
   }
+
+  return tgResult;
 }
 
 /**
- * Sets @p result to the combination-technique quadrature: the sum over the tensor grids of their
+ * Returns the combination-technique quadrature: the sum over the tensor grids of their
  * coefficient times their quadrature, scaled from the unit cube to the volume of the domain.
  *
  * This is the combination technique: the sparse-grid approximation is a linear combination of
@@ -96,24 +96,26 @@ void integrateTensorGrid(const VectorSourceFunc& sourceFunc, const TensorGridVie
  * grids; for functions with bounded mixed derivatives, the sum is nearly as accurate as the full
  * tensor grid of the highest level (up to logarithmic factors) at a fraction of its grid points.
  */
-void combineTensorGrids(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
-                        const std::span<double> result) {
+base::DataVector combineTensorGrids(const VectorSourceFunc& sourceFunc,
+                                    const SparseGrid& sparseGrid) {
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  std::vector<double> tgResult(result.size());
 
-  std::ranges::fill(result, 0.0);
+  base::DataVector result(sourceFunc.nOutputs());
+
   for (const TensorGridCTDataView tgData : sparseGrid.domainTensorGrids()) {
-    integrateTensorGrid(sourceFunc, tgData.tensorGrid, genInstr, tgResult);
+    const base::DataVector tgResult = integrateTensorGrid(sourceFunc, tgData.tensorGrid, genInstr);
+
     for (size_t k = 0; k < result.size(); k++) {
       result[k] += static_cast<double>(tgData.coefficient) * tgResult[k];
     }
   }
 
   // The 1D weights sum to 1 (unit interval): the integral over the domain scales with its volume
-  const double volume = genInstr.getVolumeOfDomain();
   for (double& value : result) {
-    value *= volume;
+    value *= genInstr.getVolumeOfDomain();
   }
+
+  return result;
 }
 
 }  // namespace
@@ -125,29 +127,19 @@ double textbookQuadrature(const SourceFunc& sourceFunc, const SparseGrid& sparse
         out[0] = sourceFunc.evaluate(x);
       },
       1);
-  double result = 0.0;
-  combineTensorGrids(asVectorFunc, sparseGrid, std::span<double>(&result, 1));
+
+  const double result = combineTensorGrids(asVectorFunc, sparseGrid)[0];
 
   sourceFunc.finishOperatorCall();
   return result;
 }
 
-void textbookQuadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
-                        const std::span<double> result) {
-  if (result.size() != sourceFunc.nOutputs()) {
-    throw std::invalid_argument(
-        "textbookQuadrature: The size of the result is not the number of outputs");
-  }
-
-  combineTensorGrids(sourceFunc, sparseGrid, result);
-
-  sourceFunc.finishOperatorCall();
-}
-
 base::DataVector textbookQuadrature(const VectorSourceFunc& sourceFunc,
                                     const SparseGrid& sparseGrid) {
-  base::DataVector result(sourceFunc.nOutputs());
-  textbookQuadrature(sourceFunc, sparseGrid, result);
+  const base::DataVector result = combineTensorGrids(sourceFunc, sparseGrid);
+
+  sourceFunc.finishOperatorCall();
+
   return result;
 }
 

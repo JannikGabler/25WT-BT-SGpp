@@ -42,6 +42,14 @@ void VectorSourceFunc::evaluate(const base::DataVector& point, std::span<double>
   func(point, out);
 }
 
+base::DataVector VectorSourceFunc::evaluate(const base::DataVector& point) const {
+  base::DataVector result(nOutputs_);
+
+  evaluate(point, std::span<double>(result.data(), result.size()));
+
+  return result;
+}
+
 void VectorSourceFunc::evaluateNormalizedInPlace(base::DataVector& point, const HyperCubeArea& area,
                                                  std::span<double> out) const {
   assert(point.size() == area.size());

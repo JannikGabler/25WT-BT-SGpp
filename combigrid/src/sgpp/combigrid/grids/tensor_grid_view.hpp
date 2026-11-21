@@ -69,6 +69,10 @@ class TensorGridView {
   /// @brief Returns the first node of dimension @p dim (@ref nGPInDim "nGPInDim(dim)" nodes).
   const double* nodesInDim(const size_t dim) const noexcept { return rows_[row(dim)].data(); }
 
+  /// TODO: Document
+  /// Note that this method copies the nodes and is therefore inefficient.
+  const base::DataVector& nodeVectorInDim(const size_t dim) const { return rows_[row(dim)]; }
+
   /// @brief Returns the nodes of dimension @p dim.
   std::span<const double> nodeSpanInDim(const size_t dim) const noexcept {
     return {nodesInDim(dim), nGPInDim(dim)};

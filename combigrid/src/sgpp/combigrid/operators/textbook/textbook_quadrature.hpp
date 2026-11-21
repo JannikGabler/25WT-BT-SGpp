@@ -18,7 +18,6 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <span>
 
 namespace sgpp {
 namespace combigrid {
@@ -56,8 +55,8 @@ namespace combigrid {
  * @param sourceFunc Source function to integrate.
  * @param sparseGrid Sparse grid with attached generation instruction.
  * @return Approximated integral.
- * @throws base::not_implemented_exception if a node family defines no quadrature rule (Chebyshev
- *         nodes of the first type), as @c quadrature.
+ * @throws base::not_implemented_exception if a node family defines no quadrature rule, as @c
+ * quadrature.
  */
 double textbookQuadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid);
 
@@ -69,21 +68,8 @@ double textbookQuadrature(const SourceFunc& sourceFunc, const SparseGrid& sparse
  * Equals the vector-valued @c quadrature on a @c SparseGrid up to round-off. Both the scalar and
  * the vector-valued variant run this computation.
  *
- * @param sourceFunc Vector-valued source function (m = @c sourceFunc.nOutputs()).
- * @param sparseGrid Sparse grid with attached generation instruction.
- * @param result     Output: the m approximated integrals.
- * @throws std::invalid_argument if the size of @p result is not m.
- */
-void textbookQuadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
-                        std::span<double> result);
-
-/**
- * @brief Variant of the @c std::span overload for a @c VectorSourceFunc that returns the m
- * approximated integrals.
- *
  * @param sourceFunc Vector-valued source function.
  * @param sparseGrid Sparse grid with attached generation instruction.
- * @return The m approximated integrals.
  */
 base::DataVector textbookQuadrature(const VectorSourceFunc& sourceFunc,
                                     const SparseGrid& sparseGrid);

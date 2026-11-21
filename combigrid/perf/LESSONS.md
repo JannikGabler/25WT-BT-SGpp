@@ -99,5 +99,9 @@ are not in [README.md](README.md). Maintained by the master session; current sta
 - RP-6 (model) plain `guided` → `dynamic` on the SG global-interpolation TG loop: predicted to lose
   (d10 L2 0.934 → 0.830, d2 0.595 → 0.706 efficiency) → largest-first order instead (WP-77).
   interp/sg per-call basis-value table: ≤ 0.07 % at d ≥ 5 (≤ 0.001 s) → no WP.
+- WP-79 textbook Lagrange product with numerator / denominator formed on distances × 4: 1D CC / cheb1
+  sound up to level 9 instead of 8 (level ≥ 10 NaN), dropped (owner: readability over range; plain
+  product ≤ 1e-14 up to level 8, documented). `{1, 0}` weights for a degenerate linear cell → `{0.5,
+  0.5}` as `interpolateLinear` (same results, also for inf values).
 - RP-4 `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows`: 0.994x → the WP-52 −1 % is not
   recoverable this way.

@@ -198,7 +198,8 @@ lower ranks are low / unsized (see their entries).
 | – | WP-73 | Cross-call operator data cache: clear / read-only view on `SparseGridBase`, per-operator flags (`useCrossCallOperatorDataCache` + operator-specific options, defaults per operator) (owner 2026-11-17; feature / API) | accepted (2026-11-18; concurrency variant (a); owner: DSG quadrature default on → WP-82) | judged 0.999x, `expensive/` 1.001x, memory 1.005; repeated calls (flag on, 16 t): SG quad cc d2 L20 1.19x, DSG quad 1.03–1.15x; DSG `interplin` parallel-region bug fixed |
 | – | WP-82 | DSG quadrature: cross-call cache on by default via the new `DeltasSparseGridQuadratureOptions` (`QuadratureOptions` = `SparseGrid` only) (owner 2026-11-18; behavior / API change agreed) | accepted (2026-11-18; large-index retention: owner option (a), keep as documented) | measured: judged 1.000x, `expensive/` 0.999x, memory 1.004 (0 flags); repeated DSG quad calls 16 t 1.04–1.31x (equi d3 L14 1.311x, b1 d15 L5 1.308x, cc d5 L10 1.043x); retained index 0.9–17.8 MiB on e2e grids, cc d2 L20 64 MiB |
 | – | RP-6 | Re-profiling after WP-56 / WP-49 (+ WP-73 / WP-82 state; cumulative memory; SG interp basis-value share; first profile of the `expensive/` group; re-rank) | accepted (2026-11-18) | measured: baseline → rp-6 (38 cases) 69.89 → 34.70 s (**2.014x**; d ≥ 7 1.99x), 0 SLOWER; suite (48) 36.33 s, rp-5 → rp-6 1.031x (≈ 0.30 s benchmark binary, 0.81 s WP-56 + WP-49); `expensive/` 17.77 s (0.999x); memory geomean **0.716**; new lever: largest-first TG order (→ WP-77) |
-| – | WP-79 | Textbook operator variants: naive per-TG CT for `quadrature`, `interpolate`, `interpolateLinear` on `SparseGrid` (standard 1D / tensor-product solvers, no optimizations; no DSG variants; scalar / vector decided in-session, one core per operator; helpers in the operator's `.cpp`; naming decided in-session; C++ + Python) (owner 2026-11-17; feature / API) | in progress (prompt 2026-11-18; owner 2026-11-17: after RP-6, before the next optimization WP) | none (understandability; test oracles); judged neutral |
+| – | WP-79 | Textbook operator variants: naive per-TG CT for `quadrature`, `interpolate`, `interpolateLinear` on `SparseGrid` (standard 1D / tensor-product solvers, no optimizations; no DSG variants; scalar / vector decided in-session, one core per operator; helpers in the operator's `.cpp`; naming decided in-session; C++ + Python) (owner 2026-11-17; feature / API) | accepted (2026-11-21; commit pending) | measured: judged 1.002x, `expensive/` 0.999x, memory 1.008 (0 flags); textbook / optimized 1 t 1.13–1.47x |
+| – | WP-83 | SG quadrature with cheb1 nodes: `std::terminate` fix (1D rules validated / created before the OpenMP region) + new quadrature rule for cheb1 nodes (owner 2026-11-21; bug fix + feature) | in progress (prompt 2026-11-21; owner: before WP-61) | none intended (cheb1 quadrature becomes available; existing results bitwise) |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point of a `SparseGrid` / `DeltasSparseGrid` (cache warm-up, testing; any source function; name, result form, dedup mechanism decided in-session; C++ + Python) (owner 2026-11-17; feature / API) | ready · unranked (owner places it) | none judged; warm-up avoids the SG operators' duplicate first-call evaluations |
 | – | WP-81 | Explanation / visualization foundations: exploration — information helpers, string representations (console / Jupyter), plots (TGs, SGs, TG tableaus with CT coefficients, source functions and operator results on TGs / SGs); requirements worked out with the owner in-session → plan + implementation WPs (owner 2026-11-17) | ready · unranked (owner places it) | none (exploration; no library change) |
 | – | WP-59 | Global interpolation: TG loop `schedule(guided)` → `schedule(dynamic)` (from WP-56) | dropped (2026-11-18): merged into WP-77 (RP-6) | RP-6 model: plain guided → dynamic loses on interp/sg (d10 L2 0.934 → 0.830, d2 0.595 → 0.706); interp order + SG interplin schedule → WP-77 |
@@ -362,6 +363,8 @@ After WP-73 / WP-82 (accepted 2026-11-18; features / defaults, judged 0.999x / 1
 for rule 7): cross-call cache defaults SG quad off, DSG quad + DSG interpolations on (DSG quad via
 `DeltasSparseGridQuadratureOptions`); large DSG quad indices stay retained (owner (a)). WP-60 also
 covers the serial index build (≈ 20 % of a 16 t call on small grids). Next: RP-6, then WP-79.
+After WP-79 (accepted 2026-11-21; feature, judged 1.002x, does not count for rule 7): new WP-83 (cheb1
+SG quadrature `std::terminate` + cheb1 rule; owner: before WP-61, same driver); ranks unchanged.
 
 ---
 
@@ -3627,7 +3630,8 @@ the judged suite.
 - **Risk**: low–medium (public API surface + Python; tolerances of the comparisons).
 - **Functional change**: agreed (owner 2026-11-17: new public textbook operators); naming decided
   in-session. Changes to existing operators → BLOCKED with options.
-- **Status**: in progress (prompt 2026-11-18, after RP-6).
+- **Status**: accepted (2026-11-21, commit pending; incl. the owner's rework). Follow-ups → WP-83,
+  backlog K.
 
 ## WP-80 — Grid-evaluation operator: evaluate a source function on all grid points (owner 2026-11-17; feature / API)
 - **Source**: owner 2026-11-17: "an 'evaluation' operator. It should simply evaluate a given source
@@ -3768,6 +3772,35 @@ the judged suite.
 - **Dependencies**: WP-73 accepted and committed. **Status**: accepted (2026-11-18; owner: large-index
   retention (cc d2 L20 64 MiB) kept as documented, option (a); no cap / dimension rule).
 
+## WP-83 — SG quadrature with cheb1 nodes: `std::terminate` fix + Chebyshev (first kind) quadrature rule (owner 2026-11-21; bug fix + feature)
+- **Source**: WP-79 summary, follow-up 1; owner 2026-11-21: fix the termination and add a quadrature
+  rule for cheb1 nodes. **Placement**: owner 2026-11-21: before WP-61 (same SG quadrature driver).
+- **Bug**: with Chebyshev nodes of the first kind ("cheb1"), the family's `getQuadRule(n)` throws
+  `not_implemented_exception` **inside** the OpenMP region of the SG `quadrature` (weight table /
+  TG loop) → `std::terminate` instead of a catchable exception (`textbookQuadrature` throws cleanly).
+  Fix: obtain / validate the 1D rules of all used (dim, level) rows serially before any parallel
+  region (or a generic capture-and-rethrow if that is simpler); audit the other throw sites reachable
+  inside the SG / DSG quadrature parallel regions (DSG: nested families only) and report other
+  operators' cases as follow-ups.
+- **Feature**: a quadrature rule for cheb1 nodes (interpolatory rule on the Chebyshev points of the
+  first kind = **Fejér's first rule**, weights positive, exact for degree n − 1; FFT / DCT-based
+  computation like the CC rule (Waldvogel 2006) or the closed cosine sum — session chooses, numerically
+  sound at all levels the grids allow; weights on [0, 1] like the other rules). Registered as the
+  family's rule (`getQuadRule`), so `quadrature`, `textbookQuadrature` and Python get it; public
+  class (if any) in the umbrella header + `combigrid.i`; docs (`module-reference.md`,
+  `python-bindings.md` if bound). DSG quadrature: cheb1 is not nested → unchanged.
+- **Tests**: cheb1 quadrature exactness (polynomials up to degree n − 1 per dimension, d 1–4),
+  weights vs. a high-precision reference (mpmath in `.venv/`), positivity / symmetry / sum = 1;
+  `quadrature` == `textbookQuadrature` for cheb1 (scalar + vector); families without a rule (if any
+  remain) throw a catchable exception at 1 and 16 threads; existing quadrature pinning bitwise.
+- **Benchmarks**: unprotected micro cases for cheb1 weight generation (vs. CC at equal n) and a cheb1
+  SG quadrature; `ab e2e` `^(quad|mivec)/sg/|^expensive/(quad|mivec)/` neutral (rule set-up moved out
+  of the region), refcheck = before.
+- **Expected gain**: none (bug fix + feature). **Risk**: low (new rule; driver set-up order).
+- **Functional change**: agreed (owner 2026-11-21): cheb1 quadrature supported; the termination becomes
+  a normal exception where a rule is still missing. Changes to existing results → BLOCKED with options.
+- **Status**: in progress (prompt 2026-11-21).
+
 ## Code-hygiene backlog (owner 2026-11-15; input of WP-55, then clean-up WPs)
 Every reported, not yet completed hygiene / clean-up finding goes here (the master appends new ones
 from summaries; WP-55 verifies them; no piecemeal fixes before the clean-up WPs). Source in brackets.
@@ -3836,6 +3869,9 @@ from summaries; WP-55 verifies them; no piecemeal fixes before the clean-up WPs)
   (one removed by WP-73; → G).
 - **J. From WP-82**: stale `results/WP-73/python_checks.py` / `results/WP-73/tsan_driver.cpp` pass
   `QuadratureOptions` to the DSG quadrature (now `DeltasSparseGridQuadratureOptions`; results only).
+- **K. From WP-79** (owner 2026-11-21): `interpolateLinear` (SG / DSG) docs: without boundary nodes the
+  cell next to the boundary reaches to the domain boundary and `f` is evaluated there (outside the
+  grid's nodes) — add a sentence to the optimized operators' Doxygen (the textbook header has it).
 - **E. Owner files / docs outdated** (report to the owner; STATUS): CLAUDE.md §5 banner claim (B1);
   ANALYSIS.md WP-29c symbol names; SG++ install docs (optional Boost ≥ 1.81 / xxHash ≥ 0.8, LMDB, CI
   `liblmdb-dev`).

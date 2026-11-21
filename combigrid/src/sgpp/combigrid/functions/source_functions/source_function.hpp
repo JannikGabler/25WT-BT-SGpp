@@ -70,7 +70,7 @@ class SourceFunc {
   SourceFunc& operator=(Subclass&& other) = delete;
 
   // Hidden from SWIG as well: the bindings replace the destructor by an %extend destructor
-  // (SourceFunc.i / VectorSourceFunc.i), which a declared destructor would shadow (warning 302).
+  // (SourceFunc.i / VectorSourceFunc.i), which a declared destructor would shadow.
   virtual ~SourceFunc() = default;
 #endif
 

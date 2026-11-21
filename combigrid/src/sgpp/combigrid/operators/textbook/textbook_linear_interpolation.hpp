@@ -19,7 +19,6 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <span>
 
 namespace sgpp {
 namespace combigrid {
@@ -79,24 +78,11 @@ double textbookInterpolateLinear(const SourceFunc& sourceFunc, const base::DataV
  * Equals the vector-valued @c interpolateLinear on a @c SparseGrid up to round-off. Both the
  * scalar and the vector-valued variant run this computation.
  *
- * @param sourceFunc Vector-valued source function (m = @c sourceFunc.nOutputs()).
- * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().
- * @param sparseGrid Sparse grid with attached generation instruction.
- * @param result     Output: the m interpolated values.
- * @throws std::invalid_argument if the size of @p result is not m or the size of @p point is not
- *         the dimensionality of the grid.
- */
-void textbookInterpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                               const SparseGrid& sparseGrid, std::span<double> result);
-
-/**
- * @brief Variant of the @c std::span overload for a @c VectorSourceFunc that returns the m
- * interpolated values.
- *
  * @param sourceFunc Vector-valued source function.
  * @param point      Evaluation point; @c size() must equal @c sparseGrid.nDim().
  * @param sparseGrid Sparse grid with attached generation instruction.
- * @return The m interpolated values.
+ * @return Interpolated values.
+ * @throws std::invalid_argument if the size of @p point is not the dimensionality of the grid.
  */
 base::DataVector textbookInterpolateLinear(const VectorSourceFunc& sourceFunc,
                                            const base::DataVector& point,
