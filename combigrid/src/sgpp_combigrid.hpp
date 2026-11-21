@@ -77,5 +77,10 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 
+// Textbook operators (SparseGrid only): plain per-tensor-grid reference implementations
+#include <sgpp/combigrid/operators/textbook/textbook_global_interpolation.hpp>
+#include <sgpp/combigrid/operators/textbook/textbook_linear_interpolation.hpp>
+#include <sgpp/combigrid/operators/textbook/textbook_quadrature.hpp>
+
 // Tools
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>

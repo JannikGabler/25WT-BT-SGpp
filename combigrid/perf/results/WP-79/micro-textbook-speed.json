@@ -1,0 +1,241 @@
+{
+ "suite": "micro",
+ "snapshot": "WP-79-after",
+ "threads": 1,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-43-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "12.14",
+   "9.42",
+   "8.50"
+  ]
+ },
+ "records": [
+  {
+   "suite": "micro",
+   "case": "micro/textbook/quad/textbook/cc/b0/d3/L6",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00295033595,
+     0.0029534509
+    ]
+   },
+   "items": 38868,
+   "batch": 20,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/quad/optimized/cc/b0/d3/L6",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.002085964142857143,
+     0.0020845298928571427
+    ]
+   },
+   "items": 38868,
+   "batch": 28,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/quad/textbook/equi/b1/d5/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.009076400666666666,
+     0.009060325499999999
+    ]
+   },
+   "items": 72315,
+   "batch": 6,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/quad/optimized/equi/b1/d5/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.006490861333333334,
+     0.006475333333333334
+    ]
+   },
+   "items": 72315,
+   "batch": 9,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/interp/textbook/cc/b0/d3/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0012248237500000001,
+     0.0012240263958333334
+    ]
+   },
+   "items": 15188,
+   "batch": 48,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/interp/optimized/cc/b0/d3/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0008305202361111111,
+     0.0008317938749999999
+    ]
+   },
+   "items": 15188,
+   "batch": 72,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/interp/textbook/cc/b0/d5/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.025455244,
+     0.0254499365
+    ]
+   },
+   "items": 206358,
+   "batch": 2,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/interp/optimized/cc/b0/d5/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.018590005,
+     0.018624553
+    ]
+   },
+   "items": 206358,
+   "batch": 3,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/interplin/textbook/equi/b1/d5/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.000855295,
+     0.0008542005
+    ]
+   },
+   "items": 8032,
+   "batch": 70,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/interplin/optimized/equi/b1/d5/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.0007307724197530864,
+     0.0007323270246913581
+    ]
+   },
+   "items": 8032,
+   "batch": 81,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/interplin/textbook/equi/b1/d8/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.021127486333333334,
+     0.021185872999999997
+    ]
+   },
+   "items": 126720,
+   "batch": 3,
+   "counters": {}
+  },
+  {
+   "suite": "micro",
+   "case": "micro/textbook/interplin/optimized/equi/b1/d8/L4",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.018747403,
+     0.018779879
+    ]
+   },
+   "items": 126720,
+   "batch": 3,
+   "counters": {}
+  }
+ ],
+ "process_floor_kib": null
+}

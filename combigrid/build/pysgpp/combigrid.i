@@ -363,6 +363,24 @@ COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::quadrature)
 %include "combigrid/src/sgpp/combigrid/operators/quadrature/quadrature.hpp"
 %include "combigrid/src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp"
 
+// Textbook operators (SparseGrid only; plain per-tensor-grid reference implementations). Same
+// pattern as above: the std::span overloads are hidden, the DataVector overloads cover them; their
+// internals live in anonymous namespaces of their .cpp files.
+%ignore sgpp::combigrid::textbookQuadrature(const VectorSourceFunc&, const SparseGrid&,
+                                            std::span<double>);
+%ignore sgpp::combigrid::textbookInterpolate(const VectorSourceFunc&, const base::DataVector&,
+                                             const SparseGrid&, std::span<double>);
+%ignore sgpp::combigrid::textbookInterpolateLinear(const VectorSourceFunc&, const base::DataVector&,
+                                                   const SparseGrid&, std::span<double>);
+
+COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::textbookQuadrature)
+COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::textbookInterpolate)
+COMBIGRID_SOURCE_FUNC_EXCEPTION(sgpp::combigrid::textbookInterpolateLinear)
+
+%include "combigrid/src/sgpp/combigrid/operators/textbook/textbook_quadrature.hpp"
+%include "combigrid/src/sgpp/combigrid/operators/textbook/textbook_global_interpolation.hpp"
+%include "combigrid/src/sgpp/combigrid/operators/textbook/textbook_linear_interpolation.hpp"
+
 // ---------------------------------------------------------------------------
 // Tools
 // ---------------------------------------------------------------------------

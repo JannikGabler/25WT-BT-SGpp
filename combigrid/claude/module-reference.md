@@ -113,6 +113,9 @@ operators/
   quadrature/            quadrature() for SparseGrid (quadrature.cpp) and DeltasSparseGrid
                          (deltas_sparse_grid_quadrature.cpp); quadrature_rules/ (Clenshaw-Curtis,
                          Simpson, trapezoidal, getters); fast_quadrature.* commented out
+  textbook/              textbookQuadrature(), textbookInterpolate(), textbookInterpolateLinear()
+                         for SparseGrid: naive per-tensor-grid reference implementations, one
+                         .cpp per operator with all helpers in an anonymous namespace (WP-79)
 sparse_grid_generation_instructions/   SGGenInstr, CompleteSGGenInstr, MIVecSGGenInstr
 tools/                 (namespace tools)
   combitech_coefficients/               computeCTCoeffs, computeCTCoeffSingle
@@ -352,6 +355,31 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   (`QuadWeightTable::computeAllRows`, largest first, `omp for schedule(dynamic, 1) nowait`), then
   tensor grids (`schedule(dynamic)`); a tensor grid whose row is still being computed waits for
   it in `call_once`.
+- **Textbook operators** (WP-79; [operators/textbook/](../src/sgpp/combigrid/operators/textbook/)):
+  `textbookQuadrature(f, sg)`, `textbookInterpolate(f, point, sg)`,
+  `textbookInterpolateLinear(f, point, sg)` on a `SparseGrid` only (no DSG variants: the DSG
+  operators are the opposite of the per-TG CT), scalar `SourceFunc` → `double` and
+  `VectorSourceFunc` → `std::span` / `DataVector` overloads like the optimized operators, same
+  names in Python. Purpose: teaching / reference / test oracle — `Σ_ℓ c_ℓ Op_ℓ(f)` with a plain
+  serial loop over the TGs, each TG solved on its own: quadrature = tensor product of the node
+  family's 1D rule (`getQuadRule(n)->genWeights(n)`, so cheb1 throws as in `quadrature`), global
+  interpolation = tensor-product Lagrange basis written out as the product formula
+  `L_i(x) = Π_{k≠i} (x − x_k)/(x_i − x_k)` (O(n²) per dimension; owner 2026-11-19: the textbook
+  operators explain the CT, stability / accuracy are secondary. Measured in 1D: CC / cheb1 agree
+  with the barycentric `interpolate` to ≤ 1e-13 up to level 8 (513 nodes), wrong (errors ~10) from
+  level 9 on (partial products over/underflow; scaling the distances by 4 = capacity 1 fixed level 9
+  only, NaN from level 10, dropped for readability); equidistant L4 (33 nodes) differs by ≤ 3e-8
+  relative (Runge, both formulas)), multilinear = the cell containing the point (`std::ranges::lower_bound`, the 1e-12 /
+  outside-the-hull conventions of `interpolateLinear`) and its 2^d corners. One core per operator:
+  the vector-valued computation; the scalar overload wraps `f` as a 1-output `VectorSourceFunc`
+  and calls the user's `finishOperatorCall()` once. Rules: no OpenMP, no scratch / caches / weight
+  tables / shared kernels, no cross-call cache, no options; helpers in the operator's own `.cpp`
+  (exception to the `tools/` rule, so one file reads top to bottom). Results equal the optimized
+  operators within round-off and the evaluation points are bitwise the same multiset
+  (`getGridPoint` of the domain views, corners via `tools::mapToDomain`); pinned by
+  `tests/operators/textbook_operators_test.cpp`. Speed (1 thread, `cosProd` integrand, `micro/textbook/*`, `perf/results/WP-79/micro-textbook-speed.md`): textbook / optimized 1.4x (quadrature), 1.4–1.5x (interpolate), 1.1–1.2x (interpolateLinear); the optimized operators are also parallel.
+  Per-TG results `(c_ℓ, Op_ℓ f)` are formed in the loop but not returned (a natural hook for
+  refinement indicators of a later dimension-adaptive CT).
 - `tools::computeCTCoeffs(miVec)`: CT coefficients of a downwards-closed MI set.
 
 ## Design rationale (thesis §5)

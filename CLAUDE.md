@@ -43,6 +43,10 @@ nodes: `getDomainTensorGrid(i)` / `getUnitTensorGrid(i)`, ranges `domainTensorGr
 → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid` (nested nodes
 only) has its own overloads of all three operators that evaluate every grid point / distinct corner
 once per call (thread-count independent); the `SparseGrid` operators implement the standard CT.
+`textbookQuadrature` / `textbookInterpolate` / `textbookInterpolateLinear` (`SparseGrid` only,
+[operators/textbook/](combigrid/src/sgpp/combigrid/operators/textbook/)) are naive, serial
+per-tensor-grid reference versions for reading and as test oracles (same results within
+round-off, same evaluation points); not for production.
 User functions are wrapped in `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`); weights, basis values
 and interpolation cells live on [0,1]^d (`getUnitNodeTable()`), the source function is evaluated at
 the domain nodes (`getDomainNodeTable()`, mapped with `tools::mapToDomain`, bitwise the points of

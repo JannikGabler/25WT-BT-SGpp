@@ -54,6 +54,9 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
+#include <sgpp/combigrid/operators/textbook/textbook_global_interpolation.hpp>
+#include <sgpp/combigrid/operators/textbook/textbook_linear_interpolation.hpp>
+#include <sgpp/combigrid/operators/textbook/textbook_quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
@@ -1377,6 +1380,47 @@ void addCrossCallInterpLinDSG(Suite& suite, const size_t nDim, const LvlType max
       true);
 }
 
+/**
+ * Textbook operator vs. optimized operator on the same SparseGrid (perf::cosProd on the shifted
+ * domain; interpolation at one query point; items = grid points of all tensor grids, for
+ * interplin corners of all tensor grids): micro/textbook/<op>/{textbook,optimized}/<cfg>. A
+ * speed reference for the documentation of the textbook operators (1 thread).
+ */
+void addTextbookOperator(Suite& suite, const std::string& op, const std::string& nodes,
+                         const LvlType boundary, const size_t nDim, const LvlType maxLvl) {
+  for (const bool textbook : {true, false}) {
+    const std::string name = "micro/textbook/" + op + (textbook ? "/textbook/" : "/optimized/") +
+                             cfg(nodes, boundary, nDim, maxLvl);
+    suite.addMicro(name, [=](MicroRun& run) {
+      const HyperCubeArea domain = perf::shiftedDomain(nDim);
+      CompleteSGGenInstr genInstr(maxLvl, nDim);
+      perf::configure(genInstr, nodes, boundary, domain);
+      const SparseGrid sg(genInstr);
+      const SourceFunc f(perf::cosProd);
+      const DataVector point = perf::randomPoints(domain, 1, 99)[0];
+
+      if (op == "quad") {
+        run.setItems(sumOfGridPoints(sg));
+        run.measure([&]() {
+          doNotOptimize(textbook ? cg::textbookQuadrature(f, sg) : cg::quadrature(f, sg));
+        });
+      } else if (op == "interp") {
+        run.setItems(sumOfGridPoints(sg));
+        run.measure([&]() {
+          doNotOptimize(textbook ? cg::textbookInterpolate(f, point, sg)
+                                 : cg::interpolate(f, point, sg));
+        });
+      } else {
+        run.setItems(static_cast<double>(sg.nTG()) * std::pow(2.0, static_cast<double>(nDim)));
+        run.measure([&]() {
+          doNotOptimize(textbook ? cg::textbookInterpolateLinear(f, point, sg)
+                                 : cg::interpolateLinear(f, point, sg));
+        });
+      }
+    });
+  }
+}
+
 int main(int argc, char** argv) {
   Suite suite("micro", 5, 0);  // the batch calibration doubles as warm-up
 
@@ -1557,6 +1601,14 @@ int main(int argc, char** argv) {
   addCrossCallInterpLinDSG(suite, 2, 16);
   addCrossCallInterpLinDSG(suite, 10, 5);
   addCrossCallInterpLinDSG(suite, 5, 8);
+
+  // Textbook operators vs. optimized operators (small grids; speed reference, not judged)
+  addTextbookOperator(suite, "quad", "cc", 0, 3, 6);
+  addTextbookOperator(suite, "quad", "equi", 1, 5, 5);
+  addTextbookOperator(suite, "interp", "cc", 0, 3, 5);
+  addTextbookOperator(suite, "interp", "cc", 0, 5, 4);
+  addTextbookOperator(suite, "interplin", "equi", 1, 5, 5);
+  addTextbookOperator(suite, "interplin", "equi", 1, 8, 4);
 
   return suite.main(argc, argv);
 }
