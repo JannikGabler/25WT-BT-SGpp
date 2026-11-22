@@ -5,6 +5,7 @@
 #include <sgpp/combigrid/functions/node_generation_functions/default_functions/first_type_chebyshev_node_generation_function.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/fejer_first_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -59,8 +60,12 @@ Getters
 ******/
 
 QuadRule* FirstTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
-  // TODO
-  throw base::not_implemented_exception("Operation is not yet implemented!");
+  return getQuadRule(nNodes, true);
+}
+
+QuadRule* FirstTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes,
+                                                     const bool includeBoundary) const {
+  return getFejerFirstQuadRule(includeBoundary);
 }
 
 InterpolationMethod* FirstTypeChebyshevNodeGenFunc::getInterpolationMethod(

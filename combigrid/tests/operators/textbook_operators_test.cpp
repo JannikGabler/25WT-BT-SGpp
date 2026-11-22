@@ -25,7 +25,6 @@
 #include <memory>
 #include <mutex>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
@@ -226,12 +225,6 @@ BOOST_AUTO_TEST_CASE(quadrature_equals_optimized) {
   for (const Config& config : configs()) {
     LvlMIVec miVec(config.nDim, 0);
     const SparseGrid sg = makeGrid(config, miVec);
-    if (config.nodes == "cheb1") {
-      // No quadrature rule for this family (quadrature throws it inside its parallel region,
-      // which terminates the process, so only the textbook operator is checked)
-      BOOST_CHECK_THROW(textbookQuadrature(f, sg), sgpp::base::not_implemented_exception);
-      continue;
-    }
     checkClose(textbookQuadrature(f, sg), quadrature(f, sg), "quadrature " + config.name());
     const DataVector textbook = textbookQuadrature(vf, sg), optimized = quadrature(vf, sg);
     for (size_t k = 0; k < 3; k++) {
@@ -322,7 +315,7 @@ BOOST_AUTO_TEST_CASE(exact_on_the_span_of_the_grid) {
 
 BOOST_AUTO_TEST_CASE(same_evaluation_points_as_optimized) {
   for (const Config& config : configs()) {
-    if (config.nDim > 3 || config.nodes == "cheb1") continue;
+    if (config.nDim > 3) continue;
     LvlMIVec miVec(config.nDim, 0);
     const SparseGrid sg = makeGrid(config, miVec);
     const DataVector point = testPoints(sg.getGenInstr().getDomain())[1];

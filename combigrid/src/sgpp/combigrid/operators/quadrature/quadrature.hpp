@@ -9,8 +9,9 @@
  * sparse grid.
  *
  * Each contained tensor grid contributes a tensor-product quadrature
- * (Clenshaw-Curtis, Simpson, trapezoidal, etc.) whose 1D rule is selected
- * per dimension by the node-generation function. The combination
+ * (Clenshaw-Curtis, Simpson, trapezoidal, Fejér's first rule, etc.) whose
+ * 1D rule is selected per dimension and level by the node-generation function
+ * (@c NodeGenFunc::getQuadRule with the level's boundary nodes). The combination
  * coefficients yield the final sparse-grid integral approximation.
  */
 #pragma once
@@ -47,6 +48,9 @@ namespace combigrid {
  * @param sparseGrid Sparse grid with attached generation instruction.
  * @param options    Options (see @c QuadratureOptions).
  * @return Approximated integral value.
+ * @throws Whatever @c NodeGenFunc::getQuadRule throws (e.g. @c base::not_implemented_exception
+ * for a node family without a quadrature rule): the rules are obtained before the parallel
+ * region (also by the vector-valued overloads).
  */
 double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
                   const QuadratureOptions& options = QuadratureOptions());

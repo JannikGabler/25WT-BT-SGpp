@@ -53,6 +53,7 @@
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/fejer_first_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_linear_interpolation.hpp>
@@ -445,6 +446,24 @@ void addEvalNormalized(Suite& suite, const size_t nDim) {
 void addCCWeights(Suite& suite, const GPCntType nNodes) {
   suite.addMicro("micro/quadrule/cc_weights/n" + std::to_string(nNodes), [=](MicroRun& run) {
     cg::QuadRule* const rule = cg::getClenshawCurtisQuadRule();
+    std::vector<double> weights(nNodes);
+
+    run.setItems(static_cast<double>(nNodes));
+    run.measure([&]() {
+      rule->genWeightsInplace(weights);
+      doNotOptimize(weights.data());
+    });
+  });
+}
+
+/// 1D weights of the first-kind Chebyshev nodes (WP-83), at the node counts of the
+/// Clenshaw-Curtis cases: with the boundary nodes ("cheb1": Fejér's first rule of n - 2 nodes plus
+/// the closed-form endpoint correction, as used by grids with boundary nodes) or without
+/// ("fejer1": Fejér's first rule of n nodes, Bluestein FFT of the next power of two).
+void addCheb1Weights(Suite& suite, const GPCntType nNodes, const bool includeBoundary) {
+  const std::string name = includeBoundary ? "cheb1_weights" : "fejer1_weights";
+  suite.addMicro("micro/quadrule/" + name + "/n" + std::to_string(nNodes), [=](MicroRun& run) {
+    cg::QuadRule* const rule = cg::getFejerFirstQuadRule(includeBoundary);
     std::vector<double> weights(nNodes);
 
     run.setItems(static_cast<double>(nNodes));
@@ -1445,6 +1464,17 @@ int main(int argc, char** argv) {
   addCCWeights(suite, 32769);
   addCCWeights(suite, 131073);   // 2^17 + 1
   addCCWeights(suite, 1048577);  // 2^20 + 1 (level 19 with boundary)
+  for (const GPCntType nNodes : {33u, 1025u, 32769u, 131073u, 1048577u}) {  // As addCCWeights
+    addCheb1Weights(suite, nNodes, true);
+    addCheb1Weights(suite, nNodes, false);
+  }
+  addCheb1Weights(suite, 131071, false);  // 2^17 - 1, prime (level 16 without boundary)
+  // WP-83: SG quadrature with first-kind Chebyshev nodes and the Clenshaw-Curtis counterparts
+  addQuadOperator(suite, "cheb1", 0, 2, 16);
+  addQuadOperator(suite, "cheb1", 0, 3, 8);
+  addQuadOperator(suite, "cc", 0, 3, 8);
+  addQuadOperator(suite, "cheb1", 1, 5, 6);
+  addQuadOperator(suite, "cc", 1, 5, 6);
 
   // Deltas sparse grid quadrature
   addProcessDeltaTG(suite, "equi", 0, 5, 12);

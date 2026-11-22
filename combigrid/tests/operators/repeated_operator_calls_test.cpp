@@ -114,7 +114,7 @@ DataVector queryPoint(const RepeatConfig& config) {
 
 /// The bit patterns of all results of one grid: per operator scalar, then the m vector outputs.
 template <typename Grid>
-std::vector<uint64_t> allResults(const Grid& grid, const DataVector& point, const bool withQuad) {
+std::vector<uint64_t> allResults(const Grid& grid, const DataVector& point) {
   const SourceFunc func(scalarFunc);
   const VectorSourceFunc vecFunc(vectorFunc, 3);
   std::vector<uint64_t> bits;
@@ -123,10 +123,8 @@ std::vector<uint64_t> allResults(const Grid& grid, const DataVector& point, cons
     for (size_t k = 0; k < values.size(); k++) add(values[k]);
   };
 
-  if (withQuad) {  // No quadrature rule for cheb1 nodes
-    add(sgpp::combigrid::quadrature(func, grid));
-    addAll(sgpp::combigrid::quadrature(vecFunc, grid));
-  }
+  add(sgpp::combigrid::quadrature(func, grid));
+  addAll(sgpp::combigrid::quadrature(vecFunc, grid));
   add(sgpp::combigrid::interpolate(func, point, grid));
   addAll(sgpp::combigrid::interpolate(vecFunc, point, grid));
   add(sgpp::combigrid::interpolateLinear(func, point, grid));
@@ -165,22 +163,21 @@ void checkRepeatedCalls(const RepeatConfig& config) {
   const DataVector point = queryPoint(config);
   const Grid grid(genInstr);
   const size_t nTG = grid.nTG();
-  const bool withQuad = config.nodes != "cheb1";
   std::vector<uint64_t> first;
   {
     const ThreadCount oneThread(1);
-    first = allResults(grid, point, withQuad);
+    first = allResults(grid, point);
     for (int repeat = 0; repeat < 2; repeat++) {
-      const std::vector<uint64_t> again = allResults(grid, point, withQuad);
+      const std::vector<uint64_t> again = allResults(grid, point);
       BOOST_CHECK_EQUAL_COLLECTIONS(again.begin(), again.end(), first.begin(), first.end());
     }
     const Grid fresh(genInstr);
-    const std::vector<uint64_t> freshResults = allResults(fresh, point, withQuad);
+    const std::vector<uint64_t> freshResults = allResults(fresh, point);
     BOOST_CHECK_EQUAL_COLLECTIONS(freshResults.begin(), freshResults.end(), first.begin(),
                                   first.end());
     BOOST_CHECK(grid == fresh);
   }
-  checkClose(allResults(grid, point, withQuad), first);
+  checkClose(allResults(grid, point), first);
   BOOST_CHECK_EQUAL(grid.nTG(), nTG);
 }
 

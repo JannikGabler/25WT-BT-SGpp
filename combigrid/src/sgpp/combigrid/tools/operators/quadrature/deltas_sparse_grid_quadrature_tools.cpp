@@ -59,10 +59,11 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
     weights.appendSubVec(1);  // weights[dim]
 
     for (LvlType lvl = 0; lvl <= nodeTable.maxLvl(dim); lvl++) {
-      const GPCntType nNodes = lvl2GPCntFunc(lvl) + (lvl >= boundaryLvlOffset ? 2 : 0);
+      const bool includeBoundary = lvl >= boundaryLvlOffset;
+      const GPCntType nNodes = lvl2GPCntFunc(lvl) + (includeBoundary ? 2 : 0);
 
       sortedWeights.resize(nNodes);
-      nodeGenFunc->getQuadRule(nNodes)->genWeightsInplace(sortedWeights);
+      nodeGenFunc->getQuadRule(nNodes, includeBoundary)->genWeightsInplace(sortedWeights);
 
       weights.appendSubVec(2, nNodes);  // weights[dim][lvl]
       // The sub-vector just appended consists of the last nNodes elements.

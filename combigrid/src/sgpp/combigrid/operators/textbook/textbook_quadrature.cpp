@@ -32,15 +32,19 @@ namespace {
 
 /**
  * Returns, per dimension of @p tg, the weights on [0, 1] of the 1D quadrature rule that the node
- * family of the dimension defines for the number of nodes of the tensor grid in that dimension.
+ * family of the dimension defines for the nodes of the tensor grid in that dimension (their
+ * number, with the boundary nodes iff the level is at least the boundary level offset).
  */
 std::vector<base::DataVector> quadratureWeights1D(const TensorGridView& tg,
                                                   const SGGenInstr& genInstr) {
   std::vector<base::DataVector> weights;
+  const LvlMIView levels = tg.getLevels();
 
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
     const GPCntType nNodes = tg.nGPInDim(dim);
-    const QuadRule* const rule = genInstr.getNodeGenFuncForDim(dim)->getQuadRule(nNodes);
+    const bool includeBoundary = levels[dim] >= genInstr.getBoundaryLevelOffset();
+    const QuadRule* const rule =
+        genInstr.getNodeGenFuncForDim(dim)->getQuadRule(nNodes, includeBoundary);
     weights.push_back(rule->genWeights(nNodes));
   }
 

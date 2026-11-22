@@ -112,5 +112,9 @@ base::DataVector NodeGenFunc::genDeltaNodesWithoutBoundary(
   return result;
 }
 
+QuadRule* NodeGenFunc::getQuadRule(const GPCntType nNodes, const bool includeBoundary) const {
+  return getQuadRule(nNodes);
+}
+
 }  // namespace combigrid
 }  // namespace sgpp

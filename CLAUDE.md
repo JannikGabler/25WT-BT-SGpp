@@ -176,6 +176,11 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 - Orphaned OpenMP worksharing (`#pragma omp for` outside the function's own `parallel`) must not
   run on a serial path that skips the operator's parallel region: it would bind to a caller's
   parallel region and split the call's work across the caller's team.
+- An exception that leaves an OpenMP region calls `std::terminate`: obtain everything that may
+  throw (e.g. quadrature rules) serially before the region. Operators get 1D rules from
+  `NodeGenFunc::getQuadRule(n, includeBoundary)` (`lvl >= offset`); its default returns
+  `getQuadRule(n)`, which assumes the boundary nodes (equi / CC are not interpolatory for levels
+  below an offset ≥ 2; cheb1 overrides it).
 - `.lint` / `.os` / `.gcda` files without a matching source are stale artifacts — do not resurrect
   sources from them.
 - Combigrid is only built in CI's **linux-full** job.

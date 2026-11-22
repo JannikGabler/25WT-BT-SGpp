@@ -23,17 +23,23 @@ namespace combigrid {
 namespace misc {
 
 QuadWeightTable::QuadWeightTable(const SparseGrid& sparseGrid)
-    : genInstr_(sparseGrid.getGenInstr()),
-      unitNodeTable_(sparseGrid.getUnitNodeTable()),
+    : unitNodeTable_(sparseGrid.getUnitNodeTable()),
       rowsBySize_(unitNodeTable_.nRows()),
+      rules_(unitNodeTable_.nRows()),
       rows_(unitNodeTable_.nRows()),
       published_(unitNodeTable_.nRows()),
       onceFlags_(unitNodeTable_.nRows()) {
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
+
   // Every row belongs to at least one (dimension, level) pair; dimensions sharing rows overwrite
-  // each other's entries with equivalent ones
+  // each other's entries with equivalent ones (same node-generation function and node counts)
   for (size_t dim = 0; dim < unitNodeTable_.nDim(); dim++) {
     for (LvlType lvl = 0; lvl <= unitNodeTable_.maxLvl(dim); lvl++) {
-      rowsBySize_[unitNodeTable_.row(dim, lvl)] = {dim, lvl};
+      const size_t row = unitNodeTable_.row(dim, lvl);
+      rowsBySize_[row] = {dim, lvl};
+      rules_[row] = genInstr.getNodeGenFuncForDim(dim)->getQuadRule(unitNodeTable_.nNodes(dim, lvl),
+                                                                    lvl >= boundaryLvlOffset);
     }
   }
 
@@ -50,7 +56,8 @@ void QuadWeightTable::computeAllRows() const {
 }
 
 size_t QuadWeightTable::memoryBytes() const noexcept {
-  size_t bytes = sizeof(*this) + tools::vectorBytes(rowsBySize_) + tools::vectorBytes(rows_) +
+  size_t bytes = sizeof(*this) + tools::vectorBytes(rowsBySize_) + tools::vectorBytes(rules_) +
+                 tools::vectorBytes(rows_) +
                  published_.capacity() * sizeof(std::atomic<const double*>) +
                  onceFlags_.capacity() * sizeof(std::once_flag);
   for (const auto& [dim, lvl] : rowsBySize_) {
@@ -70,14 +77,12 @@ const double* QuadWeightTable::computeRow(const size_t dim, const LvlType lvl) c
   const size_t row = unitNodeTable_.row(dim, lvl);
 
   // call_once lets the threads that need the row meanwhile wait for it and makes its weights
-  // visible to them. Dimensions share a row only if they have the same node-generation function
-  // (and node counts), so the weights do not depend on the dimension that computes them.
+  // visible to them. The rule of the row was obtained by the constructor.
   std::call_once(onceFlags_[row], [this, dim, lvl, row]() {
-    const GPCntType nNodes = unitNodeTable_.nNodes(dim, lvl);
     std::vector<double>& weights = rows_[row];
 
-    weights.resize(nNodes);
-    genInstr_.getNodeGenFuncForDim(dim)->getQuadRule(nNodes)->genWeightsInplace(weights);
+    weights.resize(unitNodeTable_.nNodes(dim, lvl));
+    rules_[row]->genWeightsInplace(weights);
     published_[row].store(weights.data(), std::memory_order_release);
   });
 

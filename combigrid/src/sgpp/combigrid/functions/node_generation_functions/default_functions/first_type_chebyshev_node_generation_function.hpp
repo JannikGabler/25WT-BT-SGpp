@@ -41,8 +41,18 @@ class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
   /******
   Getters
   ******/
-  /// @copydoc NodeGenFunc::getQuadRule
+  /**
+   * @brief Returns the quadrature rule of the @p nNodes nodes with the boundary nodes:
+   * @ref getQuadRule(GPCntType, bool) const "getQuadRule(nNodes, true)".
+   */
   QuadRule* getQuadRule(const GPCntType nNodes) const override;
+
+  /**
+   * @brief Returns the interpolatory rule on the @p nNodes nodes
+   * (@c quadrature_rules::FejerFirstQuadRule): Fejér's first rule without the boundary nodes, the
+   * interpolatory rule on 0, the inner nodes and 1 with them.
+   */
+  QuadRule* getQuadRule(GPCntType nNodes, bool includeBoundary) const override;
 
   /// @copydoc NodeGenFunc::getInterpolationMethod
   InterpolationMethod* getInterpolationMethod(const GPCntType nNodes) const override;

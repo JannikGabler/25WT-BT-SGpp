@@ -15,7 +15,7 @@
 #include <mutex>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
@@ -32,9 +32,13 @@ namespace misc {
  * dimension @f$k@f$ and the number of nodes of level @f$\ell_k@f$, i.e. on the row of the unit
  * node table of the sparse grid (@c SparseGridBase::getUnitNodeTable): dimensions sharing their
  * rows have the same node-generation function and node counts. The table therefore holds one
- * weight list per row, @c getQuadRule(n)->genWeightsInplace for the @c n nodes of the row
- * (bitwise the weights of the rule), on the unit interval (the domain volume is applied by the
- * operator).
+ * weight list per row, @c getQuadRule(n, includeBoundary)->genWeightsInplace for the @c n nodes
+ * of the row (bitwise the weights of the rule; @c includeBoundary iff the level is at least the
+ * boundary level offset), on the unit interval (the domain volume is applied by the operator).
+ *
+ * The rules of all rows are obtained by the constructor, serially: a node family without a rule
+ * throws there (outside the operator's parallel region, so the caller gets the exception) and the
+ * rows are then filled by the rules' weight generation only.
  *
  * A row is computed once, by the thread that requests it first, which also allocates it; threads
  * that need it meanwhile wait for it. Rows are requested on their first use (@ref weights) or all
@@ -46,8 +50,11 @@ namespace misc {
 class QuadWeightTable {
  public:
   /**
-   * @brief Constructs the table of @p sparseGrid with all rows not yet computed.
+   * @brief Constructs the table of @p sparseGrid with all rows not yet computed; obtains the
+   * quadrature rule of every row.
    * @param sparseGrid Sparse grid; must outlive the table.
+   * @throws Whatever @c NodeGenFunc::getQuadRule throws for a row (e.g. a node family without a
+   * quadrature rule).
    */
   explicit QuadWeightTable(const SparseGrid& sparseGrid);
 
@@ -85,11 +92,13 @@ class QuadWeightTable {
   /// returns them.
   const double* computeRow(size_t dim, LvlType lvl) const;
 
-  const SGGenInstr& genInstr_;      ///< Generation instruction (node-generation functions).
   const NodeTable& unitNodeTable_;  ///< Unit node table of the sparse grid (rows, node counts).
 
   /// @brief Per row, sorted by decreasing node count: a (dimension, level) pair of the row.
   std::vector<std::pair<size_t, LvlType>> rowsBySize_;
+
+  /// @brief Per row: its quadrature rule (non-owning).
+  std::vector<const QuadRule*> rules_;
 
   /// @brief Per row: its weights (empty until computed).
   mutable std::vector<std::vector<double>> rows_;

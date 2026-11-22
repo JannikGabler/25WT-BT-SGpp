@@ -112,7 +112,8 @@ operators/
                          DeltasSparseGrid (deltas_sparse_grid_linear_interpolation.cpp)
   quadrature/            quadrature() for SparseGrid (quadrature.cpp) and DeltasSparseGrid
                          (deltas_sparse_grid_quadrature.cpp); quadrature_rules/ (Clenshaw-Curtis,
-                         Simpson, trapezoidal, getters); fast_quadrature.* commented out
+                         Fejér's first rule (cheb1), Simpson, trapezoidal, getters);
+                         fast_quadrature.* commented out
   textbook/              textbookQuadrature(), textbookInterpolate(), textbookInterpolateLinear()
                          for SparseGrid: naive per-tensor-grid reference implementations, one
                          .cpp per operator with all helpers in an anonymous namespace (WP-79)
@@ -331,11 +332,16 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 - `NodeGenFunc`
   ([functions/node_generation_functions/node_generation_function.hpp](../src/sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp)):
   abstract 1D node family; also returns the matching 1D `QuadRule*` and `InterpolationMethod*`.
+  `getQuadRule(n)` is the rule of the n nodes with the boundary nodes; the virtual overload
+  `getQuadRule(n, includeBoundary)` (WP-83; default: `getQuadRule(n)`) is what the operators call
+  (`lvl >= boundaryLevelOffset`). Only cheb1 overrides it; the equi / CC rules assume the boundary
+  nodes, so for levels below an offset ≥ 2 their weights are not the interpolatory weights of the
+  inner nodes (pre-existing; e.g. Simpson on {¼, ½, ¾}: x² off by 0.0625; convergence order kept).
   Getters (raw pointers to process-lifetime singletons — never delete or wrap):
   `getEquidistantNodeGenFunc()` (Simpson / trapezoidal by parity),
   `getClenshawCurtisNodeGenFunc()` = `getSecondTypeChebyshevNodeGenFunc()` (same singleton; CC
-  quadrature, closed-form barycentric weights), `getFirstTypeChebyshevNodeGenFunc()` (no closed-form
-  quadrature).
+  quadrature, closed-form barycentric weights), `getFirstTypeChebyshevNodeGenFunc()` (generic
+  barycentric weights; quadrature since WP-83: `FejerFirstQuadRule`, see "Quadrature rules").
 - `Lvl2GPCntFunc`: function pointer; `linearLvl2GPCntFunction` (ℓ+1),
   `doublingLvl2GPCntFunction` (2^{ℓ+1}−1 inner nodes, CC-compatible; the Doxygen comment has a typo,
   the code is `tools::pow(2, lvl+1) - 1`).
@@ -362,7 +368,7 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `VectorSourceFunc` → `std::span` / `DataVector` overloads like the optimized operators, same
   names in Python. Purpose: teaching / reference / test oracle — `Σ_ℓ c_ℓ Op_ℓ(f)` with a plain
   serial loop over the TGs, each TG solved on its own: quadrature = tensor product of the node
-  family's 1D rule (`getQuadRule(n)->genWeights(n)`, so cheb1 throws as in `quadrature`), global
+  family's 1D rule (`getQuadRule(n, lvl >= offset)->genWeights(n)`), global
   interpolation = tensor-product Lagrange basis written out as the product formula
   `L_i(x) = Π_{k≠i} (x − x_k)/(x_i − x_k)` (O(n²) per dimension; owner 2026-11-19: the textbook
   operators explain the CT, stability / accuracy are secondary. Measured in 1D: CC / cheb1 agree
@@ -407,7 +413,16 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 - **Quadrature rules** per dimension by node type and parity: equidistant odd → composite Simpson,
   even → trapezoidal; Chebyshev 2nd kind → Clenshaw-Curtis (Waldvogel's method as one real FFT
   of length n − 1 with `USE_EIGEN` / `USE_ARMADILLO`, else O(n²); the bitwise pins of the weights
-  are recorded with Eigen). Result × |Ω|.
+  are recorded with Eigen); Chebyshev 1st kind → `quadrature_rules::FejerFirstQuadRule`
+  (WP-83; `getFejerFirstQuadRule(includeBoundary)`): without boundary nodes Fejér's first rule
+  (positive, exact to degree n − 1), with them the interpolatory rule on {0, n − 2 cheb1 nodes, 1}
+  = Fejér's weights of the inner nodes + a closed-form correction (owner 2026-11-22: interpolatory,
+  i.e. ∫ of the interpolant; endpoint weights −O(1/m²), inner weights positive, Σ|w| = 1 + O(1/m²)).
+  Fejér's sums are a length-n DFT, computed by Bluestein's algorithm (3 complex FFTs of the next
+  power of two; n = 2^{ℓ+1} − 1 is often prime-heavy, e.g. 131071 prime), else O(n²) direct sums.
+  Result × |Ω|. The SG weight table obtains every row's rule serially in its constructor, so a
+  family without a rule throws a catchable exception before any parallel region (WP-83; before,
+  cheb1 called `std::terminate` from inside the OpenMP region).
 
 ## Vocabulary
 
