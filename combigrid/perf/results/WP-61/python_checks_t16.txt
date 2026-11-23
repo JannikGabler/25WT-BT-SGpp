@@ -1,0 +1,8 @@
+cc d3 L6 b0 nTG 64: 0x1.6f8744a5489adp+4 0x1.6f8744a5489adp+4 0x1.1afd21ff2e447p+1 0x1.16cbdf1f6e0f2p+1
+cc d3 L6 b1 nTG 64: 0x1.6f8744a5489a3p+4 0x1.6f8744a5489a3p+4 0x1.1afd21ff2e45cp+1 0x1.16cbdf1f6e0f0p+1
+cc d5 L4 b0 nTG 126: 0x1.7cd89e577a1e9p+9 0x1.7cd89e577a1e9p+9 0x1.98eb37867ef48p+2 0x1.92dc5abb7f078p+2
+cc d5 L4 b1 nTG 126: 0x1.7cce9ab63adddp+9 0x1.7cce9ab63adddp+9 0x1.98eb37867f019p+2 0x1.92dc5abb7f109p+2
+equi d3 L6 b0 nTG 64: 0x1.6f8744a8cdf1ap+4 0x1.6f8744a8cdf1ap+4 0x1.1afd21ff2e49ap+1 0x1.16cbdf1f6e136p+1
+equi d3 L6 b1 nTG 64: 0x1.6f8744b43e846p+4 0x1.6f8744b43e846p+4 0x1.1afd21ff2e484p+1 0x1.16cbdf1f6e13bp+1
+equi d5 L4 b0 nTG 126: 0x1.7cd8a008ea1a7p+9 0x1.7cd8a008ea1a7p+9 0x1.98eb37867f171p+2 0x1.92dc5abb7f206p+2
+equi d5 L4 b1 nTG 126: 0x1.7cd6d4287b822p+9 0x1.7cd6d4287b822p+9 0x1.98eb37867f092p+2 0x1.92dc5abb7f0c3p+2

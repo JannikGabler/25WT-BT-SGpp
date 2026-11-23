@@ -1,0 +1,65 @@
+{
+ "suite": "micro",
+ "snapshot": "WP-61-after",
+ "threads": 1,
+ "environment": {
+  "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+  "n_cpus": 16,
+  "governor": "performance",
+  "epp": "performance",
+  "boost": "0",
+  "platform_profile": "performance",
+  "ac_online": "1",
+  "perf_event_paranoid": "1",
+  "kernel": "7.0.0-43-generic",
+  "compiler": "15.2.0",
+  "load_avg": [
+   "1.80",
+   "5.34",
+   "6.29"
+  ]
+ },
+ "records": [
+  {
+   "suite": "micro",
+   "case": "micro/quad/compensated_combination/equi/b1/d15/L6",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00012004802994011976,
+     0.00012071200798403194
+    ]
+   },
+   "items": 54264,
+   "batch": 501,
+   "counters": {
+    "nTG": 54264
+   }
+  },
+  {
+   "suite": "micro",
+   "case": "micro/quad/compensated_combination/equi/b1/d20/L5",
+   "kind": "micro",
+   "threads": 1,
+   "samples": 2,
+   "warmups": 0,
+   "unit": "s",
+   "metrics": {
+    "call": [
+     0.00011861218452380952,
+     0.00011839254563492063
+    ]
+   },
+   "items": 53130,
+   "batch": 504,
+   "counters": {
+    "nTG": 53130
+   }
+  }
+ ],
+ "process_floor_kib": null
+}

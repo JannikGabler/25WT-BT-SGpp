@@ -1,0 +1,1 @@
+normal build, 1 thread: 116 of 432 values (108 configs x 4) changed; max |delta| 8.882e-15 (mixed b1 shifted d3 complete sg), max rel 2.331e-15, max 15 ulp

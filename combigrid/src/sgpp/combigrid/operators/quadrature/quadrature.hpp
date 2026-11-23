@@ -38,6 +38,11 @@ namespace combigrid {
  * estimates are combined via the stored coefficients and finally scaled
  * by the volume of the domain.
  *
+ * The estimates of the tensor grids are combined serially in the order of the tensor grids with
+ * compensated summation: the result is bitwise independent of the number of threads, the same in
+ * repeated calls, and the round-off of the combination is about one rounding of the result even
+ * though the coefficients are large integers of alternating sign.
+ *
  * @note Data kept across calls (@c QuadratureOptions::useCrossCallOperatorDataCache, default
  * off): the 1D quadrature weight table of the grid (one double per node of every (dimension,
  * level) row of the unit node table; e.g. 32 MiB for 2 dimensions with Clenshaw-Curtis nodes of

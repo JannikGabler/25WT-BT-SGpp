@@ -28,6 +28,33 @@ namespace tools {
 namespace quadrature {
 
 /**
+ * @brief Computes the quadrature estimate of every tensor grid of @c context.sparseGrid (unit
+ * hypercube, without the coefficient) in parallel and stores it at the index of the tensor grid.
+ *
+ * Every estimate is computed by one thread with the same operations at every thread count, so
+ * the estimates do not depend on the number of threads or the schedule; combined serially in the
+ * order of the tensor grids (@c tools::compensatedDotProduct), the quadrature results are bitwise
+ * independent of both.
+ *
+ * @param context     Read-only data of the quadrature call.
+ * @param sourceFunc  Source function.
+ * @param tgEstimates Output: the estimate of tensor grid i at index i (size nTG).
+ */
+void estimateTensorGrids(const misc::QuadratureContext& context, const SourceFunc& sourceFunc,
+                         std::span<double> tgEstimates);
+
+/**
+ * @brief @ref estimateTensorGrids for a vector-valued source function.
+ *
+ * @param context     Read-only data of the quadrature call.
+ * @param sourceFunc  Vector-valued source function (m outputs).
+ * @param tgEstimates Output: the m estimates of tensor grid i at indices i m, ..., i m + m - 1
+ *                    (size nTG m).
+ */
+void estimateTensorGrids(const misc::QuadratureContext& context, const VectorSourceFunc& sourceFunc,
+                         std::span<double> tgEstimates);
+
+/**
  * @brief Tensor-product quadrature on a single tensor grid.
  *
  * Looks up the 1D quadrature weights of @p tg (@ref getWeights) and sums the weight times the
@@ -60,18 +87,6 @@ double processTensorGrid(const misc::QuadratureContext& context, const SourceFun
  */
 void processTensorGrid(const misc::QuadratureContext& context, const VectorSourceFunc& sourceFunc,
                        TensorGridView tg, misc::QuadratureScratch& scratch, std::span<double> out);
-
-/**
- * @brief Sets @p result to the sum over the tensor grids of @c context.sparseGrid of the
- * coefficient times the vector-valued quadrature estimate of the tensor grid (unit hypercube), in
- * parallel.
- *
- * @param context    Read-only data of the quadrature call.
- * @param sourceFunc Vector-valued source function (m outputs).
- * @param result     Output: the m combined estimates (size m).
- */
-void combineTensorGrids(const misc::QuadratureContext& context, const VectorSourceFunc& sourceFunc,
-                        const std::span<double> result);
 
 /**
  * @brief Prepares the row loop over @p tg: 1D quadrature weights (@ref getWeights) and iterated

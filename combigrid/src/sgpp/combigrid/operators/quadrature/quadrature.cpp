@@ -8,19 +8,18 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/tools/math/compensated_sum.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
+#include <span>
 #include <stdexcept>
 
 using sgpp::combigrid::misc::QuadratureContext;
-using sgpp::combigrid::misc::QuadratureScratch;
 using sgpp::combigrid::misc::QuadWeightTable;
-using sgpp::combigrid::tools::quadrature::combineTensorGrids;
+using sgpp::combigrid::tools::quadrature::estimateTensorGrids;
 using sgpp::combigrid::tools::quadrature::getWeightTable;
-using sgpp::combigrid::tools::quadrature::processTensorGrid;
 
 namespace sgpp {
 namespace combigrid {
@@ -28,27 +27,20 @@ namespace combigrid {
 double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
                   const QuadratureOptions& options) {
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const size_t nDim = sparseGrid.nDim();
+  const size_t nTG = sparseGrid.nTG();
 
-  const std::shared_ptr<const QuadWeightTable> table =
+  const std::shared_ptr<const QuadWeightTable> weightTable =
       getWeightTable(sparseGrid, options.useCrossCallOperatorDataCache);
-  const QuadWeightTable& weightTable = *table;
-  const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = weightTable};
+  const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = *weightTable};
 
-  double result = 0;
-
-#pragma omp parallel reduction(+ : result)
-  {
-    QuadratureScratch scratch(nDim);
-    weightTable.computeAllRows();  // Nowait operation: Threads can immediately continue
-
-#pragma omp for schedule(dynamic) nowait
-    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getDomainTensorGrid(tgIdx);
-      result +=
-          tgData.coefficient * processTensorGrid(context, sourceFunc, tgData.tensorGrid, scratch);
-    }
-  }
+  // One estimate per tensor grid (nTG doubles), combined serially in the order of the tensor
+  // grids: results bitwise independent of the number of threads and the schedule. Compensated
+  // summation: the coefficients are large integers of alternating sign (round-off of a plain loop
+  // up to 2e-8 relative on complete grids with 5e4 tensor grids; compensated: about one rounding)
+  const std::unique_ptr<double[]> tgEstimates = std::make_unique_for_overwrite<double[]>(nTG);
+  estimateTensorGrids(context, sourceFunc, std::span<double>(tgEstimates.get(), nTG));
+  const double result = tools::compensatedDotProduct(
+      sparseGrid.getCoefficients(), std::span<const double>(tgEstimates.get(), nTG));
 
   sourceFunc.finishOperatorCall();
 
@@ -66,7 +58,13 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
       getWeightTable(sparseGrid, options.useCrossCallOperatorDataCache);
   const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = *weightTable};
 
-  combineTensorGrids(context, sourceFunc, result);
+  // As in the scalar operator: estimates per tensor grid (nTG m doubles), combined in order
+  const size_t nEstimates = sparseGrid.nTG() * result.size();
+  const std::unique_ptr<double[]> tgEstimates =
+      std::make_unique_for_overwrite<double[]>(nEstimates);
+  estimateTensorGrids(context, sourceFunc, std::span<double>(tgEstimates.get(), nEstimates));
+  tools::compensatedDotProducts(sparseGrid.getCoefficients(),
+                                std::span<const double>(tgEstimates.get(), nEstimates), result);
 
   const double volume = genInstr.getVolumeOfDomain();
   for (double& value : result) {

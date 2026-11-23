@@ -2,6 +2,7 @@
 // This file is part of the SG++ project. For conditions of distribution and
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
+#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -15,7 +16,7 @@
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
-#include <vector>
+#include <span>
 
 using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;
@@ -26,6 +27,49 @@ namespace combigrid {
 
 namespace tools {
 namespace quadrature {
+
+void estimateTensorGrids(const QuadratureContext& context, const SourceFunc& sourceFunc,
+                         const std::span<double> tgEstimates) {
+  const SparseGrid& sparseGrid = context.sparseGrid;
+  const size_t nTG = sparseGrid.nTG();
+  assert(tgEstimates.size() == nTG);
+  double* const estimates = tgEstimates.data();
+
+#pragma omp parallel
+  {
+    QuadratureScratch scratch(sparseGrid.nDim());
+    context.weightTable.computeAllRows();  // Nowait operation: Threads can immediately continue
+
+    // The tensor grids differ in size by orders of magnitude -> Dynamic scheduling
+#pragma omp for schedule(dynamic) nowait
+    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+      estimates[tgIdx] = processTensorGrid(
+          context, sourceFunc, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid, scratch);
+    }
+  }
+}
+
+void estimateTensorGrids(const QuadratureContext& context, const VectorSourceFunc& sourceFunc,
+                         const std::span<double> tgEstimates) {
+  const SparseGrid& sparseGrid = context.sparseGrid;
+  const size_t nTG = sparseGrid.nTG();
+  const size_t nOutputs = sourceFunc.nOutputs();
+  assert(tgEstimates.size() == nTG * nOutputs);
+  double* const estimates = tgEstimates.data();
+
+#pragma omp parallel
+  {
+    QuadratureScratch scratch(sparseGrid.nDim(), nOutputs);
+    context.weightTable.computeAllRows();  // As in the scalar operator
+
+    // Dynamic scheduling as in the scalar operator
+#pragma omp for schedule(dynamic) nowait
+    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+      processTensorGrid(context, sourceFunc, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid,
+                        scratch, std::span<double>(estimates + tgIdx * nOutputs, nOutputs));
+    }
+  }
+}
 
 double processTensorGrid(const QuadratureContext& context, const SourceFunc& sourceFunc,
                          const TensorGridView tg, QuadratureScratch& scratch) {
@@ -57,42 +101,6 @@ void processTensorGrid(const QuadratureContext& context, const VectorSourceFunc&
 
   const misc::VectorValues values(sourceFunc, scratch.rows.valueBuffer);
   values.store(weighted_sum::sumOverRows(values, scratch.rows), out.data());
-}
-
-/**
- * Sets @p result to the sum over the tensor grids of the coefficient times the vector-valued
- * quadrature estimate of the tensor grid (unit hypercube), in parallel: per thread first, then
- * added to @p result, as the reduction of the scalar operator does output by output.
- */
-void combineTensorGrids(const QuadratureContext& context, const VectorSourceFunc& sourceFunc,
-                        const std::span<double> result) {
-  const SparseGrid& sparseGrid = context.sparseGrid;
-  const size_t nOutputs = result.size();
-
-  std::ranges::fill(result, 0.0);
-
-#pragma omp parallel
-  {
-    QuadratureScratch scratch(sparseGrid.nDim(), nOutputs);
-    std::vector<double> tgResult(nOutputs);
-    std::vector<double> threadResult(nOutputs, 0.0);
-    context.weightTable.computeAllRows();  // As in the scalar operator
-
-    // Dynamic scheduling as in the scalar operator
-#pragma omp for schedule(dynamic) nowait
-    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getDomainTensorGrid(tgIdx);
-      processTensorGrid(context, sourceFunc, tgData.tensorGrid, scratch, tgResult);
-      for (size_t k = 0; k < nOutputs; k++) {
-        threadResult[k] += tgData.coefficient * tgResult[k];
-      }
-    }
-
-#pragma omp critical
-    for (size_t k = 0; k < nOutputs; k++) {
-      result[k] += threadResult[k];
-    }
-  }
 }
 
 /**

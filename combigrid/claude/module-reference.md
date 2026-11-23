@@ -360,7 +360,17 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `constants.hpp`. SG quadrature: each thread first takes weight-table rows
   (`QuadWeightTable::computeAllRows`, largest first, `omp for schedule(dynamic, 1) nowait`), then
   tensor grids (`schedule(dynamic)`); a tensor grid whose row is still being computed waits for
-  it in `call_once`.
+  it in `call_once`. The estimate of tensor grid i goes to slot i of a per-call buffer (nTG
+  doubles, × m for vector-valued; `tools::quadrature::estimateTensorGrids`), summed serially in
+  TG order with compensated summation (`tools::compensatedDotProduct(s)`,
+  [tools/math/compensated_sum.hpp](../src/sgpp/combigrid/tools/math/compensated_sum.hpp),
+  header-only: accumulator `tools::CompensatedSum` (`add`, `addProduct`, `value`; Neumaier + FMA
+  product errors) and templates `compensatedSum` / `compensatedDotProduct(s)` for any contiguous
+  ranges of arithmetic values (`tools::ArithmeticRange`); reusable for other CT combinations,
+  e.g. interpolation; WP-61, owner 2026-11-23): SG
+  quadrature results are bitwise independent of the thread count and the processing order of the
+  TGs, and the combination's round-off is ≈ 1 ulp (plain loop: up to 2e-8 relative at nTG ≈ 5e4,
+  condition numbers Σ|c Q| / |Σ c Q| up to 8e5).
 - **Textbook operators** (WP-79; [operators/textbook/](../src/sgpp/combigrid/operators/textbook/)):
   `textbookQuadrature(f, sg)`, `textbookInterpolate(f, point, sg)`,
   `textbookInterpolateLinear(f, point, sg)` on a `SparseGrid` only (no DSG variants: the DSG
