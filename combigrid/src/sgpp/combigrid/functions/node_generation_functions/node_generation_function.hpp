@@ -137,35 +137,28 @@ class NodeGenFunc {
   /// @name Getters
   /// @{
 
-  /**
-   * @brief Returns the matching 1D quadrature rule for this node family.
-   *
-   * The rule is the one for the @p nNodes nodes with the boundary nodes
-   * (@ref genNodesWithBoundary); see the overload with @c includeBoundary for
-   * node sets without them.
-   *
-   * @param nNodes Number of nodes for which the rule will be used (some
-   * subclasses dispatch on @p nNodes).
-   * @return Non-owning pointer to the quadrature rule.
-   */
-  virtual QuadRule* getQuadRule(GPCntType nNodes) const = 0;
+  //   /**
+  //    * @brief Returns the matching 1D quadrature rule for this node family.
+  //    *
+  //    * The rule is the one for the @p nNodes nodes with the boundary nodes
+  //    * (@ref genNodesWithBoundary); see the overload with @c includeBoundary for
+  //    * node sets without them.
+  //    *
+  //    * @param nNodes Number of nodes for which the rule will be used (some
+  //    * subclasses dispatch on @p nNodes).
+  //    * @return Non-owning pointer to the quadrature rule.
+  //    */
+  //   virtual QuadRule* getQuadRule(GPCntType nNodes) const = 0;
 
   /**
    * @brief Returns the matching 1D quadrature rule for the @p nNodes nodes of
    * this node family with or without the boundary nodes (@ref genNodes).
    *
-   * The quadrature operators call this overload, with @p includeBoundary true
-   * iff the level is at least the boundary level offset. The default returns
-   * @ref getQuadRule "getQuadRule(nNodes)" for both node sets (the equidistant
-   * and Clenshaw-Curtis families: their rules assume the boundary nodes, so
-   * the rule of a level below an offset @f$\ge 2@f$ is not the interpolatory
-   * rule of its nodes); the first-kind Chebyshev family returns distinct rules.
-   *
    * @param nNodes          Number of nodes for which the rule will be used.
    * @param includeBoundary Whether the nodes include the boundary nodes 0 and 1.
    * @return Non-owning pointer to the quadrature rule.
    */
-  virtual QuadRule* getQuadRule(GPCntType nNodes, bool includeBoundary) const;
+  virtual QuadRule* getQuadRule(GPCntType nNodes, bool includeBoundary) const = 0;
 
   /**
    * @brief Returns the matching 1D interpolation method for this node family.

@@ -76,7 +76,9 @@ void SecondTypeChebyshevNodeGenFunc::genDeltaNodesWithoutBoundary(
 Getters
 ******/
 
-QuadRule* SecondTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
+// TODO: includeBoundary is ignored
+QuadRule* SecondTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes,
+                                                      bool includeBoundary) const {
   return getClenshawCurtisQuadRule();
 }
 

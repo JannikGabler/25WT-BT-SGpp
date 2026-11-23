@@ -482,7 +482,9 @@ std::pair<std::vector<size_t>, std::vector<MIWithCoeff>> expectedProjectedSubTri
     const std::optional<GPCntType> idx =
         findNode(nodes, expectedDeltaNodes(genInstr, dim, m[dim])[0]);
     BOOST_REQUIRE(idx.has_value());
-    return genInstr.getNodeGenFuncForDim(dim)->getQuadRule(nNodes)->genWeights(nNodes)[*idx];
+    return genInstr.getNodeGenFuncForDim(dim)
+        ->getQuadRule(nNodes, lvl >= genInstr.getBoundaryLevelOffset())
+        ->genWeights(nNodes)[*idx];
   };
 
   std::map<std::vector<LvlType>, double> leaves;
@@ -613,7 +615,10 @@ class BruteForceGlobalWeights {
         const auto nodesBegin = nodesPerDim.begin() + static_cast<std::ptrdiff_t>(offset);
 
         entry.nodes.emplace_back(std::vector<double>(nodesBegin, nodesBegin + nNodes));
-        entry.weights.push_back(nodeGenFuncs[dim]->getQuadRule(nNodes)->genWeights(nNodes));
+        entry.weights.push_back(
+            nodeGenFuncs[dim]
+                ->getQuadRule(nNodes, tg.mi[dim] >= sg.getGenInstr().getBoundaryLevelOffset())
+                ->genWeights(nNodes));
         offset += nNodes;
       }
     }
@@ -1191,8 +1196,9 @@ BOOST_AUTO_TEST_CASE(One_Dimensional_Weights) {
         for (LvlType lvl = 0; lvl <= maxLvl; lvl++) {
           const DataVector nodes = regularNodes(genInstr, dim, lvl);
           const GPCntType nNodes = static_cast<GPCntType>(nodes.size());
-          const DataVector expected =
-              genInstr.getNodeGenFuncForDim(dim)->getQuadRule(nNodes)->genWeights(nNodes);
+          const DataVector expected = genInstr.getNodeGenFuncForDim(dim)
+                                          ->getQuadRule(nNodes, lvl >= boundaryLvlOffset)
+                                          ->genWeights(nNodes);
           const std::span<const double> weightsOfLvl = weights[dim][lvl];
 
           BOOST_TEST_CONTEXT("Dimension " << dim << ", level " << lvl) {

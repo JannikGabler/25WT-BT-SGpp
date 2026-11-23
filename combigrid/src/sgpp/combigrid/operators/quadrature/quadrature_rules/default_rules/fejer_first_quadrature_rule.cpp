@@ -29,6 +29,7 @@
 
 namespace sgpp {
 namespace combigrid {
+
 namespace quadrature_rules {
 
 namespace {

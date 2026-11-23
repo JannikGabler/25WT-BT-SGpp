@@ -8,6 +8,7 @@
  * @brief Boost.Test cases for the sparse-grid quadrature operator.
  */
 
+#include "sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp"
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/tools/old/interface.hpp>
@@ -1042,9 +1043,9 @@ struct NaiveTGQuadrature {
  * the quadrature rules of the node generation functions, and f at the point mapped onto the
  * domain.
  */
-NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGridView tgView,
+NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGridCTDataView tgView,
                                     const SGGenInstr& genInstr) {
-  const TensorGrid tg = tgView.toTensorGrid();  // Nodes on the domain
+  const TensorGrid tg = tgView.tensorGrid.toTensorGrid();  // Nodes on the domain
   const size_t nDim = tg.nDim();
   const GPMI& nGPPerDim = tg.getGPCntPerDim();
 
@@ -1052,7 +1053,7 @@ NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGr
   for (size_t dim = 0; dim < nDim; dim++) {
     weights1D[dim].resize(nGPPerDim[dim]);
     genInstr.getNodeGenFuncForDim(dim)
-        ->getQuadRule(nGPPerDim[dim])
+        ->getQuadRule(nGPPerDim[dim], tgView.mi[dim] >= genInstr.getBoundaryLevelOffset())
         ->genWeightsInplace(weights1D[dim]);
   }
 
@@ -1123,7 +1124,7 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
   double absTotal = 0.0;
 
   for (const auto& tgData : sg.domainTensorGrids()) {
-    const NaiveTGQuadrature expected = naiveTGQuadrature(sourceFunc, tgData.tensorGrid, genInstr);
+    const NaiveTGQuadrature expected = naiveTGQuadrature(sourceFunc, tgData, genInstr);
 
     evaluatedPoints.clear();
     const double result =

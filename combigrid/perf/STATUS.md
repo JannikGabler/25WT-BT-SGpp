@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-79 (2026-11-21; accepted, commit pending) · Next free WP number: 84 ·
+Last processed: WP-83 (2026-11-22; accepted, commit pending) · Next free WP number: 86 ·
 Last re-profiling: RP-6 (2026-11-18) · Finished WPs, results, archive: [HISTORY.md](HISTORY.md) ·
 Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 
@@ -55,10 +55,10 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 | Rank | ID | Title | Status |
 |---|---|---|---|
 | – | WP-63 … 72 | Dimension-adaptive CT implementation (A1 nestedness + std CC growth, A2 core, A3 quad driver, A4 non-nested / vector, A5 interp, A6 Python, B1 lazy, B2 buffering, C1 stored values, C2 resume) | needs decision (D1–D9) · **unranked** (owner places them) |
-| – | WP-83 | SG quadrature: cheb1 `std::terminate` fix (rules validated before the OpenMP region) + new cheb1 quadrature rule (Fejér's first rule expected; owner 11-21) | **in progress** (prompt 11-21; owner: before WP-61) |
+| – | WP-84 | Quadrature rules for inner-only nodes: equi / CC below an offset ≥ 2 override `getQuadRule(n, includeBoundary)` (CC → Fejér-2; equi: session proposes; results at b ≥ 2 change, agreed 11-22) | ready · **unranked** (owner places it) |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point (cache warm-up, testing; name / result / dedup in-session; owner's request) | ready · **unranked** (owner places it) |
 | – | WP-81 | Explanation / visualization foundations: exploration + requirements with the owner in-session (info helpers, strings, plots) → implementation WPs | ready · **unranked** (owner places it) |
-| 1 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG sums in TG order); **before WP-77** (its reordering then stays bitwise, one re-pinning); after WP-83 (same driver) | ready (next optimization WP; functional: agreed 11-15) |
+| 1 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG sums in TG order); **before WP-77** (its reordering then stays bitwise, one re-pinning); after WP-83 (same driver) | **in progress** (prompt 11-22; functional: agreed 11-15) |
 | 2 | WP-77 | TG-loop load balance: largest-first TG order (SG quad / mivec, DSG quad, SG interp) + SG interplin dynamic; optional TG split variant (RP-6: suite 0.25–0.4 s, `expensive/` 1.1–1.6 s; absorbs WP-59) | ready (after WP-61) |
 | 3 | WP-74 | DSG lin. interp.: fused last transform + vectorized fiber transform + 1–4-leaf evaluation chunks (RP-6: 0.05–0.08 s = 6–10 % of interplin/dsg; `expensive/` d5 −45 %) | ready (low) |
 | 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-6: 0.1–0.15 s, b1 d15 / d20 only) | ready |
@@ -71,46 +71,45 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 | 11 | WP-33 | Base's global `operator new` replacement | needs decision (after WP-32) |
 | 12 | WP-31 | MI-set: O(n·d) `isMIVecDownwardsClosed` | ready (low) |
 | 13 | WP-48 | Operator drivers: `std::fma`-pinned CT combination + small-call gate (interplin/sg d2 ≈ 20 ms) | ready (low) |
-| 14 | WP-35 | Fragile tests + audit (test-only) | ready (low; may move up) |
-| 15 | WP-54 | TODO inventory of combigrid (measurement) | ready (low) |
-| 16 | WP-55 | Code-hygiene exploration: verify the backlog (PLAN.md end), propose clean-up WPs | ready (low; after WP-54) |
-| 17 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision |
-| 18 | WP-30 | Vector-valued: small-m optimizations | planned |
-| 19 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) |
-| 20 | WP-39 | Disk tier: append-only log write path + parallel load | planned (owner places it) |
-| 21 | WP-41 | Adaptive caching: disk rule weighted by active threads | planned (late) |
-| 22 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions | planned (late) |
-| 23 | WP-78 | Caching: `CachedSourceFunc` overhead at 1 µs × 16 t (WP-76: cached interplin/sg d8 efficiency 0.20) | planned (owner places it; master: size it soon, cached cases now count) |
-| 24 | WP-44 | DSG row loop light: single-pass row weights + inline `compRowWeights` (RP-6: 0.2–0.3 s at b0 d7/d10 ≈ 1.5–2 % of quad/dsg; S) | planned (owner places it; master: ≈ rank 5) |
-| 25 | WP-07 | Generic barycentric weights cache (≈ 0.003 s judged; may merge into WP-09) | ready (low) |
+| 14 | WP-85 | Operators' OpenMP regions: generic capture-and-rethrow (user `evaluate` throws, `bad_alloc`, user node families → catchable instead of `std::terminate`; agreed 11-22) | ready (low; after WP-77, same TG loops) |
+| 15 | WP-35 | Fragile tests + audit (test-only) | ready (low; may move up) |
+| 16 | WP-54 | TODO inventory of combigrid (measurement) | ready (low) |
+| 17 | WP-55 | Code-hygiene exploration: verify the backlog (PLAN.md end), propose clean-up WPs | ready (low; after WP-54) |
+| 18 | WP-37 | pysgpp `DataVector` iteration / bounds check (base) | needs decision |
+| 19 | WP-30 | Vector-valued: small-m optimizations | planned |
+| 20 | WP-34 | Python source functions: GIL contention at 16 t (36x) | planned (owner places it) |
+| 21 | WP-39 | Disk tier: append-only log write path + parallel load | planned (owner places it) |
+| 22 | WP-41 | Adaptive caching: disk rule weighted by active threads | planned (late) |
+| 23 | WP-42 | Adaptive caching: "keep" hint / non-myopic decisions | planned (late) |
+| 24 | WP-78 | Caching: `CachedSourceFunc` overhead at 1 µs × 16 t (WP-76: cached interplin/sg d8 efficiency 0.20) | planned (owner places it; master: size it soon, cached cases now count) |
+| 25 | WP-44 | DSG row loop light: single-pass row weights + inline `compRowWeights` (RP-6: 0.2–0.3 s at b0 d7/d10 ≈ 1.5–2 % of quad/dsg; S) | planned (owner places it; master: ≈ rank 5) |
+| 26 | WP-07 | Generic barycentric weights cache (≈ 0.003 s judged; may merge into WP-09) | ready (low) |
 | last | WP-43 | Final clean-up: phase references out of code docs + phase leftovers | ready (always last) |
 
 ## Next action
 
-**WP-83 in progress** (prompt 11-21; owner: before WP-61, same SG quadrature driver). Owner commits
-"Accept WP-79" (incl. the owner's staged rework: textbook operators, `source_function.hpp`,
-`vector_source_function.{hpp,cpp}`, `tensor_grid_view.hpp`; summary, `results/WP-79/`, STATUS /
-PLAN / HISTORY / LESSONS) before WP-83 starts. Next master start: process WP-83, then **WP-61**
-(rank 1: makes WP-77 bitwise neutral), then **WP-77** (largest-first TG order; TG split as optional
-variant). Adaptive WPs 63–72 wait for the owner (D1–D9 + placement). Hygiene findings →
-**Code-hygiene backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
+**WP-61 in progress** (prompt 11-22; rank 1: bitwise thread-count-independent SG quadrature, makes
+WP-77's reordering bitwise neutral). Owner commits "Accept WP-83" (checkpoint 18346c71d + the owner's
+staged rework; STATUS / PLAN / HISTORY / LESSONS) before WP-61 starts. Next master start: process
+WP-61, then **WP-77** (largest-first TG order; TG split as optional variant). Adaptive WPs 63–72 wait
+for the owner (D1–D9 + placement); WP-84 / WP-80 / WP-81 wait for the owner's placement. Hygiene
+findings → **Code-hygiene backlog** (end of PLAN.md) → WP-54 → WP-55 → clean-up WPs.
 
 ## Open decisions for the owner
 
 - **WP-62 D1–D9** (plan `results/WP-62/plan.md` §5; recommendations in PLAN.md WP-62) and the
   placement of WP-63 … 72 — owner decides later (11-17).
 - WP-09 (after its summary): adopt the proposed interface or not.
-- WP-78 (caching overhead at 1 µs × 16 t, caching callers only): placement.
-- WP-80 (grid-evaluation operator), WP-81 (visualization exploration): placement.
+- Placement: WP-80 (grid evaluation), WP-81 (visualization), WP-84 (equi / CC rules below an offset ≥ 2;
+  correctness, relevant for adaptive offsets). Optional: protected `quad/sg/cheb1-*` reference case (none yet).
 - CC weights with `-ffp-contract=off` (bitwise build-independent weights; ≤ 6.7e-16/m): **not now** (11-15).
 - Placement of WP-54 / WP-55 (hygiene; may move up); WP-35 up (time-seeded test hit in several sessions).
 - WP-33 (after WP-32): drop / restrict / align large allocations only / keep base's `operator new`
   (WP-23: memory −5 %, generation 1.1–1.4x; datadriven relies on it).
 - WP-04 `TrieNode` 24 → 16 B (optional; `results/WP-04/*.patch`): −3 MiB per b0 case for b0 0.982x.
-- WP-37: base's Python `DataVector` iteration (segfault today) — base API change, placement.
-- WP-34: placement + mechanism (Python callables 1 t 0.78 vs. 16 t 25.1 µs ≈ 32x; e.g. serial
+- WP-37 (base's Python `DataVector` iteration, segfault today; base API change): placement. WP-34: placement + mechanism (Python callables 1 t 0.78 vs. 16 t 25.1 µs ≈ 32x; e.g. serial
   operator or `OMP_NUM_THREADS=1` hint). WP-39: placement. WP-44: placement (largest remaining DSG lever;
-  RP-6: 0.2–0.3 s, S; master recommends ≈ rank 5). WP-78: placement (master: size it soon).
+  RP-6: 0.2–0.3 s, S; master: ≈ rank 5). WP-78 (cache overhead 1 µs × 16 t): placement (master: size it soon).
 - Adaptive as the default `CachePolicy` (not planned): cheap functions 0.57–0.91x of plain instead
   of 0.07–0.30x; expensive pay ≈ 3–7 ns per hit.
 - WP-06 option (B) (only if asked): fix dimensions with unit-vector basis values (on-node queries).
@@ -120,17 +119,18 @@ variant). Adaptive WPs 63–72 wait for the owner (D1–D9 + placement). Hygiene
 ## Re-profiling
 
 Last: RP-6 (2026-11-18; rp-6 = 37a84e1af; accepted). Accepted optimizations since: **0**. WP-79
-(feature, judged 1.002x) and WP-83 (bug fix + feature) do not count. Rule: features / refactorings / measurement WPs count only if a group
-changes ≥ 1.3x or a hot-spot ranking shifts. The `interp/dsg`, `interplin/dsg` and `expensive/`
+(feature, 1.002x) and WP-83 (bug fix + feature, 0.996x = noise) do not count. Rule: features /
+refactorings / measurement WPs count only if a group changes ≥ 1.3x or a hot-spot ranking shifts. The `interp/dsg`, `interplin/dsg` and `expensive/`
 cases have no baseline values (reported absolutely; `expensive/` history in
 `results/WP-76/history/`, rp-6 values in `results/RP-6/e2e-expensive-rp-5-vs-rp-6.md`).
 
 ## Log (newest first; older entries in HISTORY.md)
 
-- 2026-11-21 WP-79 summary processed: **accepted** by the owner incl. the owner's staged rework
-  (commit pending): `textbookQuadrature` / `textbookInterpolate` / `textbookInterpolateLinear` (C++ +
-  Python), judged 1.002x, `expensive/` 0.999x, memory 1.008 (0 flags), refcheck = known WARN.
-  Follow-ups (owner): new **WP-83** (cheb1 SG quadrature `std::terminate` + cheb1 quadrature rule;
-  owner: before WP-61); `interpolateLinear` boundary-cell doc sentence → backlog K. Not planned
-  (owner): per-TG values variant for adaptive indicators, `CPPLINT.cfg` filter (backlog A1 stays).
-  2 "Do not retry" lines. Ranks unchanged (no new optimization evidence). WP-83 prompt issued.
+- 2026-11-22 WP-83 summary processed: **accepted** by the owner incl. the owner's staged rework
+  (checkpoint 18346c71d; commit pending): cheb1 SG quadrature (`FejerFirstQuadRule`, interpolatory with
+  boundary nodes; owner in-session: additive virtual `getQuadRule(n, includeBoundary)`), rules obtained
+  serially (`std::terminate` → exception). Judged 0.996x (noise), `expensive/` 0.999x, memory 1.003
+  (0 flags), refcheck = known WARN, existing results bitwise. Owner: follow-ups → new **WP-84** (equi /
+  CC rules below an offset ≥ 2, functional agreed; owner places it) and **WP-85** (generic
+  capture-and-rethrow in the operators' OpenMP regions; rank 14, after WP-77; ranks ≥ 14 +1). Rule cost
+  at levels ≥ 15: not planned. 1 "Do not retry" line, 1 measurement note. WP-61 prompt issued.

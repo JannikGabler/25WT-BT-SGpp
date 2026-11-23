@@ -36,10 +36,6 @@ namespace misc {
  * of the row (bitwise the weights of the rule; @c includeBoundary iff the level is at least the
  * boundary level offset), on the unit interval (the domain volume is applied by the operator).
  *
- * The rules of all rows are obtained by the constructor, serially: a node family without a rule
- * throws there (outside the operator's parallel region, so the caller gets the exception) and the
- * rows are then filled by the rules' weight generation only.
- *
  * A row is computed once, by the thread that requests it first, which also allocates it; threads
  * that need it meanwhile wait for it. Rows are requested on their first use (@ref weights) or all
  * at once by the threads of a parallel region (@ref computeAllRows), the largest first, so that
@@ -53,8 +49,6 @@ class QuadWeightTable {
    * @brief Constructs the table of @p sparseGrid with all rows not yet computed; obtains the
    * quadrature rule of every row.
    * @param sparseGrid Sparse grid; must outlive the table.
-   * @throws Whatever @c NodeGenFunc::getQuadRule throws for a row (e.g. a node family without a
-   * quadrature rule).
    */
   explicit QuadWeightTable(const SparseGrid& sparseGrid);
 

@@ -52,8 +52,7 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
   Getters
   ******/
   /// @copydoc NodeGenFunc::getQuadRule
-  QuadRule* getQuadRule(GPCntType nNodes) const override;
-  using NodeGenFunc::getQuadRule;  // The overload with the boundary flag (default)
+  QuadRule* getQuadRule(GPCntType nNodes, bool includeBoundary) const override;
 
   /// @copydoc NodeGenFunc::getInterpolationMethod
   InterpolationMethod* getInterpolationMethod(GPCntType nNodes) const override;

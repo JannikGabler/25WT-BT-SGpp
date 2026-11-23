@@ -78,6 +78,7 @@
 #include "perf_harness.hpp"
 #include "perf_interp_sol.hpp"
 #include "perf_problems.hpp"
+#include "sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp"
 
 using sgpp::combigrid::CompleteSGGenInstr;
 using sgpp::combigrid::DeltasSparseGrid;
@@ -354,9 +355,9 @@ void addSolQuadTG(Suite& suite, const std::string& nodes, const LvlType boundary
     perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
     const SparseGrid sg(genInstr);
     const SourceFunc sourceFunc(perf::expSum);
-    const TensorGrid tg = sg.getUnitTensorGrid(largestTGIdx(sg)).tensorGrid.toTensorGrid();
+    const TensorGridCTData tgData = sg.getUnitTensorGrid(largestTGIdx(sg)).toTensorGridCTData();
     const HyperCubeArea& domain = sg.getGenInstr().getDomain();
-    const cg::GPMI& nPerDim = tg.getGPCntPerDim();
+    const cg::GPMI& nPerDim = tgData.tensorGrid.getGPCntPerDim();
 
     // Per-dimension nodes on the domain and 1D weights
     std::vector<std::vector<double>> x(nDim), w(nDim);
@@ -366,14 +367,18 @@ void addSolQuadTG(Suite& suite, const std::string& nodes, const LvlType boundary
       x[k].resize(n);
       w[k].resize(n);
       for (GPCntType i = 0; i < n; i++) {
-        x[k][i] = tg.getNodesPerDim()[offset + i] * (domain[k].second - domain[k].first) +
-                  domain[k].first;
+        x[k][i] =
+            tgData.tensorGrid.getNodesPerDim()[offset + i] * (domain[k].second - domain[k].first) +
+            domain[k].first;
       }
-      sg.getGenInstr().getNodeGenFuncForDim(k)->getQuadRule(n)->genWeightsInplace(w[k]);
+      sg.getGenInstr()
+          .getNodeGenFuncForDim(k)
+          ->getQuadRule(n, tgData.mi[k] >= boundary)
+          ->genWeightsInplace(w[k]);
       offset += n;
     }
 
-    run.setItems(static_cast<double>(tg.nGP()));
+    run.setItems(static_cast<double>(tgData.tensorGrid.nGP()));
     run.measure([&]() {
       std::vector<GPCntType> idx(nDim, 0);
       DataVector gp(nDim);

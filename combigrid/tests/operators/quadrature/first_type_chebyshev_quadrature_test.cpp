@@ -135,8 +135,8 @@ void checkExact(SGGenInstr& genInstr, const LvlMI& ell, const LvlType boundary,
 /// Equidistant nodes whose quadrature rule is missing (a user-defined family without a rule).
 class NoRuleNodeGenFunc : public sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc {
  public:
-  QuadRule* getQuadRule(GPCntType /*nNodes*/) const override {
-    throw sgpp::base::not_implemented_exception("NoRuleNodeGenFunc: no quadrature rule");
+  QuadRule* getQuadRule(GPCntType /*nNodes*/, bool) const override {
+    throw sgpp::base::not_implemented_exception("No quadrature rule");
   }
 };
 

@@ -76,7 +76,8 @@ void EquidistantNodeGenFunc::genDeltaNodesWithoutBoundary(const LvlType lvl,
 Getters
 ******/
 
-QuadRule* EquidistantNodeGenFunc::getQuadRule(const GPCntType nNodes) const {
+// TODO: includeBoundary is currently ignored
+QuadRule* EquidistantNodeGenFunc::getQuadRule(const GPCntType nNodes, bool includeBoundary) const {
   if (nNodes & 1) {  // nNodes is odd
     return getSimpsonQuadRule();
   } else {  // nNodes is even

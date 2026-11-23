@@ -155,6 +155,10 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   measurably faster even with LTO.
 - **One type per file** avoid multiple or nested structs, classes, etc. in a single file.
 - **Methods > 30 lines** get decomposed (rare exceptions for optimization).
+- **Extending existing code** (guideline, not a hard rule): when extending existing functionality
+  (e.g. adding a parameter to an operation), prefer adjusting the existing code over adding new code
+  on top of it whenever the new code would make the existing code obsolete / unnecessary (e.g. the
+  new code could completely replace the existing one).
 - **Errors**: `assert` for internal invariants; otherwise throw an exception
 - **Parallelism**: OpenMP in the operator drivers and internally (gated by `constants.hpp`).
 

@@ -198,14 +198,6 @@ BOOST_AUTO_TEST_CASE(node_families_return_their_rules) {
   for (const GPCntType n : {1u, 3u, 5u, 17u}) {
     BOOST_CHECK(cheb1->getQuadRule(n, false) == sgpp::combigrid::getFejerFirstQuadRule(false));
     BOOST_CHECK(cheb1->getQuadRule(n, true) == sgpp::combigrid::getFejerFirstQuadRule(true));
-    // The overload without the flag: the node set with the boundary nodes, as for all families
-    BOOST_CHECK(cheb1->getQuadRule(n) == cheb1->getQuadRule(n, true));
-    // The other families: one rule regardless of the boundary nodes (unchanged)
-    for (const NodeGenFunc* family : {sgpp::combigrid::getEquidistantNodeGenFunc(),
-                                      sgpp::combigrid::getClenshawCurtisNodeGenFunc()}) {
-      BOOST_CHECK(family->getQuadRule(n, false) == family->getQuadRule(n));
-      BOOST_CHECK(family->getQuadRule(n, true) == family->getQuadRule(n));
-    }
   }
 }
 

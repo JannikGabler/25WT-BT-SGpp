@@ -48,9 +48,6 @@ namespace combigrid {
  * @param sparseGrid Sparse grid with attached generation instruction.
  * @param options    Options (see @c QuadratureOptions).
  * @return Approximated integral value.
- * @throws Whatever @c NodeGenFunc::getQuadRule throws (e.g. @c base::not_implemented_exception
- * for a node family without a quadrature rule): the rules are obtained before the parallel
- * region (also by the vector-valued overloads).
  */
 double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
                   const QuadratureOptions& options = QuadratureOptions());

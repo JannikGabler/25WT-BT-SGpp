@@ -21,6 +21,9 @@ are not in [README.md](README.md). Maintained by the master session; current sta
 - **Load-balance model** (RP-6, `results/RP-6/schedule_sim.py`): makespan with cost of a TG = its
   points reproduces `expensive/mivec/sg` c100us exactly (dynamic / guided). SG `interpolateLinear`
   has uniform per-TG cost (2^d corners) → no size-based order there.
+- **SG quadrature at 16 t is not bitwise reproducible** (until WP-61): the `reduction(+)` order varies
+  between rounds; `quad/sg/equi-exp/b1/d15/L6` differs by up to 5e-7 absolute within one snapshot's 5
+  rounds (WP-83) → the e2e "result sanity" line is not evidence of a change there; bitwise pins are 1 t.
 - **Cross-call cache in e2e**: the pipelines build a new grid per run → the cache never hits in the
   judged suite; repeated-call gains need dedicated benchmarks (WP-73 / WP-82).
 
@@ -103,5 +106,10 @@ are not in [README.md](README.md). Maintained by the master session; current sta
   sound up to level 9 instead of 8 (level ≥ 10 NaN), dropped (owner: readability over range; plain
   product ≤ 1e-14 up to level 8, documented). `{1, 0}` weights for a degenerate linear cell → `{0.5,
   0.5}` as `interpolateLinear` (same results, also for inf values).
+- WP-83 Bluestein FFT for the cheb1 / Fejér-1 rule with one `Eigen::FFT` object per transform + `fft.inv`
+  (3 twiddle tables per row): 1.08–1.28x slower than one plan with forward transforms only (inverse
+  by conjugation); cheb1 SG d2 L16 operator 161.7 vs. 157.6 ms. Enabling cheb1 quadrature in the
+  cached-source-function tests: their `withQuadrature` flag also builds a DSG, which cheb1 (not nested)
+  cannot have → keep cheb1 without quadrature there.
 - RP-4 `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows`: 0.994x → the WP-52 −1 % is not
   recoverable this way.

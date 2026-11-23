@@ -153,7 +153,9 @@ void checkWeightsOfAllTensorGrids(const SparseGrid& sg) {
     for (size_t dim = 0; dim < sg.nDim(); dim++) {
       const GPCntType nNodes = tg.nGPInDim(dim);
       const DataVector expected =
-          genInstr.getNodeGenFuncForDim(dim)->getQuadRule(nNodes)->genWeights(nNodes);
+          genInstr.getNodeGenFuncForDim(dim)
+              ->getQuadRule(nNodes, tgData.mi[dim] >= genInstr.getBoundaryLevelOffset())
+              ->genWeights(nNodes);
       const std::span<const double> used(scratch.rows.weightsOfDim[dim], nNodes);
 
       BOOST_CHECK_MESSAGE(bitwiseEqual(used, expected),
