@@ -68,8 +68,9 @@ using NestedStdVec = typename NestedStdVecSelector<T, D>::type;
  *   @c size() is the number of top-level sub-vectors and whose iteration
  *   visits them).
  *
- * The container is built by converting a nested @c std::vector or
- * incrementally, mirroring the calls on a nested vector:
+ * The container is built by converting a nested @c std::vector, with a
+ * rectangular shape (@c FlatNestedVec<double, 2>({n, m}): @c n sub-vectors of
+ * @c m elements each) or incrementally, mirroring the calls on a nested vector:
  * @code
  * FlatNestedVec<double, 3> fv;  // nested
  * fv.appendSubVec(1);           // nested.emplace_back();
@@ -91,9 +92,7 @@ using NestedStdVec = typename NestedStdVecSelector<T, D>::type;
  * <b>Hot loops.</b> SG++ compiles with strict aliasing, so storing elements
  * does not make the compiler reload the container's array pointers and
  * offsets: in a loop, chained @c fv[x1]...[xD] writes compile like writes
- * through a local span (@c FlatNestedVec<double, 3>: 0.64 ns per element
- * either way, nested vector 0.67 ns; 4.5 ns chained with
- * @c -fno-strict-aliasing). Keep the view or span of the sub-vector being
+ * through a local span. Keep the view or span of the sub-vector being
  * worked on in a local variable (or iterate with range-for) when the loop also
  * - stores pointers to @p T, e.g. into other containers (GCC gives pointers to
  *   @c T and to @c const @c T one alias set, so they alias the container's
@@ -163,6 +162,46 @@ class FlatNestedVec {
   FlatNestedVec() noexcept = default;
 
   /**
+   * @brief Constructs an empty container with capacity for at least
+   * @p nElemsCapacity elements (like @ref reserve()).
+   *
+   * @note Unlike @c std::vector(n), no elements are created: for @p D >= 2
+   * elements need parent sub-vectors. To create elements, use the constructor
+   * taking a shape.
+   * @param nElemsCapacity Number of elements to reserve capacity for.
+   */
+  explicit FlatNestedVec(const size_type nElemsCapacity) { data_.reserve(nElemsCapacity); }
+
+  /**
+   * @brief Constructs a rectangular container: @c shape[0] top-level
+   * sub-vectors, each entry of depth @f$k \in \{1, \ldots, D-1\}@f$ has
+   * @c shape[k] children, and the @f$\prod_k@f$ @c shape[k] elements are
+   * value-initialized.
+   *
+   * Equivalent to the nested vector built with nested size constructors, e.g.
+   * @c FlatNestedVec<double, 2>({n, m}) represents
+   * @c std::vector<std::vector<double>>(n, std::vector<double>(m)). Allocates
+   * every array exactly once. The container can be extended (made ragged)
+   * afterwards like any other.
+   *
+   * @param shape Number of children per entry of every depth; @c shape[0] is
+   *              the number of top-level entries, @c shape[D-1] the number of
+   *              elements per sub-vector of depth @p D-1. The number of entries
+   *              of every depth below 1 must fit into @p Index (checked by
+   *              @c assert).
+   */
+  explicit FlatNestedVec(const std::array<size_type, D>& shape) {
+    size_type nParents = shape[0];
+
+    for (std::size_t k = 0; k + 1 < D; k++) {
+      fillUniformOffsets(offsets_[k], nParents, shape[k + 1]);
+      nParents *= shape[k + 1];
+    }
+
+    data_.resize(nParents);
+  }
+
+  /**
    * @brief Constructs the flat representation of the nested vector @p nested.
    *
    * Allocates every array exactly once.
@@ -173,11 +212,14 @@ class FlatNestedVec {
     } else {
       std::array<size_type, D> nEntriesPerDepth{};
       countEntries<1>(nested, nEntriesPerDepth);
+
       for (std::size_t k = 0; k + 1 < D; k++) {
         if (nEntriesPerDepth[k] == 0) continue;
+
         offsets_[k].reserve(nEntriesPerDepth[k] + 1);
         offsets_[k].push_back(0);
       }
+
       data_.reserve(nEntriesPerDepth[D - 1]);
       appendNested<1>(nested);
     }
@@ -496,6 +538,23 @@ class FlatNestedVec {
   static constexpr bool sumFitsIndex(const size_type a, const size_type b) noexcept {
     constexpr size_type MAX = std::numeric_limits<Index>::max();
     return a <= MAX && b <= MAX - a;
+  }
+
+  /**
+   * @brief Fills the offset array @p off for @p nParents sub-vectors with
+   * @p nChildren children each. Leaves @p off empty if @p nParents is 0.
+   */
+  static void fillUniformOffsets(std::vector<Index>& off, const size_type nParents,
+                                 const size_type nChildren) {
+    if (nParents == 0) return;
+
+    assert(nChildren == 0 || nParents <= std::numeric_limits<Index>::max() / nChildren);
+
+    off.resize(nParents + 1);
+
+    for (size_type i = 0; i <= nParents; i++) {
+      off[i] = static_cast<Index>(i * nChildren);
+    }
   }
 
   /// @brief Base pointers of the offset arrays below depth 1 (see @c FlatNestedVecView).

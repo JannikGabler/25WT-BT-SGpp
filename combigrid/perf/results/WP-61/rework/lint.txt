@@ -1,0 +1,15 @@
+cpplint (tools/cpplint.py --extensions=cpp,hpp --linelength=100, repo CPPLINT.cfg) + check_copyright_banners.py
++ check_includes.py on every added / modified .cpp/.hpp of the staged diff (B), compared with the same
+files in A (809b8cfe1). build/include_order is reported for every SG++ file (filtered by the build) and omitted.
+
+New in B:
+  combigrid/src/sgpp/combigrid/miscellaneous/cpp_concepts/cpp_concepts.hpp:33  You don't need a ; after a }  [readability/braces] [4]
+      (false positive on the requires-expression of static_castable_to; needs // NOLINT or a reformulation)
+  combigrid/src/sgpp/combigrid/miscellaneous/cpp_concepts/cpp_concepts.hpp:38  Could not find a newline character at the end of the file.  [whitespace/ending_newline] [5]
+Unchanged from A (pre-existing, same message, shifted lines):
+  flat_nested_vector.hpp:506 (A: 464)  Add #include <algorithm> for swap
+  thread_count_independent_quadrature_test.cpp:137 (A: 134)  Add #include <utility> for pair<>
+  compensated_sum_test.cpp:64 (A: 63)  Missing space before {
+Banner / include checks: clean.
+Note: the build did not re-lint these files (their .lint stamps were newer than the sources), so the
+build log shows none of these warnings.

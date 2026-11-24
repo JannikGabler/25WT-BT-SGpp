@@ -12,7 +12,7 @@
 
 #include <functional>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/tools/concepts/strict_subclass_of.hpp>
+#include <sgpp/combigrid/miscellaneous/cpp_concepts/cpp_concepts.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 
@@ -67,11 +67,11 @@ class VectorSourceFunc {
    * overrides, e.g. @c finishOperatorCall (slicing). Pass such objects by reference. Not
    * explicit, so that it also catches copy-initialization (@c VectorSourceFunc f = cached;).
    */
-  template <tools::StrictSubclassOf<VectorSourceFunc> Subclass>
+  template <misc::StrictSubclassOf<VectorSourceFunc> Subclass>
   VectorSourceFunc(Subclass&& other) = delete;  // NOLINT(runtime/explicit)
 
   /// @brief Assigning an object of a subclass is not allowed either (slicing, see above).
-  template <tools::StrictSubclassOf<VectorSourceFunc> Subclass>
+  template <misc::StrictSubclassOf<VectorSourceFunc> Subclass>
   VectorSourceFunc& operator=(Subclass&& other) = delete;
 
   // Hidden from SWIG as well: the bindings replace the destructor by an %extend destructor

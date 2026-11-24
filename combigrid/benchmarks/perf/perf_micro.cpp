@@ -61,7 +61,7 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
-#include <sgpp/combigrid/tools/math/compensated_sum.hpp>
+#include <sgpp/combigrid/tools/numerics/compensated_sum_tools.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/interpolation_methods/default_methods/barycentric_formula.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
@@ -79,9 +79,9 @@
 #include "perf_harness.hpp"
 #include "perf_interp_sol.hpp"
 #include "perf_problems.hpp"
-#include "sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp"
 
 using sgpp::combigrid::CompleteSGGenInstr;
+using sgpp::combigrid::CTCoeffType;
 using sgpp::combigrid::DeltasSparseGrid;
 using sgpp::combigrid::GPCntType;
 using sgpp::combigrid::HyperCubeArea;
@@ -271,7 +271,8 @@ void addCompensatedCombination(Suite& suite, const std::string& nodes, const Lvl
         run.setItems(static_cast<double>(nTG));
         run.setCounter("nTG", static_cast<double>(nTG));
         run.measure([&]() {
-          doNotOptimize(cg::tools::compensatedDotProduct(sg.getCoefficients(), estimates));
+          doNotOptimize(cg::tools::numerics::compensatedDotProduct<double, CTCoeffType, double>(
+              sg.getCoefficients(), estimates));
         });
       });
 }

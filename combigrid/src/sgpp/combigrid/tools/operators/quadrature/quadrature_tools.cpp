@@ -10,6 +10,7 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/tools/operators/cross_call/cross_call_operator_data_tools.hpp>
@@ -17,6 +18,7 @@
 #include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
+#include <vector>
 
 using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;
@@ -28,12 +30,12 @@ namespace combigrid {
 namespace tools {
 namespace quadrature {
 
-void estimateTensorGrids(const QuadratureContext& context, const SourceFunc& sourceFunc,
-                         const std::span<double> tgEstimates) {
+std::vector<double> estimateTensorGrids(const QuadratureContext& context,
+                                        const SourceFunc& sourceFunc) {
   const SparseGrid& sparseGrid = context.sparseGrid;
   const size_t nTG = sparseGrid.nTG();
-  assert(tgEstimates.size() == nTG);
-  double* const estimates = tgEstimates.data();
+
+  std::vector<double> estimates(nTG);
 
 #pragma omp parallel
   {
@@ -47,28 +49,32 @@ void estimateTensorGrids(const QuadratureContext& context, const SourceFunc& sou
           context, sourceFunc, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid, scratch);
     }
   }
+
+  return estimates;
 }
 
-void estimateTensorGrids(const QuadratureContext& context, const VectorSourceFunc& sourceFunc,
-                         const std::span<double> tgEstimates) {
+misc::FlatNestedVec<double, 2> estimateTensorGrids(const QuadratureContext& context,
+                                                   const VectorSourceFunc& sourceFunc) {
   const SparseGrid& sparseGrid = context.sparseGrid;
   const size_t nTG = sparseGrid.nTG();
   const size_t nOutputs = sourceFunc.nOutputs();
-  assert(tgEstimates.size() == nTG * nOutputs);
-  double* const estimates = tgEstimates.data();
+
+  misc::FlatNestedVec<double, 2> estimates({nTG, nOutputs});
 
 #pragma omp parallel
   {
     QuadratureScratch scratch(sparseGrid.nDim(), nOutputs);
-    context.weightTable.computeAllRows();  // As in the scalar operator
+    context.weightTable.computeAllRows();  // Nowait operation: Threads can immediately continue
 
-    // Dynamic scheduling as in the scalar operator
+    // The tensor grids differ in size by orders of magnitude -> Dynamic scheduling
 #pragma omp for schedule(dynamic) nowait
     for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
       processTensorGrid(context, sourceFunc, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid,
-                        scratch, std::span<double>(estimates + tgIdx * nOutputs, nOutputs));
+                        scratch, estimates[tgIdx]);
     }
   }
+
+  return estimates;
 }
 
 double processTensorGrid(const QuadratureContext& context, const SourceFunc& sourceFunc,

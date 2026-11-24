@@ -58,7 +58,7 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 | – | WP-84 | Quadrature rules for inner-only nodes: equi / CC below an offset ≥ 2 override `getQuadRule(n, includeBoundary)` (CC → Fejér-2; equi: session proposes; results at b ≥ 2 change, agreed 11-22) | ready · **unranked** (owner places it) |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point (cache warm-up, testing; name / result / dedup in-session; owner's request) | ready · **unranked** (owner places it) |
 | – | WP-81 | Explanation / visualization foundations: exploration + requirements with the owner in-session (info helpers, strings, plots) → implementation WPs | ready · **unranked** (owner places it) |
-| 1 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG sums in TG order); **before WP-77** (its reordering then stays bitwise, one re-pinning); after WP-83 (same driver) | **in progress** (prompt 11-22; functional: agreed 11-15) |
+| 1 | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG sums in TG order); **before WP-77** (its reordering then stays bitwise, one re-pinning); after WP-83 (same driver) | **proposed** (summary 11-23; owner's staged rework → verification session first) |
 | 2 | WP-77 | TG-loop load balance: largest-first TG order (SG quad / mivec, DSG quad, SG interp) + SG interplin dynamic; optional TG split variant (RP-6: suite 0.25–0.4 s, `expensive/` 1.1–1.6 s; absorbs WP-59) | ready (after WP-61) |
 | 3 | WP-74 | DSG lin. interp.: fused last transform + vectorized fiber transform + 1–4-leaf evaluation chunks (RP-6: 0.05–0.08 s = 6–10 % of interplin/dsg; `expensive/` d5 −45 %) | ready (low) |
 | 4 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-6: 0.1–0.15 s, b1 d15 / d20 only) | ready |
@@ -88,8 +88,10 @@ Do-not-retry list, measurement notes: [LESSONS.md](LESSONS.md)
 
 ## Next action
 
-**WP-61 in progress** (prompt 11-22; rank 1: bitwise thread-count-independent SG quadrature, makes
-WP-77's reordering bitwise neutral). Owner commits "Accept WP-83" (checkpoint 18346c71d + the owner's
+**WP-61 proposed** (summary 11-23: bitwise thread-count independent, compensated TG-order sum,
+0.998x = noise). The owner staged a rework (concepts → `miscellaneous/cpp_concepts/`, compensated sum →
+`tools/numerics/`, `FlatNestedVector` additions); a verification session checks it against checkpoint
+809b8cfe1 (prompt 11-23), then the owner decides. Owner commits "Accept WP-83" (checkpoint 18346c71d + the owner's
 staged rework; STATUS / PLAN / HISTORY / LESSONS) before WP-61 starts. Next master start: process
 WP-61, then **WP-77** (largest-first TG order; TG split as optional variant). Adaptive WPs 63–72 wait
 for the owner (D1–D9 + placement); WP-84 / WP-80 / WP-81 wait for the owner's placement. Hygiene
@@ -126,6 +128,9 @@ cases have no baseline values (reported absolutely; `expensive/` history in
 
 ## Log (newest first; older entries in HISTORY.md)
 
+- 2026-11-23 WP-61 summary read (PROPOSED: bitwise 1/2/3/16 t, round-off ≈ 1 ulp, judged 0.998x,
+  memory 0.999, 0 flags; refcheck = known WARN). Owner staged a rework → verification-only session
+  (rework vs. checkpoint 809b8cfe1: bits, tests, Python, runtime, conventions); decision after it.
 - 2026-11-22 WP-83 summary processed: **accepted** by the owner incl. the owner's staged rework
   (checkpoint 18346c71d; commit pending): cheb1 SG quadrature (`FejerFirstQuadRule`, interpolatory with
   boundary nodes; owner in-session: additive virtual `getQuadRule(n, includeBoundary)`), rules obtained

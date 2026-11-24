@@ -42,7 +42,7 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
-#include <sgpp/combigrid/tools/math/compensated_sum.hpp>
+#include <sgpp/combigrid/tools/numerics/compensated_sum_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -53,6 +53,7 @@ namespace {
 
 using sgpp::base::DataVector;
 using sgpp::combigrid::CompleteSGGenInstr;
+using sgpp::combigrid::CTCoeffType;
 using sgpp::combigrid::HyperCubeArea;
 using sgpp::combigrid::LvlMI;
 using sgpp::combigrid::LvlMIVec;
@@ -64,6 +65,8 @@ using sgpp::combigrid::SGGenInstr;
 using sgpp::combigrid::SourceFunc;
 using sgpp::combigrid::SparseGrid;
 using sgpp::combigrid::VectorSourceFunc;
+using sgpp::combigrid::tools::numerics::compensatedDotProduct;
+using sgpp::combigrid::tools::numerics::compensatedDotProducts;
 
 constexpr size_t N_OUTPUTS = 3;
 const std::vector<int> THREAD_COUNTS{1, 2, 3, 16};
@@ -205,8 +208,8 @@ std::vector<std::vector<double>> tensorGridEstimates(const SparseGrid& grid) {
   return estimates;
 }
 
-/// Volume times the compensated combination (tools::compensatedDotProduct(s)) of the estimates
-/// in tensor grid order: the scalar value, then the m vector-valued ones.
+/// Volume times the compensated combination (tools::numerics::compensatedDotProduct(s)) of the
+/// estimates in tensor grid order: the scalar value, then the m vector-valued ones.
 std::vector<double> combineInOrder(const SparseGrid& grid,
                                    const std::vector<std::vector<double>>& estimates,
                                    const double volume) {
@@ -216,9 +219,9 @@ std::vector<double> combineInOrder(const SparseGrid& grid,
     vec.insert(vec.end(), tgValues.begin() + 1, tgValues.end());
   }
   std::vector<double> result(1 + N_OUTPUTS);
-  result[0] = sgpp::combigrid::tools::compensatedDotProduct(grid.getCoefficients(), scalar);
-  sgpp::combigrid::tools::compensatedDotProducts(grid.getCoefficients(), vec,
-                                                 std::span<double>(result).subspan(1));
+  result[0] = compensatedDotProduct<double, CTCoeffType, double>(grid.getCoefficients(), scalar);
+  compensatedDotProducts<double, CTCoeffType, double>(grid.getCoefficients(), vec,
+                                                      std::span<double>(result).subspan(1));
   for (double& value : result) value *= volume;
   return result;
 }

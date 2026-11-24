@@ -19,6 +19,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -152,6 +153,46 @@ BOOST_AUTO_TEST_CASE(testDefaultConstructedIsEmpty) {
   BOOST_CHECK(fv.begin() == fv.end());
   BOOST_CHECK(fv.toNested().empty());
   BOOST_CHECK((fv == FlatNestedVec<double, 3>(NestedStdVec<double, 3>{})));
+}
+
+BOOST_AUTO_TEST_CASE(testCapacityConstructorOnlyReserves) {
+  const FlatNestedVec<double, 3> fv(100);
+  BOOST_TEST(fv.capacity() >= 100U);
+  BOOST_TEST(fv.empty());
+  BOOST_TEST(fv.nEntries(1) == 0U);
+  BOOST_CHECK((fv == FlatNestedVec<double, 3>()));
+
+  const FlatNestedVec<int, 1> flat(7);
+  BOOST_TEST(flat.capacity() >= 7U);
+  BOOST_TEST(flat.empty());
+}
+
+BOOST_AUTO_TEST_CASE(testShapeConstructor) {
+  // Depth 2: n x m, value-initialized.
+  const FlatNestedVec<double, 2> fv2({3, 4});
+  checkRepresents(fv2, NestedStdVec<double, 2>(3, std::vector<double>(4)));
+  BOOST_TEST(fv2.capacity() == 12U);
+
+  // Depth 3 with a narrow index type.
+  const FlatNestedVec<int, 3, std::uint16_t> fv3({2, 3, 5});
+  checkRepresents(fv3, NestedStdVec<int, 3>(2, NestedStdVec<int, 2>(3, std::vector<int>(5))));
+
+  // Depth 1 behaves like std::vector(n).
+  checkRepresents(FlatNestedVec<int, 1>(std::array<std::size_t, 1>{4}), std::vector<int>(4));
+
+  // Zeros at any depth: empty sub-vectors below, no entries below them.
+  checkRepresents(FlatNestedVec<double, 3>({0, 3, 5}), NestedStdVec<double, 3>{});
+  checkRepresents(FlatNestedVec<double, 3>({2, 0, 5}), NestedStdVec<double, 3>(2));
+  checkRepresents(FlatNestedVec<double, 3>({2, 3, 0}),
+                  NestedStdVec<double, 3>(2, NestedStdVec<double, 2>(3)));
+  BOOST_CHECK((FlatNestedVec<double, 3>({0, 0, 0}) == FlatNestedVec<double, 3>()));
+
+  // The result can be written and extended like any other container.
+  FlatNestedVec<double, 2> grown({2, 2});
+  grown[1][0] = 1.5;
+  grown.appendSubVec(1, 1);
+  grown.push_back(2.5);
+  checkRepresents(grown, NestedStdVec<double, 2>{{0, 0}, {1.5, 0}, {0, 2.5}});
 }
 
 BOOST_AUTO_TEST_CASE(testDepth1BehavesLikeVector) {

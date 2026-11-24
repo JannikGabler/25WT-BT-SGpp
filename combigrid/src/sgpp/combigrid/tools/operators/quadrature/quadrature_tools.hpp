@@ -19,7 +19,9 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <span>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -28,6 +30,7 @@ namespace tools {
 namespace quadrature {
 
 /**
+ * TODO: Document (@return tag)
  * @brief Computes the quadrature estimate of every tensor grid of @c context.sparseGrid (unit
  * hypercube, without the coefficient) in parallel and stores it at the index of the tensor grid.
  *
@@ -38,21 +41,19 @@ namespace quadrature {
  *
  * @param context     Read-only data of the quadrature call.
  * @param sourceFunc  Source function.
- * @param tgEstimates Output: the estimate of tensor grid i at index i (size nTG).
  */
-void estimateTensorGrids(const misc::QuadratureContext& context, const SourceFunc& sourceFunc,
-                         std::span<double> tgEstimates);
+std::vector<double> estimateTensorGrids(const misc::QuadratureContext& context,
+                                        const SourceFunc& sourceFunc);
 
 /**
+ * TODO: Document (@return tag)
  * @brief @ref estimateTensorGrids for a vector-valued source function.
  *
  * @param context     Read-only data of the quadrature call.
  * @param sourceFunc  Vector-valued source function (m outputs).
- * @param tgEstimates Output: the m estimates of tensor grid i at indices i m, ..., i m + m - 1
- *                    (size nTG m).
  */
-void estimateTensorGrids(const misc::QuadratureContext& context, const VectorSourceFunc& sourceFunc,
-                         std::span<double> tgEstimates);
+misc::FlatNestedVec<double, 2> estimateTensorGrids(const misc::QuadratureContext& context,
+                                                   const VectorSourceFunc& sourceFunc);
 
 /**
  * @brief Tensor-product quadrature on a single tensor grid.

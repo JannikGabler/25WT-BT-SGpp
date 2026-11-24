@@ -1,0 +1,4 @@
+[-std=c++23 -O0] compensated sum A vs B: 6800 checks, 0 bitwise differences
+[-std=c++23 -O3 -march=native] compensated sum A vs B: 6800 checks, 0 bitwise differences
+[-std=gnu++23 -O3 -march=native -ffp-contract=fast] compensated sum A vs B: 6800 checks, 0 bitwise differences
+[-std=c++23 -O3 -march=native -DNDEBUG -flto] compensated sum A vs B: 6800 checks, 0 bitwise differences

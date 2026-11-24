@@ -1,0 +1,10 @@
+pinning_quad_dump.cpp (results/WP-61/), built against A = 809b8cfe1 headers + snapshot WP-61-rework-A
+and against B = staged tree + snapshot WP-61-rework-B (108 lines: SG quadrature, scalar + 3 vector
+outputs, configurations of grid_storage_pinning).
+The program forces 1 thread (omp_set_num_threads(1)), so only the 1-thread comparison is meaningful:
+  A == B : identical output (diff empty)
+  B      == results/WP-61/pinning_quad_values_after.txt (the values pinned by WP-61)
+Thread counts 1/2/3/16: see reference_bits.txt (perf_reference, all 54 SG quad / mivec cases
+bitwise equal across 1/2/3/16 t in A and in B, and A == B) and the Boost test
+thread_count_independent_quadrature (passes in B).
+B output: pinning_quad_values_B.txt
