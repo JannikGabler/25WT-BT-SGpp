@@ -6,25 +6,56 @@
 /**
  * @file deltas_sparse_grid_quadrature_tools.hpp
  * @brief Quadrature-specific internals of the quadrature operator on a @c DeltasSparseGrid: the
- * 1D quadrature weights in delta order and the vector-valued combination. The grid points are
- * summed with their global weights by @c tools::dsg_weighted_sum (shared with the global
+ * 1D quadrature weights in delta order and the parallel loop over the delta tensor grids. The grid
+ * points are summed with their global weights by @c tools::dsg_weighted_sum (shared with the global
  * interpolation; see there for the global weights and the delta order).
  */
 #pragma once
 
 #include <memory>
+#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_quadrature_index.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <span>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
 
 namespace tools {
 namespace dsg_quadrature {
+
+/**
+ * @brief Computes the value of every delta tensor grid of @c context.deltasSparseGrid
+ * (@c tools::dsg_weighted_sum::processDeltaTensorGrid: the sum of the global weights times the
+ * source function over its grid points, on the unit hypercube) in parallel and stores it at the
+ * index of the delta tensor grid.
+ *
+ * Every value is computed by one thread with the same operations at every thread count, so the
+ * values do not depend on the number of threads or the schedule; summed serially in the order of
+ * the delta tensor grids (@c tools::numerics::compensatedSum), the quadrature results are
+ * bitwise independent of both.
+ *
+ * @param context    Read-only data of the delta quadrature call.
+ * @param sourceFunc Source function.
+ * @return The value of delta tensor grid i at index i (size nTG).
+ */
+std::vector<double> estimateDeltaTensorGrids(const misc::GenericDSGOperatorContext& context,
+                                             const SourceFunc& sourceFunc);
+
+/**
+ * @brief @ref estimateDeltaTensorGrids for a vector-valued source function.
+ *
+ * @param context    Read-only data of the delta quadrature call.
+ * @param sourceFunc Vector-valued source function (m outputs).
+ * @return The m values of delta tensor grid i as sub-vector i (nTG sub-vectors of m values; the
+ *         elements are index-major, i.e. the values of delta tensor grid i at i m, ...,
+ *         i m + m - 1).
+ */
+misc::FlatNestedVec<double, 2> estimateDeltaTensorGrids(
+    const misc::GenericDSGOperatorContext& context, const VectorSourceFunc& sourceFunc);
 
 /**
  * @brief Computes the 1D quadrature weights of every level of every dimension in delta order.
@@ -37,18 +68,6 @@ namespace dsg_quadrature {
  * nodes of level @c m start at index @c weights1D[dim][m-1].size() (at 0 for @c m = 0).
  */
 misc::FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid);
-
-/**
- * @brief Sets @p result to the sum of @c tools::dsg_weighted_sum::processDeltaTensorGrid
- * (vector-valued, with the quadrature weights) over the delta tensor grids of
- * @c context.deltasSparseGrid (on the unit domain), in parallel.
- *
- * @param context    Read-only data of the delta quadrature call.
- * @param sourceFunc Vector-valued source function (m outputs).
- * @param result     Output: the m sums (size m).
- */
-void combineDeltaTensorGrids(const misc::GenericDSGOperatorContext& context,
-                             const VectorSourceFunc& sourceFunc, std::span<double> result);
 
 /**
  * @brief Returns the query-independent data of the quadrature on @p deltasSparseGrid (1D weights,

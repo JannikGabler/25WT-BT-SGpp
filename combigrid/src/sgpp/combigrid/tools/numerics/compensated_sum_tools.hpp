@@ -16,12 +16,13 @@
  */
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <cassert>
-#include <ranges>
+#include <cstddef>
 #include <sgpp/combigrid/miscellaneous/cpp_concepts/cpp_concepts.hpp>
 #include <sgpp/combigrid/tools/numerics/compensated_sum.hpp>
 #include <span>
-#include <vector>
 
 namespace sgpp {
 namespace combigrid {
@@ -79,12 +80,47 @@ OType compensatedDotProduct(const RA& a, const RB& b) {
   return sum.value();
 }
 
+/// @brief Number of accumulators that @ref compensatedDotProducts and @ref compensatedSums keep
+/// on the stack per pass over the terms (more outputs take further passes).
+inline constexpr size_t COMPENSATED_SUMS_PER_PASS = 8;
+
 /**
- * @brief @ref compensatedDotProduct for m outputs in one pass over @p b: @p result[k] =
- * @f$\sum_i a_i b_{i m + k}@f$ for k < m.
+ * @brief Common loop of @ref compensatedDotProducts and @ref compensatedSums: for every block of
+ * up to @ref COMPENSATED_SUMS_PER_PASS outputs, one pass over the n rows of the span @p b (m
+ * values each, m = @p result.size()) calls @p addTerm(sum of output k, row i, value of output k
+ * in row i) and writes the values of the sums to @p result.
+ */
+template <misc::StdFloatingPoint OType, typename BSpan, typename AddTerm>
+void compensatedSumsOfRows(const BSpan b, const size_t nRows, const std::span<OType> result,
+                           const AddTerm& addTerm) {
+  const size_t nOutputs = result.size();
+  assert(b.size() == nRows * nOutputs);
+
+  for (size_t first = 0; first < nOutputs; first += COMPENSATED_SUMS_PER_PASS) {
+    const size_t nSums = std::min(COMPENSATED_SUMS_PER_PASS, nOutputs - first);
+    std::array<CompensatedSum<OType>, COMPENSATED_SUMS_PER_PASS> sums{};
+
+    for (size_t i = 0; i < nRows; i++) {
+      const auto* const row = b.data() + i * nOutputs + first;
+
+      for (size_t k = 0; k < nSums; k++) {
+        addTerm(sums[k], i, static_cast<OType>(row[k]));
+      }
+    }
+
+    for (size_t k = 0; k < nSums; k++) {
+      result[first + k] = sums[k].value();
+    }
+  }
+}
+
+/**
+ * @brief @ref compensatedDotProduct for m outputs: @p result[k] = @f$\sum_i a_i b_{i m + k}@f$
+ * for k < m.
  *
- * Every output equals @ref compensatedDotProduct of @p a with the values of that output
- * bitwise. One pass reads @p b once (m separate dot products with stride m would read it m times).
+ * Every output equals @ref compensatedDotProduct of @p a with the values of that output bitwise.
+ * Up to @ref COMPENSATED_SUMS_PER_PASS outputs are summed in one pass over @p b (m separate dot
+ * products with stride m would read it m times); no heap allocation.
  *
  * @tparam OType Floating-point type of the summation and the results (given explicitly, or
  *               deduced from @p result if it is a @c std::span<OType>).
@@ -100,23 +136,33 @@ template <misc::StdFloatingPoint OType, misc::ContiguousRangeCastableTo<OType> R
 void compensatedDotProducts(const RA& a, const RB& b, const std::span<OType> result) {
   const std::span aSpan(a);
   const std::span bSpan(b);
-  const size_t nOutputs = result.size();
-  assert(bSpan.size() == aSpan.size() * nOutputs);
 
-  std::vector<CompensatedSum<OType>> sums(nOutputs);
+  compensatedSumsOfRows<OType>(bSpan, aSpan.size(), result,
+                               [&](CompensatedSum<OType>& sum, const size_t i, const OType value) {
+                                 sum.addProduct(static_cast<OType>(aSpan[i]), value);
+                               });
+}
 
-  for (size_t i = 0; i < aSpan.size(); i++) {
-    const OType factor = static_cast<OType>(aSpan[i]);
-    const auto row = bSpan.subspan(i * nOutputs, nOutputs);
+/**
+ * @brief @ref compensatedSum for m outputs: @p result[k] = @f$\sum_i b_{i m + k}@f$ for k < m.
+ *
+ * Every output equals @ref compensatedSum of the values of that output bitwise; one pass over
+ * @p b per @ref COMPENSATED_SUMS_PER_PASS outputs, no heap allocation.
+ *
+ * @tparam OType Floating-point type of the summation and the results (given explicitly, or
+ *               deduced from @p result if it is a @c std::span<OType>).
+ * @tparam R     Contiguous range of numbers, each converted to @p OType.
+ * @param values Terms, index-major: the m values of index i at i m, ..., i m + m - 1 (size n m).
+ * @param result Output: the m compensated sums (size m).
+ */
+template <misc::StdFloatingPoint OType, misc::ContiguousRangeCastableTo<OType> R>
+void compensatedSums(const R& values, const std::span<OType> result) {
+  const std::span valueSpan(values);
+  const size_t nRows = result.empty() ? 0 : valueSpan.size() / result.size();
 
-    for (size_t k = 0; k < nOutputs; k++) {
-      sums[k].addProduct(factor, static_cast<OType>(row[k]));
-    }
-  }
-
-  for (size_t k = 0; k < nOutputs; k++) {
-    result[k] = sums[k].value();
-  }
+  compensatedSumsOfRows<OType>(
+      valueSpan, nRows, result,
+      [](CompensatedSum<OType>& sum, size_t, const OType value) { sum.add(value); });
 }
 
 }  // namespace numerics

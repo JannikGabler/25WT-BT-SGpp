@@ -1,0 +1,48 @@
+cc b0 sg quadrature: 4050a3f569a5d7ea
+cc b0 sg quadrature vec: 4050a3f569a5d7f9 40385f641dbda929 409dcf40a965a2d8
+cc b0 sg interpolate: 4019bb58e6bd6c23
+cc b0 sg interpolate vec: 4019bb58e6bd6c2d 40048fa2f9610d38 4076daac35fea3cc
+cc b0 sg interpolateLinear: 4019bb569cb3ffd2
+cc b0 sg interpolateLinear vec: 4019bb569cb3ffd2 40048be4ff1201c9 4076df8a5c23a491
+cc b0 dsg quadrature: 4050a3f569a5d7e6
+cc b0 dsg quadrature vec: 4050a3f569a5d7e6 40385f641dbda920 409dcf40a965a268
+cc b0 dsg interpolate: 4019bb58e6bd6c11
+cc b0 dsg interpolate vec: 4019bb58e6bd6c11 40048fa2f9610d9e 4076daac35fea3aa
+cc b0 dsg interpolateLinear: 4019bb569cb3ffb1
+cc b0 dsg interpolateLinear vec: 4019bb569cb3ffb1 40048be4ff1201ca 4076df8a5c23a48e
+cc b1 sg quadrature: 4050a3f569a5b99b
+cc b1 sg quadrature vec: 4050a3f569a5b990 40385f641def6791 409dcf40a965a46a
+cc b1 sg interpolate: 4019bb5920ab95f2
+cc b1 sg interpolate vec: 4019bb5920ab95f8 40048ef4c6b28579 4076daac3516eb44
+cc b1 sg interpolateLinear: 4019bb569cb3ffd2
+cc b1 sg interpolateLinear vec: 4019bb569cb3ffd2 40048be4ff1201c9 4076df8a5c23a491
+cc b1 dsg quadrature: 4050a3f569a5b98e
+cc b1 dsg quadrature vec: 4050a3f569a5b98e 40385f641def678c 409dcf40a965a452
+cc b1 dsg interpolate: 4019bb5920ab966d
+cc b1 dsg interpolate vec: 4019bb5920ab966d 40048ef4c6b28520 4076daac3516eb0c
+cc b1 dsg interpolateLinear: 4019bb569cb3ffb1
+cc b1 dsg interpolateLinear vec: 4019bb569cb3ffb1 40048be4ff1201ca 4076df8a5c23a48e
+equi b0 sg quadrature: 4050a3f56cf620f8
+equi b0 sg quadrature vec: 4050a3f56cf620e9 40385f6416e6a32c 409dcf40a9309e3d
+equi b0 sg interpolate: 4019bbaf9d3a0c9c
+equi b0 sg interpolate vec: 4019bbaed4d5254c 4004903b7cc2dec2 4076daab660f7f60
+equi b0 sg interpolateLinear: 4019bb27236366d2
+equi b0 sg interpolateLinear vec: 4019bb27236366d2 40048f6482e0175f 4076dbef63727272
+equi b0 dsg quadrature: 4050a3f56cf620cc
+equi b0 dsg quadrature vec: 4050a3f56cf620cc 40385f6416e6a41f 409dcf40a9309e2a
+equi b0 dsg interpolate: 4019bb65d31dcdc0
+equi b0 dsg interpolate vec: 4019bb65d31dcdc0 4004912a461e3c40 4076da5c8d52eea0
+equi b0 dsg interpolateLinear: 4019bb27236366e1
+equi b0 dsg interpolateLinear vec: 4019bb27236366e1 40048f6482e01754 4076dbef63727260
+equi b1 sg quadrature: 4050a3f5af4290ad
+equi b1 sg quadrature vec: 4050a3f5af4290a7 40385f64f7fd2318 409dcf40a50bd6e0
+equi b1 sg interpolate: 4019bb7c45a5e98d
+equi b1 sg interpolate vec: 4019bb7c45a5dbc0 40048fe280b102e6 4076daaa234e201c
+equi b1 sg interpolateLinear: 4019bb27236366d2
+equi b1 sg interpolateLinear vec: 4019bb27236366d2 40048f6482e0175f 4076dbef63727272
+equi b1 dsg quadrature: 4050a3f5af4290c3
+equi b1 dsg quadrature vec: 4050a3f5af4290c3 40385f64f7fd2357 409dcf40a50bd723
+equi b1 dsg interpolate: 4019bb87883fde40
+equi b1 dsg interpolate vec: 4019bb87883fde40 40048fc9cbb340c0 4076da9407321f90
+equi b1 dsg interpolateLinear: 4019bb27236366e1
+equi b1 dsg interpolateLinear vec: 4019bb27236366e1 40048f6482e01754 4076dbef63727260

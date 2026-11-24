@@ -3,7 +3,6 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
-#include <algorithm>
 #include <bit>
 #include <cassert>
 #include <cmath>
@@ -11,8 +10,10 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
@@ -22,6 +23,7 @@
 #include <span>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 using sgpp::combigrid::misc::LinInterpScratch;
 
@@ -45,12 +47,15 @@ namespace {
  */
 std::pair<double, double> findNeighbors(const double x, const std::span<const double> nodes) {
   assert(!nodes.empty());
+
   const double* first = nodes.data();
+
   for (size_t len = nodes.size(); len > 1;) {
     const size_t half = len / 2;
     first = (first[half - 1] < x) ? first + half : first;
     len -= half;
   }
+
   const double* const it = first + (*first < x ? 1 : 0);
   const double* const end = nodes.data() + nodes.size();
 
@@ -61,10 +66,68 @@ std::pair<double, double> findNeighbors(const double x, const std::span<const do
   } else if (it == nodes.data()) {  // No node <= x
     return {0.0, *it};
   }
+
   return {*(it - 1), *it};
 }
 
+/**
+ * Calls @p process(tgIdx, scratch) for every tensor grid of @p sparseGrid in parallel, with a
+ * scratch per thread for m = @p nOutputs (0 for a scalar source function).
+ *
+ * Static scheduling: in repeated calls on the same grid (one call per query point), every thread
+ * processes the same tensor grids and finds their nodes in its own caches. Running small calls on
+ * fewer threads or serially was slower: on a 2D grid of level 16 (33 tensor grids, 132 corners)
+ * at 16 threads, a call took 5.8 us with 16 threads, 6.0 us with 8, 7.9 us with 4, 10.5 us with 2
+ * and 12 us serially (the binary searches of a single thread over all 2^16-node rows miss the
+ * cache).
+ */
+template <typename Process>
+void forEachTensorGrid(const SparseGrid& sparseGrid, const size_t nOutputs, Process&& process) {
+  const size_t nTG = sparseGrid.nTG();
+
+#pragma omp parallel
+  {
+    LinInterpScratch scratch(sparseGrid.nDim(), nOutputs);
+
+#pragma omp for schedule(static) nowait
+    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+      process(tgIdx, scratch);
+    }
+  }
+}
+
 }  // namespace
+
+std::vector<double> estimateTensorGrids(const SourceFunc& sourceFunc,
+                                        const base::DataVector& normPoint,
+                                        const SparseGrid& sparseGrid) {
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+
+  std::vector<double> values(sparseGrid.nTG());
+
+  forEachTensorGrid(sparseGrid, 0, [&](const size_t tgIdx, LinInterpScratch& scratch) {
+    values[tgIdx] = processTensorGrid(
+        sourceFunc, normPoint, sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid, genInstr, scratch);
+  });
+
+  return values;
+}
+
+misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourceFunc,
+                                                   const base::DataVector& normPoint,
+                                                   const SparseGrid& sparseGrid) {
+  const size_t nOutputs = sourceFunc.nOutputs();
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+
+  misc::FlatNestedVec<double, 2> values(sparseGrid.nTG(), nOutputs);
+
+  forEachTensorGrid(sparseGrid, nOutputs, [&](const size_t tgIdx, LinInterpScratch& scratch) {
+    processTensorGrid(sourceFunc, normPoint, sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid,
+                      genInstr, scratch, values[tgIdx]);
+  });
+
+  return values;
+}
 
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& point,
                          const TensorGridView& unitTG, const SGGenInstr& genInstr,
@@ -85,9 +148,11 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
 
 std::pair<double, double> weights1D(const double x, const double lower, const double upper) {
   const double length = upper - lower;
+
   if (length == 0.0) {
     return {0.5, 0.5};
   }
+
   return {(upper - x) / length, (x - lower) / length};
 }
 
@@ -100,10 +165,13 @@ void prepareCorners(const base::DataVector& point, const TensorGridView& unitTG,
   for (size_t k = 0; k < nDim; k++) {
     const std::pair<double, double> neighbors = findNeighbors(point[k], unitTG.nodeSpanInDim(k));
     const double width = domain[k].second - domain[k].first;
+
     bracket[2 * k] = tools::mapToDomain(neighbors.first, domain[k].first, width);
     bracket[2 * k + 1] = tools::mapToDomain(neighbors.second, domain[k].first, width);
+
     std::tie(factors[2 * k], factors[2 * k + 1]) =
         weights1D(point[k], neighbors.first, neighbors.second);
+
     scratch.curGridPoint[k] = bracket[2 * k];
   }
 
@@ -115,8 +183,10 @@ void fillWeightTable(const double* const factors, const size_t tableDim, double*
   // lower one. Every entry is the product of its 1D weights in the order of the dimensions,
   // starting from 1.0 (bitwise the weights of the definition).
   table[0] = 1.0;
+
   for (size_t k = 0; k < tableDim; k++) {
     const size_t half = size_t{1} << k;
+
     for (size_t j = 0; j < half; j++) {
       table[j + half] = table[j] * factors[2 * k + 1];
       table[j] *= factors[2 * k];
@@ -126,7 +196,9 @@ void fillWeightTable(const double* const factors, const size_t tableDim, double*
 
 void moveToCorner(const size_t corner, const double* const bracket, double* const gp) {
   const auto t = static_cast<size_t>(std::countr_zero(corner));
+
   gp[t] = bracket[2 * t + 1];
+
   for (size_t k = 0; k < t; k++) {
     gp[k] = bracket[2 * k];
   }

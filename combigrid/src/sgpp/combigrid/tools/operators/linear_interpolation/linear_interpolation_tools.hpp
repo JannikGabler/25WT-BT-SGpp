@@ -31,18 +31,53 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
+#include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
 
 namespace tools {
 namespace lin_interpolation {
+
+/**
+ * @brief Computes the multilinear interpolant of every tensor grid of @p sparseGrid at
+ * @p normPoint (without the coefficient) in parallel and stores it at the index of the tensor
+ * grid.
+ *
+ * Every value is computed by one thread with the same operations at every thread count, so the
+ * values do not depend on the number of threads or the schedule; combined serially in the order
+ * of the tensor grids (@c tools::numerics::compensatedDotProduct), the interpolation results are
+ * bitwise independent of both.
+ *
+ * @param sourceFunc Source function.
+ * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param sparseGrid Sparse grid.
+ * @return The value of tensor grid i at index i (size nTG).
+ */
+std::vector<double> estimateTensorGrids(const SourceFunc& sourceFunc,
+                                        const base::DataVector& normPoint,
+                                        const SparseGrid& sparseGrid);
+
+/**
+ * @brief @ref estimateTensorGrids for a vector-valued source function.
+ *
+ * @param sourceFunc Vector-valued source function (m outputs).
+ * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param sparseGrid Sparse grid.
+ * @return The m values of tensor grid i as sub-vector i (nTG sub-vectors of m values; the
+ *         elements are index-major, i.e. the values of tensor grid i at i m, ..., i m + m - 1).
+ */
+misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourceFunc,
+                                                   const base::DataVector& normPoint,
+                                                   const SparseGrid& sparseGrid);
 
 /**
  * @brief Multilinear interpolation on a single tensor grid.

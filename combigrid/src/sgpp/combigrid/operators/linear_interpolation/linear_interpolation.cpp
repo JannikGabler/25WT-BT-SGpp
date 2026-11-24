@@ -3,59 +3,44 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
-#include <omp.h>
-#include <algorithm>
 #include <cassert>
-#include <cstddef>
-#include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
-#include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
-#include <sgpp/combigrid/grids/tensor_grid_view.hpp>
-#include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
-#include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
-#include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
+#include <sgpp/combigrid/tools/numerics/compensated_sum_tools.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
-#include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>
 #include <vector>
 
-using LinInterpScratch = sgpp::combigrid::misc::LinInterpScratch;
+using sgpp::combigrid::misc::FlatNestedVec;
+using sgpp::combigrid::tools::normalizeDataVector;
+using sgpp::combigrid::tools::lin_interpolation::estimateTensorGrids;
+using sgpp::combigrid::tools::numerics::compensatedDotProduct;
+using sgpp::combigrid::tools::numerics::compensatedDotProducts;
 
 namespace sgpp {
 namespace combigrid {
 
 double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& point,
                          const SparseGrid& sparseGrid) {
-  assert(point.size() == sparseGrid.nDim());
-
-  const size_t nDim = sparseGrid.nDim();
+  if (point.size() != sparseGrid.nDim()) {
+    throw std::invalid_argument(
+        "The size of the point doesn't match the dimensionality of the sparse grid.");
+  }
 
   // The cell is computed in normalized coordinates, with the nodes on the unit interval
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
-  double result = 0;
+  const base::DataVector normPoint =
+      normalizeDataVector(point, sparseGrid.getGenInstr().getDomain());
 
-#pragma omp parallel reduction(+ : result)
-  {
-    LinInterpScratch scratch(nDim);
-
-#pragma omp for schedule(static) nowait
-    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getUnitTensorGrid(tgIdx);
-      result +=
-          tgData.coefficient * tools::lin_interpolation::processTensorGrid(
-                                   sourceFunc, normPoint, tgData.tensorGrid, genInstr, scratch);
-    }
-  }
+  // One value per tensor grid, stored at its index
+  const std::vector<double> tgValues = estimateTensorGrids(sourceFunc, normPoint, sparseGrid);
+  const double result = compensatedDotProduct<double>(sparseGrid.getCoefficients(), tgValues);
 
   sourceFunc.finishOperatorCall();
 
@@ -65,39 +50,18 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
 void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
                        const SparseGrid& sparseGrid, const std::span<double> result) {
   if (result.size() != sourceFunc.nOutputs()) {
+    throw std::invalid_argument("The size of the result is not the number of outputs");
+  } else if (point.size() != sparseGrid.nDim()) {
     throw std::invalid_argument(
-        "interpolateLinear: The size of the result is not the number of outputs");
+        "The size of the point doesn't match the dimensionality of the sparse grid.");
   }
-  assert(point.size() == sparseGrid.nDim());
 
-  const size_t nDim = sparseGrid.nDim();
-  const size_t nOutputs = result.size();
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const base::DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
+  const base::DataVector normPoint =
+      normalizeDataVector(point, sparseGrid.getGenInstr().getDomain());
 
-  std::ranges::fill(result, 0.0);
-
-#pragma omp parallel
-  {
-    LinInterpScratch scratch(nDim, nOutputs);
-    std::vector<double> tgResult(nOutputs);
-    std::vector<double> threadResult(nOutputs, 0.0);
-
-#pragma omp for schedule(static) nowait
-    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getUnitTensorGrid(tgIdx);
-      tools::lin_interpolation::processTensorGrid(sourceFunc, normPoint, tgData.tensorGrid,
-                                                  genInstr, scratch, tgResult);
-      for (size_t k = 0; k < nOutputs; k++) {
-        threadResult[k] += tgData.coefficient * tgResult[k];
-      }
-    }
-
-#pragma omp critical
-    for (size_t k = 0; k < nOutputs; k++) {
-      result[k] += threadResult[k];
-    }
-  }
+  // m values per tensor grid, stored at its index
+  const FlatNestedVec<double, 2> tgValues = estimateTensorGrids(sourceFunc, normPoint, sparseGrid);
+  compensatedDotProducts<double>(sparseGrid.getCoefficients(), tgValues, result);
 
   sourceFunc.finishOperatorCall();
 }

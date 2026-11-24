@@ -1,0 +1,12 @@
+WP-48-before: 146 cases
+  1 t vs 2 t: 51 cases differ ['expensive/interp/sg', 'expensive/interplin/sg', 'expensive/mivec/dsg', 'expensive/quad/dsg', 'interp/sg', 'interplin/sg', 'quad/dsg']
+  1 t vs 3 t: 50 cases differ ['expensive/interp/sg', 'expensive/interplin/sg', 'expensive/mivec/dsg', 'expensive/quad/dsg', 'interp/sg', 'interplin/sg', 'quad/dsg']
+  1 t vs 16 t: 50 cases differ ['expensive/interp/sg', 'expensive/interplin/sg', 'expensive/mivec/dsg', 'expensive/quad/dsg', 'interp/sg', 'interplin/sg', 'quad/dsg']
+  16 t run 1 vs run 2: 48 cases differ ['expensive/interp/sg', 'expensive/interplin/sg', 'expensive/mivec/dsg', 'expensive/quad/dsg', 'interp/sg', 'interplin/sg', 'quad/dsg']
+  thread-count dependent (1/2/3/16 t): 53 of 146
+WP-48-after: 146 cases
+  1 t vs 2 t: 0 cases differ []
+  1 t vs 3 t: 0 cases differ []
+  1 t vs 16 t: 0 cases differ []
+  16 t run 1 vs run 2: 0 cases differ []
+  thread-count dependent (1/2/3/16 t): 0 of 146

@@ -12,7 +12,7 @@ matters lives in files, so you can be restarted from scratch at any time.
 ## What you read (keep the context small)
 
 1. `combigrid/perf/STATUS.md` — always, completely (open WPs, next action, decisions, rules).
-   `combigrid/perf/LESSONS.md` (do-not-retry list, measurement notes) — when writing a prompt or
+   `combigrid/perf/LESSONS.md` (dropped-earlier list, measurement notes) — when writing a prompt or
    judging a summary; `combigrid/perf/HISTORY.md` (finished WPs + results, log archive) — only
    when past results are needed.
 2. Summaries in `combigrid/perf/summaries/` newer than "Last processed" in STATUS.md — completely.
@@ -34,18 +34,21 @@ make finding them part of a work package.
    - Accepted: WP status `accepted`; move its row from STATUS.md's table to HISTORY.md's table
      with result column = headline gain (e.g. "quad/sg d10: 2.1x"), plus the peak-memory change
      if the summary reports `MEM+`/`MEM-` cases, and the commit hash.
-   - Rejected: status `rejected` (row to HISTORY.md); add a "Do not retry" line to LESSONS.md:
-     `WP-NN <idea>: <numbers>, <why>`.
+   - Rejected: status `rejected` (row to HISTORY.md); add a "Dropped earlier" line to LESSONS.md:
+     `WP-NN <idea> (<context>): <numbers>, <why>`. The context (where / for which case it was
+     measured) lets later sessions judge whether the reason still applies.
      Make sure the code was reverted (`git status --short` clean except summaries/results; the
      owner uses `perf.py reject --apply`). Remind the owner to commit the summary.
-   - Every "Attempts not kept" entry of any summary also becomes a "Do not retry" line (LESSONS.md).
+   - Every "Attempts not kept" entry of any summary also becomes a "Dropped earlier" line (LESSONS.md).
    - `BLOCKED`: add the decision to "Open decisions for the owner" with the options from the
      summary; status `blocked`.
    - `NO-GAIN`: as rejected once the owner confirmed.
    - Follow-ups / profile shift: add new WPs to PLAN.md (fields as the existing entries,
      "Source: WP-NN summary") or adjust expected gains / ranks of existing ones.
-   - Case-realism notes (gains only for unrealistic cases; realistic cases the suite misses):
-     pass them to the owner and take them into the ranking; suite changes need the owner.
+   - Reports of things that look wrong, unrealistic or obsolete (cases, gains, plan entries,
+     rules, code, docs, tooling): pass them to the owner; take case-realism reports into the
+     ranking; turn the rest into PLAN.md entries / backlog lines or open decisions. Suite, rule
+     and procedure changes need the owner.
 3. **Re-profiling check** (rule 7 of the phase): schedule the re-profiling package `RP-k`
    before the next optimization WP if any of the following holds:
    - 2 accepted optimizations since the last re-profiling,
@@ -82,7 +85,7 @@ make finding them part of a work package.
      is a valid secondary goal.
 5. **Update the files**: STATUS.md (open-WP table, next action, open decisions, re-profiling
    counter, "Last processed", log line with date), HISTORY.md (finished WPs, commit hashes, old
-   log lines), LESSONS.md (do-not-retry, measurement notes) and PLAN.md. Keep STATUS.md ≤ ~130
+   log lines), LESSONS.md (dropped earlier, measurement notes) and PLAN.md. Keep STATUS.md ≤ ~130
    lines: keep only the latest log lines there, move older ones to HISTORY.md. These four files
    are yours; do not edit anything else (no commits — the owner commits).
 6. **Write the prompt** for the next work session (template below), print it in a single fenced
@@ -110,15 +113,17 @@ Work package WP-<NN>: <title>
 - L1 micro cases: <existing `micro/...` names, and/or what to add>
 - L2/L3 e2e cases (ab filter): `<regex>`
 - Dependencies / context from earlier WPs: <facts the session needs, or "none">
-- Do not retry: <relevant lines from LESSONS.md, or "none">
+- Dropped earlier (context, not prohibitions): <relevant lines from LESSONS.md, or "none">.
+  Each was dropped for its stated reason in its own context. Before one shapes a design decision,
+  read its summary and check whether the reason applies here; if not, retry or adapt it.
 - Functional or interface changes: none intended. If the optimization turns out to require one
   (public API or observable behavior, numerical results beyond a refcheck WARN, compiler flags,
   build configuration, new dependencies), do not implement it: finish with status BLOCKED and
   describe the options with their expected gains.<or: the agreed change, quoting the owner's decision>
-- Case realism (owner 2026-11-18): if you notice that certain gains only pay for rather unlikely or
-  unrealistic cases (e.g. very high levels), or that realistic cases are not tracked by cases in the
-  suite, feel free to report that to the owner or the master session at any time (in the summary:
-  section "Profile shift / follow-ups", or directly in the conversation).
+- Feedback welcome (owner 2026-11-24): if anything looks wrong, unrealistic, obsolete or
+  questionable to you (e.g. gains only for unlikely cases, realistic cases the suite misses, plan
+  entries, rules, earlier decisions, code, docs, tooling), report it to the owner or the master
+  session (summary section "Profile shift / follow-ups", or directly in the conversation).
 
 Deliverables: summary combigrid/perf/summaries/WP-<NN>-<slug>.md (from TEMPLATE.md), reports in
 combigrid/perf/results/WP-<NN>/, snapshots WP-<NN>-before / WP-<NN>-after. End with a short

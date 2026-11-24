@@ -276,6 +276,48 @@ void addCompensatedCombination(Suite& suite, const std::string& nodes, const Lvl
                  });
 }
 
+/**
+ * WP-48: the serial combination of quadrature() on a DeltasSparseGrid (scalar): the compensated
+ * sum (tools::numerics::compensatedSum) of one value per delta tensor grid, in the order of the
+ * delta tensor grids; ns per delta tensor grid. The values are fixed (the cost does not depend on
+ * them).
+ */
+void addDeltaCompensatedCombination(Suite& suite, const std::string& nodes, const LvlType boundary,
+                                    const size_t nDim, const LvlType maxLvl) {
+  suite.addMicro(
+      "micro/dsg/compensated_combination/" + cfg(nodes, boundary, nDim, maxLvl),
+      [=](MicroRun& run) {
+        CompleteSGGenInstr genInstr(maxLvl, nDim);
+        perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
+        const DeltasSparseGrid dsg(genInstr);
+        const size_t nTG = dsg.nTG();
+        std::vector<double> values(nTG);
+        for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+          values[tgIdx] = 1.0 / static_cast<double>(tgIdx + 1);
+        }
+
+        run.setItems(static_cast<double>(nTG));
+        run.setCounter("nTG", static_cast<double>(nTG));
+        run.measure([&]() { doNotOptimize(cg::tools::numerics::compensatedSum<double>(values)); });
+      });
+}
+
+/// WP-48: the whole quadrature() call on a DeltasSparseGrid (perf::expSum, default options: the
+/// per-grid data stay in the cross-call cache), one call per sample.
+void addDeltaQuadOperator(Suite& suite, const std::string& nodes, const LvlType boundary,
+                          const size_t nDim, const LvlType maxLvl) {
+  suite.addMicro("micro/dsg/operator/" + cfg(nodes, boundary, nDim, maxLvl), [=](MicroRun& run) {
+    CompleteSGGenInstr genInstr(maxLvl, nDim);
+    perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
+    const DeltasSparseGrid dsg(genInstr);
+    const SourceFunc sourceFunc(perf::expSum);
+
+    run.setItems(sumOfGridPoints(dsg));
+    run.setCounter("nTG", static_cast<double>(dsg.nTG()));
+    run.measure([&]() { doNotOptimize(cg::quadrature(sourceFunc, dsg)); });
+  });
+}
+
 /// Tensor grids and context of the vector-valued quadrature cases (addVectorQuad).
 struct VectorQuadSetup {
   VectorQuadSetup(const std::string& nodes, const LvlType boundary, const size_t nDim,
@@ -1490,6 +1532,13 @@ int main(int argc, char** argv) {
   addQuadOperator(suite, "equi", 1, 20, 4);
   addCompensatedCombination(suite, "equi", 1, 15, 6);  // Largest nTG of the e2e suite: 54264
   addCompensatedCombination(suite, "equi", 1, 20, 5);  // 53130
+  // WP-48: DSG quadrature, serial compensated combination (largest nTG of the e2e suite) and the
+  // whole call
+  addDeltaCompensatedCombination(suite, "equi", 1, 20, 6);
+  addDeltaCompensatedCombination(suite, "equi", 1, 15, 7);
+  addDeltaQuadOperator(suite, "equi", 0, 3, 12);
+  addDeltaQuadOperator(suite, "equi", 0, 5, 8);
+  addDeltaQuadOperator(suite, "equi", 1, 15, 4);
   addSolQuadTG(suite, "equi", 0, 5, 10);
   addSolQuadTG(suite, "equi", 0, 10, 4);
   addIterateTG(suite, 10, 4);
@@ -1541,6 +1590,10 @@ int main(int argc, char** argv) {
   addGlobalSGOperator(suite, "cc", 2, 12);
   addGlobalSGOperator(suite, "equi", 3, 5);
   addGlobalSGOperator(suite, "cheb1", 5, 4);  // WP-06: generic formula, many tensor grids
+  // WP-48: small grids (parallel-region overhead per call)
+  addGlobalSGOperator(suite, "cc", 1, 6);
+  addGlobalSGOperator(suite, "cc", 2, 4);
+  addGlobalSGOperator(suite, "cc", 3, 3);
   // WP-45: the deltas sparse grid operator (same configurations), vector-valued with m = 4
   addGlobalDSGOperator(suite, "cc", 8, 2, 0);
   addGlobalDSGOperator(suite, "cc", 5, 5, 0);
@@ -1563,6 +1616,12 @@ int main(int argc, char** argv) {
   addLinearSGOperator(suite, 8, 5);
   addLinearSGOperator(suite, 5, 8);
   addLinearSGOperator(suite, 2, 16);
+  // WP-48: small grids (few tensor grids or corners per call: parallel-region overhead)
+  addLinearSGOperator(suite, 1, 10);
+  addLinearSGOperator(suite, 2, 8);
+  addLinearSGOperator(suite, 3, 6);
+  addLinearSGOperator(suite, 3, 10);
+  addLinearSGOperator(suite, 4, 6);
   // WP-47: the deltas sparse grid operator (same configurations), vector-valued with m = 4
   addLinearDSGOperator(suite, 10, 5, 0);
   addLinearDSGOperator(suite, 8, 5, 0);

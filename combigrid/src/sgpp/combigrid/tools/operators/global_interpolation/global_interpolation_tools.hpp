@@ -29,14 +29,47 @@
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/global_interpolation_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <span>
+#include <vector>
 
 namespace sgpp {
 namespace combigrid {
 
 namespace tools {
 namespace global_interpolation {
+
+/**
+ * @brief Computes the interpolant of every tensor grid of @p sparseGrid at @p normPoint (without
+ * the coefficient) in parallel and stores it at the index of the tensor grid.
+ *
+ * Every value is computed by one thread with the same operations at every thread count, so the
+ * values do not depend on the number of threads or the schedule; combined serially in the order
+ * of the tensor grids (@c tools::numerics::compensatedDotProduct), the interpolation results are
+ * bitwise independent of both.
+ *
+ * @param sourceFunc Source function.
+ * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param sparseGrid Sparse grid.
+ * @return The value of tensor grid i at index i (size nTG).
+ */
+std::vector<double> estimateTensorGrids(const SourceFunc& sourceFunc,
+                                        const base::DataVector& normPoint,
+                                        const SparseGrid& sparseGrid);
+
+/**
+ * @brief @ref estimateTensorGrids for a vector-valued source function.
+ *
+ * @param sourceFunc Vector-valued source function (m outputs).
+ * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
+ * @param sparseGrid Sparse grid.
+ * @return The m values of tensor grid i as sub-vector i (nTG sub-vectors of m values; the
+ *         elements are index-major, i.e. the values of tensor grid i at i m, ..., i m + m - 1).
+ */
+misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourceFunc,
+                                                   const base::DataVector& normPoint,
+                                                   const SparseGrid& sparseGrid);
 
 /**
  * @brief Tensor-product global interpolation of @p sourceFunc on the tensor grid @p tg.
@@ -105,19 +138,6 @@ double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& n
 void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
                        const TensorGridView& tg, const TensorGridView& unitTG,
                        const SGGenInstr& genInstr, std::span<double> out);
-
-/**
- * @brief Sets @p result to the combination of the vector-valued interpolants of all tensor
- * grids of @p sparseGrid at @p normPoint, in parallel (per thread first, then added to
- * @p result, as the reduction of the scalar operator does output by output).
- *
- * @param sourceFunc Vector-valued source function.
- * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param sparseGrid Sparse grid.
- * @param result     Output: the m combined values (size m).
- */
-void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
-                        const SparseGrid& sparseGrid, std::span<double> result);
 
 /**
  * @brief Prepares the row loop over @p tg: 1D basis values at @p normPoint

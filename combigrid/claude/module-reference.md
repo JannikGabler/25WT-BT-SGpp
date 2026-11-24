@@ -137,7 +137,7 @@ tools/                 (namespace tools; sub-namespaces per operator, e.g. tools
                          compSubTrie); ProjectedSubTrieBuilder), quadrature/ (quadrature_tools,
                          namespace tools::quadrature: 1D quadrature weights + SG kernel;
                          deltas_sparse_grid_quadrature_tools, namespace tools::dsg_quadrature:
-                         comp1DWeights, combineDeltaTensorGrids), global_interpolation/
+                         comp1DWeights, estimateDeltaTensorGrids), global_interpolation/
                          (global_interpolation_tools, namespace tools::global_interpolation;
                          deltas_sparse_grid_global_interpolation_tools, namespace
                          tools::dsg_global_interpolation; interpolation_methods/: generic
@@ -148,7 +148,7 @@ tools/                 (namespace tools; sub-namespaces per operator, e.g. tools
   downwards_closedness, paretoMaxima, multiindex_bounding_box_generation, multiindex_domination
   multiindex/, multiindex_view/, multiindex_vector/ (component-wise max)   MI helpers
   math/ (binomial, pow, ceil), numerics/ (namespace tools::numerics: compensated summation,
-  CompensatedSum + compensatedSum / compensatedDotProduct(s)), comparison/ (nearly_equal), data_vector/ (normalization
+  CompensatedSum + compensatedSum(s) / compensatedDotProduct(s)), comparison/ (nearly_equal), data_vector/ (normalization
   [0,1]^d ↔ domain; mapToDomain = std::fma, the one unit → domain mapping of all operators),
   hashing/ (FNV-1a), collections/ (k-way unique merge), functions/ (equidistant
   node utilities), os/, concurrency.hpp (range partitioning), iterators.hpp, benchmarking/
@@ -381,6 +381,16 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   quadrature results are bitwise independent of the thread count and the processing order of the
   TGs, and the combination's round-off is ≈ 1 ulp (plain loop: up to 2e-8 relative at nTG ≈ 5e4,
   condition numbers Σ|c Q| / |Σ c Q| up to 8e5).
+  The same pattern in every other driver (WP-48, owner 2026-11-24), with the same names and
+  return types (`std::vector<double>` / `FlatNestedVec<double, 2>(nTG, m)` per call): DSG
+  quadrature (`tools::dsg_quadrature::estimateDeltaTensorGrids` → slot per delta TG, then
+  `compensatedSum(s)`: the global weights already contain the coefficients), SG `interpolate` /
+  `interpolateLinear` (`tools::{global,lin}_interpolation::estimateTensorGrids(f, normPoint, sg)`
+  → slot per TG, then `compensatedDotProduct(s)` with the coefficients). `compensatedDotProducts`
+  / `compensatedSums` keep up to 8 accumulators on the stack per pass (no heap allocation).
+  Every operator is now bitwise thread-count independent (the DSG interpolations were already,
+  WP-45 / WP-49). Interplin keeps `schedule(static)` and the full team for small calls: serial or
+  fewer threads lost up to 2x on d2 L16 (per-thread cache locality of the node rows, WP-48).
 - **Textbook operators** (WP-79; [operators/textbook/](../src/sgpp/combigrid/operators/textbook/)):
   `textbookQuadrature(f, sg)`, `textbookInterpolate(f, point, sg)`,
   `textbookInterpolateLinear(f, point, sg)` on a `SparseGrid` only (no DSG variants: the DSG

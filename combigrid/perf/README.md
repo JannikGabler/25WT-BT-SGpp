@@ -16,7 +16,7 @@ combigrid/perf/
   README.md          this file (commands, methodology, protection)
   STATUS.md          compact status of the optimization phase (the master's main input)
   HISTORY.md         finished WPs with results, commit archive, old log lines
-  LESSONS.md         do-not-retry list (failed ideas with numbers), measurement notes
+  LESSONS.md         dropped-earlier list (ideas, context, numbers, reason), measurement notes
   PLAN.md            ranked work packages (WPs) with location, hypothesis, evidence, risk, ...
   ANALYSIS.md        initial analysis and profiles (re-profiling results are appended)
   summaries/         TEMPLATE.md + WP-NN-<slug>.md, one per work session

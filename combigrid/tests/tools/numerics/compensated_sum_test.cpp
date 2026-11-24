@@ -140,6 +140,39 @@ BOOST_AUTO_TEST_CASE(Multiple_Outputs_Equal_Single_Outputs_Bitwise) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(Multiple_Output_Sums_And_More_Outputs_Than_One_Pass) {
+  // compensatedSums / compensatedDotProducts with m outputs equal the single-output functions
+  // bitwise, also beyond the number of accumulators of one pass (several passes over the terms)
+  using sgpp::combigrid::tools::numerics::COMPENSATED_SUMS_PER_PASS;
+  using sgpp::combigrid::tools::numerics::compensatedSums;
+  for (const size_t nOutputs : {size_t{1}, COMPENSATED_SUMS_PER_PASS, COMPENSATED_SUMS_PER_PASS + 3,
+                                2 * COMPENSATED_SUMS_PER_PASS + 1}) {
+    for (const size_t n : {0u, 1u, 9u, 2000u}) {
+      std::vector<CTCoeffType> c;
+      std::vector<std::vector<double>> perOutput(nOutputs);
+      for (size_t k = 0; k < nOutputs; k++) {
+        makeCombination(n, static_cast<unsigned>(100 + k), c, perOutput[k]);
+        for (double& x : perOutput[k]) x *= (k % 2 == 0) ? 1.0 : -3e4;
+      }
+      std::vector<double> interleaved;
+      for (size_t i = 0; i < n; i++) {
+        for (size_t k = 0; k < nOutputs; k++) interleaved.push_back(perOutput[k][i]);
+      }
+
+      std::vector<double> sums(nOutputs, -1.0), dots(nOutputs, -1.0);
+      compensatedSums<double>(interleaved, sums);
+      compensatedDotProducts<double>(c, interleaved, dots);
+      for (size_t k = 0; k < nOutputs; k++) {
+        BOOST_TEST_CONTEXT("m " << nOutputs << " n " << n << " output " << k) {
+          BOOST_CHECK_EQUAL(bitsOf(sums[k]), bitsOf(compensatedSum<double>(perOutput[k])));
+          BOOST_CHECK_EQUAL(bitsOf(dots[k]),
+                            bitsOf(compensatedDotProduct<double>(c, perOutput[k])));
+        }
+      }
+    }
+  }
+}
+
 BOOST_AUTO_TEST_CASE(Other_Element_And_Range_Types) {
   // The result depends only on the values converted to double: equal bitwise for int / double /
   // float factors (exactly representable) and span / vector / array / DataVector ranges

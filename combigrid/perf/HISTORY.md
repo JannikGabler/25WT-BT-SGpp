@@ -27,7 +27,8 @@ master's log. Maintained by the master session; current state: [STATUS.md](STATU
 | – | WP-82 | DSG quadrature: cross-call cache on by default via the new `DeltasSparseGridQuadratureOptions` (`QuadratureOptions` = `SparseGrid` only; API change agreed) | accepted (11-18, 37a84e1af) | judged 1.000x, `expensive/` 0.999x, memory 1.004; repeated DSG quad calls 16 t 1.04–1.31x; retained index 0.9–17.8 MiB (e2e), cc d2 L20 64 MiB (owner: keep, documented) | [WP-82](summaries/WP-82-dsg-quad-cache-default.md) |
 | – | WP-79 | Textbook operators `textbookQuadrature` / `textbookInterpolate` / `textbookInterpolateLinear` (naive serial per-TG CT on `SparseGrid`, one vector core per operator, C++ + Python; owner's request; incl. the owner's rework) | accepted (11-21, d3b7f00ba) | feature: judged 1.002x, `expensive/` 0.999x, memory 1.008 (0 flags); refcheck = known WARN; textbook / optimized 1 t: quad 1.40–1.41x, interp 1.37–1.47x, interplin 1.13–1.17x | [WP-79](summaries/WP-79-textbook-operators.md) |
 | – | WP-83 | SG quadrature with cheb1 nodes: rules obtained serially before the OpenMP regions (`std::terminate` → catchable exception), new `FejerFirstQuadRule(includeBoundary)` (Fejér-1 / interpolatory with boundary nodes, Bluestein FFT), additive virtual `NodeGenFunc::getQuadRule(n, includeBoundary)` (owner 11-22); bug fix + feature, incl. the owner's rework | accepted (11-22, c43b8f21b) | feature: judged 0.996x (noise), `expensive/` 0.999x, memory 1.003 (0 flags); refcheck = known WARN; existing results bitwise; cheb1 rule ≈ 4.8x CC at equal n (n = 131073: 29.9 vs. 6.25 ms) | [WP-83](summaries/WP-83-cheb1-quadrature.md) |
-| – | WP-61 | SG quadrature: bitwise thread-count-independent results — per-TG results in a TG-indexed buffer, serial compensated combination in TG order (`tools::numerics::CompensatedSum` / `compensatedDotProduct(s)`, Neumaier + exact product errors; owner 11-23); incl. the owner's rework (concepts → `miscellaneous/cpp_concepts/`, sums → `tools/numerics/`, `FlatNestedVec(n1, …, nD)`) | accepted (11-24, commit pending) | functional: SG quad / mivec bitwise 1 = 2 = 3 = 16 t, combination round-off ≈ 1 ulp (b1 d15 L6 16 t error 3.5–5.0e-9 → 2.0e-10); judged 0.998x (rework 1.000x), `expensive/` 0.998x, memory 0.999 / 1.007 (0 flags); refcheck = known WARN; 116 / 432 pinned 1 t values ≤ 15 ulp, `grid_storage_pinning` SG hashes re-pinned | [WP-61](summaries/WP-61-sg-quad-ordered-sums.md) [rework](summaries/WP-61-owner-rework-check.md) |
+| – | WP-61 | SG quadrature: bitwise thread-count-independent results — per-TG results in a TG-indexed buffer, serial compensated combination in TG order (`tools::numerics::CompensatedSum` / `compensatedDotProduct(s)`, Neumaier + exact product errors; owner 11-23); incl. the owner's rework (concepts → `miscellaneous/cpp_concepts/`, sums → `tools/numerics/`, `FlatNestedVec(n1, …, nD)`) | accepted (11-24, 1b8e1495f) | functional: SG quad / mivec bitwise 1 = 2 = 3 = 16 t, combination round-off ≈ 1 ulp (b1 d15 L6 16 t error 3.5–5.0e-9 → 2.0e-10); judged 0.998x (rework 1.000x), `expensive/` 0.998x, memory 0.999 / 1.007 (0 flags); refcheck = known WARN; 116 / 432 pinned 1 t values ≤ 15 ulp, `grid_storage_pinning` SG hashes re-pinned | [WP-61](summaries/WP-61-sg-quad-ordered-sums.md) [rework](summaries/WP-61-owner-rework-check.md) |
+| – | WP-48 | Ordered compensated CT combination in the remaining drivers (WP-61 pattern: TG-indexed per-TG values + serial compensated pass) in DSG quadrature, SG `interpolate`, SG `interpolateLinear` (scalar + vector; owner 11-24: extended, functional agreed); small-call gate refuted | accepted (11-24, commit pending) | functional: all operators bitwise 1 = 2 = 3 = 16 t (0 of 146 reference cases vary, before 53); judged 1.000x (interplin/sg d2 L16 1.117x), `expensive/` 1.000x, memory 1.003 (0 flags); refcheck = known WARN; `grid_storage_pinning` DSG hashes re-pinned | [WP-48](summaries/WP-48-ordered-ct-combination.md) |
 
 Re-profiling snapshots: `rp-1` f48d2bbc1, `rp-2` 5215417ea (1.604x), `rp-3` 0c6ecfc4b (1.818x),
 `rp-4` 6ac45a05d (1.933x), `rp-5` 3261399ec (1.973x; 38 cases 69.93 → 35.45 s; memory geomean 0.724;
@@ -37,6 +38,15 @@ RP-6 11-18.
 
 ## Log (older entries, newest first)
 
+- 2026-11-24 WP-61 processed: **accepted** by the owner incl. the staged rework + R1–R9 follow-ups
+  (verification: bitwise == checkpoint 809b8cfe1, 1.000x, memory 1.007, 0 flags; commit pending). SG
+  quad / mivec bitwise thread-count independent, round-off ≈ 1 ulp, judged 0.998x. Owner: **WP-48
+  extended** (ordered compensated combination in DSG quad / SG interp / interplin, functional agreed) and
+  moved 13 → 1 **before WP-77** (WP-77 bitwise neutral everywhere); **WP-35 15 → 3** (+ new flaky
+  `concurrent_operator_calls_on_one_function`, + `grid_storage_pinning` without Eigen / Armadillo);
+  ranks 3–12 +1, 16–26 −1; `%extend` 509 → backlog L; concepts header kept. WP-77 entry corrected
+  (DSG quad was not thread-count independent). No RP due (0 optimizations since RP-6). 2 "Do not
+  retry" lines, 1 measurement note updated, 2 recurring-failure lines. WP-48 prompt issued.
 - 2026-11-23 WP-61 summary read (PROPOSED: bitwise 1/2/3/16 t, round-off ≈ 1 ulp, judged 0.998x,
   memory 0.999, 0 flags; refcheck = known WARN). Owner staged a rework → verification-only session
   (rework vs. checkpoint 809b8cfe1: bits, tests, Python, runtime, conventions); decision after it.
@@ -116,4 +126,5 @@ RP-6 11-18.
   11-21 WP-79 d3b7f00ba (WP-83 defined; owner: before WP-61). 11-22 WP-83 accepted (checkpoint
   18346c71d + owner's rework; WP-84 / WP-85 defined from its follow-ups; commit c43b8f21b).
   11-23 WP-61 checkpoint 809b8cfe1, rework check c2f5e90f1. 11-24 WP-61 accepted (owner's rework +
-  R1–R9 follow-ups; commit pending; WP-48 extended → rank 1 before WP-77, WP-35 → rank 3).
+  R1–R9 follow-ups; 1b8e1495f; WP-48 extended → rank 1 before WP-77, WP-35 → rank 3). 11-24 WP-48
+  accepted (all operators bitwise thread-count independent; commit pending; WP-86 defined).

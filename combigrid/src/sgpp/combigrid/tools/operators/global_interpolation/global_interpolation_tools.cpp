@@ -14,9 +14,9 @@
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/global_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/weighted_sum_scratch.hpp>
+#include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
@@ -33,6 +33,57 @@ namespace combigrid {
 
 namespace tools {
 namespace global_interpolation {
+
+namespace {
+
+/**
+ * Calls @p process(tgIdx, scratch) for every tensor grid of @p sparseGrid in parallel, with a
+ * scratch per thread for m = @p nOutputs (0 for a scalar source function).
+ */
+template <typename Process>
+void forEachTensorGrid(const SparseGrid& sparseGrid, const size_t nOutputs, Process&& process) {
+  const size_t nTG = sparseGrid.nTG();
+
+#pragma omp parallel
+  {
+    GlobalInterpScratch scratch(sparseGrid.nDim(), sparseGrid.getMaxTGSumOverGPCntsPerDim(),
+                                nOutputs);
+
+#pragma omp for schedule(guided) nowait
+    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+      process(tgIdx, scratch);
+    }
+  }
+}
+
+}  // namespace
+
+std::vector<double> estimateTensorGrids(const SourceFunc& sourceFunc,
+                                        const base::DataVector& normPoint,
+                                        const SparseGrid& sparseGrid) {
+  std::vector<double> values(sparseGrid.nTG());
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  forEachTensorGrid(sparseGrid, 0, [&](const size_t tgIdx, GlobalInterpScratch& scratch) {
+    values[tgIdx] =
+        processTensorGrid(sourceFunc, normPoint, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid,
+                          sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid, genInstr, scratch);
+  });
+  return values;
+}
+
+misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourceFunc,
+                                                   const base::DataVector& normPoint,
+                                                   const SparseGrid& sparseGrid) {
+  const size_t nOutputs = sourceFunc.nOutputs();
+  misc::FlatNestedVec<double, 2> values(sparseGrid.nTG(), nOutputs);
+  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  forEachTensorGrid(sparseGrid, nOutputs, [&](const size_t tgIdx, GlobalInterpScratch& scratch) {
+    processTensorGrid(sourceFunc, normPoint, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid,
+                      sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid, genInstr, scratch,
+                      values[tgIdx]);
+  });
+  return values;
+}
 
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& normPoint,
                          const TensorGridView& tg, const TensorGridView& unitTG,
@@ -77,38 +128,6 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
                        const SGGenInstr& genInstr, const std::span<double> out) {
   GlobalInterpScratch scratch(tg.nDim(), tg.sumOfGPCntsPerDim(), sourceFunc.nOutputs());
   processTensorGrid(sourceFunc, normPoint, tg, unitTG, genInstr, scratch, out);
-}
-
-void combineTensorGrids(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
-                        const SparseGrid& sparseGrid, const std::span<double> result) {
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const size_t nOutputs = result.size();
-
-  std::ranges::fill(result, 0.0);
-
-#pragma omp parallel
-  {
-    GlobalInterpScratch scratch(sparseGrid.nDim(), sparseGrid.getMaxTGSumOverGPCntsPerDim(),
-                                nOutputs);
-    std::vector<double> tgResult(nOutputs);
-    std::vector<double> threadResult(nOutputs, 0.0);
-
-#pragma omp for schedule(guided) nowait
-    for (size_t tgIdx = 0; tgIdx < sparseGrid.nTG(); tgIdx++) {
-      const TensorGridCTDataView tgData = sparseGrid.getDomainTensorGrid(tgIdx);
-      processTensorGrid(sourceFunc, normPoint, tgData.tensorGrid,
-                        sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid, genInstr, scratch,
-                        tgResult);
-      for (size_t k = 0; k < nOutputs; k++) {
-        threadResult[k] += tgData.coefficient * tgResult[k];
-      }
-    }
-
-#pragma omp critical
-    for (size_t k = 0; k < nOutputs; k++) {
-      result[k] += threadResult[k];
-    }
-  }
 }
 
 void prepareTensorGrid(const base::DataVector& normPoint, const TensorGridView& tg,

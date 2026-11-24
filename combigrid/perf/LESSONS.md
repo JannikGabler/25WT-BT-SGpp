@@ -1,7 +1,7 @@
 # Lessons — combigrid optimization phase
 
-What did not work (copy the relevant lines into work-session prompts) and measurement notes that
-are not in [README.md](README.md). Maintained by the master session; current state:
+Ideas tried and dropped (the relevant lines go into work-session prompts as context) and
+measurement notes that are not in [README.md](README.md). Maintained by the master session; current state:
 [STATUS.md](STATUS.md).
 
 ## Measurement notes
@@ -21,12 +21,14 @@ are not in [README.md](README.md). Maintained by the master session; current sta
 - **Load-balance model** (RP-6, `results/RP-6/schedule_sim.py`): makespan with cost of a TG = its
   points reproduces `expensive/mivec/sg` c100us exactly (dynamic / guided). SG `interpolateLinear`
   has uniform per-TG cost (2^d corners) → no size-based order there.
-- **Thread-count (in)dependence of results**: SG quadrature / mivec are bitwise thread-count independent
-  since WP-61 (TG-indexed buffer + compensated TG-order sum; e2e: 1 value per case over all rounds), as
-  are the DSG interpolations (WP-45 / WP-49). DSG quadrature and SG interp / interplin still use
-  `reduction(+)` (until WP-48 extended): at 16 t 46 of the 146 `perf_reference` cases differ run to run
-  (`results/WP-61/rework/reference_bits.txt`; before WP-61 `quad/sg/equi-exp/b1/d15/L6` varied by 5e-7)
-  → for those operators the e2e "result sanity" line is not evidence of a change; bitwise pins are 1 t.
+- **Thread-count (in)dependence of results**: since WP-48 **every operator** is bitwise thread-count
+  and run-to-run independent (TG-indexed per-TG values + serial compensated combination in TG order:
+  SG quad / mivec WP-61; DSG quad, SG interp / interplin WP-48; DSG interpolations WP-45 / WP-49;
+  `perf_reference` 0 of 146 cases vary at 1/2/3/16 t, `results/WP-48/reference_bits.txt`) → the e2e
+  "result sanity" line is evidence of a change for all operators, and a TG reordering must be
+  bitwise neutral (test `thread_count_independent_operators`). Before WP-48: 53 of 146 varied.
+- **Micro at 16 t**: µs-long calls measure as ms with CIs up to 5x (wake-up artifacts of the micro
+  harness; WP-48 `micro-t16.md`) → judge small calls with 1-t micro + e2e only.
 - **Cross-call cache in e2e**: the pipelines build a new grid per run → the cache never hits in the
   judged suite; repeated-call gains need dedicated benchmarks (WP-73 / WP-82).
 
@@ -41,9 +43,11 @@ are not in [README.md](README.md). Maintained by the master session; current sta
   (pre-existing), alone 40/40.
 - `grid_storage_pinning` fails without Eigen / Armadillo (FFT-backend-specific hashes; owner 11-24 → WP-35).
 
-## Do not retry
+## Dropped earlier
 
-(`WP-NN <idea>: <numbers>, <why>`; details in the summaries)
+(`WP-NN <idea> (<context>): <numbers>, <why>`; details in the summaries.) Decision context, not
+prohibitions: each line holds for the code, case and measurement it came from. Sessions read the
+summary before letting a line shape a design, and retry or adapt an idea when the reason does not apply.
 - **Methodology** (README.md): profiles via `perf script -F ip,sym,symoff,dso -G` + `addr2line -a
   -i` (`results/RP-3/profile_split.py`), not callchains / `--sort symoff`; libgomp / OpenBLAS shares
   of ms-long processes = pool spin-up. TySan: > 12 GB, false positives → `-Wstrict-aliasing`.
@@ -72,8 +76,9 @@ are not in [README.md](README.md). Maintained by the master session; current sta
   swap at the hook (races) → mode word; `atomic_thread_fence` in the seqlock (TSan) → release / acquire.
 - WP-28 `MDB_WRITEMAP` (slower, sparse preallocation); pending lookup / spill inline (inserts 2.6–4.8 %
   slower) → out of line + `[[unlikely]]`; fsync in the destructor (cold runs 1.3–5x slower).
-- WP-29b `updateCoeffSums` out-of-line (e2e 0.992x) → header-inline. WP-29c per-call `std::vector`
-  for innerk factors (0.74x) → stack blocks; pointer-based ops / non-inlined templates (0.972,
+- WP-29b `updateCoeffSums` out-of-line (e2e 0.992x) → header-inline. WP-29c `std::vector` for the innerk
+  factors per 1D interpolation call inside `OptBarycentricFormula` (hot path; malloc 10 %
+  of the time, cc d2 m1 0.74x) → stack blocks (once per operator call is negligible, WP-48); pointer-based ops / non-inlined templates (0.972,
   0.992x); `aligned(64)` on both collapse templates (op-cache misses 6x).
 - WP-36 hashed cache for reuse in interp / interplin: 0.41–0.94x (lookup > integrand) → index-based reuse only.
 - WP-47 DSG lin. interpolation: serial path inside `omp parallel if(false)` (d2 12.1 vs. 8.8 µs) →
@@ -128,3 +133,11 @@ are not in [README.md](README.md). Maintained by the master session; current sta
   deduction from `std::vector` / non-const spans) → deduced contiguous ranges, `<OType>` explicit.
 - RP-4 `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows`: 0.994x → the WP-52 −1 % is not
   recoverable this way.
+- WP-48 thread-local per-call TG value buffer for the SG interpolations (`misc::TensorGridValueBuffer`,
+  ≈ 60 lines + test): vs. a plain per-call `std::vector` micro 1.000x, e2e 0.999x (memory 0.996) → the
+  few-KiB malloc is negligible next to the per-thread scratches; plain vector as SG quadrature.
+- WP-48 small-call gate for SG `interpolateLinear` (serial below a corner-visit gate / thread cap):
+  interplin/sg d2 L16 p16384 full team 95–107 ms, serial 194–196, cap 8 t 98–99, 4 t 129–130, 2 t
+  172–173 ms. `schedule(static)` keeps each thread's TGs (2^16-node rows) in its L2 across calls;
+  one thread misses cache (12 vs. 5.8 µs per call). Serial pays only for tiny grids (not in the suite);
+  a corner-count gate also ignores the source-function cost → no gate (SG interp neither).

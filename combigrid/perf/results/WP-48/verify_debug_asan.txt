@@ -1,0 +1,6 @@
+build 'debug' finished in 188s; 0 compiler/style warnings in combigrid sources or perf benchmarks
+[debug] run 1/3: exit 0; [1;32;49m*** No errors detected
+[debug] run 2/3: exit 0; [1;32;49m*** No errors detected
+[debug] run 3/3: exit 0; [1;32;49m*** No errors detected
+build 'asan' finished in 202s; 0 compiler/style warnings in combigrid sources or perf benchmarks
+[asan] run 1/1: exit 0; [1;32;49m*** No errors detected

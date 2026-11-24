@@ -1,0 +1,312 @@
+A/B `e2e`: A=`WP-48-before` B=`WP-48-after`, 16 thread(s), 5 rounds (interleaved processes) x 1 sample(s), speedup = median(A)/median(B) (> 1: B faster) as geometric mean of the per-round ratios, 95% t-CI with the spread bounded below by the noise model (baseline/noise_e2e.json)
+
+| case | metric | A | B | speedup | 95% CI | verdict |
+|---|---|---|---|---|---|---|
+| quad/sg/equi-exp/b0/d2/L20 | total | 317.45ms | 331.99ms | 0.977 | [0.875, 1.090] | ~ (noise) |
+| quad/sg/equi-exp/b0/d2/L20 | operator | 279.68ms | 294.57ms | 0.976 | [0.858, 1.110] | ~ (noise) |
+| quad/sg/equi-exp/b0/d2/L20 | generation | 37.74ms | 39.07ms | 0.981 | [0.881, 1.093] | ~ (noise) |
+| quad/sg/equi-exp/b0/d5/L10 | total | 248.64ms | 248.31ms | 1.002 | [0.990, 1.014] | ~ (noise) |
+| quad/sg/equi-exp/b0/d5/L10 | operator | 246.92ms | 245.79ms | 1.003 | [0.992, 1.015] | ~ (noise) |
+| quad/sg/equi-exp/b0/d5/L10 | generation | 1.45ms | 1.57ms | 0.872 | [0.403, 1.886] | ~ (noise) |
+| quad/sg/equi-exp/b0/d7/L7 | total | 496.82ms | 498.12ms | 0.999 | [0.989, 1.010] | ~ (noise) |
+| quad/sg/equi-exp/b0/d7/L7 | operator | 494.76ms | 496.52ms | 0.998 | [0.988, 1.009] | ~ (noise) |
+| quad/sg/equi-exp/b0/d7/L7 | generation | 1.50ms | 1.50ms | 1.285 | [0.755, 2.189] | ~ (noise) |
+| quad/sg/equi-exp/b0/d10/L4 | total | 906.69ms | 904.74ms | 0.999 | [0.987, 1.010] | ~ (noise) |
+| quad/sg/equi-exp/b0/d10/L4 | operator | 903.17ms | 902.72ms | 0.998 | [0.988, 1.007] | ~ (noise) |
+| quad/sg/equi-exp/b0/d10/L4 | generation | 3.48ms | 2.17ms | 1.285 | [0.674, 2.452] | ~ (noise) |
+| quad/sg/equi-exp/b1/d10/L7 | total | 241.64ms | 241.26ms | 1.001 | [0.996, 1.005] | ~ (noise) |
+| quad/sg/equi-exp/b1/d10/L7 | operator | 239.50ms | 239.15ms | 1.001 | [0.992, 1.009] | ~ (noise) |
+| quad/sg/equi-exp/b1/d10/L7 | generation | 1.44ms | 1.43ms | 1.000 | [0.827, 1.210] | ~ (noise) |
+| quad/sg/equi-exp/b1/d15/L6 | total | 490.69ms | 491.13ms | 1.003 | [0.990, 1.015] | ~ (noise) |
+| quad/sg/equi-exp/b1/d15/L6 | operator | 481.54ms | 481.93ms | 1.003 | [0.989, 1.017] | ~ (noise) |
+| quad/sg/equi-exp/b1/d15/L6 | generation | 6.46ms | 6.49ms | 1.001 | [0.894, 1.121] | ~ (noise) |
+| quad/sg/equi-exp/b1/d20/L5 | total | 216.73ms | 216.23ms | 1.005 | [0.992, 1.018] | ~ (noise) |
+| quad/sg/equi-exp/b1/d20/L5 | operator | 204.91ms | 204.76ms | 1.005 | [0.996, 1.014] | ~ (noise) |
+| quad/sg/equi-exp/b1/d20/L5 | generation | 8.29ms | 8.27ms | 1.006 | [0.744, 1.359] | ~ (noise) |
+| quad/sg/equi-sin/b0/d7/L7 | total | 2.397s | 2.398s | 1.000 | [0.992, 1.009] | ~ (noise) |
+| quad/sg/equi-sin/b0/d7/L7 | operator | 2.396s | 2.396s | 1.000 | [0.992, 1.009] | ~ (noise) |
+| quad/sg/equi-sin/b0/d7/L7 | generation | 1.56ms | 1.44ms | 1.059 | [0.877, 1.279] | ~ (noise) |
+| quad/sg/cc-uq/b0/d2/L20 | total | 449.38ms | 434.42ms | 1.006 | [0.956, 1.059] | ~ (noise) |
+| quad/sg/cc-uq/b0/d2/L20 | operator | 363.57ms | 356.38ms | 0.992 | [0.933, 1.055] | ~ (noise) |
+| quad/sg/cc-uq/b0/d2/L20 | generation | 80.11ms | 71.41ms | 1.078 | [0.933, 1.246] | ~ (noise) |
+| quad/sg/cc-uq/b0/d3/L14 | total | 75.62ms | 75.09ms | 1.010 | [0.992, 1.027] | ~ (noise) |
+| quad/sg/cc-uq/b0/d3/L14 | operator | 74.30ms | 73.72ms | 1.011 | [0.993, 1.029] | ~ (noise) |
+| quad/sg/cc-uq/b0/d3/L14 | generation | 1.25ms | 1.28ms | 0.967 | [0.935, 1.000] | ~ (noise) |
+| quad/sg/cc-uq/b0/d5/L10 | total | 322.14ms | 321.21ms | 1.001 | [0.996, 1.007] | ~ (noise) |
+| quad/sg/cc-uq/b0/d5/L10 | operator | 320.10ms | 319.45ms | 1.001 | [0.996, 1.006] | ~ (noise) |
+| quad/sg/cc-uq/b0/d5/L10 | generation | 1.70ms | 1.51ms | 1.107 | [0.917, 1.336] | ~ (noise) |
+| quad/sg/cc-uq/b0/d7/L7 | total | 688.17ms | 689.25ms | 0.996 | [0.981, 1.011] | ~ (noise) |
+| quad/sg/cc-uq/b0/d7/L7 | operator | 686.98ms | 687.63ms | 0.996 | [0.981, 1.012] | ~ (noise) |
+| quad/sg/cc-uq/b0/d7/L7 | generation | 1.39ms | 1.51ms | 0.858 | [0.677, 1.086] | ~ (noise) |
+| quad/sg/cc-uq/b0/d10/L4 | total | 1.305s | 1.309s | 0.998 | [0.992, 1.004] | ~ (noise) |
+| quad/sg/cc-uq/b0/d10/L4 | operator | 1.303s | 1.307s | 0.998 | [0.993, 1.003] | ~ (noise) |
+| quad/sg/cc-uq/b0/d10/L4 | generation | 2.14ms | 2.26ms | 0.856 | [0.585, 1.254] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d3/L16 | total | 92.81ms | 93.85ms | 0.992 | [0.979, 1.005] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d3/L16 | operator | 89.97ms | 90.69ms | 0.989 | [0.980, 0.999] | SLOWER |
+| quad/dsg/equi-exp/b0/d3/L16 | generation | 974.21us | 525.06us | 1.695 | [0.580, 4.954] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d5/L12 | total | 202.88ms | 202.58ms | 1.002 | [0.997, 1.007] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d5/L12 | operator | 202.04ms | 201.70ms | 1.002 | [0.998, 1.006] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d5/L12 | generation | 477.64us | 478.06us | 0.977 | [0.757, 1.260] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d7/L10 | total | 1.146s | 1.149s | 0.997 | [0.993, 1.001] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d7/L10 | operator | 1.145s | 1.148s | 0.997 | [0.993, 1.001] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d7/L10 | generation | 198.21us | 189.41us | 0.820 | [0.358, 1.879] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d10/L7 | total | 5.409s | 5.403s | 1.001 | [0.997, 1.004] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d10/L7 | operator | 5.408s | 5.402s | 1.001 | [0.997, 1.004] | ~ (noise) |
+| quad/dsg/equi-exp/b0/d10/L7 | generation | 480.85us | 367.44us | 1.091 | [0.585, 2.037] | ~ (noise) |
+| quad/dsg/equi-exp/b1/d15/L7 | total | 1.163s | 1.166s | 1.000 | [0.994, 1.005] | ~ (noise) |
+| quad/dsg/equi-exp/b1/d15/L7 | operator | 1.149s | 1.152s | 0.999 | [0.994, 1.005] | ~ (noise) |
+| quad/dsg/equi-exp/b1/d15/L7 | generation | 4.12ms | 4.08ms | 1.009 | [0.864, 1.177] | ~ (noise) |
+| quad/dsg/equi-exp/b1/d20/L6 | total | 1.136s | 1.135s | 1.007 | [0.992, 1.022] | ~ (noise) |
+| quad/dsg/equi-exp/b1/d20/L6 | operator | 1.108s | 1.108s | 1.006 | [0.991, 1.022] | ~ (noise) |
+| quad/dsg/equi-exp/b1/d20/L6 | generation | 11.06ms | 11.03ms | 1.012 | [0.983, 1.043] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d5/L12 | total | 247.38ms | 247.61ms | 0.999 | [0.995, 1.003] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d5/L12 | operator | 246.25ms | 246.57ms | 0.999 | [0.995, 1.003] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d5/L12 | generation | 632.84us | 656.44us | 0.992 | [0.923, 1.066] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d7/L10 | total | 1.451s | 1.449s | 1.002 | [0.998, 1.006] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d7/L10 | operator | 1.450s | 1.448s | 1.002 | [0.998, 1.006] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d7/L10 | generation | 225.31us | 228.04us | 0.998 | [0.871, 1.143] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d10/L7 | total | 6.875s | 6.875s | 0.993 | [0.981, 1.005] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d10/L7 | operator | 6.874s | 6.873s | 0.993 | [0.981, 1.005] | ~ (noise) |
+| quad/dsg/cc-uq/b0/d10/L7 | generation | 648.61us | 514.10us | 1.114 | [0.729, 1.702] | ~ (noise) |
+| interp/sg/cc/b0/d2/L12/p64 | total | 127.78ms | 128.02ms | 0.999 | [0.981, 1.018] | ~ (noise) |
+| interp/sg/cc/b0/d2/L12/p64 | operator | 127.49ms | 127.75ms | 0.999 | [0.981, 1.018] | ~ (noise) |
+| interp/sg/cc/b0/d2/L12/p64 | generation | 221.81us | 217.49us | 1.006 | [0.921, 1.099] | ~ (noise) |
+| interp/sg/cc/b0/d3/L9/p64 | total | 186.35ms | 185.55ms | 1.000 | [0.980, 1.021] | ~ (noise) |
+| interp/sg/cc/b0/d3/L9/p64 | operator | 186.22ms | 185.41ms | 1.000 | [0.980, 1.021] | ~ (noise) |
+| interp/sg/cc/b0/d3/L9/p64 | generation | 89.19us | 89.12us | 0.971 | [0.864, 1.092] | ~ (noise) |
+| interp/sg/cc/b0/d5/L6/p64 | total | 1.138s | 1.139s | 1.013 | [0.973, 1.056] | ~ (noise) |
+| interp/sg/cc/b0/d5/L6/p64 | operator | 1.138s | 1.139s | 1.013 | [0.973, 1.056] | ~ (noise) |
+| interp/sg/cc/b0/d5/L6/p64 | generation | 73.19us | 73.12us | 0.965 | [0.770, 1.210] | ~ (noise) |
+| interp/sg/cc/b0/d7/L4/p16 | total | 1.009s | 1.007s | 1.001 | [0.988, 1.014] | ~ (noise) |
+| interp/sg/cc/b0/d7/L4/p16 | operator | 1.008s | 1.007s | 1.001 | [0.988, 1.014] | ~ (noise) |
+| interp/sg/cc/b0/d7/L4/p16 | generation | 66.35us | 74.52us | 0.923 | [0.860, 0.990] | SLOWER |
+| interp/sg/cc/b0/d10/L2/p8 | total | 1.607s | 1.604s | 1.001 | [0.994, 1.008] | ~ (noise) |
+| interp/sg/cc/b0/d10/L2/p8 | operator | 1.607s | 1.604s | 1.001 | [0.994, 1.009] | ~ (noise) |
+| interp/sg/cc/b0/d10/L2/p8 | generation | 40.37us | 49.59us | 0.769 | [0.665, 0.889] | SLOWER |
+| interp/sg/cheb1/b0/d3/L6/p64 | total | 34.10ms | 34.25ms | 1.002 | [0.983, 1.021] | ~ (noise) |
+| interp/sg/cheb1/b0/d3/L6/p64 | operator | 34.01ms | 34.16ms | 1.002 | [0.983, 1.021] | ~ (noise) |
+| interp/sg/cheb1/b0/d3/L6/p64 | generation | 41.07us | 40.93us | 1.002 | [0.700, 1.434] | ~ (noise) |
+| interp/sg/cheb1/b0/d5/L4/p64 | total | 117.20ms | 117.42ms | 0.999 | [0.986, 1.013] | ~ (noise) |
+| interp/sg/cheb1/b0/d5/L4/p64 | operator | 117.11ms | 117.35ms | 0.999 | [0.986, 1.013] | ~ (noise) |
+| interp/sg/cheb1/b0/d5/L4/p64 | generation | 38.55us | 31.01us | 1.266 | [0.984, 1.630] | ~ (noise) |
+| interp/sg/equi/b0/d3/L5/p64 | total | 11.82ms | 11.88ms | 1.015 | [0.966, 1.066] | ~ (noise) |
+| interp/sg/equi/b0/d3/L5/p64 | operator | 11.74ms | 11.81ms | 1.015 | [0.966, 1.066] | ~ (noise) |
+| interp/sg/equi/b0/d3/L5/p64 | generation | 31.99us | 32.27us | 0.984 | [0.846, 1.145] | ~ (noise) |
+| interp/dsg/cc/b0/d2/L12/p64 | total | 52.45ms | 52.16ms | 1.004 | [0.991, 1.017] | ~ (noise) |
+| interp/dsg/cc/b0/d2/L12/p64 | operator | 52.07ms | 51.81ms | 1.004 | [0.991, 1.017] | ~ (noise) |
+| interp/dsg/cc/b0/d2/L12/p64 | generation | 229.29us | 226.43us | 1.004 | [0.925, 1.089] | ~ (noise) |
+| interp/dsg/cc/b0/d3/L9/p64 | total | 43.27ms | 43.05ms | 1.003 | [0.995, 1.011] | ~ (noise) |
+| interp/dsg/cc/b0/d3/L9/p64 | operator | 43.11ms | 42.89ms | 1.003 | [0.996, 1.011] | ~ (noise) |
+| interp/dsg/cc/b0/d3/L9/p64 | generation | 61.53us | 60.55us | 1.010 | [0.996, 1.024] | ~ (noise) |
+| interp/dsg/cc/b0/d5/L6/p64 | total | 175.81ms | 174.98ms | 0.998 | [0.981, 1.016] | ~ (noise) |
+| interp/dsg/cc/b0/d5/L6/p64 | operator | 175.70ms | 174.88ms | 0.998 | [0.981, 1.016] | ~ (noise) |
+| interp/dsg/cc/b0/d5/L6/p64 | generation | 50.71us | 49.94us | 1.022 | [0.964, 1.083] | ~ (noise) |
+| interp/dsg/cc/b0/d7/L4/p16 | total | 151.60ms | 151.37ms | 1.001 | [0.998, 1.005] | ~ (noise) |
+| interp/dsg/cc/b0/d7/L4/p16 | operator | 151.51ms | 151.30ms | 1.001 | [0.998, 1.005] | ~ (noise) |
+| interp/dsg/cc/b0/d7/L4/p16 | generation | 41.84us | 40.58us | 1.073 | [0.909, 1.266] | ~ (noise) |
+| interp/dsg/cc/b0/d10/L2/p8 | total | 398.76ms | 398.61ms | 1.001 | [0.997, 1.004] | ~ (noise) |
+| interp/dsg/cc/b0/d10/L2/p8 | operator | 398.70ms | 398.55ms | 1.001 | [0.997, 1.004] | ~ (noise) |
+| interp/dsg/cc/b0/d10/L2/p8 | generation | 35.55us | 34.36us | 1.122 | [0.881, 1.429] | ~ (noise) |
+| interp/dsg/equi/b0/d3/L5/p64 | total | 6.56ms | 6.51ms | 0.970 | [0.861, 1.094] | ~ (noise) |
+| interp/dsg/equi/b0/d3/L5/p64 | operator | 6.49ms | 6.45ms | 0.970 | [0.860, 1.094] | ~ (noise) |
+| interp/dsg/equi/b0/d3/L5/p64 | generation | 24.79us | 25.21us | 0.994 | [0.964, 1.025] | ~ (noise) |
+| interplin/sg/equi/b1/d2/L16/p16384 | total | 112.03ms | 99.87ms | 1.117 | [1.075, 1.160] | faster |
+| interplin/sg/equi/b1/d2/L16/p16384 | operator | 105.15ms | 93.02ms | 1.126 | [1.081, 1.174] | faster |
+| interplin/sg/equi/b1/d2/L16/p16384 | generation | 2.32ms | 2.39ms | 0.975 | [0.897, 1.060] | ~ (noise) |
+| interplin/sg/equi/b1/d5/L8/p1024 | total | 363.47ms | 361.00ms | 1.010 | [0.985, 1.036] | ~ (noise) |
+| interplin/sg/equi/b1/d5/L8/p1024 | operator | 362.93ms | 360.47ms | 1.010 | [0.984, 1.037] | ~ (noise) |
+| interplin/sg/equi/b1/d5/L8/p1024 | generation | 77.66us | 81.09us | 0.969 | [0.852, 1.101] | ~ (noise) |
+| interplin/sg/equi/b1/d8/L5/p256 | total | 1.205s | 1.198s | 1.007 | [0.984, 1.030] | ~ (noise) |
+| interplin/sg/equi/b1/d8/L5/p256 | operator | 1.202s | 1.194s | 1.007 | [0.984, 1.029] | ~ (noise) |
+| interplin/sg/equi/b1/d8/L5/p256 | generation | 2.14ms | 2.01ms | 1.102 | [0.728, 1.667] | ~ (noise) |
+| interplin/sg/equi/b1/d10/L5/p32 | total | 1.853s | 1.856s | 1.001 | [0.981, 1.022] | ~ (noise) |
+| interplin/sg/equi/b1/d10/L5/p32 | operator | 1.852s | 1.854s | 1.001 | [0.981, 1.022] | ~ (noise) |
+| interplin/sg/equi/b1/d10/L5/p32 | generation | 1.61ms | 1.62ms | 0.830 | [0.447, 1.542] | ~ (noise) |
+| interplin/dsg/equi/b1/d2/L16/p16384 | total | 157.09ms | 159.53ms | 0.976 | [0.927, 1.027] | ~ (noise) |
+| interplin/dsg/equi/b1/d2/L16/p16384 | operator | 151.50ms | 153.78ms | 0.976 | [0.926, 1.028] | ~ (noise) |
+| interplin/dsg/equi/b1/d2/L16/p16384 | generation | 1.30ms | 1.33ms | 0.966 | [0.856, 1.090] | ~ (noise) |
+| interplin/dsg/equi/b1/d5/L8/p1024 | total | 121.36ms | 121.70ms | 0.998 | [0.985, 1.010] | ~ (noise) |
+| interplin/dsg/equi/b1/d5/L8/p1024 | operator | 120.77ms | 121.11ms | 0.998 | [0.985, 1.010] | ~ (noise) |
+| interplin/dsg/equi/b1/d5/L8/p1024 | generation | 137.52us | 122.57us | 1.098 | [1.023, 1.178] | faster |
+| interplin/dsg/equi/b1/d8/L5/p256 | total | 237.18ms | 238.35ms | 0.998 | [0.990, 1.007] | ~ (noise) |
+| interplin/dsg/equi/b1/d8/L5/p256 | operator | 234.79ms | 235.54ms | 1.001 | [0.987, 1.016] | ~ (noise) |
+| interplin/dsg/equi/b1/d8/L5/p256 | generation | 2.05ms | 2.17ms | 0.780 | [0.462, 1.317] | ~ (noise) |
+| interplin/dsg/equi/b1/d10/L5/p32 | total | 272.12ms | 271.35ms | 1.001 | [0.990, 1.012] | ~ (noise) |
+| interplin/dsg/equi/b1/d10/L5/p32 | operator | 270.31ms | 269.60ms | 1.001 | [0.989, 1.014] | ~ (noise) |
+| interplin/dsg/equi/b1/d10/L5/p32 | generation | 1.32ms | 1.36ms | 0.984 | [0.416, 2.326] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d5/S16/n1000 | total | 684.52ms | 692.58ms | 0.994 | [0.943, 1.049] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d5/S16/n1000 | operator | 681.31ms | 689.40ms | 0.994 | [0.942, 1.049] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d5/S16/n1000 | generation | 2.68ms | 2.67ms | 1.007 | [0.995, 1.019] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d10/S12/n1000 | total | 373.00ms | 382.18ms | 0.983 | [0.961, 1.006] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d10/S12/n1000 | operator | 365.26ms | 374.55ms | 0.984 | [0.961, 1.007] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d10/S12/n1000 | generation | 7.14ms | 7.15ms | 0.962 | [0.878, 1.055] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d15/S10/n300 | total | 26.40ms | 26.29ms | 1.006 | [0.988, 1.024] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d15/S10/n300 | operator | 23.83ms | 23.74ms | 1.006 | [0.956, 1.058] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d15/S10/n300 | generation | 2.40ms | 2.37ms | 1.009 | [1.002, 1.015] | faster |
+| mivec/sg/cc-exp/b1/d20/S7/n300 | total | 3.05ms | 3.02ms | 1.014 | [0.980, 1.048] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d20/S7/n300 | operator | 2.12ms | 2.13ms | 1.001 | [0.924, 1.084] | ~ (noise) |
+| mivec/sg/cc-exp/b1/d20/S7/n300 | generation | 769.02us | 750.93us | 1.052 | [0.956, 1.157] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d10/L4/c100us | total | 1.536s | 1.537s | 0.999 | [0.992, 1.007] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d10/L4/c100us | operator | 1.533s | 1.534s | 0.999 | [0.992, 1.007] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d10/L4/c100us | generation | 2.15ms | 2.19ms | 1.003 | [0.623, 1.617] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d10/L4/c100us | total | 571.55ms | 571.18ms | 1.000 | [0.995, 1.006] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d10/L4/c100us | operator | 569.27ms | 569.07ms | 1.000 | [0.996, 1.004] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d10/L4/c100us | generation | 2.03ms | 2.14ms | 1.041 | [0.756, 1.434] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d20/L3/c100us | total | 1.037s | 1.037s | 1.001 | [0.986, 1.015] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d20/L3/c100us | operator | 1.034s | 1.035s | 1.000 | [0.986, 1.014] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d20/L3/c100us | generation | 2.04ms | 2.10ms | 1.075 | [0.805, 1.435] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d20/L3/c100us | total | 520.96ms | 521.29ms | 1.000 | [0.976, 1.025] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d20/L3/c100us | operator | 518.82ms | 519.17ms | 0.999 | [0.979, 1.020] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d20/L3/c100us | generation | 1.84ms | 1.93ms | 1.041 | [0.467, 2.322] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us | total | 2.158s | 2.157s | 1.000 | [0.997, 1.004] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us | operator | 2.157s | 2.156s | 1.000 | [0.997, 1.004] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us | generation | 1.15ms | 1.17ms | 0.977 | [0.957, 0.997] | SLOWER |
+| expensive/mivec/dsg/cc-exp/b1/d15/S6/n300/c100us | total | 881.15ms | 881.12ms | 1.000 | [0.996, 1.004] | ~ (noise) |
+| expensive/mivec/dsg/cc-exp/b1/d15/S6/n300/c100us | operator | 879.81ms | 879.61ms | 1.000 | [0.996, 1.004] | ~ (noise) |
+| expensive/mivec/dsg/cc-exp/b1/d15/S6/n300/c100us | generation | 1.12ms | 1.14ms | 0.994 | [0.960, 1.030] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us | total | 1.072s | 1.072s | 1.000 | [0.986, 1.014] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us | operator | 1.072s | 1.072s | 1.000 | [0.986, 1.014] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us | generation | 72.15us | 75.01us | 0.928 | [0.821, 1.048] | ~ (noise) |
+| expensive/interp/dsg/cc-exp/b1/d10/L3/p8/c100us | total | 502.85ms | 503.20ms | 1.000 | [0.996, 1.003] | ~ (noise) |
+| expensive/interp/dsg/cc-exp/b1/d10/L3/p8/c100us | operator | 502.77ms | 503.13ms | 1.000 | [0.996, 1.003] | ~ (noise) |
+| expensive/interp/dsg/cc-exp/b1/d10/L3/p8/c100us | generation | 45.96us | 47.14us | 0.978 | [0.899, 1.064] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us | total | 829.51ms | 828.37ms | 0.998 | [0.970, 1.026] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us | operator | 829.44ms | 828.30ms | 0.998 | [0.970, 1.026] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us | generation | 47.98us | 48.12us | 0.989 | [0.819, 1.195] | ~ (noise) |
+| expensive/interplin/dsg/equi-exp/b1/d5/L5/p16/c100us | total | 345.48ms | 345.36ms | 0.991 | [0.957, 1.026] | ~ (noise) |
+| expensive/interplin/dsg/equi-exp/b1/d5/L5/p16/c100us | operator | 345.42ms | 345.29ms | 0.991 | [0.957, 1.026] | ~ (noise) |
+| expensive/interplin/dsg/equi-exp/b1/d5/L5/p16/c100us | generation | 35.20us | 36.18us | 0.960 | [0.895, 1.031] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us-ramp | total | 2.475s | 2.477s | 0.999 | [0.996, 1.003] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us-ramp | operator | 2.474s | 2.476s | 0.999 | [0.996, 1.003] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us-ramp | generation | 1.16ms | 1.17ms | 0.995 | [0.976, 1.015] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d7/L3/p8/c100us-ramp | total | 398.12ms | 398.07ms | 0.995 | [0.981, 1.008] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d7/L3/p8/c100us-ramp | operator | 398.06ms | 398.01ms | 0.995 | [0.981, 1.008] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d7/L3/p8/c100us-ramp | generation | 37.78us | 31.01us | 1.224 | [1.010, 1.482] | faster |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-ramp | total | 1.291s | 1.290s | 1.001 | [0.969, 1.034] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-ramp | operator | 1.290s | 1.290s | 1.001 | [0.969, 1.034] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-ramp | generation | 50.15us | 55.31us | 0.844 | [0.719, 0.989] | SLOWER |
+| expensive/quad/sg/cc-exp/b1/d15/L5/c1us | total | 1.153s | 1.154s | 1.000 | [0.980, 1.021] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d15/L5/c1us | operator | 1.151s | 1.151s | 1.000 | [0.980, 1.021] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d15/L5/c1us | generation | 1.78ms | 1.78ms | 0.999 | [0.973, 1.027] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d15/L5/c1us | total | 350.00ms | 350.06ms | 1.000 | [0.992, 1.009] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d15/L5/c1us | operator | 348.73ms | 348.76ms | 1.000 | [0.997, 1.004] | ~ (noise) |
+| expensive/quad/dsg/cc-exp/b1/d15/L5/c1us | generation | 342.09us | 345.43us | 0.978 | [0.897, 1.066] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d20/S10/n300/c1us | total | 665.43ms | 663.08ms | 1.004 | [0.981, 1.029] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d20/S10/n300/c1us | operator | 661.84ms | 659.53ms | 1.004 | [0.981, 1.029] | ~ (noise) |
+| expensive/mivec/sg/cc-exp/b1/d20/S10/n300/c1us | generation | 3.41ms | 3.36ms | 1.005 | [0.973, 1.038] | ~ (noise) |
+| expensive/mivec/dsg/cc-exp/b1/d20/S10/n300/c1us | total | 332.97ms | 332.85ms | 1.001 | [0.997, 1.005] | ~ (noise) |
+| expensive/mivec/dsg/cc-exp/b1/d20/S10/n300/c1us | operator | 329.38ms | 329.29ms | 1.001 | [0.997, 1.005] | ~ (noise) |
+| expensive/mivec/dsg/cc-exp/b1/d20/S10/n300/c1us | generation | 3.25ms | 3.22ms | 1.005 | [0.991, 1.019] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L4/p16/c1us | total | 257.63ms | 257.91ms | 0.999 | [0.819, 1.219] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L4/p16/c1us | operator | 255.22ms | 255.77ms | 0.998 | [0.822, 1.211] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L4/p16/c1us | generation | 1.92ms | 1.95ms | 1.101 | [0.775, 1.564] | ~ (noise) |
+| expensive/interp/dsg/cc-exp/b1/d10/L4/p16/c1us | total | 98.97ms | 100.49ms | 0.998 | [0.987, 1.010] | ~ (noise) |
+| expensive/interp/dsg/cc-exp/b1/d10/L4/p16/c1us | operator | 96.78ms | 96.73ms | 1.000 | [0.995, 1.005] | ~ (noise) |
+| expensive/interp/dsg/cc-exp/b1/d10/L4/p16/c1us | generation | 2.15ms | 3.54ms | 0.930 | [0.657, 1.316] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d10/L4/p16/c1us | total | 1.077s | 1.079s | 0.999 | [0.885, 1.128] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d10/L4/p16/c1us | operator | 1.073s | 1.077s | 0.999 | [0.884, 1.128] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d10/L4/p16/c1us | generation | 2.23ms | 2.00ms | 1.098 | [0.794, 1.518] | ~ (noise) |
+| expensive/interplin/dsg/equi-exp/b1/d10/L4/p16/c1us | total | 207.63ms | 207.52ms | 0.995 | [0.976, 1.013] | ~ (noise) |
+| expensive/interplin/dsg/equi-exp/b1/d10/L4/p16/c1us | operator | 205.61ms | 205.54ms | 0.996 | [0.983, 1.011] | ~ (noise) |
+| expensive/interplin/dsg/equi-exp/b1/d10/L4/p16/c1us | generation | 1.98ms | 2.03ms | 0.866 | [0.290, 2.591] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d10/L4/c100us-cached | total | 576.22ms | 576.10ms | 1.000 | [0.993, 1.007] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d10/L4/c100us-cached | operator | 572.63ms | 572.52ms | 1.000 | [0.996, 1.004] | ~ (noise) |
+| expensive/quad/sg/cc-exp/b1/d10/L4/c100us-cached | generation | 2.11ms | 2.25ms | 0.934 | [0.352, 2.476] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us-cached | total | 70.36ms | 70.60ms | 0.997 | [0.991, 1.002] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us-cached | operator | 70.26ms | 70.49ms | 0.997 | [0.991, 1.002] | ~ (noise) |
+| expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us-cached | generation | 43.72us | 44.42us | 0.989 | [0.932, 1.050] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-cached | total | 243.50ms | 243.27ms | 1.001 | [0.913, 1.098] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-cached | operator | 243.35ms | 243.17ms | 1.001 | [0.913, 1.098] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-cached | generation | 36.18us | 35.83us | 1.046 | [0.794, 1.379] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d8/L4/p32/c1us-cached | total | 154.15ms | 153.10ms | 1.011 | [0.982, 1.040] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d8/L4/p32/c1us-cached | operator | 145.65ms | 144.43ms | 1.011 | [0.987, 1.035] | ~ (noise) |
+| expensive/interplin/sg/equi-exp/b1/d8/L4/p32/c1us-cached | generation | 57.76us | 56.29us | 1.057 | [0.937, 1.192] | ~ (noise) |
+
+Sum of medians (total, common cases, group suite): A = 36.347s, B = 36.343s, saved = 3.91ms (1.000x)
+Sum of medians (total, common cases, group expensive/): A = 17.761s, B = 17.764s, saved = -2683494.0ns (1.000x)
+Sum of medians (total, common cases, group expensive/ cached): A = 1.044s, B = 1.043s, saved = 1.17ms (1.001x)
+Result sanity (rel. error vs exact): worst growth in `quad/dsg/equi-exp/b1/d15/L7`: A 4.63e-10 -> B 8.38e-10 (the binding check is `refcheck`)
+
+Peak memory (max RSS of each benchmark process, measured outside it by GNU time; median over the rounds; B/A > 1: B needs more; spread = max/min - 1 over the rounds; flag MEM+/MEM- if |B/A - 1| > 3% and the rounds of A and B do not overlap):
+
+| case | A | B | B/A | spread A / B | flag |
+|---|---|---|---|---|---|
+| quad/sg/equi-exp/b0/d2/L20 | 125.0 MiB | 124.1 MiB | 0.993 | 23.3% / 25.0% | ~ |
+| quad/sg/equi-exp/b0/d5/L10 | 12.7 MiB | 12.8 MiB | 1.008 | 2.0% / 1.5% | ~ |
+| quad/sg/equi-exp/b0/d7/L7 | 12.7 MiB | 12.8 MiB | 1.001 | 1.4% / 2.4% | ~ |
+| quad/sg/equi-exp/b0/d10/L4 | 12.9 MiB | 12.9 MiB | 0.999 | 1.5% / 1.1% | ~ |
+| quad/sg/equi-exp/b1/d10/L7 | 13.3 MiB | 13.4 MiB | 1.006 | 1.7% / 2.0% | ~ |
+| quad/sg/equi-exp/b1/d15/L6 | 18.4 MiB | 18.4 MiB | 0.999 | 1.8% / 1.8% | ~ |
+| quad/sg/equi-exp/b1/d20/L5 | 20.2 MiB | 20.3 MiB | 1.005 | 1.8% / 1.5% | ~ |
+| quad/sg/equi-sin/b0/d7/L7 | 12.9 MiB | 12.9 MiB | 0.995 | 1.4% / 1.8% | ~ |
+| quad/sg/cc-uq/b0/d2/L20 | 191.9 MiB | 198.9 MiB | 1.037 | 10.5% / 6.0% | ~ |
+| quad/sg/cc-uq/b0/d3/L14 | 15.2 MiB | 15.1 MiB | 0.991 | 4.6% / 5.1% | ~ |
+| quad/sg/cc-uq/b0/d5/L10 | 12.9 MiB | 12.9 MiB | 1.003 | 1.1% / 1.7% | ~ |
+| quad/sg/cc-uq/b0/d7/L7 | 12.9 MiB | 12.9 MiB | 1.002 | 0.5% / 1.5% | ~ |
+| quad/sg/cc-uq/b0/d10/L4 | 13.1 MiB | 13.0 MiB | 0.992 | 4.0% / 1.6% | ~ |
+| quad/dsg/equi-exp/b0/d3/L16 | 43.8 MiB | 43.8 MiB | 1.000 | 1.3% / 2.4% | ~ |
+| quad/dsg/equi-exp/b0/d5/L12 | 18.1 MiB | 18.2 MiB | 1.008 | 1.3% / 3.7% | ~ |
+| quad/dsg/equi-exp/b0/d7/L10 | 29.5 MiB | 28.8 MiB | 0.977 | 6.3% / 5.3% | ~ |
+| quad/dsg/equi-exp/b0/d10/L7 | 29.7 MiB | 29.9 MiB | 1.008 | 2.5% / 1.4% | ~ |
+| quad/dsg/equi-exp/b1/d15/L7 | 51.7 MiB | 51.6 MiB | 0.998 | 0.8% / 0.4% | ~ |
+| quad/dsg/equi-exp/b1/d20/L6 | 83.0 MiB | 82.9 MiB | 1.000 | 0.3% / 0.3% | ~ |
+| quad/dsg/cc-uq/b0/d5/L12 | 18.4 MiB | 18.5 MiB | 1.005 | 1.5% / 1.6% | ~ |
+| quad/dsg/cc-uq/b0/d7/L10 | 28.4 MiB | 29.0 MiB | 1.022 | 5.9% / 7.7% | ~ |
+| quad/dsg/cc-uq/b0/d10/L7 | 30.1 MiB | 30.3 MiB | 1.004 | 5.2% / 2.9% | ~ |
+| interp/sg/cc/b0/d2/L12/p64 | 14.7 MiB | 14.6 MiB | 0.994 | 4.0% / 2.3% | ~ |
+| interp/sg/cc/b0/d3/L9/p64 | 12.5 MiB | 12.5 MiB | 1.002 | 0.7% / 0.8% | ~ |
+| interp/sg/cc/b0/d5/L6/p64 | 12.3 MiB | 12.3 MiB | 1.002 | 2.4% / 2.3% | ~ |
+| interp/sg/cc/b0/d7/L4/p16 | 12.2 MiB | 12.4 MiB | 1.012 | 1.7% / 1.0% | ~ |
+| interp/sg/cc/b0/d10/L2/p8 | 12.3 MiB | 12.4 MiB | 1.009 | 2.0% / 1.3% | ~ |
+| interp/sg/cheb1/b0/d3/L6/p64 | 12.3 MiB | 12.3 MiB | 1.002 | 1.8% / 2.0% | ~ |
+| interp/sg/cheb1/b0/d5/L4/p64 | 12.3 MiB | 12.4 MiB | 1.010 | 2.2% / 1.0% | ~ |
+| interp/sg/equi/b0/d3/L5/p64 | 12.4 MiB | 12.4 MiB | 0.999 | 2.5% / 0.6% | ~ |
+| interp/dsg/cc/b0/d2/L12/p64 | 15.4 MiB | 15.4 MiB | 1.003 | 5.0% / 0.9% | ~ |
+| interp/dsg/cc/b0/d3/L9/p64 | 12.7 MiB | 12.7 MiB | 1.002 | 1.5% / 2.8% | ~ |
+| interp/dsg/cc/b0/d5/L6/p64 | 12.5 MiB | 12.5 MiB | 0.994 | 1.2% / 0.9% | ~ |
+| interp/dsg/cc/b0/d7/L4/p16 | 12.5 MiB | 12.6 MiB | 1.007 | 0.8% / 2.8% | ~ |
+| interp/dsg/cc/b0/d10/L2/p8 | 12.3 MiB | 12.4 MiB | 1.002 | 2.6% / 0.9% | ~ |
+| interp/dsg/equi/b0/d3/L5/p64 | 12.3 MiB | 12.4 MiB | 1.005 | 3.2% / 0.4% | ~ |
+| interplin/sg/equi/b1/d2/L16/p16384 | 21.1 MiB | 20.6 MiB | 0.975 | 8.4% / 5.5% | ~ |
+| interplin/sg/equi/b1/d5/L8/p1024 | 12.9 MiB | 13.0 MiB | 1.011 | 1.4% / 1.1% | ~ |
+| interplin/sg/equi/b1/d8/L5/p256 | 12.8 MiB | 12.9 MiB | 1.010 | 1.9% / 2.3% | ~ |
+| interplin/sg/equi/b1/d10/L5/p32 | 12.8 MiB | 12.9 MiB | 1.012 | 1.7% / 2.4% | ~ |
+| interplin/dsg/equi/b1/d2/L16/p16384 | 21.3 MiB | 21.4 MiB | 1.003 | 2.3% / 3.9% | ~ |
+| interplin/dsg/equi/b1/d5/L8/p1024 | 13.1 MiB | 13.3 MiB | 1.014 | 3.3% / 1.6% | ~ |
+| interplin/dsg/equi/b1/d8/L5/p256 | 12.4 MiB | 12.4 MiB | 0.998 | 3.3% / 4.3% | ~ |
+| interplin/dsg/equi/b1/d10/L5/p32 | 15.9 MiB | 16.0 MiB | 1.005 | 3.7% / 1.9% | ~ |
+| mivec/sg/cc-exp/b1/d5/S16/n1000 | 13.4 MiB | 13.4 MiB | 0.997 | 1.4% / 2.7% | ~ |
+| mivec/sg/cc-exp/b1/d10/S12/n1000 | 14.9 MiB | 15.0 MiB | 1.006 | 0.7% / 0.8% | ~ |
+| mivec/sg/cc-exp/b1/d15/S10/n300 | 13.4 MiB | 13.3 MiB | 0.997 | 1.7% / 2.8% | ~ |
+| mivec/sg/cc-exp/b1/d20/S7/n300 | 12.6 MiB | 12.6 MiB | 0.997 | 1.0% / 2.4% | ~ |
+| expensive/quad/sg/cc-exp/b1/d10/L4/c100us | 12.9 MiB | 12.9 MiB | 1.000 | 6.0% / 2.5% | ~ |
+| expensive/quad/dsg/cc-exp/b1/d10/L4/c100us | 13.1 MiB | 13.2 MiB | 1.010 | 1.6% / 1.0% | ~ |
+| expensive/quad/sg/cc-exp/b1/d20/L3/c100us | 12.9 MiB | 13.0 MiB | 1.005 | 2.3% / 1.5% | ~ |
+| expensive/quad/dsg/cc-exp/b1/d20/L3/c100us | 13.3 MiB | 13.3 MiB | 1.006 | 0.5% / 1.2% | ~ |
+| expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us | 12.7 MiB | 12.6 MiB | 0.996 | 0.9% / 1.6% | ~ |
+| expensive/mivec/dsg/cc-exp/b1/d15/S6/n300/c100us | 12.8 MiB | 12.8 MiB | 1.002 | 1.5% / 2.2% | ~ |
+| expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us | 12.3 MiB | 12.4 MiB | 1.010 | 4.1% / 4.6% | ~ |
+| expensive/interp/dsg/cc-exp/b1/d10/L3/p8/c100us | 12.4 MiB | 12.4 MiB | 0.999 | 2.2% / 1.8% | ~ |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us | 12.3 MiB | 12.3 MiB | 1.003 | 1.1% / 0.8% | ~ |
+| expensive/interplin/dsg/equi-exp/b1/d5/L5/p16/c100us | 12.4 MiB | 12.3 MiB | 0.994 | 2.0% / 2.5% | ~ |
+| expensive/mivec/sg/cc-exp/b1/d15/S6/n300/c100us-ramp | 12.5 MiB | 12.6 MiB | 1.006 | 2.3% / 1.4% | ~ |
+| expensive/interp/sg/cc-exp/b1/d7/L3/p8/c100us-ramp | 12.4 MiB | 12.4 MiB | 1.000 | 2.5% / 2.7% | ~ |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-ramp | 12.2 MiB | 12.4 MiB | 1.022 | 3.4% / 1.8% | ~ |
+| expensive/quad/sg/cc-exp/b1/d15/L5/c1us | 13.7 MiB | 13.9 MiB | 1.014 | 1.9% / 1.1% | ~ |
+| expensive/quad/dsg/cc-exp/b1/d15/L5/c1us | 16.0 MiB | 16.1 MiB | 1.006 | 1.3% / 0.6% | ~ |
+| expensive/mivec/sg/cc-exp/b1/d20/S10/n300/c1us | 13.2 MiB | 13.1 MiB | 0.995 | 1.5% / 1.6% | ~ |
+| expensive/mivec/dsg/cc-exp/b1/d20/S10/n300/c1us | 13.6 MiB | 13.6 MiB | 1.004 | 1.9% / 1.4% | ~ |
+| expensive/interp/sg/cc-exp/b1/d10/L4/p16/c1us | 12.9 MiB | 13.0 MiB | 1.010 | 1.5% / 3.1% | ~ |
+| expensive/interp/dsg/cc-exp/b1/d10/L4/p16/c1us | 13.1 MiB | 13.1 MiB | 0.998 | 1.1% / 3.2% | ~ |
+| expensive/interplin/sg/equi-exp/b1/d10/L4/p16/c1us | 12.6 MiB | 12.8 MiB | 1.022 | 1.6% / 2.3% | ~ |
+| expensive/interplin/dsg/equi-exp/b1/d10/L4/p16/c1us | 14.2 MiB | 14.2 MiB | 1.002 | 1.7% / 3.7% | ~ |
+| expensive/quad/sg/cc-exp/b1/d10/L4/c100us-cached | 20.7 MiB | 21.0 MiB | 1.012 | 3.2% / 3.9% | ~ |
+| expensive/interp/sg/cc-exp/b1/d10/L3/p8/c100us-cached | 13.6 MiB | 13.5 MiB | 0.994 | 4.3% / 3.0% | ~ |
+| expensive/interplin/sg/equi-exp/b1/d5/L5/p16/c100us-cached | 13.5 MiB | 13.5 MiB | 0.999 | 3.8% / 2.5% | ~ |
+| expensive/interplin/sg/equi-exp/b1/d8/L4/p32/c1us-cached | 59.5 MiB | 59.5 MiB | 1.002 | 0.4% / 0.7% | ~ |
+
+Peak memory (common cases): geomean B/A = 1.003; largest B/A: `quad/sg/cc-uq/b0/d2/L20` 191.9 MiB -> 198.9 MiB (1.037x); 0 MEM+, 0 MEM-
+Process floor (`perf_e2e --list`, libraries only; case peaks read as floor + case memory): A 10.3 MiB, B 10.5 MiB
+Foreign CPU load per round (other processes, share of all CPUs): 0.1%, 0.1%, 0.1%, 0.2%, 0.1%
+Round durations (s): 236, 236, 236, 236, 236 (rounds getting slower = the laptop throttles under sustained load; A and B are affected alike)
+Duration: 1181s. Environment: {"governor": "performance", "boost": "0", "ac_online": "1"}

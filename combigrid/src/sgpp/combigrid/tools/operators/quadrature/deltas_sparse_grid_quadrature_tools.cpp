@@ -3,11 +3,11 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
@@ -36,6 +36,53 @@ namespace combigrid {
 
 namespace tools {
 namespace dsg_quadrature {
+
+std::vector<double> estimateDeltaTensorGrids(const GenericDSGOperatorContext& context,
+                                             const SourceFunc& sourceFunc) {
+  const DeltasSparseGrid& deltasSparseGrid = context.deltasSparseGrid;
+  const size_t nTG = deltasSparseGrid.nTG();
+
+  std::vector<double> values(nTG);
+
+#pragma omp parallel
+  {
+    DeltaWeightedSumScratch scratch(deltasSparseGrid.nDim(),
+                                    deltasSparseGrid.getMaxTGSumOverGPCntsPerDim());
+
+    // The delta tensor grids differ in size by orders of magnitude -> Dynamic scheduling
+#pragma omp for schedule(dynamic) nowait
+    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+      values[tgIdx] = processDeltaTensorGrid(context, sourceFunc,
+                                             deltasSparseGrid.getDomainTensorGrid(tgIdx), scratch);
+    }
+  }
+
+  return values;
+}
+
+FlatNestedVec<double, 2> estimateDeltaTensorGrids(const GenericDSGOperatorContext& context,
+                                                  const VectorSourceFunc& sourceFunc) {
+  const DeltasSparseGrid& deltasSparseGrid = context.deltasSparseGrid;
+  const size_t nTG = deltasSparseGrid.nTG();
+  const size_t nOutputs = sourceFunc.nOutputs();
+
+  FlatNestedVec<double, 2> values(nTG, nOutputs);
+
+#pragma omp parallel
+  {
+    DeltaWeightedSumScratch scratch(deltasSparseGrid.nDim(),
+                                    deltasSparseGrid.getMaxTGSumOverGPCntsPerDim(), nOutputs);
+
+    // The delta tensor grids differ in size by orders of magnitude -> Dynamic scheduling
+#pragma omp for schedule(dynamic) nowait
+    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+      processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getDomainTensorGrid(tgIdx),
+                             scratch, values[tgIdx]);
+    }
+  }
+
+  return values;
+}
 
 // TODO: Functionaly decompose this function if feasible regarding runtime (?)
 FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid) {
@@ -89,42 +136,6 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
   }
 
   return weights;
-}
-
-/**
- * Per thread first, then added to @p result, as the reduction of the scalar operator does output
- * by output.
- */
-void combineDeltaTensorGrids(const GenericDSGOperatorContext& context,
-                             const VectorSourceFunc& sourceFunc, const std::span<double> result) {
-  const DeltasSparseGrid& deltasSparseGrid = context.deltasSparseGrid;
-  const size_t nOutputs = result.size();
-
-  std::ranges::fill(result, 0.0);
-
-#pragma omp parallel
-  {
-    DeltaWeightedSumScratch scratch(deltasSparseGrid.nDim(),
-                                    deltasSparseGrid.getMaxTGSumOverGPCntsPerDim(), nOutputs);
-    std::vector<double> tgResult(nOutputs);
-    std::vector<double> threadResult(nOutputs, 0.0);
-
-    // Dynamic scheduling as in the scalar operator (delta tensor grids differ in size by orders
-    // of magnitude)
-#pragma omp for schedule(dynamic) nowait
-    for (size_t tgIdx = 0; tgIdx < deltasSparseGrid.nTG(); tgIdx++) {
-      processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getDomainTensorGrid(tgIdx),
-                             scratch, tgResult);
-      for (size_t k = 0; k < nOutputs; k++) {
-        threadResult[k] += tgResult[k];
-      }
-    }
-
-#pragma omp critical
-    for (size_t k = 0; k < nOutputs; k++) {
-      result[k] += threadResult[k];
-    }
-  }
 }
 
 std::shared_ptr<const misc::DSGQuadIndex> getIndex(const DeltasSparseGrid& deltasSparseGrid,
