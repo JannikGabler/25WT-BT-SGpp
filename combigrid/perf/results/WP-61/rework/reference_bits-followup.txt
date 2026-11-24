@@ -1,0 +1,6 @@
+A = 809b8cfe1, C = current tree (owner rework + follow-up), 146 perf_reference cases
+1 t: 0 cases differ
+2 t: SG quad / mivec cases differing: 0
+3 t: SG quad / mivec cases differing: 0
+16 t: SG quad / mivec cases differing: 0
+C: SG quad / mivec cases thread-count dependent: 0 of 54

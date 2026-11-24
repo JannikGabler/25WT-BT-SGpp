@@ -219,9 +219,8 @@ std::vector<double> combineInOrder(const SparseGrid& grid,
     vec.insert(vec.end(), tgValues.begin() + 1, tgValues.end());
   }
   std::vector<double> result(1 + N_OUTPUTS);
-  result[0] = compensatedDotProduct<double, CTCoeffType, double>(grid.getCoefficients(), scalar);
-  compensatedDotProducts<double, CTCoeffType, double>(grid.getCoefficients(), vec,
-                                                      std::span<double>(result).subspan(1));
+  result[0] = compensatedDotProduct<double>(grid.getCoefficients(), scalar);
+  compensatedDotProducts<double>(grid.getCoefficients(), vec, std::span<double>(result).subspan(1));
   for (double& value : result) value *= volume;
   return result;
 }

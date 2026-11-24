@@ -9,7 +9,6 @@
  */
 #pragma once
 
-#include <cassert>
 #include <cmath>
 #include <sgpp/combigrid/miscellaneous/cpp_concepts/cpp_concepts.hpp>
 
@@ -38,7 +37,7 @@ namespace numerics {
  * contraction by the compiler). Cost: about twice a plain loop. Assumes round-to-nearest and no
  * value-changing optimizations (e.g. @c -ffast-math).
  */
-template <misc::std_real_type T>
+template <misc::StdFloatingPoint T>
 class CompensatedSum {
  public:
   /// @brief Adds @p term.

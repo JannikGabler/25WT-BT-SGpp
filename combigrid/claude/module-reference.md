@@ -70,7 +70,12 @@ miscellaneous/         (namespace misc)
                          writes per pass)
   operators/value_types/ ScalarValues / VectorValues: value types the operator kernels are
                          templates over (scalar vs. m outputs)
-  flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array
+  flat_nested_vector/    FlatNestedVec(View): ragged nested vectors in one contiguous array;
+                         FlatNestedVec<T, D>(n1, ..., nD) builds a rectangular one (exactly D
+                         integers, like the nested std::vector size constructors)
+  cpp_concepts/          general concepts: OneOf, StrictSubclassOf (slicing protection of the
+                         source functions), StdFloatingPoint (float / double / long double),
+                         StaticCastableTo, ContiguousRangeCastableTo
   numerics/              DoubleDouble: unevaluated sum hi + lo of two doubles (FMA product,
                          TwoSum), header-inline; the projected coefficients of the DSG sub-tries
                          (ProjectedSubTrieBuilder)
@@ -118,7 +123,8 @@ operators/
                          for SparseGrid: naive per-tensor-grid reference implementations, one
                          .cpp per operator with all helpers in an anonymous namespace (WP-79)
 sparse_grid_generation_instructions/   SGGenInstr, CompleteSGGenInstr, MIVecSGGenInstr
-tools/                 (namespace tools)
+tools/                 (namespace tools; sub-namespaces per operator, e.g. tools::quadrature,
+                       and per topic directory, e.g. tools::numerics)
   combitech_coefficients/               computeCTCoeffs, computeCTCoeffSingle
   sparse_grid_generation/               SparseGrid / DeltasSparseGrid generation, node lookup
   sparse_grid_generation_instructions/  MI generation of the complete sparse grid
@@ -141,7 +147,8 @@ tools/                 (namespace tools)
                          tools::dsg_lin_interpolation)
   downwards_closedness, paretoMaxima, multiindex_bounding_box_generation, multiindex_domination
   multiindex/, multiindex_view/, multiindex_vector/ (component-wise max)   MI helpers
-  math/ (binomial, pow, ceil), comparison/ (nearly_equal), data_vector/ (normalization
+  math/ (binomial, pow, ceil), numerics/ (namespace tools::numerics: compensated summation,
+  CompensatedSum + compensatedSum / compensatedDotProduct(s)), comparison/ (nearly_equal), data_vector/ (normalization
   [0,1]^d ↔ domain; mapToDomain = std::fma, the one unit → domain mapping of all operators),
   hashing/ (FNV-1a), collections/ (k-way unique merge), functions/ (equidistant
   node utilities), os/, concurrency.hpp (range partitioning), iterators.hpp, benchmarking/
@@ -253,7 +260,7 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `finishOperatorCall()` once at its end (empty for plain functions, overridden by the cached
   classes; never per evaluation). Same for `VectorSourceFunc`. Virtual destructor, defaulted copy /
   move; copying or assigning a subclass object (slicing) is a deleted overload
-  (`tools::StrictSubclassOf`, [tools/concepts/](../src/sgpp/combigrid/tools/concepts/)).
+  (`misc::StrictSubclassOf`, [miscellaneous/cpp_concepts/](../src/sgpp/combigrid/miscellaneous/cpp_concepts/)).
 - Caching ([functions/source_functions/caching/](../src/sgpp/combigrid/functions/source_functions/caching/),
   WP-26; works if Boost ≥ 1.81 + xxHash ≥ 0.8 were found when building, see
   `tools/defines/dependencies_defines.hpp`; otherwise the `SourceFuncCache` constructor, and with it
@@ -362,12 +369,15 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   tensor grids (`schedule(dynamic)`); a tensor grid whose row is still being computed waits for
   it in `call_once`. The estimate of tensor grid i goes to slot i of a per-call buffer (nTG
   doubles, × m for vector-valued; `tools::quadrature::estimateTensorGrids`), summed serially in
-  TG order with compensated summation (`tools::compensatedDotProduct(s)`,
-  [tools/math/compensated_sum.hpp](../src/sgpp/combigrid/tools/math/compensated_sum.hpp),
-  header-only: accumulator `tools::CompensatedSum` (`add`, `addProduct`, `value`; Neumaier + FMA
-  product errors) and templates `compensatedSum` / `compensatedDotProduct(s)` for any contiguous
-  ranges of arithmetic values (`tools::ArithmeticRange`); reusable for other CT combinations,
-  e.g. interpolation; WP-61, owner 2026-11-23): SG
+  TG order with compensated summation (`tools::numerics::compensatedDotProduct(s)`,
+  [tools/numerics/](../src/sgpp/combigrid/tools/numerics/), header-only: accumulator
+  `CompensatedSum<T>` in `compensated_sum.hpp` (`add`, `addProduct`, `value`; Neumaier + FMA
+  product errors) and templates `compensatedSum` / `compensatedDotProduct(s)` in
+  `compensated_sum_tools.hpp`, with the floating-point type given explicitly
+  (`compensatedDotProduct<double>(c, v)`) and the ranges deduced (any contiguous sized range of
+  numbers, `misc::ContiguousRangeCastableTo`; the scalar buffer is a `std::vector`, the vector-valued
+  one a `misc::FlatNestedVec<double, 2>(nTG, m)`); reusable for other CT combinations, e.g.
+  interpolation; WP-61, owner 2026-11-23): SG
   quadrature results are bitwise independent of the thread count and the processing order of the
   TGs, and the combination's round-off is ≈ 1 ulp (plain loop: up to 2e-8 relative at nTG ≈ 5e4,
   condition numbers Σ|c Q| / |Σ c Q| up to 8e5).

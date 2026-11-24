@@ -69,7 +69,7 @@ using NestedStdVec = typename NestedStdVecSelector<T, D>::type;
  *   visits them).
  *
  * The container is built by converting a nested @c std::vector, with a
- * rectangular shape (@c FlatNestedVec<double, 2>({n, m}): @c n sub-vectors of
+ * rectangular shape (@c FlatNestedVec<double, 2>(n, m): @c n sub-vectors of
  * @c m elements each) or incrementally, mirroring the calls on a nested vector:
  * @code
  * FlatNestedVec<double, 3> fv;  // nested
@@ -162,40 +162,31 @@ class FlatNestedVec {
   FlatNestedVec() noexcept = default;
 
   /**
-   * @brief Constructs an empty container with capacity for at least
-   * @p nElemsCapacity elements (like @ref reserve()).
+   * @brief Constructs a rectangular container with value-initialized
+   * elements, like the nested size constructors of @c std::vector:
+   * @c FlatNestedVec<double, 1>(n) represents @c std::vector<double>(n),
+   * @c FlatNestedVec<double, 2>(n, m) represents
+   * @c std::vector<std::vector<double>>(n, std::vector<double>(m)).
    *
-   * @note Unlike @c std::vector(n), no elements are created: for @p D >= 2
-   * elements need parent sub-vectors. To create elements, use the constructor
-   * taking a shape.
-   * @param nElemsCapacity Number of elements to reserve capacity for.
+   * Allocates every array exactly once. The container can be extended (made
+   * ragged) afterwards like any other. Takes exactly @p D integers, so a
+   * braced list (e.g. @c FlatNestedVec<int, 1>({5})) always selects the
+   * nested-vector constructor.
+   *
+   * @param shape Number of children per entry of every depth: @c shape[0]
+   *              top-level sub-vectors, ..., @c shape[D-1] elements per
+   *              sub-vector of depth @p D-1. The number of entries of every
+   *              depth below 1 must fit into @p Index (checked by @c assert).
    */
-  explicit FlatNestedVec(const size_type nElemsCapacity) { data_.reserve(nElemsCapacity); }
-
-  /**
-   * @brief Constructs a rectangular container: @c shape[0] top-level
-   * sub-vectors, each entry of depth @f$k \in \{1, \ldots, D-1\}@f$ has
-   * @c shape[k] children, and the @f$\prod_k@f$ @c shape[k] elements are
-   * value-initialized.
-   *
-   * Equivalent to the nested vector built with nested size constructors, e.g.
-   * @c FlatNestedVec<double, 2>({n, m}) represents
-   * @c std::vector<std::vector<double>>(n, std::vector<double>(m)). Allocates
-   * every array exactly once. The container can be extended (made ragged)
-   * afterwards like any other.
-   *
-   * @param shape Number of children per entry of every depth; @c shape[0] is
-   *              the number of top-level entries, @c shape[D-1] the number of
-   *              elements per sub-vector of depth @p D-1. The number of entries
-   *              of every depth below 1 must fit into @p Index (checked by
-   *              @c assert).
-   */
-  explicit FlatNestedVec(const std::array<size_type, D>& shape) {
-    size_type nParents = shape[0];
+  template <std::integral... Counts>
+    requires(sizeof...(Counts) == D)
+  explicit FlatNestedVec(const Counts... shape) {
+    const std::array<size_type, D> counts{static_cast<size_type>(shape)...};
+    size_type nParents = counts[0];
 
     for (std::size_t k = 0; k + 1 < D; k++) {
-      fillUniformOffsets(offsets_[k], nParents, shape[k + 1]);
-      nParents *= shape[k + 1];
+      fillUniformOffsets(offsets_[k], nParents, counts[k + 1]);
+      nParents *= counts[k + 1];
     }
 
     data_.resize(nParents);

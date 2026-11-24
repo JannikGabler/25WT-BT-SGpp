@@ -19,7 +19,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -155,44 +154,52 @@ BOOST_AUTO_TEST_CASE(testDefaultConstructedIsEmpty) {
   BOOST_CHECK((fv == FlatNestedVec<double, 3>(NestedStdVec<double, 3>{})));
 }
 
-BOOST_AUTO_TEST_CASE(testCapacityConstructorOnlyReserves) {
-  const FlatNestedVec<double, 3> fv(100);
-  BOOST_TEST(fv.capacity() >= 100U);
-  BOOST_TEST(fv.empty());
-  BOOST_TEST(fv.nEntries(1) == 0U);
-  BOOST_CHECK((fv == FlatNestedVec<double, 3>()));
-
-  const FlatNestedVec<int, 1> flat(7);
-  BOOST_TEST(flat.capacity() >= 7U);
-  BOOST_TEST(flat.empty());
-}
-
 BOOST_AUTO_TEST_CASE(testShapeConstructor) {
   // Depth 2: n x m, value-initialized.
-  const FlatNestedVec<double, 2> fv2({3, 4});
+  const FlatNestedVec<double, 2> fv2(3, 4);
   checkRepresents(fv2, NestedStdVec<double, 2>(3, std::vector<double>(4)));
   BOOST_TEST(fv2.capacity() == 12U);
 
+  // Counts of any integer type (here std::size_t, as in the operators).
+  const std::size_t n = 2;
+  const std::size_t m = 3;
+  checkRepresents(FlatNestedVec<double, 2>(n, m),
+                  NestedStdVec<double, 2>(n, std::vector<double>(m)));
+
   // Depth 3 with a narrow index type.
-  const FlatNestedVec<int, 3, std::uint16_t> fv3({2, 3, 5});
+  const FlatNestedVec<int, 3, std::uint16_t> fv3(2, 3, 5);
   checkRepresents(fv3, NestedStdVec<int, 3>(2, NestedStdVec<int, 2>(3, std::vector<int>(5))));
 
   // Depth 1 behaves like std::vector(n).
-  checkRepresents(FlatNestedVec<int, 1>(std::array<std::size_t, 1>{4}), std::vector<int>(4));
+  checkRepresents(FlatNestedVec<int, 1>(4), std::vector<int>(4));
 
   // Zeros at any depth: empty sub-vectors below, no entries below them.
-  checkRepresents(FlatNestedVec<double, 3>({0, 3, 5}), NestedStdVec<double, 3>{});
-  checkRepresents(FlatNestedVec<double, 3>({2, 0, 5}), NestedStdVec<double, 3>(2));
-  checkRepresents(FlatNestedVec<double, 3>({2, 3, 0}),
+  checkRepresents(FlatNestedVec<double, 3>(0, 3, 5), NestedStdVec<double, 3>{});
+  checkRepresents(FlatNestedVec<double, 3>(2, 0, 5), NestedStdVec<double, 3>(2));
+  checkRepresents(FlatNestedVec<double, 3>(2, 3, 0),
                   NestedStdVec<double, 3>(2, NestedStdVec<double, 2>(3)));
-  BOOST_CHECK((FlatNestedVec<double, 3>({0, 0, 0}) == FlatNestedVec<double, 3>()));
+  BOOST_CHECK((FlatNestedVec<double, 3>(0, 0, 0) == FlatNestedVec<double, 3>()));
 
   // The result can be written and extended like any other container.
-  FlatNestedVec<double, 2> grown({2, 2});
+  FlatNestedVec<double, 2> grown(2, 2);
   grown[1][0] = 1.5;
   grown.appendSubVec(1, 1);
   grown.push_back(2.5);
   checkRepresents(grown, NestedStdVec<double, 2>{{0, 0}, {1.5, 0}, {0, 2.5}});
+}
+
+BOOST_AUTO_TEST_CASE(testBracedListSelectsNestedConstructor) {
+  // The shape constructor takes exactly D integers, so braced lists convert a nested vector,
+  // as for std::vector (not a shape or a capacity).
+  checkRepresents(FlatNestedVec<int, 1>({5}), std::vector<int>{5});
+  checkRepresents(FlatNestedVec<int, 2>({{5}}), NestedStdVec<int, 2>{{5}});
+  checkRepresents(FlatNestedVec<int, 2>({{5, 6}}), NestedStdVec<int, 2>{{5, 6}});
+  checkRepresents(FlatNestedVec<int, 3>({{{5, 6}}}), NestedStdVec<int, 3>{{{5, 6}}});
+
+  // Wrong number of counts or non-integer counts do not compile.
+  static_assert(!std::is_constructible_v<FlatNestedVec<double, 2>, std::size_t>);
+  static_assert(!std::is_constructible_v<FlatNestedVec<int, 1>, int, int>);
+  static_assert(!std::is_constructible_v<FlatNestedVec<double, 2>, double, int>);
 }
 
 BOOST_AUTO_TEST_CASE(testDepth1BehavesLikeVector) {

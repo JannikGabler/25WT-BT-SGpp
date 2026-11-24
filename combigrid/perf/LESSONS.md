@@ -21,9 +21,12 @@ are not in [README.md](README.md). Maintained by the master session; current sta
 - **Load-balance model** (RP-6, `results/RP-6/schedule_sim.py`): makespan with cost of a TG = its
   points reproduces `expensive/mivec/sg` c100us exactly (dynamic / guided). SG `interpolateLinear`
   has uniform per-TG cost (2^d corners) → no size-based order there.
-- **SG quadrature at 16 t is not bitwise reproducible** (until WP-61): the `reduction(+)` order varies
-  between rounds; `quad/sg/equi-exp/b1/d15/L6` differs by up to 5e-7 absolute within one snapshot's 5
-  rounds (WP-83) → the e2e "result sanity" line is not evidence of a change there; bitwise pins are 1 t.
+- **Thread-count (in)dependence of results**: SG quadrature / mivec are bitwise thread-count independent
+  since WP-61 (TG-indexed buffer + compensated TG-order sum; e2e: 1 value per case over all rounds), as
+  are the DSG interpolations (WP-45 / WP-49). DSG quadrature and SG interp / interplin still use
+  `reduction(+)` (until WP-48 extended): at 16 t 46 of the 146 `perf_reference` cases differ run to run
+  (`results/WP-61/rework/reference_bits.txt`; before WP-61 `quad/sg/equi-exp/b1/d15/L6` varied by 5e-7)
+  → for those operators the e2e "result sanity" line is not evidence of a change; bitwise pins are 1 t.
 - **Cross-call cache in e2e**: the pipelines build a new grid per run → the cache never hits in the
   judged suite; repeated-call gains need dedicated benchmarks (WP-73 / WP-82).
 
@@ -31,7 +34,12 @@ are not in [README.md](README.md). Maintained by the master session; current sta
 
 - time-seeded `equidistant_nodes/sin_func_random_cube_3D`
   (WP-29a 2 of 16, WP-28 1 of ≈ 15, WP-47 1); `{equidistant,clenshaw_curtis}_nodes/linear_func_unit_cube_1D`
-  (WP-47 once, WP-52 2 of ≈ 50; pre-existing).
+  (WP-47 once, WP-52 2 of ≈ 50; pre-existing); `sin_func_random_cube_3D` again in the WP-61 rework
+  (normal 1 of 3).
+- timing-dependent `source_function_cache_adaptive/concurrent_operator_calls_on_one_function`
+  (`modeSwitches >= 1`, got 0): WP-61 rework 2 of 60 suite runs on both 809b8cfe1 and the rework
+  (pre-existing), alone 40/40.
+- `grid_storage_pinning` fails without Eigen / Armadillo (FFT-backend-specific hashes; owner 11-24 → WP-35).
 
 ## Do not retry
 
@@ -111,5 +119,12 @@ are not in [README.md](README.md). Maintained by the master session; current sta
   by conjugation); cheb1 SG d2 L16 operator 161.7 vs. 157.6 ms. Enabling cheb1 quadrature in the
   cached-source-function tests: their `withQuadrature` flag also builds a DSG, which cheb1 (not nested)
   cannot have → keep cheb1 without quadrature there.
+- WP-61 SG quadrature combination: plain loop in TG order (round-off up to 1.9e-8, 20x the old 16-way
+  split, up to 300x the discretization error; 84 µs at nTG 54k), pairwise (9.6e-11) → Neumaier + exact
+  product errors (≈ 0, 119 µs at nTG 54k; owner 11-23). Out-of-line non-template v1 (same bits / cost)
+  → header-only templates. Rework review: `FlatNestedVec` capacity / `std::array` shape constructors
+  hijack braced lists (`FlatNestedVec<int, 1>({5})` → size 0, `<int, 2>({{5}})` ambiguous) →
+  `FlatNestedVec(n1, …, nD)` + `reserve()`; `std::span<const T>` parameters in the sum templates (no
+  deduction from `std::vector` / non-const spans) → deduced contiguous ranges, `<OType>` explicit.
 - RP-4 `[[gnu::aligned(64)]]` on `weighted_sum::sumOverRows`: 0.994x → the WP-52 −1 % is not
   recoverable this way.

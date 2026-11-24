@@ -41,10 +41,12 @@ Snapshots `WP-61-rework-A` (`--commit 809b8cfe1`) and `WP-61-rework-B`.
   - `FlatNestedVec<int, 2>({{5}})`, `({{5, 6}})` and `= FlatNestedVec<int, 2>({{2, 3}})` built one sub-vector in A. In B they are ambiguous compile errors.
   - `FlatNestedVec<int, 1>(5)` reserves capacity, unlike `std::vector(5)`; this is documented. No current call site is affected.
   - Fix: replace both constructors with named factories (e.g. `static FlatNestedVec withShape(const std::array<size_type, D>&)`; drop the capacity constructor in favour of `reserve()`), or tag them (`FlatNestedVec(ShapeTag, shape)`). Add a test for `FlatNestedVec<int, 1>({5})` / `<int, 2>({{5}})`.
+  - **Proposal (owner asked for constructors, 11-24):** replace both constructors with one variadic constructor taking exactly D integers, `FlatNestedVec<double, 2>(n, m)`, like the nested size constructors of `std::vector`; drop the capacity constructor (`reserve()`). Braced lists then always select the nested-vector constructor again, as in A. Prototype: `results/WP-61/rework/flat_nested_vector_proposal.diff` (all A meanings restored; adapted `testShapeConstructor` passes; `quadrature_tools.cpp` compiles with `estimates(nTG, nOutputs)`).
 - **R2 Usability regression of the compensated-sum templates** (`compensated_sum_tools.hpp:41`, `:66`, `:96`):
   - The parameters are `std::span<const IType>`, so neither `std::vector` nor a non-const `std::span<double>` deduces. Every call site must spell `<double, CTCoeffType, double>`: `quadrature.cpp:39`, `:60`, `perf_micro.cpp:274` and all tests.
   - `static_castable_to` now accepts `bool`, enums and class types with explicit conversions; A's `Arithmetic` excluded `bool`.
   - Fix: take `std::ranges::contiguous_range R` (+ `sized_range`), constrained on `static_castable_to<std::ranges::range_value_t<R>, OType>` (or an arithmetic concept), with `OType = double` as the first, defaulted template parameter.
+  - **Proposal (11-24):** new concept `misc::ContiguousRangeCastableTo<R, To>` (contiguous + sized, `static_castable_to`, no `bool`); templates `<std_real_type OType = double, ContiguousRangeCastableTo<OType> R...>` taking `const R&`, bodies on `std::span(r)`; `compensatedDotProducts` takes `std::type_identity_t<std::span<OType>>` so `OType` stays `double` for a `std::vector` result. Calls become `compensatedDotProduct(c, v)` / `compensatedDotProducts(c, tgEstimates, result)`. Prototype: `results/WP-61/rework/compensated_sum_deduction_proposal.diff`; bits == A (`compsum_ab.cpp` with deduced calls, 6 800 checks, 4 compile modes); standalone timing equal (dot n = 54 264: 119–121 µs both; m = 3: 433 µs both).
 - **R3 Stale / TODO docs:**
   - `compensated_sum_tools.hpp:7` has `@file compensated_sum.hpp`, a duplicate of the other header's `@file`, which Doxygen merges. Its `@brief` (l. 8–14) still says "in double", "the accumulator", "every contiguous range of arithmetic values".
   - `@tparam R/RA/RB` (l. 35, 57–59, 88–89) do not match `OType/IType*`. The three `TODO: Document (update)`.
@@ -71,3 +73,17 @@ Snapshots `WP-61-rework-A` (`--commit 809b8cfe1`) and `WP-61-rework-B`.
   - `misc` under `miscellaneous/`, `tools::numerics` under `tools/`; banners and include style are clean.
 
 `lib/` currently holds the OPT=0 SG_PYTHON build; run `perf.py build normal` before the next benchmark.
+
+## Follow-up (2026-11-24, applied on the owner's request)
+- R1: `FlatNestedVec(n1, ..., nD)` (exactly D integers) replaces the capacity and `std::array` shape constructors; braced lists select the nested-vector constructor again; tests adapted + `testBracedListSelectsNestedConstructor`.
+- R2: option A: `compensatedSum / compensatedDotProduct(s)<OType>(ranges...)`, `OType` explicit (no default), ranges deduced (`misc::ContiguousRangeCastableTo`, no `bool`); all call sites `<double>`; compile-time accept / reject checks in the test. Prototype bits == A, timing equal (above).
+- R3 / R4: docs, `@file`, `@return`, TODOs, includes; concepts renamed `OneOf`, `StdFloatingPoint`, `StaticCastableTo`; cpplint clean (one-line `requires` + `// NOLINT`). Open: "one type per file" for `cpp_concepts.hpp` (owner).
+- R5: module reference (paths, layout, compensated sum), `perf_micro.cpp` comment, `python-bindings.md` (509 expected), stale `.lint`; option left to the owner: drop the redundant `%extend VectorSourceFunc::evaluate` (removes 509).
+- R6: test moved to `tests/tools/numerics/compensated_sum_test.cpp` (plain `mv`, not staged); old `.lint` / `.os` deleted.
+- R7: `quadrature: ` prefix restored. R8: comment at the combination restored. R9: kept `tools::numerics`, documented the topic sub-namespaces in CLAUDE.md §5 and the module reference.
+- **Verification of the follow-up** (`results/WP-61/rework/*-followup.*`):
+  - Debug `test --repeat 3`: 2/3 clean. Run 1 failed in `source_function_cache_adaptive/concurrent_operator_calls_on_one_function` (`modeSwitches >= 1`, got 0). That check is timing-dependent and pre-existing: interleaved, A (809b8cfe1, debug worktree) and the current tree each failed **2 of 60** suite runs, always on the same check; alone it passed 40/40. **New flaky test** (not WP-35) → LESSONS / a follow-up WP.
+  - Normal `test --repeat 3`: 2/3 clean; run 3 hit the known flaky `equidistant_nodes/sin_func_random_cube_3D` (alone 20/20 clean). ASan 1/1 clean.
+  - SG_PYTHON=1: only SWIG warnings 389 ×2 and 509; `pysgpp_swig.py` byte-identical to A's; 12/12 examples pass; `python_checks.py` 1 t == 16 t == the earlier bits.
+  - Snapshot `WP-61-rework-C`: refcheck 1 / 16 t = only the known WARN; `perf_reference` == A bitwise at 1 t (146 cases); the 54 SG quad / mivec cases == A at 2/3/16 t and thread-count independent.
+  - `lib/` is the normal build again.

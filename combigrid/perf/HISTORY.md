@@ -26,7 +26,8 @@ master's log. Maintained by the master session; current state: [STATUS.md](STATU
 | – | WP-73 | Cross-call operator data cache: clear / entries / bytes on `SparseGridBase`, options per operator (`useCrossCallOperatorDataCache`), concurrency (a); DSG `interplin` parallel-region bug fix (owner's request) | accepted (11-18, b9bf8bb65) | judged 0.999x, `expensive/` 1.001x, memory 1.005; repeated calls flag on 16 t: SG quad cc d2 L20 1.19x, DSG quad 1.03–1.15x | [WP-73](summaries/WP-73-operator-data-cache-control.md) |
 | – | WP-82 | DSG quadrature: cross-call cache on by default via the new `DeltasSparseGridQuadratureOptions` (`QuadratureOptions` = `SparseGrid` only; API change agreed) | accepted (11-18, 37a84e1af) | judged 1.000x, `expensive/` 0.999x, memory 1.004; repeated DSG quad calls 16 t 1.04–1.31x; retained index 0.9–17.8 MiB (e2e), cc d2 L20 64 MiB (owner: keep, documented) | [WP-82](summaries/WP-82-dsg-quad-cache-default.md) |
 | – | WP-79 | Textbook operators `textbookQuadrature` / `textbookInterpolate` / `textbookInterpolateLinear` (naive serial per-TG CT on `SparseGrid`, one vector core per operator, C++ + Python; owner's request; incl. the owner's rework) | accepted (11-21, d3b7f00ba) | feature: judged 1.002x, `expensive/` 0.999x, memory 1.008 (0 flags); refcheck = known WARN; textbook / optimized 1 t: quad 1.40–1.41x, interp 1.37–1.47x, interplin 1.13–1.17x | [WP-79](summaries/WP-79-textbook-operators.md) |
-| – | WP-83 | SG quadrature with cheb1 nodes: rules obtained serially before the OpenMP regions (`std::terminate` → catchable exception), new `FejerFirstQuadRule(includeBoundary)` (Fejér-1 / interpolatory with boundary nodes, Bluestein FFT), additive virtual `NodeGenFunc::getQuadRule(n, includeBoundary)` (owner 11-22); bug fix + feature, incl. the owner's rework | accepted (11-22, commit pending) | feature: judged 0.996x (noise), `expensive/` 0.999x, memory 1.003 (0 flags); refcheck = known WARN; existing results bitwise; cheb1 rule ≈ 4.8x CC at equal n (n = 131073: 29.9 vs. 6.25 ms) | [WP-83](summaries/WP-83-cheb1-quadrature.md) |
+| – | WP-83 | SG quadrature with cheb1 nodes: rules obtained serially before the OpenMP regions (`std::terminate` → catchable exception), new `FejerFirstQuadRule(includeBoundary)` (Fejér-1 / interpolatory with boundary nodes, Bluestein FFT), additive virtual `NodeGenFunc::getQuadRule(n, includeBoundary)` (owner 11-22); bug fix + feature, incl. the owner's rework | accepted (11-22, c43b8f21b) | feature: judged 0.996x (noise), `expensive/` 0.999x, memory 1.003 (0 flags); refcheck = known WARN; existing results bitwise; cheb1 rule ≈ 4.8x CC at equal n (n = 131073: 29.9 vs. 6.25 ms) | [WP-83](summaries/WP-83-cheb1-quadrature.md) |
+| – | WP-61 | SG quadrature: bitwise thread-count-independent results — per-TG results in a TG-indexed buffer, serial compensated combination in TG order (`tools::numerics::CompensatedSum` / `compensatedDotProduct(s)`, Neumaier + exact product errors; owner 11-23); incl. the owner's rework (concepts → `miscellaneous/cpp_concepts/`, sums → `tools/numerics/`, `FlatNestedVec(n1, …, nD)`) | accepted (11-24, commit pending) | functional: SG quad / mivec bitwise 1 = 2 = 3 = 16 t, combination round-off ≈ 1 ulp (b1 d15 L6 16 t error 3.5–5.0e-9 → 2.0e-10); judged 0.998x (rework 1.000x), `expensive/` 0.998x, memory 0.999 / 1.007 (0 flags); refcheck = known WARN; 116 / 432 pinned 1 t values ≤ 15 ulp, `grid_storage_pinning` SG hashes re-pinned | [WP-61](summaries/WP-61-sg-quad-ordered-sums.md) [rework](summaries/WP-61-owner-rework-check.md) |
 
 Re-profiling snapshots: `rp-1` f48d2bbc1, `rp-2` 5215417ea (1.604x), `rp-3` 0c6ecfc4b (1.818x),
 `rp-4` 6ac45a05d (1.933x), `rp-5` 3261399ec (1.973x; 38 cases 69.93 → 35.45 s; memory geomean 0.724;
@@ -36,6 +37,17 @@ RP-6 11-18.
 
 ## Log (older entries, newest first)
 
+- 2026-11-23 WP-61 summary read (PROPOSED: bitwise 1/2/3/16 t, round-off ≈ 1 ulp, judged 0.998x,
+  memory 0.999, 0 flags; refcheck = known WARN). Owner staged a rework → verification-only session
+  (rework vs. checkpoint 809b8cfe1: bits, tests, Python, runtime, conventions); decision after it.
+- 2026-11-22 WP-83 summary processed: **accepted** by the owner incl. the owner's staged rework
+  (checkpoint 18346c71d; commit pending): cheb1 SG quadrature (`FejerFirstQuadRule`, interpolatory with
+  boundary nodes; owner in-session: additive virtual `getQuadRule(n, includeBoundary)`), rules obtained
+  serially (`std::terminate` → exception). Judged 0.996x (noise), `expensive/` 0.999x, memory 1.003
+  (0 flags), refcheck = known WARN, existing results bitwise. Owner: follow-ups → new **WP-84** (equi /
+  CC rules below an offset ≥ 2, functional agreed; owner places it) and **WP-85** (generic
+  capture-and-rethrow in the operators' OpenMP regions; rank 14, after WP-77; ranks ≥ 14 +1). Rule cost
+  at levels ≥ 15: not planned. 1 "Do not retry" line, 1 measurement note. WP-61 prompt issued.
 - 2026-11-21 WP-79 summary processed: **accepted** by the owner incl. the owner's staged rework
   (d3b7f00ba): `textbookQuadrature` / `textbookInterpolate` / `textbookInterpolateLinear` (C++ +
   Python), judged 1.002x, `expensive/` 0.999x, memory 1.008 (0 flags), refcheck = known WARN.
@@ -102,4 +114,6 @@ RP-6 11-18.
   11-18 WP-73 b9bf8bb65 (WP-82 from the owner's default decision), WP-82 37a84e1af (large index:
   option (a)), RP-6 accepted (WP-77 extended + optional TG split; WP-59 / WP-75 dropped).
   11-21 WP-79 d3b7f00ba (WP-83 defined; owner: before WP-61). 11-22 WP-83 accepted (checkpoint
-  18346c71d + owner's rework; WP-84 / WP-85 defined from its follow-ups).
+  18346c71d + owner's rework; WP-84 / WP-85 defined from its follow-ups; commit c43b8f21b).
+  11-23 WP-61 checkpoint 809b8cfe1, rework check c2f5e90f1. 11-24 WP-61 accepted (owner's rework +
+  R1–R9 follow-ups; commit pending; WP-48 extended → rank 1 before WP-77, WP-35 → rank 3).

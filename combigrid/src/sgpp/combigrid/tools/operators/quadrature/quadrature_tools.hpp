@@ -30,27 +30,28 @@ namespace tools {
 namespace quadrature {
 
 /**
- * TODO: Document (@return tag)
  * @brief Computes the quadrature estimate of every tensor grid of @c context.sparseGrid (unit
  * hypercube, without the coefficient) in parallel and stores it at the index of the tensor grid.
  *
  * Every estimate is computed by one thread with the same operations at every thread count, so
  * the estimates do not depend on the number of threads or the schedule; combined serially in the
- * order of the tensor grids (@c tools::compensatedDotProduct), the quadrature results are bitwise
- * independent of both.
+ * order of the tensor grids (@c tools::numerics::compensatedDotProduct), the quadrature results
+ * are bitwise independent of both.
  *
  * @param context     Read-only data of the quadrature call.
  * @param sourceFunc  Source function.
+ * @return The estimate of tensor grid i at index i (size nTG).
  */
 std::vector<double> estimateTensorGrids(const misc::QuadratureContext& context,
                                         const SourceFunc& sourceFunc);
 
 /**
- * TODO: Document (@return tag)
  * @brief @ref estimateTensorGrids for a vector-valued source function.
  *
  * @param context     Read-only data of the quadrature call.
  * @param sourceFunc  Vector-valued source function (m outputs).
+ * @return The m estimates of tensor grid i as sub-vector i (nTG sub-vectors of m values; the
+ *         elements are index-major, i.e. the values of tensor grid i at i m, ..., i m + m - 1).
  */
 misc::FlatNestedVec<double, 2> estimateTensorGrids(const misc::QuadratureContext& context,
                                                    const VectorSourceFunc& sourceFunc);

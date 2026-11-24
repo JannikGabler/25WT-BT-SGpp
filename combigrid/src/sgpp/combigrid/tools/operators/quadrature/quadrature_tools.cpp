@@ -59,7 +59,7 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const QuadratureContext& cont
   const size_t nTG = sparseGrid.nTG();
   const size_t nOutputs = sourceFunc.nOutputs();
 
-  misc::FlatNestedVec<double, 2> estimates({nTG, nOutputs});
+  misc::FlatNestedVec<double, 2> estimates(nTG, nOutputs);
 
 #pragma omp parallel
   {

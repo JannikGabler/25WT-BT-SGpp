@@ -5,10 +5,10 @@
 
 /**
  * @file compensated_sum_test.cpp
- * @brief Boost.Test cases for the compensated dot products of @c
- * tools::compensatedDotProduct<double, CTCoeffType, double>(s): exact cancellation, exact product
- * errors, accuracy on ill-conditioned combinations of alternating integer coefficients (against a
- * double-double reference), the one-pass multi-output variant, other element / range types and the
+ * @brief Boost.Test cases for the compensated sums and dot products of
+ * @c tools::numerics::compensatedDotProduct(s): exact cancellation, exact product errors, accuracy
+ * on ill-conditioned combinations of alternating integer coefficients (against a double-double
+ * reference), the one-pass multi-output variant, other element / range types and the
  * accumulator @c CompensatedSum.
  */
 
@@ -19,6 +19,7 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
+#include <list>
 #include <random>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/miscellaneous/numerics/double_double.hpp>
@@ -71,22 +72,21 @@ double referenceSum(const std::vector<CTCoeffType>& coefficients,
 BOOST_AUTO_TEST_SUITE(compensated_sum)
 
 BOOST_AUTO_TEST_CASE(Empty_And_Single_Term) {
-  BOOST_CHECK_EQUAL((compensatedDotProduct<double, CTCoeffType, double>(
-                        std::span<const CTCoeffType>(), std::span<const double>())),
-                    0.0);
-  BOOST_CHECK_EQUAL((compensatedSum<double, double>(std::vector<double>())), 0.0);
+  BOOST_CHECK_EQUAL(
+      (compensatedDotProduct<double>(std::span<const CTCoeffType>(), std::span<const double>())),
+      0.0);
+  BOOST_CHECK_EQUAL((compensatedSum<double>(std::vector<double>())), 0.0);
   BOOST_CHECK_EQUAL(CompensatedSum<double>().value(), 0.0);
   const std::vector<CTCoeffType> c{3};
   const std::vector<double> v{0.1};
-  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double, CTCoeffType, double>(c, v)),
-                    bitsOf(3.0 * 0.1));
+  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double>(c, v)), bitsOf(3.0 * 0.1));
 }
 
 BOOST_AUTO_TEST_CASE(Cancellation_Is_Exact) {
   // A plain loop gives 0: 1e100 + 1 rounds to 1e100
   const std::vector<CTCoeffType> c{1, 1, -1};
   const std::vector<double> v{1e100, 1.0, 1e100};
-  BOOST_CHECK_EQUAL((compensatedDotProduct<double, CTCoeffType, double>(c, v)), 1.0);
+  BOOST_CHECK_EQUAL((compensatedDotProduct<double>(c, v)), 1.0);
 }
 
 BOOST_AUTO_TEST_CASE(Product_Errors_Are_Kept) {
@@ -96,8 +96,7 @@ BOOST_AUTO_TEST_CASE(Product_Errors_Are_Kept) {
   const std::vector<double> v{0.1, rounded};
   const double expected = std::fma(3.0, 0.1, -rounded);
   BOOST_REQUIRE_NE(expected, 0.0);
-  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double, CTCoeffType, double>(c, v)),
-                    bitsOf(expected));
+  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double>(c, v)), bitsOf(expected));
 }
 
 BOOST_AUTO_TEST_CASE(Ill_Conditioned_Combinations_Are_Accurate) {
@@ -107,7 +106,7 @@ BOOST_AUTO_TEST_CASE(Ill_Conditioned_Combinations_Are_Accurate) {
       std::vector<double> v;
       makeCombination(n, seed, c, v);
       const double reference = referenceSum(c, v);
-      const double result = compensatedDotProduct<double, CTCoeffType, double>(c, v);
+      const double result = compensatedDotProduct<double>(c, v);
       double plain = 0.0;
       for (size_t i = 0; i < n; i++) plain += c[i] * v[i];
       BOOST_TEST_CONTEXT("n " << n << " seed " << seed << ": " << result << " vs. " << reference
@@ -132,14 +131,11 @@ BOOST_AUTO_TEST_CASE(Multiple_Outputs_Equal_Single_Outputs_Bitwise) {
     for (size_t i = 0; i < n; i++) interleaved.insert(interleaved.end(), {v0[i], v1[i], v2[i]});
 
     std::vector<double> result(N_OUTPUTS, -1.0);
-    compensatedDotProducts<double, CTCoeffType, double>(c, interleaved, result);
+    compensatedDotProducts<double>(c, interleaved, result);
     BOOST_TEST_CONTEXT("n " << n) {
-      BOOST_CHECK_EQUAL(bitsOf(result[0]),
-                        bitsOf(compensatedDotProduct<double, CTCoeffType, double>(c, v0)));
-      BOOST_CHECK_EQUAL(bitsOf(result[1]),
-                        bitsOf(compensatedDotProduct<double, CTCoeffType, double>(c, v1)));
-      BOOST_CHECK_EQUAL(bitsOf(result[2]),
-                        bitsOf(compensatedDotProduct<double, CTCoeffType, double>(c, v2)));
+      BOOST_CHECK_EQUAL(bitsOf(result[0]), bitsOf(compensatedDotProduct<double>(c, v0)));
+      BOOST_CHECK_EQUAL(bitsOf(result[1]), bitsOf(compensatedDotProduct<double>(c, v1)));
+      BOOST_CHECK_EQUAL(bitsOf(result[2]), bitsOf(compensatedDotProduct<double>(c, v2)));
     }
   }
 }
@@ -150,7 +146,7 @@ BOOST_AUTO_TEST_CASE(Other_Element_And_Range_Types) {
   std::vector<CTCoeffType> c;
   std::vector<double> v;
   makeCombination(1000, 7, c, v);
-  const double expected = compensatedDotProduct<double, CTCoeffType, double>(c, v);
+  const double expected = compensatedDotProduct<double>(c, v);
 
   const std::vector<double> cDouble(c.begin(), c.end());
   const std::vector<float> cFloat(c.begin(), c.end());
@@ -158,18 +154,26 @@ BOOST_AUTO_TEST_CASE(Other_Element_And_Range_Types) {
   sgpp::base::DataVector vData(v.size());
   for (size_t i = 0; i < v.size(); i++) vData[i] = v[i];
 
-  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double, double, double>(cDouble, v)),
-                    bitsOf(expected));
-  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double, float, double>(cFloat, v)),
-                    bitsOf(expected));
-  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double, int64_t, double>(cInt64, vData)),
-                    bitsOf(expected));
-  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double, CTCoeffType, double>(
-                        std::span<const CTCoeffType>(c), std::span<const double>(v))),
+  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double>(cDouble, v)), bitsOf(expected));
+  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double>(cFloat, v)), bitsOf(expected));
+  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double>(cInt64, vData)), bitsOf(expected));
+  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double>(std::span<const CTCoeffType>(c),
+                                                         std::span<const double>(v))),
                     bitsOf(expected));
   // Commutative in the factors (the product and its error are symmetric)
-  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double, double, CTCoeffType>(v, c)),
-                    bitsOf(expected));
+  BOOST_CHECK_EQUAL(bitsOf(compensatedDotProduct<double>(v, c)), bitsOf(expected));
+
+  // Accepted / rejected inputs: contiguous sized ranges of numbers (no bool, no pointers), and
+  // standard floating-point summation types only
+  using sgpp::combigrid::misc::ContiguousRangeCastableTo;
+  static_assert(ContiguousRangeCastableTo<std::span<double>, double>);
+  static_assert(ContiguousRangeCastableTo<sgpp::base::DataVector, float>);
+  static_assert(!ContiguousRangeCastableTo<std::vector<bool>, double>);
+  static_assert(!ContiguousRangeCastableTo<std::span<const bool>, double>);
+  static_assert(!ContiguousRangeCastableTo<std::list<double>, double>);
+  static_assert(!ContiguousRangeCastableTo<std::vector<double*>, double>);
+  static_assert(!sgpp::combigrid::misc::StdFloatingPoint<int>);  // e.g. compensatedSum<int>
+  static_assert(!sgpp::combigrid::misc::StdFloatingPoint<const double>);
 }
 
 BOOST_AUTO_TEST_CASE(Sum_And_Accumulator_Agree_With_The_Dot_Product) {
@@ -184,15 +188,15 @@ BOOST_AUTO_TEST_CASE(Sum_And_Accumulator_Agree_With_The_Dot_Product) {
     scaled[i] = std::ldexp(std::round(std::ldexp(v[i], 30)), -30);
     terms[i] = c[i] * scaled[i];
   }
-  const double dot = compensatedDotProduct<double, CTCoeffType, double>(c, scaled);
-  BOOST_CHECK_EQUAL(bitsOf(compensatedSum<double, double>(terms)), bitsOf(dot));
+  const double dot = compensatedDotProduct<double>(c, scaled);
+  BOOST_CHECK_EQUAL(bitsOf(compensatedSum<double>(terms)), bitsOf(dot));
 
   CompensatedSum<double> accumulator;
   for (size_t i = 0; i < c.size(); i++) accumulator.addProduct(c[i], scaled[i]);
   BOOST_CHECK_EQUAL(bitsOf(accumulator.value()), bitsOf(dot));
 
   // The compensated sum of the cancelling terms is accurate (double-double reference)
-  BOOST_CHECK_LE(std::abs(compensatedSum<double, double>(terms) - referenceSum(c, scaled)),
+  BOOST_CHECK_LE(std::abs(compensatedSum<double>(terms) - referenceSum(c, scaled)),
                  4.5e-16 * std::abs(referenceSum(c, scaled)));
 }
 

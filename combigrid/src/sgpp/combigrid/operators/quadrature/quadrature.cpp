@@ -34,10 +34,11 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
       getWeightTable(sparseGrid, options.useCrossCallOperatorDataCache);
   const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = *weightTable};
 
+  // One estimate per tensor grid, stored at its index
   const std::vector<double> tgEstimates = estimateTensorGrids(context, sourceFunc);
 
-  const double result = tools::numerics::compensatedDotProduct<double, CTCoeffType, double>(
-      sparseGrid.getCoefficients(), tgEstimates);
+  const double result =
+      tools::numerics::compensatedDotProduct<double>(sparseGrid.getCoefficients(), tgEstimates);
 
   sourceFunc.finishOperatorCall();
 
@@ -47,7 +48,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
 void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
                 const std::span<double> result, const QuadratureOptions& options) {
   if (result.size() != sourceFunc.nOutputs()) {
-    throw std::invalid_argument("The size of the result is not the number of outputs");
+    throw std::invalid_argument("quadrature: The size of the result is not the number of outputs");
   }
 
   const SGGenInstr& genInstr = sparseGrid.getGenInstr();
@@ -55,10 +56,11 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
       getWeightTable(sparseGrid, options.useCrossCallOperatorDataCache);
   const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = *weightTable};
 
+  // One estimate per tensor grid, stored at its index
   const misc::FlatNestedVec<double, 2> tgEstimates = estimateTensorGrids(context, sourceFunc);
 
-  tools::numerics::compensatedDotProducts<double, CTCoeffType, double>(sparseGrid.getCoefficients(),
-                                                                       tgEstimates, result);
+  tools::numerics::compensatedDotProducts<double>(sparseGrid.getCoefficients(), tgEstimates,
+                                                  result);
 
   const double volume = genInstr.getVolumeOfDomain();
   for (double& value : result) {

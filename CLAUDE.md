@@ -129,8 +129,10 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
   `quadrature`), not into the operator's own file.
 - **C++23** (combigrid need not compile with older standards). `#pragma once`.
 - **Namespaces**: `sgpp::combigrid` (public), `::tools` (under `tools/`), `::misc` (under
-  `miscellaneous/`), `::constants`, per-operator namespaces for internals, anonymous namespaces for
-  TU-local helpers. No `using namespace` in headers.
+  `miscellaneous/`), `::constants`, per-operator namespaces for internals (e.g.
+  `tools::quadrature`), topic sub-namespaces under `tools/` where a directory groups related
+  helpers (e.g. `tools::numerics` in `tools/numerics/`), anonymous namespaces for TU-local
+  helpers. No `using namespace` in headers.
 - **Copyright banner** — every `.cpp`/`.hpp` starts with exactly:
   ```
   // Copyright (C) 2008-today The SG++ project

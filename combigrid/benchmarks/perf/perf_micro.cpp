@@ -250,31 +250,30 @@ void addProcessAllTGs(Suite& suite, const std::string& nodes, const LvlType boun
 }
 
 /**
- * WP-61: the serial combination of quadrature() (scalar): tools::compensatedDotProduct of the
- * coefficients with one estimate per tensor grid, in the order of the tensor grids; ns per
+ * WP-61: the serial combination of quadrature() (scalar): tools::numerics::compensatedDotProduct
+ * of the coefficients with one estimate per tensor grid, in the order of the tensor grids; ns per
  * tensor grid. The estimates are fixed values (the combination's cost does not depend on them).
  */
 void addCompensatedCombination(Suite& suite, const std::string& nodes, const LvlType boundary,
                                const size_t nDim, const LvlType maxLvl) {
-  suite.addMicro(
-      "micro/quad/compensated_combination/" + cfg(nodes, boundary, nDim, maxLvl),
-      [=](MicroRun& run) {
-        CompleteSGGenInstr genInstr(maxLvl, nDim);
-        perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
-        const SparseGrid sg(genInstr);
-        const size_t nTG = sg.nTG();
-        std::vector<double> estimates(nTG);
-        for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
-          estimates[tgIdx] = 1.0 / static_cast<double>(tgIdx + 1);
-        }
+  suite.addMicro("micro/quad/compensated_combination/" + cfg(nodes, boundary, nDim, maxLvl),
+                 [=](MicroRun& run) {
+                   CompleteSGGenInstr genInstr(maxLvl, nDim);
+                   perf::configure(genInstr, nodes, boundary, perf::unitDomain(nDim));
+                   const SparseGrid sg(genInstr);
+                   const size_t nTG = sg.nTG();
+                   std::vector<double> estimates(nTG);
+                   for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+                     estimates[tgIdx] = 1.0 / static_cast<double>(tgIdx + 1);
+                   }
 
-        run.setItems(static_cast<double>(nTG));
-        run.setCounter("nTG", static_cast<double>(nTG));
-        run.measure([&]() {
-          doNotOptimize(cg::tools::numerics::compensatedDotProduct<double, CTCoeffType, double>(
-              sg.getCoefficients(), estimates));
-        });
-      });
+                   run.setItems(static_cast<double>(nTG));
+                   run.setCounter("nTG", static_cast<double>(nTG));
+                   run.measure([&]() {
+                     doNotOptimize(cg::tools::numerics::compensatedDotProduct<double>(
+                         sg.getCoefficients(), estimates));
+                   });
+                 });
 }
 
 /// Tensor grids and context of the vector-valued quadrature cases (addVectorQuad).
