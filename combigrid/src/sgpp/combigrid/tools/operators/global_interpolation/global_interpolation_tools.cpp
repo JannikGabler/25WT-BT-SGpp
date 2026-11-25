@@ -39,19 +39,24 @@ namespace {
 /**
  * Calls @p process(tgIdx, scratch) for every tensor grid of @p sparseGrid in parallel, with a
  * scratch per thread for m = @p nOutputs (0 for a scalar source function).
+ *
+ * The cost of a tensor grid is about proportional to its number of grid points, which differ by
+ * orders of magnitude: the tensor grids are handed out one at a time, largest first
+ * (@c SparseGridBase::getTGProcessingOrder).
  */
 template <typename Process>
 void forEachTensorGrid(const SparseGrid& sparseGrid, const size_t nOutputs, Process&& process) {
   const size_t nTG = sparseGrid.nTG();
+  const std::span<const size_t> order = sparseGrid.getTGProcessingOrder();
 
 #pragma omp parallel
   {
     GlobalInterpScratch scratch(sparseGrid.nDim(), sparseGrid.getMaxTGSumOverGPCntsPerDim(),
                                 nOutputs);
 
-#pragma omp for schedule(guided) nowait
-    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
-      process(tgIdx, scratch);
+#pragma omp for schedule(dynamic) nowait
+    for (size_t orderIdx = 0; orderIdx < nTG; orderIdx++) {
+      process(order[orderIdx], scratch);
     }
   }
 }

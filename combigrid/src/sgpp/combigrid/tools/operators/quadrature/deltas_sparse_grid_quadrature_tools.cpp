@@ -41,6 +41,7 @@ std::vector<double> estimateDeltaTensorGrids(const GenericDSGOperatorContext& co
                                              const SourceFunc& sourceFunc) {
   const DeltasSparseGrid& deltasSparseGrid = context.deltasSparseGrid;
   const size_t nTG = deltasSparseGrid.nTG();
+  const std::span<const size_t> order = deltasSparseGrid.getTGProcessingOrder();
 
   std::vector<double> values(nTG);
 
@@ -49,9 +50,11 @@ std::vector<double> estimateDeltaTensorGrids(const GenericDSGOperatorContext& co
     DeltaWeightedSumScratch scratch(deltasSparseGrid.nDim(),
                                     deltasSparseGrid.getMaxTGSumOverGPCntsPerDim());
 
-    // The delta tensor grids differ in size by orders of magnitude -> Dynamic scheduling
+    // The delta tensor grids differ in size by orders of magnitude -> Dynamic scheduling,
+    // largest first
 #pragma omp for schedule(dynamic) nowait
-    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+    for (size_t orderIdx = 0; orderIdx < nTG; orderIdx++) {
+      const size_t tgIdx = order[orderIdx];
       values[tgIdx] = processDeltaTensorGrid(context, sourceFunc,
                                              deltasSparseGrid.getDomainTensorGrid(tgIdx), scratch);
     }
@@ -65,6 +68,7 @@ FlatNestedVec<double, 2> estimateDeltaTensorGrids(const GenericDSGOperatorContex
   const DeltasSparseGrid& deltasSparseGrid = context.deltasSparseGrid;
   const size_t nTG = deltasSparseGrid.nTG();
   const size_t nOutputs = sourceFunc.nOutputs();
+  const std::span<const size_t> order = deltasSparseGrid.getTGProcessingOrder();
 
   FlatNestedVec<double, 2> values(nTG, nOutputs);
 
@@ -73,9 +77,11 @@ FlatNestedVec<double, 2> estimateDeltaTensorGrids(const GenericDSGOperatorContex
     DeltaWeightedSumScratch scratch(deltasSparseGrid.nDim(),
                                     deltasSparseGrid.getMaxTGSumOverGPCntsPerDim(), nOutputs);
 
-    // The delta tensor grids differ in size by orders of magnitude -> Dynamic scheduling
+    // The delta tensor grids differ in size by orders of magnitude -> Dynamic scheduling,
+    // largest first
 #pragma omp for schedule(dynamic) nowait
-    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+    for (size_t orderIdx = 0; orderIdx < nTG; orderIdx++) {
+      const size_t tgIdx = order[orderIdx];
       processDeltaTensorGrid(context, sourceFunc, deltasSparseGrid.getDomainTensorGrid(tgIdx),
                              scratch, values[tgIdx]);
     }

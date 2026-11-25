@@ -34,6 +34,7 @@ std::vector<double> estimateTensorGrids(const QuadratureContext& context,
                                         const SourceFunc& sourceFunc) {
   const SparseGrid& sparseGrid = context.sparseGrid;
   const size_t nTG = sparseGrid.nTG();
+  const std::span<const size_t> order = sparseGrid.getTGProcessingOrder();
 
   std::vector<double> estimates(nTG);
 
@@ -42,9 +43,10 @@ std::vector<double> estimateTensorGrids(const QuadratureContext& context,
     QuadratureScratch scratch(sparseGrid.nDim());
     context.weightTable.computeAllRows();  // Nowait operation: Threads can immediately continue
 
-    // The tensor grids differ in size by orders of magnitude -> Dynamic scheduling
+    // The tensor grids differ in size by orders of magnitude -> Dynamic scheduling, largest first
 #pragma omp for schedule(dynamic) nowait
-    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+    for (size_t orderIdx = 0; orderIdx < nTG; orderIdx++) {
+      const size_t tgIdx = order[orderIdx];
       estimates[tgIdx] = processTensorGrid(
           context, sourceFunc, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid, scratch);
     }
@@ -58,6 +60,7 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const QuadratureContext& cont
   const SparseGrid& sparseGrid = context.sparseGrid;
   const size_t nTG = sparseGrid.nTG();
   const size_t nOutputs = sourceFunc.nOutputs();
+  const std::span<const size_t> order = sparseGrid.getTGProcessingOrder();
 
   misc::FlatNestedVec<double, 2> estimates(nTG, nOutputs);
 
@@ -66,9 +69,10 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const QuadratureContext& cont
     QuadratureScratch scratch(sparseGrid.nDim(), nOutputs);
     context.weightTable.computeAllRows();  // Nowait operation: Threads can immediately continue
 
-    // The tensor grids differ in size by orders of magnitude -> Dynamic scheduling
+    // The tensor grids differ in size by orders of magnitude -> Dynamic scheduling, largest first
 #pragma omp for schedule(dynamic) nowait
-    for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
+    for (size_t orderIdx = 0; orderIdx < nTG; orderIdx++) {
+      const size_t tgIdx = order[orderIdx];
       processTensorGrid(context, sourceFunc, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid,
                         scratch, estimates[tgIdx]);
     }

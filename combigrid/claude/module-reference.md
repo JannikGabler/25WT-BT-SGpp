@@ -172,7 +172,14 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `domainTensorGrids()` / `unitTensorGrids()` (`TensorGridRange` = `std::ranges::subrange` of the
   proxy iterator: range-for, `size`, `[]`); they yield `TensorGridCTDataView`s
   (`toTensorGridCTData()` copies); kernels take `TensorGridView` (`nGPInDim(dim)`,
-  `nodesInDim(dim)` pointers into a table). Grids are not copyable.
+  `nodesInDim(dim)` pointers into a table). Grids are not copyable. Computed with the grid
+  (`computeMetaValues`, one pass over the levels): `getMaxTGGPCnt()`,
+  `getMaxTGSumOverGPCntsPerDim()` and (WP-77) `getTGProcessingOrder()` (internal to the operators,
+  not in Python): the TG indices largest first, by a size class of nGP (bit width + 3 mantissa
+  bits, [tools/sparse_grid/tensor_grid_processing_order.hpp](../src/sgpp/combigrid/tools/sparse_grid/tensor_grid_processing_order.hpp),
+  stable O(nTG) counting sort, `nTG` × 8 bytes); TGs below 1/4096 of all points
+  (`constants::sparse_grid_storage::SMALL_TG_POINT_SHARE_DIVISOR`) share the last class, i.e. keep
+  their index order (locality). A refined grid is a new grid → recomputed with it.
 - `DeltasSparseGrid` ([grids/deltas_sparse_grid.hpp](../src/sgpp/combigrid/grids/deltas_sparse_grid.hpp)):
   constructed from an `SGGenInstr`; `quadrature(const SourceFunc&, const DeltasSparseGrid&)`
   ([deltas_sparse_grid_quadrature.hpp](../src/sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp))
@@ -366,8 +373,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   kernel each); generation and CT coefficients are parallel above the thresholds in
   `constants.hpp`. SG quadrature: each thread first takes weight-table rows
   (`QuadWeightTable::computeAllRows`, largest first, `omp for schedule(dynamic, 1) nowait`), then
-  tensor grids (`schedule(dynamic)`); a tensor grid whose row is still being computed waits for
-  it in `call_once`. The estimate of tensor grid i goes to slot i of a per-call buffer (nTG
+  tensor grids (`schedule(dynamic)` over `getTGProcessingOrder()`, largest first; WP-77); a tensor
+  grid whose row is still being computed waits for it in `call_once`. The estimate of tensor grid i goes to slot i of a per-call buffer (nTG
   doubles, × m for vector-valued; `tools::quadrature::estimateTensorGrids`), summed serially in
   TG order with compensated summation (`tools::numerics::compensatedDotProduct(s)`,
   [tools/numerics/](../src/sgpp/combigrid/tools/numerics/), header-only: accumulator
@@ -389,8 +396,16 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   → slot per TG, then `compensatedDotProduct(s)` with the coefficients). `compensatedDotProducts`
   / `compensatedSums` keep up to 8 accumulators on the stack per pass (no heap allocation).
   Every operator is now bitwise thread-count independent (the DSG interpolations were already,
-  WP-45 / WP-49). Interplin keeps `schedule(static)` and the full team for small calls: serial or
-  fewer threads lost up to 2x on d2 L16 (per-thread cache locality of the node rows, WP-48).
+  WP-45 / WP-49). Interplin keeps the full team for small calls: serial or fewer threads lost up
+  to 2x on d2 L16 (per-thread cache locality of the node rows, WP-48).
+  TG-loop order (WP-77): SG quadrature / mivec, DSG quadrature and SG `interpolate` hand out the
+  TGs one at a time largest first (`schedule(dynamic)` over `getTGProcessingOrder()`; SG
+  `interpolate` was `guided`); results are bitwise unchanged (slots). SG interplin: no order
+  (uniform 2^d corners per TG), but `schedule(dynamic)` in index order (was `static`) for source
+  functions of position-dependent cost: `-ramp` −16 %, at the price of d2 L16 +4 % (static kept
+  the node rows in each thread's caches across calls; owner's decision). With a
+  `CachedSourceFunc`, largest first makes the largest (overlapping) TGs miss concurrently: SG quad
+  d10 L4 evaluated 97–98 k instead of 90.6 k points (+7 % time).
 - **Textbook operators** (WP-79; [operators/textbook/](../src/sgpp/combigrid/operators/textbook/)):
   `textbookQuadrature(f, sg)`, `textbookInterpolate(f, point, sg)`,
   `textbookInterpolateLinear(f, point, sg)` on a `SparseGrid` only (no DSG variants: the DSG

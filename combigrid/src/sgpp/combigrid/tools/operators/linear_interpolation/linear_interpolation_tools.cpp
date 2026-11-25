@@ -74,12 +74,9 @@ std::pair<double, double> findNeighbors(const double x, const std::span<const do
  * Calls @p process(tgIdx, scratch) for every tensor grid of @p sparseGrid in parallel, with a
  * scratch per thread for m = @p nOutputs (0 for a scalar source function).
  *
- * Static scheduling: in repeated calls on the same grid (one call per query point), every thread
- * processes the same tensor grids and finds their nodes in its own caches. Running small calls on
- * fewer threads or serially was slower: on a 2D grid of level 16 (33 tensor grids, 132 corners)
- * at 16 threads, a call took 5.8 us with 16 threads, 6.0 us with 8, 7.9 us with 4, 10.5 us with 2
- * and 12 us serially (the binary searches of a single thread over all 2^16-node rows miss the
- * cache).
+ * Dynamic scheduling to balance out source functions with position-dependent cost.
+ * Every tensor grid has the same number of corners (2^d), so no largest-first order.
+ * The price is cache locality in repeated calls on the same grid.
  */
 template <typename Process>
 void forEachTensorGrid(const SparseGrid& sparseGrid, const size_t nOutputs, Process&& process) {
@@ -89,7 +86,7 @@ void forEachTensorGrid(const SparseGrid& sparseGrid, const size_t nOutputs, Proc
   {
     LinInterpScratch scratch(sparseGrid.nDim(), nOutputs);
 
-#pragma omp for schedule(static) nowait
+#pragma omp for schedule(dynamic) nowait
     for (size_t tgIdx = 0; tgIdx < nTG; tgIdx++) {
       process(tgIdx, scratch);
     }

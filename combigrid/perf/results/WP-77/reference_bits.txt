@@ -1,0 +1,35 @@
+# WP-48 reference_bits.py WP-77-before WP-77-after (thread-count dependence)
+WP-77-before: 146 cases
+  1 t vs 2 t: 0 cases differ []
+  1 t vs 3 t: 0 cases differ []
+  1 t vs 16 t: 0 cases differ []
+  16 t run 1 vs run 2: 0 cases differ []
+  thread-count dependent (1/2/3/16 t): 0 of 146
+WP-77-after: 146 cases
+  1 t vs 2 t: 0 cases differ []
+  1 t vs 3 t: 0 cases differ []
+  1 t vs 16 t: 0 cases differ []
+  16 t run 1 vs run 2: 0 cases differ []
+  thread-count dependent (1/2/3/16 t): 0 of 146
+
+# reference_bits_ab.py WP-77-before WP-77-after 1 2 3 16 16 (A vs B bitwise)
+ 1 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+ 2 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+      WP-77-after 1 t vs 2 t: 0 cases differ []
+ 3 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+      WP-77-after 1 t vs 3 t: 0 cases differ []
+16 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+      WP-77-after 1 t vs 16 t: 0 cases differ []
+16 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+      WP-77-after 1 t vs 16 t: 0 cases differ []
+
+# reference_bits_ab.py WP-77-before WP-77-after 1 2 3 16 16 (final tree: SG interplin schedule(dynamic))
+ 1 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+ 2 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+      WP-77-after 1 t vs 2 t: 0 cases differ []
+ 3 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+      WP-77-after 1 t vs 3 t: 0 cases differ []
+16 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+      WP-77-after 1 t vs 16 t: 0 cases differ []
+16 t: WP-77-before vs WP-77-after: 0 of 146 cases differ []
+      WP-77-after 1 t vs 16 t: 0 cases differ []

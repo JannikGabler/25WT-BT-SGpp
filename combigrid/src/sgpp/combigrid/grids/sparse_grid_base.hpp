@@ -126,6 +126,19 @@ class SparseGridBase {
   size_t getMaxTGSumOverGPCntsPerDim() const noexcept { return maxTGSumOverGPCntsPerDim_; }
 
   /**
+   * @brief Returns the indices of the tensor grids, largest first; internal to the operators.
+   *
+   * The operators hand out their per-tensor-grid work to the threads in this order (load
+   * balance); every tensor grid writes its result to its own index, so the order does not change
+   * the results. Sorted by decreasing size class of the number of grid points (sizes within a
+   * factor of 1.125 share a class), in index order within a class; the tensor grids with fewer
+   * than 1/4096 of all grid points share the last class
+   * (@c constants::sparse_grid_storage::SMALL_TG_POINT_SHARE_DIVISOR); see
+   * tools/sparse_grid/tensor_grid_processing_order.hpp. Computed with the grid.
+   */
+  std::span<const size_t> getTGProcessingOrder() const noexcept { return tgProcessingOrder_; }
+
+  /**
    * @brief Returns the cross-call operator data cache of the grid (see
    * @ref getCrossCallOperatorDataCacheEntries); internal to the operators.
    */
@@ -224,7 +237,8 @@ class SparseGridBase {
   /// @brief Returns the iterator to the tensor grid with level multi-index @p mi in @p range.
   static const_iterator findTensorGrid(TensorGridRange range, const LvlMIView& mi) noexcept;
 
-  /// @brief Computes @ref getMaxTGGPCnt and @ref getMaxTGSumOverGPCntsPerDim.
+  /// @brief Computes @ref getMaxTGGPCnt, @ref getMaxTGSumOverGPCntsPerDim and
+  /// @ref getTGProcessingOrder.
   void computeMetaValues();
 
   const size_t nDim_;                      ///< Spatial dimensionality (fixed at construction).
@@ -233,8 +247,9 @@ class SparseGridBase {
   NodeTable domainNodeTable_;              ///< Node lists per (dimension, level), on the domain.
   NodeTable unitNodeTable_;                ///< The same on the unit interval.
 
-  size_t maxTGGPCnt_ = 0;                ///< See @ref getMaxTGGPCnt.
-  size_t maxTGSumOverGPCntsPerDim_ = 0;  ///< See @ref getMaxTGSumOverGPCntsPerDim.
+  size_t maxTGGPCnt_ = 0;                  ///< See @ref getMaxTGGPCnt.
+  size_t maxTGSumOverGPCntsPerDim_ = 0;    ///< See @ref getMaxTGSumOverGPCntsPerDim.
+  std::vector<size_t> tgProcessingOrder_;  ///< See @ref getTGProcessingOrder.
 
   /// Operator data kept across calls (see @ref getCrossCallOperatorDataCacheEntries). Declared
   /// last: destroyed first, its data may refer to the members above.

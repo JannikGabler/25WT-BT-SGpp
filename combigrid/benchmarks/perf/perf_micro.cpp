@@ -1655,6 +1655,8 @@ int main(int argc, char** argv) {
   addGridConstruction<DeltasSparseGrid>(suite, "dsg", "equi", 1, 20, 6);
   addGridConstruction<DeltasSparseGrid>(suite, "dsg", "equi", 1, 15, 7);
   addGridConstruction<DeltasSparseGrid>(suite, "dsg", "equi", 0, 3, 16);
+  // WP-77: the grid also computes the largest-first tensor-grid order (19448 tensor grids)
+  addGridConstruction<SparseGrid>(suite, "sg", "equi", 1, 10, 7);
   addClosure(suite, 10, 10, 300);
   addClosure(suite, 20, 6, 100);
   addClosure(suite, 5, 16, 1000);  // WP-03: the MI sets of the mivec e2e cases

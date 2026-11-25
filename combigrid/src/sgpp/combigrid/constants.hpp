@@ -16,7 +16,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 
 // Pareto Maximum calculations
 
@@ -141,6 +140,16 @@ namespace sparse_grid_storage {
 constexpr size_t MIN_TG_FOR_CONCURRENCY = 10000;
 /// Minimum number of nodes of a node table for generating its rows in parallel.
 constexpr size_t MIN_NODES_FOR_CONCURRENCY = 1 << 14;
+/**
+ * Tensor grids with fewer than 1 / SMALL_TG_POINT_SHARE_DIVISOR of all grid points keep their
+ * index order at the end of the largest-first processing order of the operators
+ * (@c SparseGridBase::getTGProcessingOrder): each of them is too small to unbalance the threads
+ * (in a simulation of the e2e benchmark grids at 16 threads, at least 99.8 % of the efficiency of
+ * sorting them too), and in index order neighbouring tensor grids, which share node rows and
+ * combination-coefficient paths, are processed together (deltas sparse grid quadrature, d20 L6 with
+ * 2.3e5 small delta tensor grids at 16 threads: 1.9 % faster than sorted by size).
+ */
+constexpr size_t SMALL_TG_POINT_SHARE_DIVISOR = 4096;
 
 }  // namespace sparse_grid_storage
 

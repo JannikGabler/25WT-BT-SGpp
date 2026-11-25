@@ -12,7 +12,8 @@
  *
  * Configurations: scalar and vector-valued (m = 3) source functions, boundary level offsets 0 / 1,
  * Clenshaw-Curtis, equidistant and first-kind Chebyshev nodes (deltas sparse grids only for the
- * nested families), complete and anisotropic multi-index grids, unit and shifted domains, with and
+ * nested families), complete and anisotropic multi-index grids (one with tensor grids of strongly
+ * different sizes), unit and shifted domains, with and
  * without the cross-call operator data cache (deltas sparse grid quadrature), and grids with fewer
  * tensor grids than threads. The quadrature on a @c SparseGrid is checked in
  * thread_count_independent_quadrature_test.cpp.
@@ -112,10 +113,17 @@ struct Config {
   size_t nDim;
   LvlType level;  // Complete grids only
   bool shifted;
+  bool skewed = false;  // Multi-index grids only: see anisotropicMIs
 };
 
-/// Anisotropic multi-index set (downwards closure taken by MIVecSGGenInstr).
-LvlMIVec anisotropicMIs(const size_t nDim) {
+/// Anisotropic multi-index set (downwards closure taken by MIVecSGGenInstr). @p skewed (d = 3):
+/// tensor grids from 1 to about 4000 points (a level-11 axis, a level-4 axis and a mixed
+/// multi-index), so that the largest tensor grids exceed a thread's balanced share of the points.
+LvlMIVec anisotropicMIs(const size_t nDim, const bool skewed) {
+  if (skewed) {
+    BOOST_REQUIRE_EQUAL(nDim, 3);
+    return LvlMIVec(std::vector<LvlMI>{LvlMI{11, 0, 0}, LvlMI{0, 0, 4}, LvlMI{2, 3, 1}});
+  }
   std::vector<LvlMI> mis;
   for (size_t dim = 0; dim < nDim; dim++) {
     LvlMI heavy(nDim, 1);
@@ -128,7 +136,7 @@ LvlMIVec anisotropicMIs(const size_t nDim) {
 std::unique_ptr<SGGenInstr> makeGenInstr(const Config& config, LvlMIVec& miVec) {
   std::unique_ptr<SGGenInstr> genInstr;
   if (config.mivec) {
-    miVec = anisotropicMIs(config.nDim);
+    miVec = anisotropicMIs(config.nDim, config.skewed);
     genInstr = std::make_unique<MIVecSGGenInstr>(miVec);
   } else {
     genInstr = std::make_unique<CompleteSGGenInstr>(config.level, config.nDim);
@@ -161,6 +169,8 @@ std::vector<Config> configs() {
       result.push_back(
           {prefix + " complete d6 L4 shifted", nodes, nested, boundary, false, 6, 4, true});
       result.push_back({prefix + " mivec d5", nodes, nested, boundary, true, 5, 0, false});
+      result.push_back(
+          {prefix + " mivec skewed d3", nodes, nested, boundary, true, 3, 0, false, true});
       // Fewer tensor grids than threads: d1 (1 tensor grid), d2 L2 (5 tensor grids)
       result.push_back({prefix + " complete d1 L5", nodes, nested, boundary, false, 1, 5, true});
       result.push_back({prefix + " complete d2 L2", nodes, nested, boundary, false, 2, 2, false});

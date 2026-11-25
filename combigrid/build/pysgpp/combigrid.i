@@ -173,7 +173,8 @@ namespace std {
 // from it: its public methods that are meaningful in Python are declared again on both classes by
 // the macro below and forward to the inherited C++ methods. Not declared again are the ranges
 // (domainTensorGrids / unitTensorGrids; as in C++, a grid has no default iteration and no
-// indexing: every accessor names the coordinates of the nodes it returns; len(grid) = nTG) and
+// indexing: every accessor names the coordinates of the nodes it returns; len(grid) = nTG), the
+// getters internal to the operators (getCrossCallOperatorDataCache, getTGProcessingOrder) and
 // the protected methods for manual assembly.
 //  - getDomainTensorGrid(idx) / getUnitTensorGrid(idx): the C++ methods return a
 //    TensorGridCTDataView into the grid's storage (not wrapped); these return an owned copy

@@ -19,8 +19,15 @@ measurement notes that are not in [README.md](README.md). Maintained by the mast
   ratios spanning it carry ≈ 0.30 s / ±4–8 % on dsg / sg equi b0 and mivec d5 (reference:
   `results/WP-76/e2e-aa-old.md`).
 - **Load-balance model** (RP-6, `results/RP-6/schedule_sim.py`): makespan with cost of a TG = its
-  points reproduces `expensive/mivec/sg` c100us exactly (dynamic / guided). SG `interpolateLinear`
-  has uniform per-TG cost (2^d corners) → no size-based order there.
+  points reproduces `expensive/mivec/sg` c100us exactly (dynamic / guided); WP-77 confirmed it
+  (largest-first predicted 1.56, measured 1.564 s). SG `interpolateLinear` has uniform per-TG cost (2^d
+  corners) → no size-based order there. Since WP-77 every TG loop runs largest-first with
+  `schedule(dynamic)`; SG interplin is dynamic in index order (static kept each thread's TG rows in L2:
+  d2 L16 −4 %, 1-t calls of 1–90 µs −2–4 %; owner accepted for `-ramp` 1.18x). Grid generation pays the
+  order: DSG d20 L6 +2.1 ms (1 t), +8 B per TG.
+- **Concurrent cache misses** (WP-77): two threads missing the same key both evaluate it; with the
+  largest-first order the largest, overlapping TGs run concurrently → cached SG quad d10 L4 c100us 97–98 k
+  instead of 90.56 k evaluations (0.927x) → WP-87 (optional).
 - **Thread-count (in)dependence of results**: since WP-48 **every operator** is bitwise thread-count
   and run-to-run independent (TG-indexed per-TG values + serial compensated combination in TG order:
   SG quad / mivec WP-61; DSG quad, SG interp / interplin WP-48; DSG interpolations WP-45 / WP-49;
@@ -141,3 +148,13 @@ summary before letting a line shape a design, and retry or adapt an idea when th
   172–173 ms. `schedule(static)` keeps each thread's TGs (2^16-node rows) in its L2 across calls;
   one thread misses cache (12 vs. 5.8 µs per call). Serial pays only for tiny grids (not in the suite);
   a corner-count gate also ignores the source-function cost → no gate (SG interp neither).
+- WP-77 largest-first TG order without a floor (all TGs sorted; full suite, quad/dsg b1 d15 / d20 with
+  many tiny delta TGs): suite −365 ms vs. −422 ms with the floor on the same filter; b1 d20 L6 operator
+  0.981, d15 L7 0.991 (lost locality) → TGs below total/4096 points keep index order (≥ 99.8 % of the
+  modelled efficiency).
+- WP-77 split of TGs above the balanced share into row ranges (on top of the largest-first order;
+  modelled with `results/WP-77/split_sim.py`, not built): only `expensive/mivec/sg` d15 S6 c100us (≈ −0.65 s
+  each, −1.2 s) and mivec/sg d15 S10 (≈ −7 ms) stay above the bound; d2 L20 / interp d2 lose to hand-out
+  granularity, not to a large TG. Cost: row-range entry into `sumOverRows`, per-call task list, partial
+  buffers (scalar + vector), sub-row splitting for row dims with few rows, round-off change → dropped by
+  the owner (11-25): DSG already reaches the bound there (0.552 vs. SG 1.564 s).
