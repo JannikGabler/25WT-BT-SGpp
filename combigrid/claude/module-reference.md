@@ -457,8 +457,10 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   `basisValues` / 1D call (not cached); Chebyshev 2nd kind uses closed-form weights.
 - **Quadrature rules** per dimension by node type and parity: equidistant odd → composite Simpson,
   even → trapezoidal; Chebyshev 2nd kind → Clenshaw-Curtis (Waldvogel's method as one real FFT
-  of length n − 1 with `USE_EIGEN` / `USE_ARMADILLO`, else O(n²); the bitwise pins of the weights
-  are recorded with Eigen); Chebyshev 1st kind → `quadrature_rules::FejerFirstQuadRule`
+  of length n − 1 with `USE_EIGEN` / `USE_ARMADILLO`, else O(n²) direct sums over a table of
+  exactly reduced cosines, compensated, as accurate as the FFT (≤ 3 eps / m; the former Chebyshev
+  cosine recurrence reached 1.4e4 eps / m at m = 2048); the tests check the weights against a
+  long double evaluation of the closed form, not bitwise); Chebyshev 1st kind → `quadrature_rules::FejerFirstQuadRule`
   (WP-83; `getFejerFirstQuadRule(includeBoundary)`): without boundary nodes Fejér's first rule
   (positive, exact to degree n − 1), with them the interpolatory rule on {0, n − 2 cheb1 nodes, 1}
   = Fejér's weights of the inner nodes + a closed-form correction (owner 2026-11-22: interpolatory,

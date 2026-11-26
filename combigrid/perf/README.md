@@ -326,10 +326,20 @@ It must compile against the unoptimized code (it is part of the "before" snapsho
   to benchmark a build it did not make (build stamp) or a non-`normal` build.
 - Snapshots are copies of `lib/libsgpp{base,combigrid}.so` + perf binaries, run via
   `LD_LIBRARY_PATH`; they stay valid while the working tree changes.
-- The Boost tests seed from the clock; run them several times (`--repeat 3`). Known flaky:
-  `equidistant_nodes/sin_func_random_cube_3D` (near-zero relative tolerance for some seeds, ≈ 1 in
-  15 full runs; WP-35): rerun it alone; report a recurrence in the summary, do not "fix" it in an
-  unrelated WP. Any other failure is real.
+- The Boost tests seed from the clock (`std::time`, printed as "Seed: …" on failure); run them
+  several times (`--repeat 3`). No test is known to be flaky since WP-35 (near-zero relative
+  tolerances, FMA- / timing-dependent preconditions and FFT-backend-specific pins fixed): any
+  failure is real. Replay a reported seed with the `LD_PRELOAD` time shim
+  `results/WP-35/tools/shim/fake_time.c` (`FAKE_TIME=<seed>`), sweep many seeds with
+  `results/WP-35/tools/fuzz.sh` (see `results/WP-35/README.md`).
+- No test compares operator results with stored bit patterns (since WP-35: their last bits
+  depend on compiler, flags, FFT backend and libm); the pinning tests use tolerances (golden
+  values) and compare bitwise only within one build (thread counts, repeated calls, ...). To
+  show that a WP leaves the results of the judged build bitwise unchanged, diff the reference
+  outputs of both snapshots (deterministic; 1 and 16 threads):
+  `for s in WP-NN-before WP-NN-after; do LD_LIBRARY_PATH=combigrid/perf/.work/snapshots/$s/lib
+  combigrid/perf/.work/snapshots/$s/bin/perf_reference --threads 16 > $s.jsonl; done`, then
+  `diff WP-NN-before.jsonl WP-NN-after.jsonl`.
 - **Memory caps**: sanitizer and heap-profiler runs (and anything that may need several GB) run
   under `systemd-run --user --scope -q -p MemoryMax=8G <cmd>`; the laptop has 12 GB and an
   uncapped run crashed it.

@@ -72,9 +72,9 @@ reference and methodology: `combigrid/perf/README.md` (read it first). `perf.py`
   pinned, including edge cases (d = 1, boundary offsets 0/1, non-unit domains, empty/size-1
   grids where applicable).
 - `perf.py build debug` then `perf.py test --repeat 3` on the **unchanged** source: must pass.
-  Record which tests pin the behavior. Known flaky (time-seeded, WP-35):
-  `equidistant_nodes/sin_func_random_cube_3D` — rerun alone, report recurrences; any other
-  failure is real.
+  Record which tests pin the behavior. No test is known to be flaky (since WP-35): any failure is
+  real (replay a clock seed: README Pitfalls). The tests pin golden values with tolerances, not bit
+  patterns: show "bitwise unchanged" by the snapshot `perf_reference` diff (README Pitfalls).
 
 **2. Micro-benchmark at the spot**
 - Use an existing `micro/...` case or add one to `perf_micro.cpp` (README: "Adding a

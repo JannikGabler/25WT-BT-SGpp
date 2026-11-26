@@ -8,10 +8,12 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <numbers>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/default_rules/clenshaw_curtis_quadrature_rule.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
+#include <sgpp/combigrid/tools/numerics/compensated_sum.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -28,7 +30,6 @@ namespace sgpp {
 namespace combigrid {
 namespace quadrature_rules {
 
-#ifdef SGPP_COMBIGRID_HAVE_FFT
 namespace {
 
 /**
@@ -52,6 +53,49 @@ double buildEvenInput(const std::span<double> c) {
 
   return (m % 2 == 0) ? c[m / 2] : 0.0;
 }
+
+/**
+ * Returns the table cos(2 pi r / m), r = 0, ..., m - 1. The argument of the entries r and m - r
+ * is reduced exactly (in integers) to 2 pi min(r, m - r) / m in [0, pi], so every entry is
+ * accurate to a few units of eps (an argument 2 pi r / m near 2 pi would carry an absolute error
+ * of a few eps * 2 pi) and the table is symmetric bitwise.
+ */
+std::vector<double> unitRootCosines(const size_t m) {
+  std::vector<double> cosines(m);
+  const double mDouble = static_cast<double>(m);
+
+  for (size_t r = 0; r <= m / 2; r++) {
+    const double value = std::cos(2.0 * std::numbers::pi * static_cast<double>(r) / mDouble);
+    cosines[r] = value;
+    cosines[(m - r) % m] = value;  // The same entry for r = 0 and for r = m/2 (even m)
+  }
+
+  return cosines;
+}
+
+/**
+ * Returns s_k = sum_{j=1..m/2} c[j] cos(2 pi j k / m) for k <= m/2 (m = cosines.size(), c as
+ * from buildEvenInput, cosines from unitRootCosines), the cosines looked up at the index
+ * (j k) mod m and the terms summed compensated (Neumaier): the error is about one eps
+ * independently of m, as for the FFT.
+ */
+double cosineSum(const size_t k, const std::span<const double> c,
+                 const std::span<const double> cosines) {
+  const size_t m = cosines.size();
+  assert(k <= m / 2 && c.size() == m);
+
+  tools::numerics::CompensatedSum<double> sum;
+  size_t r = 0;  // (j k) mod m; r + k < 2 m as k < m
+  for (size_t j = 1; j <= m / 2; j++) {
+    r += k;
+    if (r >= m) r -= m;
+    sum.add(c[j] * cosines[r]);
+  }
+
+  return sum.value();
+}
+
+#ifdef SGPP_COMBIGRID_HAVE_FFT
 
 /**
  * Writes the bins 0, ..., c.size() / 2 of the unnormalized forward discrete Fourier transform of
@@ -79,8 +123,9 @@ void forwardRealDFT(const std::span<const double> c, std::vector<std::complex<do
 #endif
 }
 
-}  // namespace
 #endif  // SGPP_COMBIGRID_HAVE_FFT
+
+}  // namespace
 
 base::DataVector ClenshawCurtisQuadRule::genWeights(const GPCntType nNodes) const {
   if (nNodes == 0) {
@@ -118,54 +163,30 @@ base::DataVector ClenshawCurtisQuadRule::genWeightsNaive(const size_t nNodes) co
 }
 
 /**
- * The sums s_k of Waldvogel's method (see genWeightsFFTInplace) evaluated directly, the cosines
- * by the Chebyshev recurrence: O(n^2), only intended as a fallback without an FFT backend.
+ * The sums s_k of Waldvogel's method (see genWeightsFFTInplace) evaluated directly: O(n^2), only
+ * intended as a fallback without an FFT backend. The cosines come from a table with exactly
+ * reduced arguments, not from the Chebyshev recurrence cos((j + 1) phi) = 2 cos(phi) cos(j phi) -
+ * cos((j - 1) phi): its error grows with the number of steps (measured against a long double
+ * evaluation of the closed form: 70 eps / m at m = 99, 1.4e4 eps / m at m = 2048), the table and
+ * the compensated sum stay below 3 eps / m for m <= 4096, like the FFT. As there, only k <= m/2 is
+ * computed and the weights are symmetric bitwise.
  */
 void ClenshawCurtisQuadRule::genWeightsNaiveInplace(const std::span<double> out) const {
   assert(out.size() >= 2);
 
-  std::fill(out.begin(), out.end(), 0.0);
+  const size_t m = out.size() - 1;
+  const std::vector<double> cosines = unitRootCosines(m);
+  const double mDouble = static_cast<double>(m);
 
-  const size_t nNodes = out.size();
-  const size_t m = nNodes - 1;
-  const size_t mHalf = m / 2;
+  std::vector<double> c(m);
+  buildEvenInput(c);
 
-  for (size_t i = 1; i <= mHalf; i++) {
-    const double bj = ((m % 2 == 0) && (i == m / 2)) ? 1.0 : 2.0;
-    const double denom = 4.0 * static_cast<double>(i) * static_cast<double>(i) - 1.0;
-    const double factor = bj / denom;
-    const double phi = 2.0 * static_cast<double>(i) * M_PI / static_cast<double>(m);
-    const double cos_phi = std::cos(phi);
-    double c_km1 = cos_phi;
-    double c_km2 = 1.0;
-
-    out[0] += factor * c_km2;
-
-    if (mHalf >= 1) {
-      out[1] += factor * c_km1;
-
-      for (size_t j = 2; j <= mHalf; j++) {
-        double c_k = 2.0 * cos_phi * c_km1 - c_km2;
-        out[j] += factor * c_k;
-        c_km2 = c_km1;
-        c_km1 = c_k;
-      }
-    }
-  }
-
-  // Mirror values
-  for (size_t i = 0; i <= mHalf; i++) {
-    out[m - i] = out[i];
-  }
-
-  for (size_t k = 0; k <= m; ++k) {  // Weights on [-1, 1]
-    const double ck = (k == 0 || k == m) ? 1.0 : 2.0;
-    out[k] = ck / static_cast<double>(m) * (1.0 - out[k]);
-  }
-
-  std::ranges::reverse(out);  // Weights on [0, 1]: w01[i] = 0.5 * wcc[m - i]
-  for (double& weight : out) {
-    weight *= 0.5;
+  for (size_t k = 0; k <= m / 2; k++) {
+    const double s = cosineSum(k, c, cosines);
+    const double ck = (k == 0) ? 1.0 : 2.0;  // c_k = c_{m-k}; k = m/2 < m as m >= 1
+    const double weight = 0.5 * (ck / mDouble * (1.0 - s));
+    out[k] = weight;
+    out[m - k] = weight;
   }
 }
 

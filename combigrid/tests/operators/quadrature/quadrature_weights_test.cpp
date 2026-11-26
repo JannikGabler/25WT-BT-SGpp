@@ -6,7 +6,7 @@
 /**
  * @file quadrature_weights_test.cpp
  * @brief Boost.Test cases pinning the 1D quadrature weights that the quadrature on a
- * @c SparseGrid applies to its tensor grids, and the Clenshaw-Curtis weights bitwise.
+ * @c SparseGrid applies to its tensor grids.
  *
  * The quadrature of a tensor grid multiplies the source function at every grid point by the
  * product of the 1D weights of the quadrature rules of its dimensions. These weights must be
@@ -24,8 +24,6 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
@@ -177,38 +175,10 @@ std::vector<double> allWeights(const SparseGrid& sg, const misc::QuadWeightTable
   return result;
 }
 
-/// FNV-1a style hash of the bit patterns of @p values.
-uint64_t hashBits(const std::span<const double> values, uint64_t h) {
-  for (const double x : values) {
-    h = (h ^ std::bit_cast<uint64_t>(x)) * 0x100000001b3ULL;
-  }
-  return h;
-}
-
-/// Node counts of the bitwise Clenshaw-Curtis pin (doubling growth with boundary up to 2^15 + 1,
-/// odd and even counts).
-const std::vector<GPCntType> CC_PIN_NODE_COUNTS = {2,  3,   4,   5,   6,   9,    17,   33,   64,
-                                                   65, 100, 129, 257, 513, 1025, 4097, 32769};
-
-/// Hash of the Clenshaw-Curtis weights for CC_PIN_NODE_COUNTS (genWeights and
-/// genWeightsInplace; recorded with the debug build and Eigen's FFT, weights by a real FFT of
-/// length n - 1).
-constexpr uint64_t CC_PIN_HASH_DEBUG = 0x60ec02f99a7622e3ULL;
-
-uint64_t hashCCWeights() {
-  const QuadRule* const rule = getClenshawCurtisQuadRule();
-  uint64_t h = 0xcbf29ce484222325ULL;
-  for (const GPCntType nNodes : CC_PIN_NODE_COUNTS) {
-    const DataVector weights = rule->genWeights(nNodes);
-    BOOST_REQUIRE_EQUAL(weights.size(), nNodes);
-    h = hashBits(weights, h);
-
-    std::vector<double> inplace(nNodes, -1.0);
-    rule->genWeightsInplace(inplace);
-    BOOST_CHECK_MESSAGE(bitwiseEqual(inplace, weights), nNodes << " nodes");
-  }
-  return h;
-}
+/// Node counts of the Clenshaw-Curtis in-place check (doubling growth with boundary up to
+/// 2^15 + 1, odd and even counts).
+const std::vector<GPCntType> CC_NODE_COUNTS = {2,  3,   4,   5,   6,   9,    17,   33,   64,
+                                               65, 100, 129, 257, 513, 1025, 4097, 32769};
 
 }  // namespace
 
@@ -313,19 +283,18 @@ BOOST_AUTO_TEST_CASE(Eager_Fill_Equals_Lazy_Fill) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(Clenshaw_Curtis_Weights_Bitwise) {
-  // The weights of the debug build (no contraction of multiply-adds, no link-time optimization)
-  // with Eigen's FFT are pinned bitwise; the optimized build and the Armadillo backend (other
-  // round-off) are checked by genWeightsInplace == genWeights only.
-  const uint64_t h = hashCCWeights();
-  const char* const print = std::getenv("SGPP_PRINT_GOLDEN");
-  if (print != nullptr && std::string(print) == "1") {
-    std::printf("Clenshaw-Curtis weights hash: 0x%016llxULL\n", static_cast<unsigned long long>(h));
-    return;
+BOOST_AUTO_TEST_CASE(Clenshaw_Curtis_Weights_Inplace_Equal_Weights_Bitwise) {
+  // The accuracy of the weights is checked against a long double evaluation of the closed form in
+  // the tests of the rule; here both entry points must give the same bits in every build
+  const QuadRule* const rule = getClenshawCurtisQuadRule();
+  for (const GPCntType nNodes : CC_NODE_COUNTS) {
+    const DataVector weights = rule->genWeights(nNodes);
+    BOOST_REQUIRE_EQUAL(weights.size(), nNodes);
+
+    std::vector<double> inplace(nNodes, -1.0);
+    rule->genWeightsInplace(inplace);
+    BOOST_CHECK_MESSAGE(bitwiseEqual(inplace, weights), nNodes << " nodes");
   }
-#if !defined(NDEBUG) && defined(USE_EIGEN)
-  BOOST_CHECK_EQUAL(h, CC_PIN_HASH_DEBUG);
-#endif
 }
 
 BOOST_AUTO_TEST_SUITE_END()

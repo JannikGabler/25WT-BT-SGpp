@@ -560,6 +560,7 @@ void checkHierarchicalLevels(const SGGenInstr& genInstr) {
     }
   }
 
+  size_t nChecked = 0;
   size_t nMismatches = 0;
   std::string firstMismatch;
 
@@ -567,6 +568,7 @@ void checkHierarchicalLevels(const SGGenInstr& genInstr) {
     const TensorGrid tensorGrid = tg.tensorGrid.toTensorGrid();
     for (const auto& point : tensorGrid.gridPointsImmutable()) {
       for (size_t dim = 0; dim < nDim; dim++) {
+        nChecked++;
         LvlType hierarchicalLvl = 0;
         while (hierarchicalLvl < regularNodesPerLvl[dim].size() &&
                !findNode(regularNodesPerLvl[dim][hierarchicalLvl], point.gp[dim])) {
@@ -582,10 +584,11 @@ void checkHierarchicalLevels(const SGGenInstr& genInstr) {
     }
   }
 
-  if (nMismatches > 0) {
-    BOOST_ERROR(nMismatches << " coordinate(s) of grid points do not belong to the level of "
-                            << "their tensor grid, e.g. " << firstMismatch);
-  }
+  BOOST_CHECK_GT(nChecked, 0u);
+  BOOST_CHECK_MESSAGE(nMismatches == 0,
+                      nMismatches << " of " << nChecked
+                                  << " coordinate(s) of grid points do not belong "
+                                  << "to the level of their tensor grid, e.g. " << firstMismatch);
 }
 
 }  // namespace

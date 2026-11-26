@@ -74,8 +74,6 @@ BOOST_AUTO_TEST_CASE(Simple3DExample) {
   BOOST_CHECK_EQUAL_COLLECTIONS(result2.begin(), result2.end(), expected.begin(), expected.end());
 }
 
-BOOST_AUTO_TEST_CASE(RandomComplexExample) {}
-
 BOOST_AUTO_TEST_CASE(RandomParallelExample) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {

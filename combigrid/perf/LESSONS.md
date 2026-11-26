@@ -39,16 +39,20 @@ measurement notes that are not in [README.md](README.md). Maintained by the mast
 - **Cross-call cache in e2e**: the pipelines build a new grid per run → the cache never hits in the
   judged suite; repeated-call gains need dedicated benchmarks (WP-73 / WP-82).
 
-## Recurring test failures (→ WP-35; report recurrences)
+## Test reliability (resolved by WP-35, 2026-11-26)
 
-- time-seeded `equidistant_nodes/sin_func_random_cube_3D`
-  (WP-29a 2 of 16, WP-28 1 of ≈ 15, WP-47 1); `{equidistant,clenshaw_curtis}_nodes/linear_func_unit_cube_1D`
-  (WP-47 once, WP-52 2 of ≈ 50; pre-existing); `sin_func_random_cube_3D` again in the WP-61 rework
-  (normal 1 of 3).
-- timing-dependent `source_function_cache_adaptive/concurrent_operator_calls_on_one_function`
-  (`modeSwitches >= 1`, got 0): WP-61 rework 2 of 60 suite runs on both 809b8cfe1 and the rework
-  (pre-existing), alone 40/40.
-- `grid_storage_pinning` fails without Eigen / Armadillo (FFT-backend-specific hashes; owner 11-24 → WP-35).
+- No known flaky test since WP-35: any failure is real. Former flakes (history): near-zero relative
+  tolerances of cancelling integrals (`equidistant_nodes/sin_func_random_cube_3D`, `*/linear_func_unit_cube_1D`;
+  1.0 % of seeds) → magnitude-scaled checks |Q − I| ≤ relTol · ∫|f|; FMA-dependent cache spill →
+  count-based small memory; timing-dependent adaptive cold start → 1-thread first call + probes;
+  FFT-backend-specific `grid_storage_pinning` hashes → golden values with tolerance.
+- Replay a clock seed with the `LD_PRELOAD` shim `results/WP-35/tools/shim/fake_time.c`
+  (`FAKE_TIME=<seed>`); sweep seeds with `results/WP-35/tools/fuzz.sh`.
+- No test stores bit patterns (owner 2026-11-25): golden values pass changes below 1e-12 (1 + |g|)
+  unnoticed → a WP claiming "bitwise unchanged" diffs the `perf_reference` output of its snapshots
+  (1 and 16 t; README Pitfalls).
+- A tests-only change can still move LTO inlining budgets (WP-35 follow-up: combigrid `.text` −2.8 kB,
+  e2e 1.000x) → compare library hashes before skipping A/B benchmarks.
 
 ## Dropped earlier
 
@@ -158,3 +162,8 @@ summary before letting a line shape a design, and retry or adapt an idea when th
   granularity, not to a large TG. Cost: row-range entry into `sumOverRows`, per-call task list, partial
   buffers (scalar + vector), sub-row splitting for row dims with few rows, round-off change → dropped by
   the owner (11-25): DSG already reaches the bound there (0.552 vs. SG 1.564 s).
+- WP-35 adaptive concurrent cold start with `cheapFunc` + only a `BOOST_REQUIRE` (test
+  `concurrent_operator_calls_on_one_function`): hit cost under 16-t contention 110–300 ns vs. `cheapFunc`
+  48–90 ns against the rule c_f < 0.8 E → still timing-dependent; replaced by a 1-thread first call + probes.
+- WP-35 contraction-proof (`constexpr`) shifted domains in the pinning / cache tests: not needed (d ≤ 3
+  products exact; cache tests no longer depend on point bits).

@@ -93,6 +93,11 @@ double cheapFunc(const DataVector& x) {
   return std::sin(sum) + std::exp(-x[0]);
 }
 
+/// Far cheaper than any lookup of the cache (a few ns vs. 40-60 ns per memory hit at 1 thread,
+/// 100-300 ns under contention): the adaptive decisions to switch caching off do not depend on
+/// the timing. (cheapFunc costs 35-70 ns, close to a hit at 1 thread.)
+double negligibleFunc(const DataVector& x) { return x[0] + 0.5 * x[x.size() - 1]; }
+
 void cheapVectorFunc(const DataVector& x, const std::span<double> out) {
   out[0] = cheapFunc(x);
   out[1] = x[0] * x[x.size() - 1];
@@ -230,8 +235,8 @@ BOOST_AUTO_TEST_CASE(cheap_function_is_switched_off_and_probed) {
   withThreads(1, []() {
     const Problem problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 0, 3, 5,
                           shiftedDomain(3), true);
-    const CachedSourceFunc cached(cheapFunc, ADAPTIVE);
-    const double plain = sgpp::combigrid::quadrature(SourceFunc(cheapFunc), *problem.sg);
+    const CachedSourceFunc cached(negligibleFunc, ADAPTIVE);
+    const double plain = sgpp::combigrid::quadrature(SourceFunc(negligibleFunc), *problem.sg);
     BOOST_CHECK_EQUAL(sgpp::combigrid::quadrature(cached, *problem.sg), plain);
 
     CacheStatistics stats = cached.statistics();
@@ -298,11 +303,23 @@ BOOST_AUTO_TEST_CASE(misuse_and_other_dimensions) {
 
 BOOST_AUTO_TEST_CASE(concurrent_operator_calls_on_one_function) {
   // 4 threads with 4 OpenMP threads each run operators on one adaptive function while its mode
-  // switches (cheap function: off in the first window, probes at the hooks of all threads).
+  // switches. A first call at 1 thread switches the function off: its first window times
+  // misses only, whose overhead is several times the cost of the function. The concurrent calls
+  // start in None, and the probes (after 1, 2, 4, ... calls in None, at the hooks of all threads)
+  // switch the mode independently of the timing. (Starting concurrently instead, the first
+  // windows also time hits on values of the other threads; under contention their cost is of the
+  // order of the function's, and whether caching is switched off depends on the timing.)
   const Problem problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 4, 5, shiftedDomain(4),
                         true);
-  const double reference = sgpp::combigrid::quadrature(SourceFunc(cheapFunc), *problem.sg);
-  const CachedSourceFunc cached(cheapFunc, ADAPTIVE);
+  const double reference = sgpp::combigrid::quadrature(SourceFunc(negligibleFunc), *problem.sg);
+  const CachedSourceFunc cached(negligibleFunc, ADAPTIVE);
+  withThreads(1, [&]() {
+    const double value = sgpp::combigrid::quadrature(cached, *problem.sg);
+    BOOST_CHECK_SMALL(value - reference, 1e-10 * std::abs(reference));
+  });
+  const CacheStatistics afterFirst = cached.statistics();
+  BOOST_REQUIRE(afterFirst.adaptiveMode == AdaptiveCacheMode::None);
+
   std::atomic<size_t> wrong{0};
   std::vector<std::thread> threads;
   for (size_t t = 0; t < 4; t++) {
@@ -316,8 +333,8 @@ BOOST_AUTO_TEST_CASE(concurrent_operator_calls_on_one_function) {
   }
   for (std::thread& thread : threads) thread.join();
   BOOST_CHECK_EQUAL(wrong.load(), 0u);
-  BOOST_CHECK_EQUAL(cached.statistics().operatorCalls, 20u);
-  BOOST_CHECK_GE(cached.statistics().modeSwitches, 1u);
+  BOOST_CHECK_EQUAL(cached.statistics().operatorCalls, 21u);
+  BOOST_CHECK_GT(cached.statistics().modeSwitches, afterFirst.modeSwitches);
 }
 
 #ifdef SGPP_COMBIGRID_COMPILE_LMDB_POINT_VALUE_STORE

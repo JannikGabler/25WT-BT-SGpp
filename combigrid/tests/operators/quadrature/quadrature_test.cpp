@@ -93,6 +93,207 @@ SourceFunc genSinSourceFunction() {
   });
 }
 
+using SeedType = sgpp::base::RandomNumberGenerator::SeedType;
+
+/// Seeds randGen with each of @p seeds in turn and runs @p check (the seed is reported on failure).
+template <typename Check>
+void withSeeds(const std::vector<SeedType>& seeds, const Check& check) {
+  for (const SeedType seed : seeds) {
+    randGen.setSeed(seed);
+    BOOST_TEST_CONTEXT("Seed: " << seed) { check(); }
+  }
+}
+
+/// Runs @p check with randGen seeded from the clock (reported on failure: a failing seed can be
+/// replayed with withSeeds).
+template <typename Check>
+void withClockSeed(const Check& check) {
+  randGen.setSeed();
+  withSeeds({randGen.getSeed()}, check);
+}
+
+/**
+ * Checks the quadrature @p result against the exact integral @p expected up to @p relTol times
+ * @p magnitude, an upper bound of the integral of |f| over the domain (>= |expected|).
+ *
+ * The round-off and discretization errors of the quadrature scale with |f|, not with its
+ * integral: a tolerance relative to @p expected fails spuriously when the positive and negative
+ * parts of f cancel (e.g. sin on [-0.9, 0.9] integrates to 0). For f of one sign, @p magnitude
+ * equals |expected| and the check is the relative one.
+ */
+void checkIntegral(const double result, const double expected, const double magnitude,
+                   const double relTol) {
+  const double difference = result - expected;
+  BOOST_CHECK_MESSAGE(std::abs(difference) <= relTol * magnitude,
+                      "quadrature: " << result << ", exact: " << expected
+                                     << ", difference: " << difference
+                                     << ", relative to the magnitude " << magnitude << ": "
+                                     << std::abs(difference) / magnitude << " > " << relTol);
+}
+
+// Seeds of the clock-seeded cases below whose exact integral nearly cancels: each failed (with
+// the nodes of at least one suite) when the tolerance was relative to the exact integral.
+const std::vector<SeedType> SIN_INTERVAL_1D_PINNED_SEEDS{1817661067, 1859386278, 1866149104};
+const std::vector<SeedType> SIN_CUBE_3D_PINNED_SEEDS{1793379453, 1806637819, 1811880197};
+const std::vector<SeedType> LINEAR_UNIT_CUBE_1D_PINNED_SEEDS{1794588878, 1795242378, 1802781266};
+const std::vector<SeedType> LINEAR_INTERVAL_1D_PINNED_SEEDS{1842178291, 1846628769, 1859916851};
+const std::vector<SeedType> MONOMIAL_CUBE_PINNED_SEEDS{1816528650, 1823956672};
+
+/// Integral of |sin| over [a, b] with -pi <= a <= 0 <= b <= pi.
+double absSinIntegral(const double a, const double b) {
+  return (1.0 - std::cos(a)) + (1.0 - std::cos(b));
+}
+
+/// sin on [a, b] with random a in [-1, 0], b in [0.5, 2] (the integral vanishes for b = -a).
+void checkSinRandomInterval1D(NodeGenFunc* const nodes, const LvlType maxLvl, const double relTol) {
+  const double a = randGen.getUniformRN(-1.0, 0.0);
+  const double b = randGen.getUniformRN(0.5, 2.0);
+
+  CompleteSGGenInstr genInstr(maxLvl, 1);
+  genInstr.setNodeGenFunc(nodes);
+  genInstr.setDomainForDim({a, b}, 0);
+  const SparseGrid sg(genInstr);
+
+  // ∫ sin(x) dx = cos(a) - cos(b)
+  checkIntegral(quadrature(genSinSourceFunction(), sg), std::cos(a) - std::cos(b),
+                absSinIntegral(a, b), relTol);
+}
+
+/// prod_k sin(x_k) on a random cube (each interval as in checkSinRandomInterval1D).
+void checkSinRandomCube3D(NodeGenFunc* const nodes, const LvlType maxLvl, const double relTol) {
+  CompleteSGGenInstr genInstr(maxLvl, 3);
+  genInstr.setNodeGenFunc(nodes);
+
+  double expected = 1.0;
+  double magnitude = 1.0;
+  for (size_t d = 0; d < 3; ++d) {
+    const double a = randGen.getUniformRN(-1.0, 0.0);
+    const double b = randGen.getUniformRN(0.5, 2.0);
+    genInstr.setDomainForDim({a, b}, d);
+    expected *= std::cos(a) - std::cos(b);
+    magnitude *= absSinIntegral(a, b);
+  }
+  const SparseGrid sg(genInstr);
+
+  checkIntegral(quadrature(genSinSourceFunction(), sg), expected, magnitude, relTol);
+}
+
+/// a x + b on [0, 1] with random a in [-2, 2], b in [-1, 1] (the integral vanishes for b = -a/2).
+void checkLinearUnitCube1D(NodeGenFunc* const nodes, const LvlType maxLvl, const double relTol) {
+  const double a = randGen.getUniformRN(-2.0, 2.0);
+  const double b = randGen.getUniformRN(-1.0, 1.0);
+
+  CompleteSGGenInstr genInstr(maxLvl, 1);
+  genInstr.setNodeGenFunc(nodes);
+  const SparseGrid sg(genInstr);
+
+  // ∫ |a x + b| dx <= |a| / 2 + |b|
+  checkIntegral(quadrature(genLinearSourceFunction(a, b), sg), a * 0.5 + b,
+                std::abs(a) * 0.5 + std::abs(b), relTol);
+}
+
+/// a x + b on a random interval (a, b, interval bounds random).
+void checkLinearRandomInterval1D(NodeGenFunc* const nodes, const LvlType maxLvl,
+                                 const double relTol) {
+  const double aCoeff = randGen.getUniformRN(-2.0, 2.0);
+  const double bCoeff = randGen.getUniformRN(-1.0, 1.0);
+  const double a = randGen.getUniformRN(-3.0, -0.5);
+  const double b = randGen.getUniformRN(0.5, 3.0);
+
+  CompleteSGGenInstr genInstr(maxLvl, 1);
+  genInstr.setNodeGenFunc(nodes);
+  genInstr.setDomainForDim({a, b}, 0);
+  const SparseGrid sg(genInstr);
+
+  // ∫ (aCoeff x + bCoeff) dx = aCoeff / 2 (b^2 - a^2) + bCoeff (b - a);
+  // ∫ |aCoeff x + bCoeff| dx <= |aCoeff| (a^2 + b^2) / 2 + |bCoeff| (b - a) (a < 0 < b)
+  checkIntegral(quadrature(genLinearSourceFunction(aCoeff, bCoeff), sg),
+                aCoeff * 0.5 * (b * b - a * a) + bCoeff * (b - a),
+                std::abs(aCoeff) * 0.5 * (a * a + b * b) + std::abs(bCoeff) * (b - a), relTol);
+}
+
+/// prod_k x_k^{e_k} on a random cube, e_k in 0..3 (odd e_k: the integral vanishes for b = -a).
+void checkMonomialRandomCubeND(NodeGenFunc* const nodes, const LvlType maxLvl,
+                               const double relTol) {
+  const size_t nDim = 1 + randGen.getUniformIndexRN(4);  // 1..4
+  CompleteSGGenInstr genInstr(maxLvl, nDim);
+  genInstr.setNodeGenFunc(nodes);
+
+  std::vector<int> exponents(nDim);
+  double expected = 1.0;
+  double magnitude = 1.0;
+  for (size_t d = 0; d < nDim; ++d) {
+    exponents[d] = static_cast<int>(randGen.getUniformIndexRN(4));  // 0..3
+    const double a = randGen.getUniformRN(-1.0, 0.0);
+    const double b = randGen.getUniformRN(0.5, 2.0);
+    genInstr.setDomainForDim({a, b}, d);
+
+    // ∫ x^k dx = (b^{k+1} - a^{k+1}) / (k+1), ∫ |x|^k dx = (b^{k+1} + |a|^{k+1}) / (k+1) (a <= 0)
+    const int k = exponents[d];
+    expected *= (std::pow(b, k + 1) - std::pow(a, k + 1)) / static_cast<double>(k + 1);
+    magnitude *= (std::pow(b, k + 1) + std::pow(-a, k + 1)) / static_cast<double>(k + 1);
+  }
+
+  const SourceFunc sourceFunc([exponents](const DataVector& point) {
+    double v = 1.0;
+    for (size_t i = 0; i < point.getSize(); ++i) {
+      v *= std::pow(point[i], exponents[i]);
+    }
+    return v;
+  });
+  const SparseGrid sg(genInstr);
+
+  checkIntegral(quadrature(sourceFunc, sg), expected, magnitude, relTol);
+}
+
+/// Random polynomial (1..4 terms, coefficients in [-2, 2], exponents 0..3) on the unit cube.
+void checkRandomPolynomialUnitCubeND(NodeGenFunc* const nodes, const double relTol) {
+  const size_t nDim = 1 + randGen.getUniformIndexRN(4);                           // 1..4
+  const LvlType maxLvl = static_cast<LvlType>(6 + randGen.getUniformIndexRN(3));  // 6..8
+  const size_t nTerms = 1 + randGen.getUniformIndexRN(4);                         // 1..4
+
+  std::vector<double> coeffs(nTerms);
+  std::vector<std::vector<int>> exponents(nTerms, std::vector<int>(nDim));
+  for (size_t t = 0; t < nTerms; ++t) {
+    coeffs[t] = randGen.getUniformRN(-2.0, 2.0);
+    for (size_t i = 0; i < nDim; ++i) {
+      exponents[t][i] = static_cast<int>(randGen.getUniformIndexRN(4));  // 0..3
+    }
+  }
+
+  const SourceFunc sourceFunc([coeffs, exponents](const DataVector& point) {
+    double v = 0.0;
+    for (size_t t = 0; t < coeffs.size(); ++t) {
+      double m = coeffs[t];
+      for (size_t i = 0; i < point.getSize(); ++i) {
+        double power = 1.0;
+        for (int e = 0; e < exponents[t][i]; ++e) power *= point[i];
+        m *= power;
+      }
+      v += m;
+    }
+    return v;
+  });
+
+  // ∫ prod_i x_i^{k_i} dx = prod_i 1 / (k_i + 1); the magnitude sums the terms' absolute values
+  double expected = 0.0;
+  double magnitude = 0.0;
+  for (size_t t = 0; t < nTerms; ++t) {
+    double monomial = 1.0;
+    for (const int k : exponents[t]) {
+      monomial *= 1.0 / static_cast<double>(k + 1);
+    }
+    expected += coeffs[t] * monomial;
+    magnitude += std::abs(coeffs[t]) * monomial;
+  }
+
+  CompleteSGGenInstr genInstr(maxLvl, nDim);
+  genInstr.setNodeGenFunc(nodes);
+  const SparseGrid sg(genInstr);
+
+  checkIntegral(quadrature(sourceFunc, sg), expected, magnitude, relTol);
+}
+
 /// Node table with empty node lists (level 1 of dimension 0 and 2, level 0 of dimension 1):
 /// the tensor grids of the levels (0, 0, 0), (1, 1, 0), (0, 1, 1) have the counts (3, 0, 5),
 /// (0, 3, 5), (3, 3, 0).
@@ -211,26 +412,12 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1;
-    const LvlType maxLvl = static_cast<LvlType>(9);
+  withClockSeed([] { checkSinRandomInterval1D(getEquidistantNodeGenFunc(), 9, 1e-12); });
+}
 
-    const double a = randGen.getUniformRN(-1.0, 0.0);
-    const double b = randGen.getUniformRN(0.5, 2.0);
-
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setDomainForDim({a, b}, 0);
-
-    const SourceFunc sourceFunc = genSinSourceFunction();
-    const SparseGrid sg(genInstr);
-
-    // ∫ sin(x) dx = cos(a) - cos(b)
-    const double expected = std::cos(a) - std::cos(b);
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-10);
-  }
+BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D_pinned_seeds) {
+  withSeeds(SIN_INTERVAL_1D_PINNED_SEEDS,
+            [] { checkSinRandomInterval1D(getEquidistantNodeGenFunc(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D) {
@@ -274,77 +461,30 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_3D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 3;
-    const LvlType maxLvl = static_cast<LvlType>(9);
+  withClockSeed([] { checkSinRandomCube3D(getEquidistantNodeGenFunc(), 9, 1e-12); });
+}
 
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-
-    double expected = 1.0;
-    for (size_t d = 0; d < nDim; ++d) {
-      double a = randGen.getUniformRN(-1.0, 0.0);
-      double b = randGen.getUniformRN(0.5, 2.0);
-      genInstr.setDomainForDim({a, b}, d);
-
-      // ∫ sin(x) dx = cos(a) - cos(b)
-      expected *= (std::cos(a) - std::cos(b));
-    }
-
-    const SourceFunc sourceFunc = genSinSourceFunction();
-    const SparseGrid sg(genInstr);
-
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-10);
-  }
+BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D_pinned_seeds) {
+  withSeeds(SIN_CUBE_3D_PINNED_SEEDS,
+            [] { checkSinRandomCube3D(getEquidistantNodeGenFunc(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1;
-    const LvlType maxLvl = 4;
-    const double a = randGen.getUniformRN(-2.0, 2.0);
-    const double b = randGen.getUniformRN(-1.0, 1.0);
+  withClockSeed([] { checkLinearUnitCube1D(getEquidistantNodeGenFunc(), 4, 1e-14); });
+}
 
-    const CompleteSGGenInstr genInstr(maxLvl, nDim);
-    const SourceFunc sourceFunc = genLinearSourceFunction(a, b);
-
-    const SparseGrid sg(genInstr);
-
-    const double expected = a * 0.5 + b;
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-12);
-  }
+BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D_pinned_seeds) {
+  withSeeds(LINEAR_UNIT_CUBE_1D_PINNED_SEEDS,
+            [] { checkLinearUnitCube1D(getEquidistantNodeGenFunc(), 4, 1e-14); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1;
-    const LvlType maxLvl = 6;
+  withClockSeed([] { checkLinearRandomInterval1D(getEquidistantNodeGenFunc(), 6, 1e-12); });
+}
 
-    const double aCoeff = randGen.getUniformRN(-2.0, 2.0);
-    const double bCoeff = randGen.getUniformRN(-1.0, 1.0);
-
-    const double a = randGen.getUniformRN(-3.0, -0.5);
-    const double b = randGen.getUniformRN(0.5, 3.0);
-
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setDomainForDim({a, b}, 0);
-
-    const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
-    const SparseGrid sg(genInstr);
-
-    // ∫(a*x + b) dx = a/2 (b^2 - a^2) + b (b - a)
-    const double expected = aCoeff * 0.5 * (b * b - a * a) + bCoeff * (b - a);
-
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-10);
-  }
+BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_pinned_seeds) {
+  withSeeds(LINEAR_INTERVAL_1D_PINNED_SEEDS,
+            [] { checkLinearRandomInterval1D(getEquidistantNodeGenFunc(), 6, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(quadratic_func_unit_cube_1D) {
@@ -431,101 +571,16 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
 }
 
 BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1 + randGen.getUniformIndexRN(4);  // 1..4
-    const LvlType maxLvl = static_cast<LvlType>(8);
+  withClockSeed([] { checkMonomialRandomCubeND(getEquidistantNodeGenFunc(), 8, 1e-11); });
+}
 
-    std::vector<int> exponents(nDim);
-    std::vector<std::pair<double, double>> bounds(nDim);
-
-    double expected = 1.0;
-
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-
-    for (size_t d = 0; d < nDim; ++d) {
-      exponents[d] = static_cast<int>(randGen.getUniformIndexRN(4));  // 0..3
-      double a = randGen.getUniformRN(-1.0, 0.0);
-      double b = randGen.getUniformRN(0.5, 2.0);
-      bounds[d] = {a, b};
-      genInstr.setDomainForDim(bounds[d], d);
-
-      // ∫ x^k dx = (b^{k+1} - a^{k+1})/(k+1)
-      expected *= (std::pow(b, exponents[d] + 1) - std::pow(a, exponents[d] + 1)) /
-                  static_cast<double>(exponents[d] + 1);
-    }
-
-    const SourceFunc sourceFunc([exponents](const DataVector& point) {
-      double v = 1.0;
-      for (size_t i = 0; i < point.getSize(); ++i) {
-        v *= std::pow(point[i], exponents[i]);
-      }
-      return v;
-    });
-
-    const SparseGrid sg(genInstr);
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-9);
-  }
+BOOST_AUTO_TEST_CASE(monomial_random_cube_nD_pinned_seeds) {
+  withSeeds(MONOMIAL_CUBE_PINNED_SEEDS,
+            [] { checkMonomialRandomCubeND(getEquidistantNodeGenFunc(), 8, 1e-11); });
 }
 
 BOOST_AUTO_TEST_CASE(random_polynomial_unit_cube_nD) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1 + randGen.getUniformIndexRN(4);                           // 1..4
-    const LvlType maxLvl = static_cast<LvlType>(6 + randGen.getUniformIndexRN(3));  // 6..8
-    const size_t nTerms = 1 + randGen.getUniformIndexRN(4);                         // 1..4 Terme
-
-    // Erzeuge Terme: jeder Term hat Koeff und Exponenten (0..3)
-    struct Term {
-      double coeff;
-      std::vector<int> exps;
-    };
-    std::vector<Term> terms;
-    for (size_t t = 0; t < nTerms; ++t) {
-      Term term;
-      term.coeff = randGen.getUniformRN(-2.0, 2.0);
-      term.exps.resize(nDim);
-      for (size_t i = 0; i < nDim; ++i) {
-        term.exps[i] = static_cast<int>(randGen.getUniformIndexRN(4));  // 0..3
-      }
-      terms.push_back(term);
-    }
-
-    const CompleteSGGenInstr genInstr(maxLvl, nDim);
-    const SourceFunc sourceFunc([terms](const DataVector& point) {
-      double v = 0.0;
-      for (const Term& term : terms) {
-        double m = term.coeff;
-        for (size_t i = 0; i < point.getSize(); ++i) {
-          double xi = point[i];
-          int k = term.exps[i];
-          double xi_pow = 1.0;
-          for (int e = 0; e < k; ++e) xi_pow *= xi;
-          m *= xi_pow;
-        }
-        v += m;
-      }
-      return v;
-    });
-
-    const SparseGrid sg(genInstr);
-
-    // Exact integral: Sum_{terms} coeff * prod_i 1/(k_i+1)
-    double expected = 0.0;
-    for (const Term& term : terms) {
-      double contrib = term.coeff;
-      for (int k : term.exps) {
-        contrib *= 1.0 / static_cast<double>(k + 1);
-      }
-      expected += contrib;
-    }
-
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-9);
-  }
+  withClockSeed([] { checkRandomPolynomialUnitCubeND(getEquidistantNodeGenFunc(), 1e-11); });
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -641,27 +696,12 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1;
-    const LvlType maxLvl = static_cast<LvlType>(9);
+  withClockSeed([] { checkSinRandomInterval1D(getClenshawCurtisNodeGenFunc(), 9, 1e-12); });
+}
 
-    const double a = randGen.getUniformRN(-1.0, 0.0);
-    const double b = randGen.getUniformRN(0.5, 2.0);
-
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-    genInstr.setDomainForDim({a, b}, 0);
-
-    const SourceFunc sourceFunc = genSinSourceFunction();
-    const SparseGrid sg(genInstr);
-
-    // ∫ sin(x) dx = cos(a) - cos(b)
-    const double expected = std::cos(a) - std::cos(b);
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-10);
-  }
+BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D_pinned_seeds) {
+  withSeeds(SIN_INTERVAL_1D_PINNED_SEEDS,
+            [] { checkSinRandomInterval1D(getClenshawCurtisNodeGenFunc(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D) {
@@ -707,80 +747,30 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_3D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 3;
-    const LvlType maxLvl = static_cast<LvlType>(12);
+  withClockSeed([] { checkSinRandomCube3D(getClenshawCurtisNodeGenFunc(), 12, 1e-10); });
+}
 
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-
-    double expected = 1.0;
-    for (size_t d = 0; d < nDim; ++d) {
-      double a = randGen.getUniformRN(-1.0, 0.0);
-      double b = randGen.getUniformRN(0.5, 2.0);
-      genInstr.setDomainForDim({a, b}, d);
-
-      // ∫ sin(x) dx = cos(a) - cos(b)
-      expected *= (std::cos(a) - std::cos(b));
-    }
-
-    const SourceFunc sourceFunc = genSinSourceFunction();
-    const SparseGrid sg(genInstr);
-
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-8);
-  }
+BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D_pinned_seeds) {
+  withSeeds(SIN_CUBE_3D_PINNED_SEEDS,
+            [] { checkSinRandomCube3D(getClenshawCurtisNodeGenFunc(), 12, 1e-10); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1;
-    const LvlType maxLvl = 5;
-    const double a = randGen.getUniformRN(-2.0, 2.0);
-    const double b = randGen.getUniformRN(-1.0, 1.0);
+  withClockSeed([] { checkLinearUnitCube1D(getClenshawCurtisNodeGenFunc(), 5, 1e-14); });
+}
 
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-    const SourceFunc sourceFunc = genLinearSourceFunction(a, b);
-
-    const SparseGrid sg(genInstr);
-
-    const double expected = a * 0.5 + b;
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-12);
-  }
+BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D_pinned_seeds) {
+  withSeeds(LINEAR_UNIT_CUBE_1D_PINNED_SEEDS,
+            [] { checkLinearUnitCube1D(getClenshawCurtisNodeGenFunc(), 5, 1e-14); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1;
-    const LvlType maxLvl = 6;
+  withClockSeed([] { checkLinearRandomInterval1D(getClenshawCurtisNodeGenFunc(), 6, 1e-12); });
+}
 
-    const double aCoeff = randGen.getUniformRN(-2.0, 2.0);
-    const double bCoeff = randGen.getUniformRN(-1.0, 1.0);
-
-    const double a = randGen.getUniformRN(-3.0, -0.5);
-    const double b = randGen.getUniformRN(0.5, 3.0);
-
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-    genInstr.setDomainForDim({a, b}, 0);
-
-    const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
-    const SparseGrid sg(genInstr);
-
-    // ∫(a*x + b) dx = a/2 (b^2 - a^2) + b (b - a)
-    const double expected = aCoeff * 0.5 * (b * b - a * a) + bCoeff * (b - a);
-
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-10);
-  }
+BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_pinned_seeds) {
+  withSeeds(LINEAR_INTERVAL_1D_PINNED_SEEDS,
+            [] { checkLinearRandomInterval1D(getClenshawCurtisNodeGenFunc(), 6, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(quadratic_func_unit_cube_1D) {
@@ -870,103 +860,16 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
 }
 
 BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1 + randGen.getUniformIndexRN(4);  // 1..4
-    const LvlType maxLvl = static_cast<LvlType>(8);
+  withClockSeed([] { checkMonomialRandomCubeND(getClenshawCurtisNodeGenFunc(), 8, 1e-11); });
+}
 
-    std::vector<int> exponents(nDim);
-    std::vector<std::pair<double, double>> bounds(nDim);
-
-    double expected = 1.0;
-
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-
-    for (size_t d = 0; d < nDim; ++d) {
-      exponents[d] = static_cast<int>(randGen.getUniformIndexRN(4));  // 0..3
-      double a = randGen.getUniformRN(-1.0, 0.0);
-      double b = randGen.getUniformRN(0.5, 2.0);
-      bounds[d] = {a, b};
-      genInstr.setDomainForDim(bounds[d], d);
-
-      // ∫ x^k dx = (b^{k+1} - a^{k+1})/(k+1)
-      expected *= (std::pow(b, exponents[d] + 1) - std::pow(a, exponents[d] + 1)) /
-                  static_cast<double>(exponents[d] + 1);
-    }
-
-    const SourceFunc sourceFunc([exponents](const DataVector& point) {
-      double v = 1.0;
-      for (size_t i = 0; i < point.getSize(); ++i) {
-        v *= std::pow(point[i], exponents[i]);
-      }
-      return v;
-    });
-
-    const SparseGrid sg(genInstr);
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-9);
-  }
+BOOST_AUTO_TEST_CASE(monomial_random_cube_nD_pinned_seeds) {
+  withSeeds(MONOMIAL_CUBE_PINNED_SEEDS,
+            [] { checkMonomialRandomCubeND(getClenshawCurtisNodeGenFunc(), 8, 1e-11); });
 }
 
 BOOST_AUTO_TEST_CASE(random_polynomial_unit_cube_nD) {
-  randGen.setSeed();
-  BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    const size_t nDim = 1 + randGen.getUniformIndexRN(4);                           // 1..4
-    const LvlType maxLvl = static_cast<LvlType>(6 + randGen.getUniformIndexRN(3));  // 6..8
-    const size_t nTerms = 1 + randGen.getUniformIndexRN(4);                         // 1..4 Terme
-
-    // Erzeuge Terme: jeder Term hat Koeff und Exponenten (0..3)
-    struct Term {
-      double coeff;
-      std::vector<int> exps;
-    };
-    std::vector<Term> terms;
-    for (size_t t = 0; t < nTerms; ++t) {
-      Term term;
-      term.coeff = randGen.getUniformRN(-2.0, 2.0);
-      term.exps.resize(nDim);
-      for (size_t i = 0; i < nDim; ++i) {
-        term.exps[i] = static_cast<int>(randGen.getUniformIndexRN(4));  // 0..3
-      }
-      terms.push_back(term);
-    }
-
-    CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
-    const SourceFunc sourceFunc([terms](const DataVector& point) {
-      double v = 0.0;
-      for (const Term& term : terms) {
-        double m = term.coeff;
-        for (size_t i = 0; i < point.getSize(); ++i) {
-          double xi = point[i];
-          int k = term.exps[i];
-          double xi_pow = 1.0;
-          for (int e = 0; e < k; ++e) xi_pow *= xi;
-          m *= xi_pow;
-        }
-        v += m;
-      }
-      return v;
-    });
-
-    const SparseGrid sg(genInstr);
-
-    // Exact integral: Sum_{terms} coeff * prod_i 1/(k_i+1)
-    double expected = 0.0;
-    for (const Term& term : terms) {
-      double contrib = term.coeff;
-      for (int k : term.exps) {
-        contrib *= 1.0 / static_cast<double>(k + 1);
-      }
-      expected += contrib;
-    }
-
-    const double result = quadrature(sourceFunc, sg);
-
-    BOOST_CHECK_CLOSE(result, expected, 1e-9);
-  }
+  withClockSeed([] { checkRandomPolynomialUnitCubeND(getClenshawCurtisNodeGenFunc(), 1e-11); });
 }
 
 BOOST_AUTO_TEST_CASE(multiindex_vector_sg_gen_instr) {

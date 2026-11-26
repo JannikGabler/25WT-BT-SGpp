@@ -325,7 +325,11 @@ BOOST_AUTO_TEST_CASE(weights_match_long_double_closed_form) {
 }
 
 BOOST_AUTO_TEST_CASE(large_rules_are_symmetric_and_exact_on_chebyshev_polynomials) {
-  for (const GPCntType nNodes : {4096u, 4097u, 4098u, 32769u, 131073u}) {
+  std::vector<GPCntType> sizes{4096u, 4097u, 4098u};
+#ifdef SGPP_COMBIGRID_HAVE_FFT
+  sizes.insert(sizes.end(), {32769u, 131073u});  // O(n^2) without an FFT backend
+#endif
+  for (const GPCntType nNodes : sizes) {
     const size_t m = nNodes - 1;
     std::vector<size_t> degrees = {0, 1, 2, 3, 4, 5, 10, 11, 100, 101, m / 2, m - 2, m - 1, m};
     BOOST_TEST_CONTEXT("nNodes = " << nNodes) {

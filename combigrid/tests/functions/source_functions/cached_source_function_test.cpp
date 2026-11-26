@@ -714,6 +714,19 @@ size_t findBytes(const std::vector<char>& bytes, const void* pattern, const size
   return static_cast<size_t>(std::search(bytes.begin(), bytes.end(), p, p + size) - bytes.begin());
 }
 
+/**
+ * @p config with a memory limit far below the records of the spilling tests, whatever the
+ * distribution of the points over the shards (it depends on the bits of the points, i.e. on
+ * round-off): 16 shards with a share of 8 KiB each hold one chunk of 128 records of 48 bytes
+ * (d = 4, m = 1; a second chunk would need 12 KiB), at most 2048 records in memory. The 4D
+ * problem of these tests has 6785 distinct points.
+ */
+SourceFuncCacheConfig withSmallMemory(SourceFuncCacheConfig config) {
+  config.nShards = 16;
+  config.memoryLimit = config.nShards * 8 * 1024;
+  return config;
+}
+
 /// The test grid of the storage cases (3D, Clenshaw-Curtis, boundary, shifted domain).
 Problem storageProblem() {
   return Problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 3, 4, shiftedDomain(3), true);
@@ -1051,7 +1064,7 @@ BOOST_AUTO_TEST_CASE(shared_cache_and_concurrent_operator_calls) {
                         true);
   const double reference = sgpp::combigrid::quadrature(SourceFunc(scalarFunc), *problem.sg);
   {
-    auto cache = std::make_shared<SourceFuncCache>(persistent(file, size_t{1} << 19));
+    auto cache = std::make_shared<SourceFuncCache>(withSmallMemory(persistent(file)));
     const CachedSourceFunc first(scalarFunc, cache);
     const CachedSourceFunc second(scalarFunc, cache);
     std::atomic<size_t> wrong{0};
@@ -1060,16 +1073,21 @@ BOOST_AUTO_TEST_CASE(shared_cache_and_concurrent_operator_calls) {
       threads.emplace_back([&, t]() {
         omp_set_num_threads(4);
         for (size_t round = 0; round < 3; round++) {
-          const double value = sgpp::combigrid::quadrature((t % 2 == 0) ? first : second,
-                                                           *problem.sg);
+          const double value =
+              sgpp::combigrid::quadrature((t % 2 == 0) ? first : second, *problem.sg);
           if (std::abs(value - reference) > 1e-10 * std::abs(reference)) wrong++;
         }
       });
     }
     for (std::thread& thread : threads) thread.join();
+    const CacheStatistics stats = cache->statistics();
     BOOST_CHECK_EQUAL(wrong.load(), 0u);
-    BOOST_CHECK_EQUAL(cache->statistics().operatorCalls, 12u);
-    BOOST_CHECK_GT(cache->statistics().diskHits, 0u);
+    BOOST_CHECK_EQUAL(stats.operatorCalls, 12u);
+    // Precondition of the disk hits: records beyond the memory limit (the later rounds find
+    // them in the file).
+    BOOST_REQUIRE_GT(stats.inserts, stats.entries);
+    BOOST_CHECK_GT(stats.entries, 0u);
+    BOOST_CHECK_GT(stats.diskHits, 0u);
   }
 
   Counted counted(scalarFunc);
@@ -1085,7 +1103,7 @@ BOOST_AUTO_TEST_CASE(spilling_at_many_threads) {
                         true);
   const std::vector<double> plain = problem.run(SourceFunc(scalarFunc));
   Counted counted(scalarFunc);
-  const CachedSourceFunc cached(counted.callable(), temporary(size_t{1} << 19));
+  const CachedSourceFunc cached(counted.callable(), withSmallMemory(temporary()));
   for (size_t round = 0; round < 3; round++) {
     const std::vector<double> results = problem.run(cached);
     BOOST_REQUIRE_EQUAL(results.size(), plain.size());
@@ -1095,7 +1113,8 @@ BOOST_AUTO_TEST_CASE(spilling_at_many_threads) {
   }
   const CacheStatistics stats = cached.statistics();
   BOOST_CHECK_EQUAL(stats.lookups - stats.hits, counted.count());
-  BOOST_CHECK_GT(stats.diskEntries, 0u);
+  BOOST_CHECK_GT(stats.entries, 0u);
+  BOOST_REQUIRE_GT(stats.diskEntries, 0u);  // precondition of the disk hits
   BOOST_CHECK_GT(stats.diskHits, 0u);
   BOOST_CHECK_EQUAL(stats.rejectedInserts, 0u);
 }

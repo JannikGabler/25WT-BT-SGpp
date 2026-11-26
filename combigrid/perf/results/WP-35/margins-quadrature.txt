@@ -1,0 +1,11 @@
+linear_func_random_interval_1D                     max |err|/(relTol*magnitude) 2.965e-03   min |exact|/magnitude 3.70e-04
+linear_func_random_interval_1D_pinned_seeds        max |err|/(relTol*magnitude) 1.264e-04   min |exact|/magnitude 2.67e-05
+linear_func_unit_cube_1D                           max |err|/(relTol*magnitude) 7.815e-02   min |exact|/magnitude 1.52e-03
+linear_func_unit_cube_1D_pinned_seeds              max |err|/(relTol*magnitude) 9.031e-03   min |exact|/magnitude 2.27e-03
+monomial_random_cube_nD                            max |err|/(relTol*magnitude) 8.276e-02   min |exact|/magnitude 4.03e-04
+monomial_random_cube_nD_pinned_seeds               max |err|/(relTol*magnitude) 7.272e-04   min |exact|/magnitude 5.20e-05
+random_polynomial_unit_cube_nD                     max |err|/(relTol*magnitude) 3.200e-02   min |exact|/magnitude 3.05e-04
+sin_func_random_cube_3D                            max |err|/(relTol*magnitude) 1.945e-01   min |exact|/magnitude 3.89e-06
+sin_func_random_cube_3D_pinned_seeds               max |err|/(relTol*magnitude) 5.622e-03   min |exact|/magnitude 3.89e-06
+sin_func_random_interval_1D                        max |err|/(relTol*magnitude) 2.071e-01   min |exact|/magnitude 1.07e-03
+sin_func_random_interval_1D_pinned_seeds           max |err|/(relTol*magnitude) 8.046e-04   min |exact|/magnitude 2.34e-04

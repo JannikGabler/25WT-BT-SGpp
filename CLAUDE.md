@@ -116,6 +116,13 @@ New test: a `*.cpp` in the matching subdirectory (picked up automatically) with
 `BOOST_AUTO_TEST_CASE`, the copyright banner; **no** `BOOST_TEST_MODULE` (defined in
 [test_base.cpp](combigrid/tests/test_base.cpp)).
 
+**Portability**: tests must pass regardless of machine, architecture, compiler and build options
+(flags, optional libraries, ...) and should generally be portable (i.e. test in every environment). 
+Their scope or method may adapt to such characteristics where that helps (e.g. larger sizes only with 
+an FFT backend). Exceptions are tests of functionality that itself depends on a specific library or 
+build flag; where this is a case distinction (e.g. with / without a library), every branch must be 
+covered by tests.
+
 ---
 
 ## 5. Conventions
