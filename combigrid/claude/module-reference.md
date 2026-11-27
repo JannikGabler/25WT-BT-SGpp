@@ -33,7 +33,9 @@ grids/
                          cache (public clear / entries / bytes); proxy iterator (not SWIG-wrapped)
   cross_call_operator_data_info  CrossCallOperatorDataInfo {operatorName, description, key, bytes}:
                          read-only description of one cache entry (WP-73)
-  sparse_grid            CT sparse grid (+ optional shared SGGenInstr)
+  sparse_grid_setup      SparseGridSetup: domain, node families, growth functions, boundary offset
+                         (base of SGGenInstr; every grid stores a copy, getSetup())
+  sparse_grid            CT sparse grid
   deltas_sparse_grid     delta representation for the DSG quadrature, global and linear interpolation
                          (every grid point in exactly one delta tensor grid; public, Python-bound
                          since WP-50)
@@ -50,6 +52,13 @@ miscellaneous/         (namespace misc)
                          handed out as shared_ptr (clear drops only the cache's references);
                          SparseGridBase::getCrossCallOperatorDataCache (internal), so the grid's
                          header names no operator type (WP-73)
+  refinement/            internals of the dimension-adaptive refinement: RefinementIndexSet
+                         (append-only MI set, additive per-(dim, level) hash: neighbour and
+                         backward-box lookups in O(1) + one O(d) comparison), RefinementIndexState,
+                         RefinementState (kept between calls), RefinementNodeStorage (node tables of
+                         a call with a fixed level capacity: rows never move while workers read
+                         them), RefinementEngine (one call: worker pool + management under one lock),
+                         SparseGridStorageAccess (friend of SparseGridBase: borrow / replace storage)
   closure_trie/          ClosureTrie: trie over a downwards-closed MI set, MI -> dense rank by one
                          lookup per dimension (DSG linear interpolation; reusable for other DSG
                          operators)
@@ -122,10 +131,18 @@ operators/
   textbook/              textbookQuadrature(), textbookInterpolate(), textbookInterpolateLinear()
                          for SparseGrid: naive per-tensor-grid reference implementations, one
                          .cpp per operator with all helpers in an anonymous namespace (WP-79)
+refinement/            dimension-adaptive refinement (public): DimensionAdaptiveRefinement + refine(),
+                       RefinementOptions, RefinementIndicator, RefinementSchedule, RefinementStatistics,
+                       RefinementStopReason; targets/ (RefinementTarget, Quadrature-,
+                       GlobalInterpolation-, LinearInterpolationRefinementTarget)
 sparse_grid_generation_instructions/   SGGenInstr, CompleteSGGenInstr, MIVecSGGenInstr
 tools/                 (namespace tools; sub-namespaces per operator, e.g. tools::quadrature,
                        and per topic directory, e.g. tools::numerics)
   combitech_coefficients/               computeCTCoeffs, computeCTCoeffSingle
+  refinement/                           tools::refinement: index-set operations (backward boxes,
+                                        incremental coefficients, colexicographic order),
+                                        decision steps (cost, increment, gain, priority,
+                                        candidates, error estimate), hand-over grid <-> call
   sparse_grid_generation/               SparseGrid / DeltasSparseGrid generation, node lookup
   sparse_grid_generation_instructions/  MI generation of the complete sparse grid
   operators/             per-tensor-grid kernels of the operators: weighted_sum/ (the weighted
@@ -160,7 +177,9 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 ## Key classes / entry points
 
 - `SparseGrid` ([grids/sparse_grid.hpp](../src/sgpp/combigrid/grids/sparse_grid.hpp)): top-level
-  container, constructible from an `SGGenInstr` (copied). Storage in `SparseGridBase` (WP-18):
+  container, constructible from an `SGGenInstr`; it copies only the instruction's setup
+  (`getSetup()`: `SparseGridSetup`, WP-89) and does not refer to the instruction afterwards. Storage
+  in `SparseGridBase` (WP-18):
   `getLevels()` (the `LvlMIVec` of the reduced MI set, taken over from the generation),
   `getCoefficients()`, `getDomainNodeTable()` / `getUnitNodeTable()` (`NodeTable`: per (dim, level) one
   node list on the domain / on [0,1], same levels and counts, `nodes(dim, lvl)` /
@@ -243,14 +262,18 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   data 0.4–2 MiB in the micro cases (cached call 1.04–1.31x faster at 16 t, WP-82), 0.9–18 MiB for
   the e2e DSG quadrature grids, 64 MiB for cc d2 L20 (weights of the full 1D rule of every level,
   like the SG table, plus the trie); DSG interp index ≤ 0.8 MiB (off: d2 L12 2.2x slower); DSG
-  lin-interp index 0.2–2 MiB (off: d2 L16 400x, d5 5x, d10 1.26x slower). Adaptive refinement
-  (future) builds a new grid per step, so its caches start empty; nothing to invalidate.
+  lin-interp index 0.2–2 MiB (off: d2 L16 400x, d5 5x, d10 1.26x slower). The dimension-adaptive
+  refinement changes a grid in place and drops its cache at the start of every call.
 - `TensorGrid` ([grids/tensor_grid.hpp](../src/sgpp/combigrid/grids/tensor_grid.hpp)): stand-alone
   tensor grid, per-dim counts + flat per-dim node lists, first-dimension-fastest linear indexing,
   grid-point iterators; not stored in sparse grids (`TensorGridView::toTensorGrid()` copies).
 - `TensorGridCTData`
   ([miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp](../src/sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp)):
   `{LvlMI mi, CTCoeffType coefficient, TensorGrid tensorGrid}`.
+- `SparseGridSetup` ([grids/sparse_grid_setup.hpp](../src/sgpp/combigrid/grids/sparse_grid_setup.hpp),
+  WP-89): domain, per-dim `NodeGenFunc*`, per-dim `Lvl2GPCntFunc`, boundary level offset with their
+  getters / setters; base class of `SGGenInstr`; the grids store a copy (`SparseGridBase::getSetup()`;
+  until WP-89 a clone of the instruction, `getGenInstr()`).
 - `SGGenInstr`
   ([sparse_grid_generation_instructions/sg_gen_instruction.hpp](../src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp)):
   abstract generator holding domain, per-dim `NodeGenFunc*`, per-dim `Lvl2GPCntFunc`, boundary level
@@ -432,6 +455,32 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   Per-TG results `(c_ℓ, Op_ℓ f)` are formed in the loop but not returned (a natural hook for
   refinement indicators of a later dimension-adaptive CT).
 - `tools::computeCTCoeffs(miVec)`: CT coefficients of a downwards-closed MI set.
+- **Dimension-adaptive refinement** (WP-89; [refinement/](../src/sgpp/combigrid/refinement/)):
+  `DimensionAdaptiveRefinement(SparseGrid&, RefinementTarget&, RefinementOptions)` grows the grid
+  in place; `refine()` (until a criterion: absolute / relative tolerance on the error estimate,
+  grid-point budget (never exceeded), index-set limit, time; at least one is required), `step()`
+  (one decision, synchronized), `setOptions` (later calls continue, e.g. with another indicator,
+  without evaluating a TG twice), `getEstimate()` (the target's combination on the grid; for the
+  quadrature target bitwise `quadrature(f, sg)`), `getErrorEstimate()`; free `refine(sg, target,
+  options)`. Algorithm: Gerstner–Griebel on the full downwards-closed set I (incl. coefficient 0):
+  old / active / pending (+ evaluated ahead); increment Δ_ℓ = Σ_z (−1)^|z| Q_{ℓ−z} of the target's
+  per-TG values Q (compensated, fixed order); gain ‖Δ‖∞, cost = TG points, profit = gain / cost
+  (`RefinementIndicator`); a decision accepts the active MIs with priority ≥ θ · best (at most
+  `maxBatchSize`, cut at the budget) and evaluates their admissible forward neighbours, which join
+  the grid as active MIs. Targets (`RefinementTarget`: `nValues`, `beginRefinementCall`,
+  thread-safe `estimate(domainTG, unitTG, worker, out)`, `finishCombination`,
+  `endRefinementCall`) wrap the per-TG kernels of quadrature / global / linear interpolation
+  (scalar and vector; interpolation at P points evaluates a TG once per point: use a
+  `CachedSourceFunc`). Parallelism: one OpenMP region per call, workers take TG tasks (largest
+  first), management (commits, decisions, stops) on whichever worker holds the lock; schedules
+  `Synchronized` (decisions wait for their tasks, commits in index order: bitwise independent of the
+  thread count; optional `speculationWindow`: idle workers evaluate likely future candidates) and
+  `Asynchronous` (timing-dependent). Hand-over per attribute: node rows moved in / out (never
+  regenerated), coefficients incremental, levels written in colexicographic order with
+  coefficient ≠ 0, meta values / processing order recomputed, cross-call cache dropped, new storage
+  version (`SparseGridBase`, process-wide counter) — a refinement object re-synchronizes (closure of
+  the grid's levels, all TGs re-evaluated) if the version changed. The state (values k doubles per
+  MI) lives in the object; no function values are stored (reuse via `CachedSourceFunc`).
 
 ## Design rationale (thesis §5)
 
@@ -494,8 +543,10 @@ operation machinery.
 
 ## Known limitations (future work, thesis §8)
 
-- **Dimension-adaptive refinement** is not implemented; the caller builds the loop on
-  `MIVecSGGenInstr` (highest-priority future work; planned by the owner).
+- **Dimension-adaptive refinement** (WP-89): `SparseGrid` only (direct `DeltasSparseGrid`
+  refinement, Python bindings, predicted indicators of unevaluated candidates, a nested-aware cost
+  model, parallel kernels inside one TG and dimension buffering are follow-ups); cost = all TG points
+  (no reuse of shared points without a cache).
 - **Vector-valued source functions in Python** (WP-29d): `VectorSourceFunc` and the
   `DataVector`-returning overloads of all three operators are bound, for `SparseGrid` and
   `DeltasSparseGrid` (WP-50); the `std::span` overloads are C++ only. Python callables run

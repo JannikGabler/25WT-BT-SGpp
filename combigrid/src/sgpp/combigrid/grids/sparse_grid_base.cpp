@@ -4,12 +4,14 @@
 // sgpp.sparsegrids.org
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/grids/cross_call_operator_data_info.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/tensor_grid_processing_order.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
@@ -65,13 +67,18 @@ bool SparseGridBase::operator==(const SparseGridBase& other) const {
   return true;
 }
 
-SparseGridBase::SparseGridBase(const size_t nDim) : nDim_(nDim), levels_(nDim, 0) {}
+SparseGridBase::SparseGridBase(const SparseGridSetup& setup)
+    : nDim_(setup.nDim()), setup_(setup), levels_(setup.nDim(), 0) {}
 
 void SparseGridBase::setStorage(LvlMIVec levels, std::vector<CTCoeffType> coefficients,
                                 NodeTable domainNodeTable, NodeTable unitNodeTable) {
   assert(levels.nDim() == nDim_ && domainNodeTable.nDim() == nDim_ &&
          unitNodeTable.nDim() == nDim_);
   assert(levels.size() == coefficients.size());
+
+  // Numbers start at 1 (0 marks "never synchronized" in the refinement state)
+  static std::atomic<uint64_t> lastStorageVersion{0};
+  storageVersion_ = lastStorageVersion.fetch_add(1, std::memory_order_relaxed) + 1;
 
   levels_ = std::move(levels);
   coefficients_ = std::move(coefficients);

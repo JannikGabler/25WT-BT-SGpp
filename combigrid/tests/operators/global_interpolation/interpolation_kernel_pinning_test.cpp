@@ -173,7 +173,7 @@ double lagrangeBasis(const double* const nodes, const size_t n, const size_t j, 
 
 /// Scale of the global interpolation of output @p k at @p point (see the file docs).
 double scale(const SparseGrid& sg, const DataVector& point, const size_t k) {
-  const HyperCubeArea& domain = sg.getGenInstr().getDomain();
+  const HyperCubeArea& domain = sg.getSetup().getDomain();
   const DataVector normPoint = tools::normalizeDataVector(point, domain);
   double result = 0.0;
 
@@ -340,15 +340,15 @@ void checkResult(const SparseGrid& sg, const DataVector& point, const size_t k, 
 /// The grid points of all tensor grids of @p sg (in no particular order): the unit nodes of the
 /// node-generation functions, mapped onto the domain with tools::mapToDomain.
 std::vector<DataVector> allGridPoints(const SparseGrid& sg) {
-  const SGGenInstr& genInstr = sg.getGenInstr();
-  const HyperCubeArea& domain = genInstr.getDomain();
+  const SparseGridSetup& setup = sg.getSetup();
+  const HyperCubeArea& domain = setup.getDomain();
   const size_t nDim = sg.nDim();
   std::vector<DataVector> result;
   for (const auto& tgData : sg.domainTensorGrids()) {
     std::vector<DataVector> nodes;
     for (size_t dim = 0; dim < nDim; dim++) {
-      nodes.push_back(genInstr.getNodeGenFuncForDim(dim)->genNodes(
-          tgData.tensorGrid.nGPInDim(dim), tgData.mi[dim] >= genInstr.getBoundaryLevelOffset()));
+      nodes.push_back(setup.getNodeGenFuncForDim(dim)->genNodes(
+          tgData.tensorGrid.nGPInDim(dim), tgData.mi[dim] >= setup.getBoundaryLevelOffset()));
     }
     for (size_t idx = 0; idx < tgData.tensorGrid.nGP(); idx++) {
       DataVector gp(nDim);

@@ -15,6 +15,7 @@
 #include <mutex>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
@@ -46,14 +47,27 @@ namespace misc {
 class QuadWeightTable {
  public:
   /**
-   * @brief Constructs the table of @p sparseGrid with all rows not yet computed; obtains the
-   * quadrature rule of every row.
+   * @brief Constructs the table of the rows of @p unitNodeTable with all rows not yet computed;
+   * obtains the quadrature rule of every row (from the node count of the growth function, so a
+   * row of the node table may be generated after the construction, before its first use).
+   * @param unitNodeTable Unit node table of a sparse grid (e.g. @c SparseGrid::getUnitNodeTable);
+   *                      must outlive the table.
+   * @param setup         Setup of that grid (node-generation functions, boundary level offset).
+   */
+  QuadWeightTable(const NodeTable& unitNodeTable, const SparseGridSetup& setup);
+
+  /**
+   * @brief Constructs the table of the unit node table of @p sparseGrid (see the other
+   * constructor).
    * @param sparseGrid Sparse grid; must outlive the table.
    */
   explicit QuadWeightTable(const SparseGrid& sparseGrid);
 
   QuadWeightTable(const QuadWeightTable&) = delete;
   QuadWeightTable& operator=(const QuadWeightTable&) = delete;
+
+  /// @brief Returns the dimensionality of the node table.
+  size_t nDim() const noexcept { return unitNodeTable_.nDim(); }
 
   /**
    * @brief Returns the first of the 1D quadrature weights of (dimension @p dim, level @p lvl),

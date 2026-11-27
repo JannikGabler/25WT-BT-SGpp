@@ -25,9 +25,9 @@ namespace deltas_sparse_grid_generation {
 
 std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const DeltasSparseGrid& deltasSparseGrid) {
   const size_t nDim = deltasSparseGrid.nDim();
-  const std::vector<NodeGenFunc*>& nodeGenFuncs = deltasSparseGrid.getGenInstr().getNodeGenFuncs();
+  const std::vector<NodeGenFunc*>& nodeGenFuncs = deltasSparseGrid.getSetup().getNodeGenFuncs();
   const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs =
-      deltasSparseGrid.getGenInstr().getLvl2GPCntFuncs();
+      deltasSparseGrid.getSetup().getLvl2GPCntFuncs();
 
   std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs(nDim);
 

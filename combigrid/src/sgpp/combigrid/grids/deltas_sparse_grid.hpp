@@ -10,7 +10,6 @@
  */
 #pragma once
 
-#include <memory>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 
@@ -36,8 +35,8 @@ namespace combigrid {
  * combined; unlike @c SparseGrid, such tensor grids are kept) and the delta tensor grid. The node
  * tables hold the delta nodes of every (dimension, level), on the unit interval and on the
  * domain; for nested nodes, the rows of a dimension together are the nodes of its finest level,
- * each stored once. The generation instruction is copied (@c clone); the copy of a
- * @c MIVecSGGenInstr references the caller's @c LvlMIVec, which must outlive the grid.
+ * each stored once. Of the generation instruction only its setup is copied
+ * (@c SparseGridBase::getSetup); the grid does not refer to the instruction after construction.
  */
 class DeltasSparseGrid : public SparseGridBase {
  public:
@@ -47,28 +46,12 @@ class DeltasSparseGrid : public SparseGridBase {
   /**
    * @brief Constructs the deltas sparse grid of a generation instruction.
    *
-   * @param genInstruction Generation instruction (copied); its nodes must be nested in every
-   *                       dimension.
+   * @param genInstruction Generation instruction (its setup is copied); its nodes must be nested
+   *                       in every dimension.
    * @throws std::invalid_argument if the nodes are not nested in some dimension (see
    * @c SGGenInstr::areNodesOfAllDimsNested).
    */
   DeltasSparseGrid(const SGGenInstr& genInstruction);
-
-  /// @}
-
-  /// @name Getters
-  /// @{
-
-  /// @brief Returns the grid's copy of the generation instruction.
-  const SGGenInstr& getGenInstr() const noexcept;
-
-  /// @}
-
- protected:
-  /// @name Attributes
-  /// @{
-
-  const std::unique_ptr<SGGenInstr> genInstr;  ///< Generation instruction that produced this SG.
 
   /// @}
 };

@@ -11,12 +11,12 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -98,13 +98,13 @@ void forEachTensorGrid(const SparseGrid& sparseGrid, const size_t nOutputs, Proc
 std::vector<double> estimateTensorGrids(const SourceFunc& sourceFunc,
                                         const base::DataVector& normPoint,
                                         const SparseGrid& sparseGrid) {
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  const SparseGridSetup& setup = sparseGrid.getSetup();
 
   std::vector<double> values(sparseGrid.nTG());
 
   forEachTensorGrid(sparseGrid, 0, [&](const size_t tgIdx, LinInterpScratch& scratch) {
     values[tgIdx] = processTensorGrid(
-        sourceFunc, normPoint, sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid, genInstr, scratch);
+        sourceFunc, normPoint, sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid, setup, scratch);
   });
 
   return values;
@@ -114,33 +114,33 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourc
                                                    const base::DataVector& normPoint,
                                                    const SparseGrid& sparseGrid) {
   const size_t nOutputs = sourceFunc.nOutputs();
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  const SparseGridSetup& setup = sparseGrid.getSetup();
 
   misc::FlatNestedVec<double, 2> values(sparseGrid.nTG(), nOutputs);
 
   forEachTensorGrid(sparseGrid, nOutputs, [&](const size_t tgIdx, LinInterpScratch& scratch) {
-    processTensorGrid(sourceFunc, normPoint, sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid,
-                      genInstr, scratch, values[tgIdx]);
+    processTensorGrid(sourceFunc, normPoint, sparseGrid.getUnitTensorGrid(tgIdx).tensorGrid, setup,
+                      scratch, values[tgIdx]);
   });
 
   return values;
 }
 
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& point,
-                         const TensorGridView& unitTG, const SGGenInstr& genInstr,
+                         const TensorGridView& unitTG, const SparseGridSetup& setup,
                          LinInterpScratch& scratch) {
-  return sumOverCorners(misc::ScalarValues(sourceFunc), point, unitTG, genInstr, scratch);
+  return sumOverCorners(misc::ScalarValues(sourceFunc), point, unitTG, setup, scratch);
 }
 
 void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                       const TensorGridView& unitTG, const SGGenInstr& genInstr,
+                       const TensorGridView& unitTG, const SparseGridSetup& setup,
                        LinInterpScratch& scratch, const std::span<double> out) {
   assert(out.size() == sourceFunc.nOutputs());
   assert(scratch.valueBuffer.size() >=
          misc::VectorValues::bufferSize(sourceFunc.nOutputs(), LinInterpScratch::N_ACCS));
 
   const misc::VectorValues values(sourceFunc, scratch.valueBuffer);
-  values.store(sumOverCorners(values, point, unitTG, genInstr, scratch), out.data());
+  values.store(sumOverCorners(values, point, unitTG, setup, scratch), out.data());
 }
 
 std::pair<double, double> weights1D(const double x, const double lower, const double upper) {
@@ -211,7 +211,7 @@ void moveToCorner(const size_t corner, const double* const bracket, double* cons
  */
 template <typename ValueType>
 typename ValueType::Acc sumOverCorners(const ValueType values, const base::DataVector& point,
-                                       const TensorGridView& unitTG, const SGGenInstr& genInstr,
+                                       const TensorGridView& unitTG, const SparseGridSetup& setup,
                                        LinInterpScratch& scratch) {
   const size_t nDim = unitTG.nDim();
   typename ValueType::Acc result = values.zeroAcc(LinInterpScratch::RESULT_ACC);
@@ -219,7 +219,7 @@ typename ValueType::Acc sumOverCorners(const ValueType values, const base::DataV
     return result;
   }
 
-  prepareCorners(point, unitTG, genInstr.getDomain(), scratch);
+  prepareCorners(point, unitTG, setup.getDomain(), scratch);
   const size_t tableDim = scratch.tableDim();
   const size_t nHigh = nDim - tableDim;
   const size_t blockSize = size_t{1} << tableDim;

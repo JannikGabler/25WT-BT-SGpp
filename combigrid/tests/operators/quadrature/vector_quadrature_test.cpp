@@ -140,8 +140,8 @@ std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs
   for (const auto& tgData : sg.domainTensorGrids()) {
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
-    tools::quadrature::processTensorGrid(context, vectorFunc, tgData.tensorGrid, vectorScratch,
-                                         out);
+    tools::quadrature::processTensorGrid(context.weightTable, vectorFunc, tgData.tensorGrid,
+                                         vectorScratch, out);
     BOOST_CHECK_EQUAL(vectorPoints.size(), tgData.tensorGrid.nGP());
 
     for (size_t k = 0; k < nOutputs; k++) {
@@ -150,7 +150,7 @@ std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs
         return component(x, k);
       });
       scalarPoints.clear();
-      const double scalar = tools::quadrature::processTensorGrid(context, scalarFunc,
+      const double scalar = tools::quadrature::processTensorGrid(context.weightTable, scalarFunc,
                                                                  tgData.tensorGrid, scalarScratch);
 
       BOOST_CHECK(scalarPoints == vectorPoints);
@@ -161,7 +161,7 @@ std::vector<double> checkTensorGrids(const SparseGrid& sg, const size_t nOutputs
     }
   }
 
-  for (double& scale : scales) scale *= sg.getGenInstr().getVolumeOfDomain();
+  for (double& scale : scales) scale *= sg.getSetup().getVolumeOfDomain();
   return scales;
 }
 
@@ -266,7 +266,7 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
     const TensorGridView tg(lvls, table);
     BOOST_REQUIRE_EQUAL(tg.nGP(), 0u);
     std::vector<double> out(3, std::numeric_limits<double>::quiet_NaN());
-    tools::quadrature::processTensorGrid(context, sourceFunc, tg, scratch, out);
+    tools::quadrature::processTensorGrid(context.weightTable, sourceFunc, tg, scratch, out);
     for (const double value : out) BOOST_CHECK_EQUAL(value, 0.0);
   }
 
@@ -370,7 +370,7 @@ std::vector<double> checkDeltaTensorGrids(const DeltasSparseGrid& dsg, const siz
     }
   }
 
-  for (double& scale : scales) scale *= dsg.getGenInstr().getVolumeOfDomain();
+  for (double& scale : scales) scale *= dsg.getSetup().getVolumeOfDomain();
   return scales;
 }
 

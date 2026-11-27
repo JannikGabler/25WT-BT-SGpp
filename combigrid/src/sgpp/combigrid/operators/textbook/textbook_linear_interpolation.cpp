@@ -124,7 +124,7 @@ base::DataVector combineTensorGrids(const VectorSourceFunc& sourceFunc,
     throw std::invalid_argument("The size of the point is not the dimensionality of the grid");
   }
 
-  const HyperCubeArea& domain = sparseGrid.getGenInstr().getDomain();
+  const HyperCubeArea& domain = sparseGrid.getSetup().getDomain();
   const base::DataVector unitPoint = tools::normalizeDataVector(point, domain);
 
   base::DataVector result(sourceFunc.nOutputs());

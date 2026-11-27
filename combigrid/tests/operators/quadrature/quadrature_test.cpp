@@ -1030,8 +1030,8 @@ void checkAgainstNaiveSum(const SGGenInstr& genInstr) {
     const NaiveTGQuadrature expected = naiveTGQuadrature(sourceFunc, tgData, genInstr);
 
     evaluatedPoints.clear();
-    const double result =
-        tools::quadrature::processTensorGrid(context, recordingFunc, tgData.tensorGrid, scratch);
+    const double result = tools::quadrature::processTensorGrid(context.weightTable, recordingFunc,
+                                                               tgData.tensorGrid, scratch);
 
     BOOST_CHECK_EQUAL(evaluatedPoints.size(), tgData.tensorGrid.nGP());
     checkSamePoints(evaluatedPoints, expected.points);
@@ -1145,7 +1145,8 @@ BOOST_AUTO_TEST_CASE(Zero_Point_Tensor_Grid) {
   for (const LvlMI& lvls : {LvlMI{0, 0, 0}, LvlMI{1, 1, 0}, LvlMI{0, 1, 1}}) {
     const TensorGridView tg(lvls, table);
     BOOST_REQUIRE_EQUAL(tg.nGP(), 0u);
-    BOOST_CHECK_EQUAL(tools::quadrature::processTensorGrid(context, sourceFunc, tg, scratch), 0.0);
+    BOOST_CHECK_EQUAL(
+        tools::quadrature::processTensorGrid(context.weightTable, sourceFunc, tg, scratch), 0.0);
   }
 
   BOOST_CHECK_EQUAL(nEvaluations, 0u);

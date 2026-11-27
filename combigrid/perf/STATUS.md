@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-35 (2026-11-26; accepted, commit pending) · Next free WP number: 88 ·
+Last processed: WP-89 (2026-11-27; accepted, commit pending) · Next free WP number: 91 ·
 Last re-profiling: RP-6 (2026-11-18) · Finished WPs, results, archive: [HISTORY.md](HISTORY.md) ·
 Dropped-earlier list, measurement notes: [LESSONS.md](LESSONS.md)
 
@@ -58,10 +58,11 @@ Dropped-earlier list, measurement notes: [LESSONS.md](LESSONS.md)
 
 | Rank | ID | Title | Status |
 |---|---|---|---|
-| – | WP-63 … 72 | Dimension-adaptive CT implementation (A1 nestedness + std CC growth, A2 core, A3 quad driver, A4 non-nested / vector, A5 interp, A6 Python, B1 lazy, B2 buffering, C1 stored values, C2 resume) | needs decision (D1–D9) · **unranked** (owner places them) |
 | – | WP-84 | Quadrature rules for inner-only nodes: equi / CC below an offset ≥ 2 override `getQuadRule(n, includeBoundary)` (CC → Fejér-2; equi: session proposes; results at b ≥ 2 change, agreed 11-22) | ready · **unranked** (owner places it) |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point (cache warm-up, testing; name / result / dedup in-session; owner's request) | ready · **unranked** (owner places it) |
 | – | WP-81 | Explanation / visualization foundations: exploration + requirements with the owner in-session (info helpers, strings, plots) → implementation WPs | ready · **unranked** (owner places it) |
+| – | WP-90 | **Restructuring of the dimension-adaptive code** (owner 11-27: "a lot has to be re-structured / changed"; incl. the default schedule, for now `Synchronized`, window 0) | **owner describes it** · next |
+| – | WP-63, 68, 69, 70 + WP-89 follow-ups | Adaptive: std CC growth / nestedness, Python, lazy indicators, buffering; high-d bookkeeping (d100 317 ns / point), parallel kernels in a TG, async rule, DSG refinement, cost model, multi-point targets, indicators, TG ordering (PLAN WP-89 section) | planned · **unranked** (owner places them; may go into WP-90) |
 | 1 | WP-74 | DSG lin. interp.: fused last transform + vectorized fiber transform + 1–4-leaf evaluation chunks (RP-6: 0.05–0.08 s = 6–10 % of interplin/dsg; `expensive/` d5 −45 %) | ready (low) |
 | 2 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-6: 0.1–0.15 s, b1 d15 / d20 only) | ready |
 | 3 | WP-51 | DSG row loop at low d: split large delta TGs (≤ 0.04 s; order part done by WP-77 → re-measure first) | ready (low; measure first) |
@@ -86,20 +87,23 @@ Dropped-earlier list, measurement notes: [LESSONS.md](LESSONS.md)
 | 21 | WP-44 | DSG row loop light: single-pass row weights + inline `compRowWeights` (RP-6: 0.2–0.3 s at b0 d7/d10 ≈ 1.5–2 % of quad/dsg; S) | planned (owner places it; master: ≈ rank 4) |
 | 22 | WP-07 | Generic barycentric weights cache (≈ 0.003 s judged; may merge into WP-09) | ready (low) |
 | 23 | WP-86 | SG interpolations: per-call overhead of tiny grids (nTG = 1 on the calling thread, thread-local per-thread scratch; WP-48 / WP-77 follow-ups; tiny grids untracked) | planned (low) |
+| 24 | WP-88 | Test suite review: faster tests at equal / similar coverage, then test hygiene (incl. backlog M, portability rule CLAUDE.md §4; owner 11-26) | planned (late; owner 11-26) |
 | last | WP-43 | Final clean-up: phase references out of code docs + phase leftovers | ready (always last) |
 
 ## Next action
 
-**WP-74** (DSG lin. interp.: fused last transform + vectorized fiber transform + evaluation chunks) next —
-**prompt on hold** (owner 11-26: wait); the owner commits "Accept WP-35" first. Then WP-21 / WP-51 (re-measure). Since WP-77 all TG loops run a per-grid
-largest-first order (`schedule(dynamic)`; SG interplin dynamic in index order), still bitwise
-thread-count independent. WPs 63–72, 84, 80, 81 wait for the owner. Hygiene → **Code-hygiene backlog**
-→ WP-54 → WP-55; numerics → **Numerics backlog** (both at the end of PLAN.md).
+The owner commits "Accept WP-89" first. **Next: WP-90, restructuring of the dimension-adaptive code**
+(owner 11-27) — **prompt on hold until the owner has described it** (then PLAN entry + prompt). Afterwards
+WP-74 / WP-21 / WP-51 (re-measure). WPs 84, 80, 81 and the adaptive follow-ups wait for the owner. Hygiene → **Code-hygiene
+backlog** → WP-54 → WP-55; tests → WP-88 (late); numerics → **Numerics backlog** (end of PLAN.md).
 
 ## Open decisions for the owner
 
-- **WP-62 D1–D9** (plan `results/WP-62/plan.md` §5; recommendations in PLAN.md WP-62) and the
-  placement of WP-63 … 72 — owner decides later (11-17).
+- **WP-90** (restructuring of the adaptive code): scope from the owner (default schedule: `Synchronized`,
+  window 0 for now). Placement of WP-63 / 68 / 69 / 70 and the WP-89 follow-ups (PLAN WP-89 section).
+- **TG ordering** (owner: WP-89 was needed for it): WP-89's wishes in PLAN (WP-89 follow-up 9): one cheap
+  deterministic sort key of the index set for storage order (complete == MIVec == refined; DSG too),
+  processing order at construction / hand-over.
 - WP-09 (after its summary): adopt the proposed interface or not.
 - Placement: WP-80 (grid evaluation), WP-81 (visualization), WP-84 (equi / CC rules below an offset ≥ 2;
   correctness, relevant for adaptive offsets). Optional: protected `quad/sg/cheb1-*` reference case (none yet).
@@ -124,16 +128,15 @@ thread-count independent. WPs 63–72, 84, 80, 81 wait for the owner. Hygiene �
 
 Last: RP-6 (2026-11-18; rp-6 = 37a84e1af; accepted). Accepted optimizations since: **1** (WP-77: suite
 1.011x, `expensive/` 1.117x, no group ≥ 1.3x, no hot-spot shift). WP-79 / 83 / 61 / 48 (features /
-functional, ≈ 1.000x) do not count. Rule: features / refactorings / measurement WPs count only if a group
+functional, ≈ 1.000x) and WP-89 (feature, 1.000x) do not count. Rule: features / refactorings / measurement WPs count only if a group
 changes ≥ 1.3x or a hot-spot ranking shifts. `interp/dsg`, `interplin/dsg`, `expensive/` have no baseline
 values (`expensive/` history: `results/WP-76/history/`, `results/RP-6/e2e-expensive-rp-5-vs-rp-6.md`).
 
 ## Log (newest first; older entries in HISTORY.md)
 
-- 2026-11-26 WP-35 processed: **accepted** by the owner (commit pending). Fragile tests fixed (0 of 10 000
-  seeds, 50/50 suites; before 1.0 % of seeds) + owner's follow-up rounds: no-FFT CC fallback accurate
-  (1.4e4 → ≤ 2.61 eps / m; library change, only without Eigen / Armadillo), no stored bit patterns in tests
-  (golden values, 1e-12 (1 + |g|)); e2e 1.000x, memory 1.005, refcheck = known WARN. Does not count for
-  rule 7 (RP counter stays 1). LESSONS "Recurring test failures" → "Test reliability", 2 "Dropped
-  earlier" lines; PLAN backlog H done, new backlog M (test hygiene); perf-work skill "Known flaky" line
-  updated (owner permitted). Ranks −1 (WP-74 → 1). WP-74 prompt **on hold** (owner: wait).
+- 2026-11-27 WP-89 processed: **accepted** by the owner (commit pending). Dimension-adaptive refinement
+  (in place, operator-generic, sync / async engine, `SparseGridSetup`); judged 1.000x, memory 1.005 (0 flags),
+  refcheck = known WARN, 9 CC cases ±1–2 ulp (LTO / kiss FFT → numerics backlog B). Default schedule:
+  `Synchronized`, window 0 for now; owner: next WP restructures the adaptive code (WP-90, description
+  pending, prompt on hold). WP-64 / 65 / 66 / 67 / 72 done, WP-71 dropped, WP-63 / 68 / 69 / 70 + 9
+  follow-ups unranked. Does not count for rule 7. Ranks −1 (WP-74 → 1). LESSONS: 4 measurement notes.

@@ -1,0 +1,11 @@
+tsan.sh run 2026-11-26 (8 threads; driver output below), 445 reports, classified:
+415 refinement region / outside regions
+28 outside regions / refinement region
+2 refinement region / other region
+
+schedule 0 window 0: 194 TGs, estimate 0.396606762096761
+schedule 0 window 16: 194 TGs, estimate 0.396606762096761
+schedule 1 window 0: 131 TGs, estimate 0.396673468285389
+schedule 1 window 16: 122 TGs, estimate 0.396639121158911
+cached interpolation: 63 TGs
+exception rethrown, 27 TGs

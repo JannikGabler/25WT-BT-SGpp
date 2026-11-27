@@ -10,7 +10,6 @@
  */
 #pragma once
 
-#include <memory>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 
@@ -32,8 +31,8 @@ namespace combigrid {
  * @c SparseGrid stores the tensor grids with a non-zero coefficient (see
  * @c SparseGridBase: their level multi-indices and coefficients, and the 1D
  * node lists once per (dimension, level), on the unit interval and mapped onto
- * the domain of the generation instruction) and a copy of the generation
- * instruction.
+ * the domain) and a copy of the setup of the generation instruction
+ * (@c SparseGridBase::getSetup).
  */
 class SparseGrid : public SparseGridBase {
  public:
@@ -51,22 +50,6 @@ class SparseGrid : public SparseGridBase {
    * sparse grid.
    */
   SparseGrid(const SGGenInstr& genInstruction);
-
-  /// @}
-
-  /// @name Getters
-  /// @{
-
-  /// @brief Returns the (shared) generation instruction or @c nullptr if none was attached.
-  const SGGenInstr& getGenInstr() const noexcept;
-
-  /// @}
-
- protected:
-  /// @name Attributes
-  /// @{
-
-  const std::unique_ptr<SGGenInstr> genInstr;  ///< Generation instruction that produced this SG.
 
   /// @}
 };

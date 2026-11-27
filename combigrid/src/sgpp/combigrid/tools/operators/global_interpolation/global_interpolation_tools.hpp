@@ -27,10 +27,10 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/global_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <span>
 #include <vector>
 
@@ -76,16 +76,16 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourc
  *
  * @param sourceFunc Source function to evaluate at the grid points.
  * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tg         Tensor grid (of @p genInstr's sparse grid).
+ * @param tg         Tensor grid (of @p setup's sparse grid).
  * @param unitTG     The same tensor grid with its nodes on the unit interval.
- * @param genInstr   Generation instruction (domain, node-generation functions and their 1D
+ * @param setup   Setup of the grid (domain, node-generation functions and their 1D
  *                   interpolation methods).
  * @param scratch    Scratch of the calling thread (sized for the sparse grid of @p tg).
  * @return Interpolated value on @p tg (0 for a tensor grid without grid points).
  */
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& normPoint,
                          const TensorGridView& tg, const TensorGridView& unitTG,
-                         const SGGenInstr& genInstr, misc::GlobalInterpScratch& scratch);
+                         const SparseGridSetup& setup, misc::GlobalInterpScratch& scratch);
 
 /**
  * @brief Tensor-product global interpolation of a vector-valued source function on @p tg: the m
@@ -93,51 +93,51 @@ double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& n
  *
  * @param sourceFunc Vector-valued source function to evaluate at the grid points.
  * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tg         Tensor grid (of @p genInstr's sparse grid).
+ * @param tg         Tensor grid (of @p setup's sparse grid).
  * @param unitTG     The same tensor grid with its nodes on the unit interval.
- * @param genInstr   Generation instruction.
+ * @param setup   Setup of the grid.
  * @param scratch    Scratch of the calling thread, created with m outputs.
  * @param out        Output: the m interpolated values (size m; zero for a tensor grid without
  *                   grid points).
  */
 void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
                        const TensorGridView& tg, const TensorGridView& unitTG,
-                       const SGGenInstr& genInstr, misc::GlobalInterpScratch& scratch,
+                       const SparseGridSetup& setup, misc::GlobalInterpScratch& scratch,
                        std::span<double> out);
 
 /**
  * @brief As @ref processTensorGrid(const SourceFunc&, const base::DataVector&, TensorGridView,
- * TensorGridView, const SGGenInstr&, misc::GlobalInterpScratch&), with a scratch of its own.
+ * TensorGridView, const SparseGridSetup&, misc::GlobalInterpScratch&), with a scratch of its own.
  * @note Allocates the scratch; the operator reuses one scratch per thread.
  *
  * @param sourceFunc Source function to evaluate at the grid points.
  * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tg         Tensor grid (of @p genInstr's sparse grid).
+ * @param tg         Tensor grid (of @p setup's sparse grid).
  * @param unitTG     The same tensor grid with its nodes on the unit interval.
- * @param genInstr   Generation instruction.
+ * @param setup   Setup of the grid.
  * @return Interpolated value on this single tensor grid.
  */
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& normPoint,
                          const TensorGridView& tg, const TensorGridView& unitTG,
-                         const SGGenInstr& genInstr);
+                         const SparseGridSetup& setup);
 
 /**
  * @brief As @ref processTensorGrid(const VectorSourceFunc&, const base::DataVector&,
- * TensorGridView, TensorGridView, const SGGenInstr&, misc::GlobalInterpScratch&,
+ * TensorGridView, TensorGridView, const SparseGridSetup&, misc::GlobalInterpScratch&,
  * std::span<double>), with a
  * scratch of its own.
  * @note Allocates the scratch; the operator reuses one scratch per thread.
  *
  * @param sourceFunc Vector-valued source function to evaluate at the grid points.
  * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
- * @param tg         Tensor grid (of @p genInstr's sparse grid).
+ * @param tg         Tensor grid (of @p setup's sparse grid).
  * @param unitTG     The same tensor grid with its nodes on the unit interval.
- * @param genInstr   Generation instruction.
+ * @param setup   Setup of the grid.
  * @param out        Output: the m interpolated values (size m).
  */
 void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& normPoint,
                        const TensorGridView& tg, const TensorGridView& unitTG,
-                       const SGGenInstr& genInstr, std::span<double> out);
+                       const SparseGridSetup& setup, std::span<double> out);
 
 /**
  * @brief Prepares the row loop over @p tg: 1D basis values at @p normPoint
@@ -146,11 +146,11 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
  * @param normPoint Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param tg        Tensor grid (at least one dimension and one grid point).
  * @param unitTG    The same tensor grid with its nodes on the unit interval.
- * @param genInstr  Generation instruction.
+ * @param setup  Setup of the grid.
  * @param scratch   Scratch of the calling thread.
  */
 void prepareTensorGrid(const base::DataVector& normPoint, const TensorGridView& tg,
-                       const TensorGridView& unitTG, const SGGenInstr& genInstr,
+                       const TensorGridView& unitTG, const SparseGridSetup& setup,
                        misc::GlobalInterpScratch& scratch);
 
 /**
@@ -160,11 +160,11 @@ void prepareTensorGrid(const base::DataVector& normPoint, const TensorGridView& 
  *
  * @param normPoint Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param unitTG    Tensor grid with its nodes on the unit interval.
- * @param genInstr  Generation instruction (the interpolation method of every dimension).
+ * @param setup  Setup of the grid (the interpolation method of every dimension).
  * @param scratch   Scratch of the calling thread.
  */
 void fillBasisValues(const base::DataVector& normPoint, const TensorGridView& unitTG,
-                     const SGGenInstr& genInstr, misc::GlobalInterpScratch& scratch);
+                     const SparseGridSetup& setup, misc::GlobalInterpScratch& scratch);
 
 }  // namespace global_interpolation
 }  // namespace tools

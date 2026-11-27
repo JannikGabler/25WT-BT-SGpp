@@ -1,0 +1,14 @@
+| case | time/call | time/item |
+|---|---|---|
+| micro/adaptive/refine/quad/cc/b1/d10/budget100000 | 5.71ms | 57.25 ns |
+| micro/adaptive/sgquad/quad/cc/b1/d10/budget100000 | 3.11ms | 35.71 ns |
+| micro/adaptive/refine/quad/cc/b1/d100/budget100000 | 57.67ms | 585.40 ns |
+| micro/adaptive/sgquad/quad/cc/b1/d100/budget100000 | 25.49ms | 268.28 ns |
+| micro/adaptive/step/quad/cc/b1/d10/budget100000 | 4.73ms | 12180.41 ns |
+| micro/adaptive/rebuild/quad/cc/b1/d10/budget100000 | 331.51us | 854.40 ns |
+| micro/adaptive/step/quad/cc/b1/d100/budget100000 | 23.86ms | 7552.58 ns |
+| micro/adaptive/rebuild/quad/cc/b1/d100/budget100000 | 91.69ms | 29024.84 ns |
+
+foreign CPU load during the run: 0.9%
+
+raw results: /home/jannik/DEV/University/7. Semester/25WT-BT-SGpp/combigrid/perf/.work/runs/20261126-191238-micro.json

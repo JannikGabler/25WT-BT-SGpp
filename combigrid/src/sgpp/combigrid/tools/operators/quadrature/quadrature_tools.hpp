@@ -67,49 +67,49 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const misc::QuadratureContext
  * the coordinates and the partial weight products of the dimensions that changed. The source
  * function is evaluated at the grid points in domain coordinates.
  *
- * @param context    Read-only data of the quadrature call (grid and weight table).
+ * @param weightTable 1D quadrature weights per (dimension, level) of the tensor grid's levels.
  * @param sourceFunc Source function.
  * @param tg         Tensor grid (at least one dimension).
  * @param scratch    Per-thread scratch space; reused across calls.
  * @return Quadrature estimate on the unit hypercube
  *         @f$[0,1]^d@f$ (the domain volume is multiplied in by the caller).
  */
-double processTensorGrid(const misc::QuadratureContext& context, const SourceFunc& sourceFunc,
+double processTensorGrid(const misc::QuadWeightTable& weightTable, const SourceFunc& sourceFunc,
                          TensorGridView tg, misc::QuadratureScratch& scratch);
 
 /**
  * @brief @ref processTensorGrid for a vector-valued source function: the same row loop with m
  * values per grid point.
  *
- * @param context    Read-only data of the quadrature call.
+ * @param weightTable 1D quadrature weights per (dimension, level).
  * @param sourceFunc Vector-valued source function (m outputs).
  * @param tg         Tensor grid (at least one dimension).
  * @param scratch    Per-thread scratch space, constructed with m outputs; reused across calls.
  * @param out        Output: the m quadrature estimates on the unit hypercube (size m).
  */
-void processTensorGrid(const misc::QuadratureContext& context, const VectorSourceFunc& sourceFunc,
+void processTensorGrid(const misc::QuadWeightTable& weightTable, const VectorSourceFunc& sourceFunc,
                        TensorGridView tg, misc::QuadratureScratch& scratch, std::span<double> out);
 
 /**
  * @brief Prepares the row loop over @p tg: 1D quadrature weights (@ref getWeights) and iterated
  * dimensions (@c tools::weighted_sum).
  *
- * @param context Read-only data of the quadrature call.
+ * @param weightTable 1D quadrature weights per (dimension, level).
  * @param tg      Tensor grid (at least one dimension and one grid point).
  * @param scratch Per-thread scratch space.
  */
-void prepareTensorGrid(const misc::QuadratureContext& context, TensorGridView tg,
+void prepareTensorGrid(const misc::QuadWeightTable& weightTable, TensorGridView tg,
                        misc::QuadratureScratch& scratch);
 
 /**
  * @brief Points @c scratch.rows.weightsOfDim to the 1D quadrature weights of every dimension of
  * @p tg in the weight table of the quadrature call (computing them there on first use).
  *
- * @param context Read-only data of the quadrature call (the weight table).
+ * @param weightTable 1D quadrature weights per (dimension, level).
  * @param tg      Tensor grid.
  * @param scratch Scratch space; @c rows.weightsOfDim is filled in.
  */
-void getWeights(const misc::QuadratureContext& context, TensorGridView tg,
+void getWeights(const misc::QuadWeightTable& weightTable, TensorGridView tg,
                 misc::QuadratureScratch& scratch);
 
 /**

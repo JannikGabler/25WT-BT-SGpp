@@ -49,7 +49,7 @@ double quadrature(const SourceFunc& sourceFunc, const DeltasSparseGrid& deltasSp
 
   sourceFunc.finishOperatorCall();
 
-  return deltasSparseGrid.getGenInstr().getVolumeOfDomain() * result;
+  return deltasSparseGrid.getSetup().getVolumeOfDomain() * result;
 }
 
 void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& deltasSparseGrid,
@@ -68,7 +68,7 @@ void quadrature(const VectorSourceFunc& sourceFunc, const DeltasSparseGrid& delt
   const misc::FlatNestedVec<double, 2> tgValues = estimateDeltaTensorGrids(context, sourceFunc);
   compensatedSums<double>(tgValues, result);
 
-  const double volume = deltasSparseGrid.getGenInstr().getVolumeOfDomain();
+  const double volume = deltasSparseGrid.getSetup().getVolumeOfDomain();
   for (double& value : result) {
     value *= volume;
   }

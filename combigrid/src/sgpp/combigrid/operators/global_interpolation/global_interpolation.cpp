@@ -8,9 +8,9 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/numerics/compensated_sum_tools.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
@@ -36,8 +36,8 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
   }
 
   // The basis values are computed in normalized coordinates (see tools::global_interpolation)
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const base::DataVector normPoint = normalizeDataVector(point, genInstr.getDomain());
+  const SparseGridSetup& setup = sparseGrid.getSetup();
+  const base::DataVector normPoint = normalizeDataVector(point, setup.getDomain());
 
   // One value per tensor grid, stored at its index
   const std::vector<double> tgValues = estimateTensorGrids(sourceFunc, normPoint, sparseGrid);
@@ -57,8 +57,7 @@ void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& poi
         "The size of the point doesn't match the dimensionality of the sparse grid.");
   }
 
-  const base::DataVector normPoint =
-      normalizeDataVector(point, sparseGrid.getGenInstr().getDomain());
+  const base::DataVector normPoint = normalizeDataVector(point, sparseGrid.getSetup().getDomain());
 
   // m values per tensor grid, stored at its index
   const FlatNestedVec<double, 2> tgValues = estimateTensorGrids(sourceFunc, normPoint, sparseGrid);

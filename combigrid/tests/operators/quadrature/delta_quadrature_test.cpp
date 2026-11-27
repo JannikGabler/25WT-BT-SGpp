@@ -217,11 +217,11 @@ Hand-made delta tensor grids
 *****************************/
 
 /// Regular 1D nodes of level @p lvl in dimension @p dim (boundary iff lvl >= offset).
-DataVector regularNodes(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl) {
-  const DataVector innerNodes = genInstr.getNodeGenFuncForDim(dim)->genNodesWithoutBoundary(
-      genInstr.getLvl2GPCntFuncForDim(dim)(lvl));
+DataVector regularNodes(const SparseGridSetup& setup, const size_t dim, const LvlType lvl) {
+  const DataVector innerNodes = setup.getNodeGenFuncForDim(dim)->genNodesWithoutBoundary(
+      setup.getLvl2GPCntFuncForDim(dim)(lvl));
 
-  if (lvl < genInstr.getBoundaryLevelOffset()) {
+  if (lvl < setup.getBoundaryLevelOffset()) {
     return innerNodes;
   }
 
@@ -245,14 +245,14 @@ std::optional<GPCntType> findNode(const DataVector& nodes, const double x) {
 }
 
 /// Delta nodes of level @p lvl: the regular level-lvl nodes that are no level-(lvl - 1) nodes.
-DataVector expectedDeltaNodes(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl) {
-  const DataVector nodes = regularNodes(genInstr, dim, lvl);
+DataVector expectedDeltaNodes(const SparseGridSetup& setup, const size_t dim, const LvlType lvl) {
+  const DataVector nodes = regularNodes(setup, dim, lvl);
 
   if (lvl == 0) {
     return nodes;
   }
 
-  const DataVector coarserNodes = regularNodes(genInstr, dim, lvl - 1);
+  const DataVector coarserNodes = regularNodes(setup, dim, lvl - 1);
   DataVector result;
 
   for (const double node : nodes) {
@@ -466,7 +466,7 @@ std::vector<MIWithCoeff> subTrieLeaves(const DeltaQuadratureData& data, const Lv
  */
 std::pair<std::vector<size_t>, std::vector<MIWithCoeff>> expectedProjectedSubTrie(
     const DeltasSparseGrid& deltasSG, const TensorGridCTDataView& deltaTG) {
-  const SGGenInstr& genInstr = deltasSG.getGenInstr();
+  const SparseGridSetup& setup = deltasSG.getSetup();
   const size_t nDim = deltasSG.nDim();
   const LvlMI& m = deltaTG.mi;
 
@@ -477,13 +477,12 @@ std::pair<std::vector<size_t>, std::vector<MIWithCoeff>> expectedProjectedSubTri
   if (projDims.empty()) projDims.push_back(0);
 
   const auto singleNodeWeight = [&](const size_t dim, const LvlType lvl) {
-    const DataVector nodes = regularNodes(genInstr, dim, lvl);
+    const DataVector nodes = regularNodes(setup, dim, lvl);
     const GPCntType nNodes = static_cast<GPCntType>(nodes.size());
-    const std::optional<GPCntType> idx =
-        findNode(nodes, expectedDeltaNodes(genInstr, dim, m[dim])[0]);
+    const std::optional<GPCntType> idx = findNode(nodes, expectedDeltaNodes(setup, dim, m[dim])[0]);
     BOOST_REQUIRE(idx.has_value());
-    return genInstr.getNodeGenFuncForDim(dim)
-        ->getQuadRule(nNodes, lvl >= genInstr.getBoundaryLevelOffset())
+    return setup.getNodeGenFuncForDim(dim)
+        ->getQuadRule(nNodes, lvl >= setup.getBoundaryLevelOffset())
         ->genWeights(nNodes)[*idx];
   };
 
@@ -602,7 +601,7 @@ void checkSubTries(const DeltasSparseGrid& deltasSG) {
 class BruteForceGlobalWeights {
  public:
   explicit BruteForceGlobalWeights(const SparseGrid& sg) {
-    const std::vector<NodeGenFunc*>& nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs();
+    const std::vector<NodeGenFunc*>& nodeGenFuncs = sg.getSetup().getNodeGenFuncs();
 
     for (const auto& tg : sg.domainTensorGrids()) {
       const GPMI& gpCntPerDim = tg.tensorGrid.getGPCntPerDim();
@@ -617,7 +616,7 @@ class BruteForceGlobalWeights {
         entry.nodes.emplace_back(std::vector<double>(nodesBegin, nodesBegin + nNodes));
         entry.weights.push_back(
             nodeGenFuncs[dim]
-                ->getQuadRule(nNodes, tg.mi[dim] >= sg.getGenInstr().getBoundaryLevelOffset())
+                ->getQuadRule(nNodes, tg.mi[dim] >= sg.getSetup().getBoundaryLevelOffset())
                 ->genWeights(nNodes));
         offset += nNodes;
       }

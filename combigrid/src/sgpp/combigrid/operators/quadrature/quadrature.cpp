@@ -6,12 +6,12 @@
 #include <memory>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/numerics/compensated_sum_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -29,7 +29,7 @@ namespace combigrid {
 
 double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
                   const QuadratureOptions& options) {
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  const SparseGridSetup& setup = sparseGrid.getSetup();
   const std::shared_ptr<const QuadWeightTable> weightTable =
       getWeightTable(sparseGrid, options.useCrossCallOperatorDataCache);
   const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = *weightTable};
@@ -42,7 +42,7 @@ double quadrature(const SourceFunc& sourceFunc, const SparseGrid& sparseGrid,
 
   sourceFunc.finishOperatorCall();
 
-  return genInstr.getVolumeOfDomain() * result;
+  return setup.getVolumeOfDomain() * result;
 }
 
 void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid,
@@ -51,7 +51,6 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
     throw std::invalid_argument("quadrature: The size of the result is not the number of outputs");
   }
 
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
   const std::shared_ptr<const QuadWeightTable> weightTable =
       getWeightTable(sparseGrid, options.useCrossCallOperatorDataCache);
   const QuadratureContext context{.sparseGrid = sparseGrid, .weightTable = *weightTable};
@@ -62,7 +61,7 @@ void quadrature(const VectorSourceFunc& sourceFunc, const SparseGrid& sparseGrid
   tools::numerics::compensatedDotProducts<double>(sparseGrid.getCoefficients(), tgEstimates,
                                                   result);
 
-  const double volume = genInstr.getVolumeOfDomain();
+  const double volume = sparseGrid.getSetup().getVolumeOfDomain();
   for (double& value : result) {
     value *= volume;
   }

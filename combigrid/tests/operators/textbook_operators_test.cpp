@@ -241,7 +241,7 @@ BOOST_AUTO_TEST_CASE(global_interpolation_equals_optimized) {
     const SparseGrid sg = makeGrid(config, miVec);
     const bool equi33Nodes = config.nodes == "equi" && config.level == 4 && !config.mivec;
     const double relTol = equi33Nodes ? EQUI_33_NODES_REL_TOL : REL_TOL;
-    for (const DataVector& point : testPoints(sg.getGenInstr().getDomain())) {
+    for (const DataVector& point : testPoints(sg.getSetup().getDomain())) {
       checkClose(textbookInterpolate(f, point, sg), interpolate(f, point, sg),
                  "interpolate " + config.name() + " at " + point.toString(), relTol);
       const DataVector textbook = textbookInterpolate(vf, point, sg);
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE(linear_interpolation_equals_optimized) {
   for (const Config& config : configs()) {
     LvlMIVec miVec(config.nDim, 0);
     const SparseGrid sg = makeGrid(config, miVec);
-    for (const DataVector& point : testPoints(sg.getGenInstr().getDomain())) {
+    for (const DataVector& point : testPoints(sg.getSetup().getDomain())) {
       checkClose(textbookInterpolateLinear(f, point, sg), interpolateLinear(f, point, sg),
                  "interpolateLinear " + config.name() + " at " + point.toString());
       const DataVector textbook = textbookInterpolateLinear(vf, point, sg);
@@ -277,7 +277,7 @@ BOOST_AUTO_TEST_CASE(scalar_equals_vector_output) {
   const VectorSourceFunc vf(components, 2);
   LvlMIVec miVec(3, 0);
   const SparseGrid sg = makeGrid({"cc", 3, 3, 1, false, false}, miVec);
-  const DataVector point = testPoints(sg.getGenInstr().getDomain())[0];
+  const DataVector point = testPoints(sg.getSetup().getDomain())[0];
   BOOST_CHECK_EQUAL(textbookQuadrature(f, sg), textbookQuadrature(vf, sg)[0]);
   BOOST_CHECK_EQUAL(textbookInterpolate(f, point, sg), textbookInterpolate(vf, point, sg)[0]);
   BOOST_CHECK_EQUAL(textbookInterpolateLinear(f, point, sg),
@@ -290,7 +290,7 @@ BOOST_AUTO_TEST_CASE(exact_on_the_span_of_the_grid) {
   const SourceFunc poly([](const DataVector& x) { return std::pow(x[0], 7) * std::pow(x[1], 3); });
   LvlMIVec miVec(2, 0);
   const SparseGrid sg = makeGrid({"cc", 2, 3, 0, false, false}, miVec);
-  const HyperCubeArea& domain = sg.getGenInstr().getDomain();
+  const HyperCubeArea& domain = sg.getSetup().getDomain();
   const auto [a0, b0] = domain[0];
   const auto [a1, b1] = domain[1];
   const double exactIntegral =
@@ -307,7 +307,7 @@ BOOST_AUTO_TEST_CASE(exact_on_the_span_of_the_grid) {
   const SourceFunc multilinear(
       [](const DataVector& x) { return 1.0 + 2.0 * x[0] - x[1] + 3.0 * x[0] * x[1] * x[2]; });
   const SparseGrid sgLin = makeGrid({"equi", 3, 3, 1, false, false}, miVec);
-  for (const DataVector& point : testPoints(sgLin.getGenInstr().getDomain())) {
+  for (const DataVector& point : testPoints(sgLin.getSetup().getDomain())) {
     BOOST_CHECK_CLOSE_FRACTION(textbookInterpolateLinear(multilinear, point, sgLin),
                                multilinear.evaluate(point), 1e-12);
   }
@@ -318,7 +318,7 @@ BOOST_AUTO_TEST_CASE(same_evaluation_points_as_optimized) {
     if (config.nDim > 3) continue;
     LvlMIVec miVec(config.nDim, 0);
     const SparseGrid sg = makeGrid(config, miVec);
-    const DataVector point = testPoints(sg.getGenInstr().getDomain())[1];
+    const DataVector point = testPoints(sg.getSetup().getDomain())[1];
     PointRecorder textbook, optimized;
     const SourceFunc textbookFunc([&](const DataVector& x) { return textbook.record(x); });
     const SourceFunc optimizedFunc([&](const DataVector& x) { return optimized.record(x); });

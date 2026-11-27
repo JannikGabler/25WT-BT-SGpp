@@ -24,7 +24,8 @@
 %nocallback;
 
 // std_vector.i cannot instantiate std::vector for function pointer element types (the generated
-// traits do not compile), so SGGenInstr::setLvl2GPCntFuncs / getLvl2GPCntFuncs get hand-written
+// traits do not compile), so SparseGridSetup::setLvl2GPCntFuncs / getLvl2GPCntFuncs (inherited by
+// SGGenInstr) get hand-written
 // typemaps: a Python sequence of function pointer constants in, a tuple of them out.
 %typemap(in) const std::vector<sgpp::combigrid::Lvl2GPCntFunc>& (std::vector<sgpp::combigrid::Lvl2GPCntFunc> temp) {
   if (!PySequence_Check($input)) {
@@ -72,6 +73,7 @@
 %include "combigrid/src/sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp"
 
 namespace std {
-  // SGGenInstr::getNodeGenFuncs / setNodeGenFuncs / getUniqueNodeGenFuncs (elements non-owning).
+  // SparseGridSetup::getNodeGenFuncs / setNodeGenFuncs / getUniqueNodeGenFuncs (inherited by
+  // SGGenInstr; elements non-owning).
   %template(NodeGenFuncVector) vector<sgpp::combigrid::NodeGenFunc*>;
 }

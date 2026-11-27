@@ -51,7 +51,7 @@ void interpolateLinearDSG(const base::DataVector& point, const DeltasSparseGrid&
   const std::shared_ptr<const DSGLinInterpIndex> indexPtr =
       dsg::getIndex(deltasSparseGrid, options.useCrossCallOperatorDataCache);
   const DSGLinInterpIndex& index = *indexPtr;
-  const HyperCubeArea& domain = deltasSparseGrid.getGenInstr().getDomain();
+  const HyperCubeArea& domain = deltasSparseGrid.getSetup().getDomain();
   const size_t nOutputs = result.size();
   DSGLinInterpContext context(index);
   dsg::prepareContext(index, tools::normalizeDataVector(point, domain), domain, context);

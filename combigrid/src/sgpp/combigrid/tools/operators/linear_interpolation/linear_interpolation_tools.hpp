@@ -32,10 +32,10 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <utility>
@@ -90,12 +90,12 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourc
  * @param sourceFunc Source function to evaluate at the corner grid points.
  * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param unitTG     Tensor grid with its nodes on the unit interval.
- * @param genInstr   Generation instruction (used for the domain).
+ * @param setup   Setup of the grid (used for the domain).
  * @param scratch    Per-thread scratch space; reused across calls.
  * @return Interpolated value on this single tensor grid.
  */
 double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& point,
-                         const TensorGridView& unitTG, const SGGenInstr& genInstr,
+                         const TensorGridView& unitTG, const SparseGridSetup& setup,
                          misc::LinInterpScratch& scratch);
 
 /**
@@ -105,12 +105,12 @@ double processTensorGrid(const SourceFunc& sourceFunc, const base::DataVector& p
  * @param sourceFunc Vector-valued source function to evaluate at the corner grid points.
  * @param point      Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param unitTG     Tensor grid with its nodes on the unit interval.
- * @param genInstr   Generation instruction (used for the domain).
+ * @param setup   Setup of the grid (used for the domain).
  * @param scratch    Per-thread scratch space, constructed with m outputs.
  * @param out        Output: the m interpolated values (size m).
  */
 void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVector& point,
-                       const TensorGridView& unitTG, const SGGenInstr& genInstr,
+                       const TensorGridView& unitTG, const SparseGridSetup& setup,
                        misc::LinInterpScratch& scratch, std::span<double> out);
 
 /**
@@ -128,7 +128,7 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
  * @param values   View of the source function.
  * @param point    Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param unitTG   Tensor grid with its nodes on the unit interval.
- * @param genInstr Generation instruction (used for the domain).
+ * @param setup Setup of the grid (used for the domain).
  * @param scratch  Per-thread scratch space (neighbors, corner data, current corner).
  * @return Accumulator of the interpolated values (a @c double for scalar values, a pointer to
  *         the m values in the view's buffer for vector values); zero for a 0-dimensional tensor
@@ -136,7 +136,7 @@ void processTensorGrid(const VectorSourceFunc& sourceFunc, const base::DataVecto
  */
 template <typename ValueType>
 typename ValueType::Acc sumOverCorners(ValueType values, const base::DataVector& point,
-                                       const TensorGridView& unitTG, const SGGenInstr& genInstr,
+                                       const TensorGridView& unitTG, const SparseGridSetup& setup,
                                        misc::LinInterpScratch& scratch);
 
 /**

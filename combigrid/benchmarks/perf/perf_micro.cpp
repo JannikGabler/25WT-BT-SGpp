@@ -31,10 +31,13 @@
 #include <memory>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
+#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
@@ -58,7 +61,11 @@
 #include <sgpp/combigrid/operators/textbook/textbook_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_quadrature.hpp>
+#include <sgpp/combigrid/refinement/dimension_adaptive_refinement.hpp>
+#include <sgpp/combigrid/refinement/refinement_options.hpp>
+#include <sgpp/combigrid/refinement/targets/quadrature_refinement_target.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/numerics/compensated_sum_tools.hpp>
@@ -215,7 +222,8 @@ void addProcessTG(Suite& suite, const std::string& nodes, const LvlType boundary
 
     run.setItems(static_cast<double>(tg.nGP()));
     run.measure([&]() {
-      doNotOptimize(cg::tools::quadrature::processTensorGrid(context, sourceFunc, tg, scratch));
+      doNotOptimize(
+          cg::tools::quadrature::processTensorGrid(context.weightTable, sourceFunc, tg, scratch));
     });
   });
 }
@@ -241,8 +249,9 @@ void addProcessAllTGs(Suite& suite, const std::string& nodes, const LvlType boun
         run.measure([&]() {
           double sum = 0.0;
           for (const auto& tgData : sg.domainTensorGrids()) {
-            sum += tgData.coefficient * cg::tools::quadrature::processTensorGrid(
-                                            context, sourceFunc, tgData.tensorGrid, scratch);
+            sum += tgData.coefficient *
+                   cg::tools::quadrature::processTensorGrid(context.weightTable, sourceFunc,
+                                                            tgData.tensorGrid, scratch);
           }
           doNotOptimize(sum);
         });
@@ -367,8 +376,8 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
       for (const SourceFunc& f : funcs) {
         double sum = 0.0;
         for (const auto& tgData : s.tgs) {
-          sum += tgData.coefficient *
-                 cg::tools::quadrature::processTensorGrid(context, f, tgData.tensorGrid, scratch);
+          sum += tgData.coefficient * cg::tools::quadrature::processTensorGrid(
+                                          context.weightTable, f, tgData.tensorGrid, scratch);
         }
         doNotOptimize(sum);
       }
@@ -389,13 +398,14 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
     // Vector vs. scalar results tensor grid by tensor grid (tensor grid-major, output-minor)
     std::vector<double> vecPerTG, scalarPerTG;
     for (const auto& tgData : s.tgs) {
-      cg::tools::quadrature::processTensorGrid(context, f, tgData.tensorGrid, scratch, tgResult);
+      cg::tools::quadrature::processTensorGrid(context.weightTable, f, tgData.tensorGrid, scratch,
+                                               tgResult);
       vecPerTG.insert(vecPerTG.end(), tgResult.begin(), tgResult.end());
       cg::misc::QuadratureScratch scalarScratch(nDim);
       for (size_t k = 0; k < m; k++) {
         const SourceFunc fk([k](const DataVector& x) { return expSumK(x, k); });
         scalarPerTG.push_back(cg::tools::quadrature::processTensorGrid(
-            context, fk, tgData.tensorGrid, scalarScratch));
+            context.weightTable, fk, tgData.tensorGrid, scalarScratch));
       }
     }
     compareResults(run, name, vecPerTG, scalarPerTG);
@@ -404,7 +414,8 @@ void addVectorQuad(Suite& suite, const std::string& nodes, const LvlType boundar
     run.measure([&]() {
       std::fill(sum.begin(), sum.end(), 0.0);
       for (const auto& tgData : s.tgs) {
-        cg::tools::quadrature::processTensorGrid(context, f, tgData.tensorGrid, scratch, tgResult);
+        cg::tools::quadrature::processTensorGrid(context.weightTable, f, tgData.tensorGrid, scratch,
+                                                 tgResult);
         for (size_t k = 0; k < m; k++) sum[k] += tgData.coefficient * tgResult[k];
       }
       doNotOptimize(sum.data());
@@ -426,7 +437,7 @@ void addSolQuadTG(Suite& suite, const std::string& nodes, const LvlType boundary
     const SparseGrid sg(genInstr);
     const SourceFunc sourceFunc(perf::expSum);
     const TensorGridCTData tgData = sg.getUnitTensorGrid(largestTGIdx(sg)).toTensorGridCTData();
-    const HyperCubeArea& domain = sg.getGenInstr().getDomain();
+    const HyperCubeArea& domain = sg.getSetup().getDomain();
     const cg::GPMI& nPerDim = tgData.tensorGrid.getGPCntPerDim();
 
     // Per-dimension nodes on the domain and 1D weights
@@ -441,7 +452,7 @@ void addSolQuadTG(Suite& suite, const std::string& nodes, const LvlType boundary
             tgData.tensorGrid.getNodesPerDim()[offset + i] * (domain[k].second - domain[k].first) +
             domain[k].first;
       }
-      sg.getGenInstr()
+      sg.getSetup()
           .getNodeGenFuncForDim(k)
           ->getQuadRule(n, tgData.mi[k] >= boundary)
           ->genWeightsInplace(w[k]);
@@ -795,7 +806,7 @@ void addInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, cons
     run.setItems(static_cast<double>(tgData.tensorGrid.nGP()));
     run.measure([&]() {
       doNotOptimize(cg::tools::global_interpolation::processTensorGrid(
-          sourceFunc, normPoint, tgData.tensorGrid, unitTG, sg.getGenInstr()));
+          sourceFunc, normPoint, tgData.tensorGrid, unitTG, sg.getSetup()));
     });
   });
 }
@@ -855,7 +866,7 @@ void addLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl) {
     run.setItems(std::pow(2.0, static_cast<double>(nDim)));
     run.measure([&]() {
       doNotOptimize(cg::tools::lin_interpolation::processTensorGrid(sourceFunc, normPoint, unitTG,
-                                                                    sg.getGenInstr(), scratch));
+                                                                    sg.getSetup(), scratch));
     });
   });
 }
@@ -902,7 +913,7 @@ void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, c
     sol::tgNodes(tg, domain, unit, mapped);
     std::vector<const cg::InterpolationMethod*> methods;
     for (size_t k = 0; k < nDim; k++) {
-      methods.push_back(sg.getGenInstr().getNodeGenFuncForDim(k)->getInterpolationMethod(
+      methods.push_back(sg.getSetup().getNodeGenFuncForDim(k)->getInterpolationMethod(
           static_cast<GPCntType>(unit[k].size())));
     }
     sol::GlobalScratch scratch(nDim);
@@ -1109,13 +1120,13 @@ void addVectorInterpTG(Suite& suite, const std::string& nodes, const size_t nDim
   suite.addMicro("micro/interp/global_tg_scalar_x_m/" + name, [=](MicroRun& run) {
     const VectorInterpSetup s(nodes, 0, nDim, maxLvl, 99);
     const std::vector<SourceFunc> funcs = cosProdScalarFuncs(m);
-    const cg::SGGenInstr& genInstr = s.sg->getGenInstr();
+    const cg::SparseGridSetup& setup = s.sg->getSetup();
 
     run.setItems(static_cast<double>(s.tg->nGP() * m));
     run.measure([&]() {
       for (const SourceFunc& f : funcs) {
         doNotOptimize(cg::tools::global_interpolation::processTensorGrid(f, s.normPoint, *s.tg,
-                                                                         *s.unitTG, genInstr));
+                                                                         *s.unitTG, setup));
       }
     });
   });
@@ -1123,20 +1134,20 @@ void addVectorInterpTG(Suite& suite, const std::string& nodes, const size_t nDim
   suite.addMicro("micro/interp/global_tg_vec/" + name, [=](MicroRun& run) {
     const VectorInterpSetup s(nodes, 0, nDim, maxLvl, 99);
     const cg::VectorSourceFunc f = cosProdVectorFunc(m);
-    const cg::SGGenInstr& genInstr = s.sg->getGenInstr();
+    const cg::SparseGridSetup& setup = s.sg->getSetup();
     std::vector<double> result(m), scalars;
 
-    cg::tools::global_interpolation::processTensorGrid(f, s.normPoint, *s.tg, *s.unitTG, genInstr,
+    cg::tools::global_interpolation::processTensorGrid(f, s.normPoint, *s.tg, *s.unitTG, setup,
                                                        result);
     for (const SourceFunc& fk : cosProdScalarFuncs(m)) {
       scalars.push_back(cg::tools::global_interpolation::processTensorGrid(fk, s.normPoint, *s.tg,
-                                                                           *s.unitTG, genInstr));
+                                                                           *s.unitTG, setup));
     }
     compareResults(run, name, result, scalars);
 
     run.setItems(static_cast<double>(s.tg->nGP() * m));
     run.measure([&]() {
-      cg::tools::global_interpolation::processTensorGrid(f, s.normPoint, *s.tg, *s.unitTG, genInstr,
+      cg::tools::global_interpolation::processTensorGrid(f, s.normPoint, *s.tg, *s.unitTG, setup,
                                                          result);
       doNotOptimize(result.data());
       perf::clobberMemory();
@@ -1157,14 +1168,14 @@ void addVectorLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl, co
   suite.addMicro("micro/interplin/tg_scalar_x_m/" + name, [=](MicroRun& run) {
     const VectorInterpSetup s("equi", 1, nDim, maxLvl, 98);
     const std::vector<SourceFunc> funcs = cosProdScalarFuncs(m);
-    const cg::SGGenInstr& genInstr = s.sg->getGenInstr();
+    const cg::SparseGridSetup& setup = s.sg->getSetup();
     cg::misc::LinInterpScratch scratch(nDim);
 
     run.setItems(nCorners * static_cast<double>(m));
     run.measure([&]() {
       for (const SourceFunc& f : funcs) {
         doNotOptimize(cg::tools::lin_interpolation::processTensorGrid(f, s.normPoint, *s.unitTG,
-                                                                      genInstr, scratch));
+                                                                      setup, scratch));
       }
     });
   });
@@ -1172,21 +1183,21 @@ void addVectorLinearTG(Suite& suite, const size_t nDim, const LvlType maxLvl, co
   suite.addMicro("micro/interplin/tg_vec/" + name, [=](MicroRun& run) {
     const VectorInterpSetup s("equi", 1, nDim, maxLvl, 98);
     const cg::VectorSourceFunc f = cosProdVectorFunc(m);
-    const cg::SGGenInstr& genInstr = s.sg->getGenInstr();
+    const cg::SparseGridSetup& setup = s.sg->getSetup();
     cg::misc::LinInterpScratch scratch(nDim, m), scalarScratch(nDim);
     std::vector<double> result(m), scalars;
 
-    cg::tools::lin_interpolation::processTensorGrid(f, s.normPoint, *s.unitTG, genInstr, scratch,
+    cg::tools::lin_interpolation::processTensorGrid(f, s.normPoint, *s.unitTG, setup, scratch,
                                                     result);
     for (const SourceFunc& fk : cosProdScalarFuncs(m)) {
       scalars.push_back(cg::tools::lin_interpolation::processTensorGrid(fk, s.normPoint, *s.unitTG,
-                                                                        genInstr, scalarScratch));
+                                                                        setup, scalarScratch));
     }
     compareResults(run, name, result, scalars);
 
     run.setItems(nCorners * static_cast<double>(m));
     run.measure([&]() {
-      cg::tools::lin_interpolation::processTensorGrid(f, s.normPoint, *s.unitTG, genInstr, scratch,
+      cg::tools::lin_interpolation::processTensorGrid(f, s.normPoint, *s.unitTG, setup, scratch,
                                                       result);
       doNotOptimize(result.data());
       perf::clobberMemory();
@@ -1417,7 +1428,8 @@ void addCrossCallQuadSG(Suite& suite, const std::string& nodes, const LvlType bo
   addCrossCall<SparseGrid>(
       suite, "quad_sg", nodes, boundary, nDim, maxLvl,
       [](const SparseGrid& sg) {
-        auto table = std::make_unique<cg::misc::QuadWeightTable>(sg);
+        auto table =
+            std::make_unique<cg::misc::QuadWeightTable>(sg.getUnitNodeTable(), sg.getSetup());
         table->computeAllRows();
         return table;
       },
@@ -1513,6 +1525,104 @@ void addTextbookOperator(Suite& suite, const std::string& op, const std::string&
       }
     });
   }
+}
+
+/*******************************************************************************
+Dimension-adaptive refinement
+*******************************************************************************/
+
+/// Anisotropic Gaussian exp(-sum_k (4 / k^2 (x_k - 1/2))^2), k = 1, 2, ... (cheap).
+double adaptGauss(const DataVector& x) {
+  double sum = 0.0;
+  for (size_t k = 0; k < x.size(); k++) {
+    const double t = 4.0 / static_cast<double>((k + 1) * (k + 1)) * (x[k] - 0.5);
+    sum += t * t;
+  }
+  return std::exp(-sum);
+}
+
+/// A level-0 Clenshaw-Curtis grid (boundary offset 1) of dimension @p nDim.
+std::unique_ptr<SparseGrid> adaptStartGrid(const size_t nDim) {
+  CompleteSGGenInstr genInstr(0, nDim);
+  genInstr.setNodeGenFunc(cg::getClenshawCurtisNodeGenFunc());
+  genInstr.setLvl2GPCntFunc(cg::doublingLvl2GPCntFunction);
+  genInstr.setBoundaryLevelOffset(1);
+  return std::make_unique<SparseGrid>(genInstr);
+}
+
+std::string adaptCfg(const size_t nDim, const size_t budget) {
+  return "quad/cc/b1/d" + std::to_string(nDim) + "/budget" + std::to_string(budget);
+}
+
+/**
+ * micro/adaptive/refine: a whole refinement from level 0 (quadrature of adaptGauss, grid-point
+ * budget), per evaluated grid point; micro/adaptive/sgquad: the SG quadrature of the refined grid
+ * (the same tensor grids, the operator alone), per grid point of its tensor grids.
+ */
+void addAdaptiveRefine(Suite& suite, const size_t nDim, const size_t budget) {
+  suite.addMicro("micro/adaptive/refine/" + adaptCfg(nDim, budget), [=](MicroRun& run) {
+    cg::RefinementOptions options;
+    options.maxGridPoints = budget;
+    const SourceFunc f(adaptGauss);
+    {
+      std::unique_ptr<SparseGrid> sg = adaptStartGrid(nDim);
+      cg::QuadratureRefinementTarget target(f);
+      run.setItems(static_cast<double>(cg::refine(*sg, target, options).nEvaluatedGridPoints));
+    }
+    run.measure([&]() {
+      std::unique_ptr<SparseGrid> sg = adaptStartGrid(nDim);
+      cg::QuadratureRefinementTarget target(f);
+      doNotOptimize(cg::refine(*sg, target, options).nTensorGrids);
+    });
+  });
+  suite.addMicro("micro/adaptive/sgquad/" + adaptCfg(nDim, budget), [=](MicroRun& run) {
+    cg::RefinementOptions options;
+    options.maxGridPoints = budget;
+    const SourceFunc f(adaptGauss);
+    std::unique_ptr<SparseGrid> sg = adaptStartGrid(nDim);
+    cg::QuadratureRefinementTarget target(f);
+    cg::refine(*sg, target, options);
+    double nGP = 0;
+    for (const auto& tg : sg->domainTensorGrids()) nGP += static_cast<double>(tg.tensorGrid.nGP());
+    run.setItems(nGP);
+    run.measure([&]() { doNotOptimize(cg::quadrature(f, *sg)); });
+  });
+}
+
+/**
+ * micro/adaptive/step: one step() on a grid refined to @p budget grid points (the hand-over of the
+ * grid in and out of the call plus one decision; the grid grows by one decision per call);
+ * micro/adaptive/rebuild: the same grid built anew from its index set (MIVecSGGenInstr), the
+ * alternative of a loop that rebuilds the grid after every step. Items: tensor grids of the grid.
+ */
+void addAdaptiveHandOver(Suite& suite, const size_t nDim, const size_t budget) {
+  suite.addMicro("micro/adaptive/step/" + adaptCfg(nDim, budget), [=](MicroRun& run) {
+    cg::RefinementOptions options;
+    options.maxGridPoints = budget;
+    const SourceFunc f(adaptGauss);
+    std::unique_ptr<SparseGrid> sg = adaptStartGrid(nDim);
+    cg::QuadratureRefinementTarget target(f);
+    cg::DimensionAdaptiveRefinement refinement(*sg, target, options);
+    refinement.refine();
+    run.setItems(static_cast<double>(sg->nTG()));
+    run.measure([&]() { doNotOptimize(refinement.step().nTensorGrids); });
+  });
+  suite.addMicro("micro/adaptive/rebuild/" + adaptCfg(nDim, budget), [=](MicroRun& run) {
+    cg::RefinementOptions options;
+    options.maxGridPoints = budget;
+    const SourceFunc f(adaptGauss);
+    std::unique_ptr<SparseGrid> sg = adaptStartGrid(nDim);
+    cg::QuadratureRefinementTarget target(f);
+    cg::refine(*sg, target, options);
+    const LvlMIVec levels = sg->getLevels();
+    cg::MIVecSGGenInstr genInstr(levels);
+    static_cast<cg::SparseGridSetup&>(genInstr) = sg->getSetup();
+    run.setItems(static_cast<double>(sg->nTG()));
+    run.measure([&]() {
+      const SparseGrid rebuilt(genInstr);
+      doNotOptimize(rebuilt.nTG());
+    });
+  });
 }
 
 int main(int argc, char** argv) {
@@ -1735,6 +1845,12 @@ int main(int argc, char** argv) {
   addTextbookOperator(suite, "interp", "cc", 0, 5, 4);
   addTextbookOperator(suite, "interplin", "equi", 1, 5, 5);
   addTextbookOperator(suite, "interplin", "equi", 1, 8, 4);
+
+  // Dimension-adaptive refinement (feature cases, not judged)
+  addAdaptiveRefine(suite, 10, 100000);
+  addAdaptiveRefine(suite, 100, 100000);
+  addAdaptiveHandOver(suite, 10, 100000);
+  addAdaptiveHandOver(suite, 100, 100000);
 
   return suite.main(argc, argv);
 }

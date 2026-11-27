@@ -187,16 +187,16 @@ std::string describe(const Config& c, const size_t pointIdx) {
  * points), times max |f| (bounded by 2 for testFunc on the test domains).
  */
 double roundOffScale(const SparseGrid& sg, const DataVector& point) {
-  const SGGenInstr& genInstr = sg.getGenInstr();
-  const DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
+  const SparseGridSetup& setup = sg.getSetup();
+  const DataVector normPoint = tools::normalizeDataVector(point, setup.getDomain());
   double scale = 0.0;
   for (const auto& tgData : sg.domainTensorGrids()) {
     double product = 1.0;
     for (size_t j = 0; j < sg.nDim(); j++) {
       const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[j];
-      const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(j);
+      const NodeGenFunc* nodeGenFunc = setup.getNodeGenFuncForDim(j);
       const DataVector nodesVec =
-          nodeGenFunc->genNodes(nNodes, tgData.mi[j] >= genInstr.getBoundaryLevelOffset());
+          nodeGenFunc->genNodes(nNodes, tgData.mi[j] >= setup.getBoundaryLevelOffset());
       const std::vector<double> nodes(nodesVec.begin(), nodesVec.end());
       std::vector<double> weights(nNodes);
       nodeGenFunc->getInterpolationMethod(nNodes)->basisValues(normPoint[j], nodes, weights);

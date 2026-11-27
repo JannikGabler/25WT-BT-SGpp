@@ -110,7 +110,7 @@ base::DataVector combineTensorGrids(const VectorSourceFunc& sourceFunc,
   }
 
   const base::DataVector unitPoint =
-      tools::normalizeDataVector(point, sparseGrid.getGenInstr().getDomain());
+      tools::normalizeDataVector(point, sparseGrid.getSetup().getDomain());
 
   base::DataVector result(sourceFunc.nOutputs());
 

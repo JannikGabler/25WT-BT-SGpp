@@ -198,7 +198,8 @@ std::vector<size_t> checkedCorners(const size_t nCorners) {
 
 /// Scalar kernel: evaluated points (bitwise, in order), weights (bitwise) and value; returns
 /// the kernel's value and its round-off bound.
-std::pair<double, double> checkScalarKernel(const TensorGridView unitTG, const SGGenInstr& genInstr,
+std::pair<double, double> checkScalarKernel(const TensorGridView unitTG,
+                                            const SparseGridSetup& setup,
                                             const DataVector& normPoint,
                                             const std::vector<RefCorner>& ref) {
   misc::LinInterpScratch scratch(unitTG.nDim());
@@ -208,7 +209,7 @@ std::pair<double, double> checkScalarKernel(const TensorGridView unitTG, const S
     return testFunc(x);
   });
   const double value =
-      tools::lin_interpolation::processTensorGrid(recording, normPoint, unitTG, genInstr, scratch);
+      tools::lin_interpolation::processTensorGrid(recording, normPoint, unitTG, setup, scratch);
 
   BOOST_REQUIRE_EQUAL(points.size(), ref.size());
   double expected = 0.0, scale = 0.0;
@@ -225,9 +226,9 @@ std::pair<double, double> checkScalarKernel(const TensorGridView unitTG, const S
     const SourceFunc indicator(
         [&count, corner](const DataVector&) { return (count++ == corner) ? 1.0 : 0.0; });
     BOOST_TEST_CONTEXT("corner " << corner) {
-      checkBitwise(tools::lin_interpolation::processTensorGrid(indicator, normPoint, unitTG,
-                                                               genInstr, scratch),
-                   ref[corner].weight);
+      checkBitwise(
+          tools::lin_interpolation::processTensorGrid(indicator, normPoint, unitTG, setup, scratch),
+          ref[corner].weight);
     }
   }
   return result;
@@ -235,7 +236,7 @@ std::pair<double, double> checkScalarKernel(const TensorGridView unitTG, const S
 
 /// Vector kernel (m = 3): output k is the indicator of corner (k * nCorners) / 3; the outputs
 /// must equal those weights bitwise, the evaluated points those of the reference.
-void checkVectorKernel(const TensorGridView unitTG, const SGGenInstr& genInstr,
+void checkVectorKernel(const TensorGridView unitTG, const SparseGridSetup& setup,
                        const DataVector& normPoint, const std::vector<RefCorner>& ref) {
   constexpr size_t N_OUTPUTS = 3;
   misc::LinInterpScratch scratch(unitTG.nDim(), N_OUTPUTS);
@@ -249,8 +250,7 @@ void checkVectorKernel(const TensorGridView unitTG, const SGGenInstr& genInstr,
       },
       N_OUTPUTS);
   std::vector<double> out(N_OUTPUTS, std::numeric_limits<double>::quiet_NaN());
-  tools::lin_interpolation::processTensorGrid(indicators, normPoint, unitTG, genInstr, scratch,
-                                              out);
+  tools::lin_interpolation::processTensorGrid(indicators, normPoint, unitTG, setup, scratch, out);
 
   BOOST_REQUIRE_EQUAL(points.size(), nCorners);
   for (size_t c = 0; c < nCorners; c++) {
@@ -262,18 +262,18 @@ void checkVectorKernel(const TensorGridView unitTG, const SGGenInstr& genInstr,
 /// Checks every tensor grid of @p sg at @p point, and the operator against the combination of
 /// the kernel values (any order of the combination).
 void checkGrid(const SparseGrid& sg, const DataVector& point) {
-  const SGGenInstr& genInstr = sg.getGenInstr();
-  const DataVector normPoint = tools::normalizeDataVector(point, genInstr.getDomain());
+  const SparseGridSetup& setup = sg.getSetup();
+  const DataVector normPoint = tools::normalizeDataVector(point, setup.getDomain());
   double expected = 0.0, absSum = 0.0, tgBounds = 0.0;
 
   // The kernel works on the nodes on the unit interval
   for (const auto& tgData : sg.unitTensorGrids()) {
     const TensorGridView unitTG = tgData.tensorGrid;
     const std::vector<RefCorner> ref =
-        referenceCorners(unitTG.toTensorGrid(), normPoint, genInstr.getDomain());
+        referenceCorners(unitTG.toTensorGrid(), normPoint, setup.getDomain());
     BOOST_TEST_CONTEXT("mi " << tgData.mi.size() << "-dim, coefficient " << tgData.coefficient) {
-      const auto [tgValue, tgBound] = checkScalarKernel(unitTG, genInstr, normPoint, ref);
-      checkVectorKernel(unitTG, genInstr, normPoint, ref);
+      const auto [tgValue, tgBound] = checkScalarKernel(unitTG, setup, normPoint, ref);
+      checkVectorKernel(unitTG, setup, normPoint, ref);
       expected += tgData.coefficient * tgValue;
       absSum += std::abs(tgData.coefficient * tgValue);
       tgBounds += std::abs(tgData.coefficient) * tgBound;

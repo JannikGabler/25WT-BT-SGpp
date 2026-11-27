@@ -16,11 +16,11 @@
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -36,15 +36,15 @@ namespace {
  * number, with the boundary nodes iff the level is at least the boundary level offset).
  */
 std::vector<base::DataVector> quadratureWeights1D(const TensorGridView& tg,
-                                                  const SGGenInstr& genInstr) {
+                                                  const SparseGridSetup& setup) {
   std::vector<base::DataVector> weights;
   const LvlMIView levels = tg.getLevels();
 
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
     const GPCntType nNodes = tg.nGPInDim(dim);
-    const bool includeBoundary = levels[dim] >= genInstr.getBoundaryLevelOffset();
+    const bool includeBoundary = levels[dim] >= setup.getBoundaryLevelOffset();
     const QuadRule* const rule =
-        genInstr.getNodeGenFuncForDim(dim)->getQuadRule(nNodes, includeBoundary);
+        setup.getNodeGenFuncForDim(dim)->getQuadRule(nNodes, includeBoundary);
     weights.push_back(rule->genWeights(nNodes));
   }
 
@@ -72,8 +72,8 @@ double tensorProductWeight(const std::vector<base::DataVector>& weights1D, size_
  * sum over the grid points of (product of the 1D weights) * f(grid point).
  */
 base::DataVector integrateTensorGrid(const VectorSourceFunc& sourceFunc, const TensorGridView& tg,
-                                     const SGGenInstr& genInstr) {
-  const std::vector<base::DataVector> weights1D = quadratureWeights1D(tg, genInstr);
+                                     const SparseGridSetup& setup) {
+  const std::vector<base::DataVector> weights1D = quadratureWeights1D(tg, setup);
 
   base::DataVector tgResult(sourceFunc.nOutputs());
 
@@ -102,12 +102,12 @@ base::DataVector integrateTensorGrid(const VectorSourceFunc& sourceFunc, const T
  */
 base::DataVector combineTensorGrids(const VectorSourceFunc& sourceFunc,
                                     const SparseGrid& sparseGrid) {
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
+  const SparseGridSetup& setup = sparseGrid.getSetup();
 
   base::DataVector result(sourceFunc.nOutputs());
 
   for (const TensorGridCTDataView tgData : sparseGrid.domainTensorGrids()) {
-    const base::DataVector tgResult = integrateTensorGrid(sourceFunc, tgData.tensorGrid, genInstr);
+    const base::DataVector tgResult = integrateTensorGrid(sourceFunc, tgData.tensorGrid, setup);
 
     for (size_t k = 0; k < result.size(); k++) {
       result[k] += static_cast<double>(tgData.coefficient) * tgResult[k];
@@ -116,7 +116,7 @@ base::DataVector combineTensorGrids(const VectorSourceFunc& sourceFunc,
 
   // The 1D weights sum to 1 (unit interval): the integral over the domain scales with its volume
   for (double& value : result) {
-    value *= genInstr.getVolumeOfDomain();
+    value *= setup.getVolumeOfDomain();
   }
 
   return result;

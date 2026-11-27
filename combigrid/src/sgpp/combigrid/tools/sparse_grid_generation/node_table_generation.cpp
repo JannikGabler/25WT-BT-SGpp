@@ -10,7 +10,7 @@
 #include <sgpp/combigrid/constants.hpp>
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
@@ -66,16 +66,16 @@ std::vector<std::pair<size_t, LvlType>> layOutRows(const std::vector<size_t>& sa
   return rows;
 }
 
-/// Writes the unit nodes of (dimension @p dim, level @p lvl) to @p out.
-void genRow(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl, const bool deltaNodes,
-            base::DataVector& out) {
-  const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
-  const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
-  const GPCntType nNodes = compNodeCnt(genInstr, dim, lvl, deltaNodes);
+/// Writes the unit nodes (delta or regular) of (dimension @p dim, level @p lvl) to @p out.
+void genRow(const SparseGridSetup& setup, const size_t dim, const LvlType lvl,
+            const bool deltaNodes, base::DataVector& out) {
+  const NodeGenFunc* const nodeGenFunc = setup.getNodeGenFuncForDim(dim);
+  const LvlType boundaryLvlOffset = setup.getBoundaryLevelOffset();
+  const GPCntType nNodes = compNodeCnt(setup, dim, lvl, deltaNodes);
   out.resize(nNodes);
 
   if (deltaNodes) {
-    nodeGenFunc->genDeltaNodes(lvl, genInstr.getLvl2GPCntFuncForDim(dim), std::span<double>(out),
+    nodeGenFunc->genDeltaNodes(lvl, setup.getLvl2GPCntFuncForDim(dim), std::span<double>(out),
                                lvl == boundaryLvlOffset);
   } else {
     nodeGenFunc->genNodes(nNodes, out, lvl >= boundaryLvlOffset);
@@ -89,24 +89,24 @@ void genRow(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl, con
  * scheduled dynamically). Every row is allocated by the thread that generates it: a single buffer
  * of all nodes would be zero-filled serially (2D, level 20, 16 threads: 81 ms instead of 22 ms).
  */
-NodeTable genUnitNodeTable(const SGGenInstr& genInstr, const LvlMIVec& levels,
+NodeTable genUnitNodeTable(const SparseGridSetup& setup, const LvlMIVec& levels,
                            const bool deltaNodes) {
-  assert(levels.nDim() == genInstr.nDim());
+  assert(levels.nDim() == setup.nDim());
 
   std::vector<LvlType> maxLvls = compMaxLvls(levels);
   std::vector<size_t> firstRowOfDim;
   const std::vector<std::pair<size_t, LvlType>> rows =
-      layOutRows(findDimsWithSameNodes(genInstr, false), maxLvls, firstRowOfDim);
+      layOutRows(findDimsWithSameNodes(setup, false), maxLvls, firstRowOfDim);
 
   size_t nNodes = 0;
-  for (const auto& [dim, lvl] : rows) nNodes += compNodeCnt(genInstr, dim, lvl, deltaNodes);
+  for (const auto& [dim, lvl] : rows) nNodes += compNodeCnt(setup, dim, lvl, deltaNodes);
   const bool parallel = nNodes >= constants::sparse_grid_storage::MIN_NODES_FOR_CONCURRENCY;
 
   NodeTable table(std::move(firstRowOfDim), std::move(maxLvls), rows.size());
 
 #pragma omp parallel for schedule(dynamic) if (parallel)
   for (size_t r = 0; r < rows.size(); r++) {
-    genRow(genInstr, rows[r].first, rows[r].second, deltaNodes, table.rowNodes(r));
+    genRow(setup, rows[r].first, rows[r].second, deltaNodes, table.rowNodes(r));
   }
 
   return table;
@@ -117,15 +117,15 @@ NodeTable genUnitNodeTable(const SGGenInstr& genInstr, const LvlMIVec& levels,
  * intervals share unit rows only), each one the mapped copy of the unit row of its (dimension,
  * level); in parallel as the generation of the unit table.
  */
-NodeTable mapOntoDomain(const SGGenInstr& genInstr, const NodeTable& unitNodeTable) {
+NodeTable mapOntoDomain(const SparseGridSetup& setup, const NodeTable& unitNodeTable) {
   const size_t nDim = unitNodeTable.nDim();
-  assert(genInstr.nDim() == nDim);
+  assert(setup.nDim() == nDim);
 
   std::vector<LvlType> maxLvls(nDim);
   for (size_t dim = 0; dim < nDim; dim++) maxLvls[dim] = unitNodeTable.maxLvl(dim);
   std::vector<size_t> firstRowOfDim;
   const std::vector<std::pair<size_t, LvlType>> rows =
-      layOutRows(findDimsWithSameNodes(genInstr, true), maxLvls, firstRowOfDim);
+      layOutRows(findDimsWithSameNodes(setup, true), maxLvls, firstRowOfDim);
 
   size_t nNodes = 0;
   for (const auto& [dim, lvl] : rows) nNodes += unitNodeTable.nNodes(dim, lvl);
@@ -136,29 +136,46 @@ NodeTable mapOntoDomain(const SGGenInstr& genInstr, const NodeTable& unitNodeTab
 #pragma omp parallel for schedule(dynamic) if (parallel)
   for (size_t r = 0; r < rows.size(); r++) {
     const auto [dim, lvl] = rows[r];
-    const std::span<const double> unitNodes = unitNodeTable.nodeSpan(dim, lvl);
-    const std::pair<double, double> interval = genInstr.getDomainForDim(dim);
-    const double width = interval.second - interval.first;
-    base::DataVector& out = table.rowNodes(r);
-    out.resize(unitNodes.size());
-    for (size_t i = 0; i < unitNodes.size(); i++) {
-      out[i] = mapToDomain(unitNodes[i], interval.first, width);
-    }
+    genDomainRow(setup, dim, unitNodeTable.nodeSpan(dim, lvl), table.rowNodes(r));
   }
 
   return table;
 }
 
-std::vector<size_t> findDimsWithSameNodes(const SGGenInstr& genInstr, const bool sameDomain) {
-  const size_t nDim = genInstr.nDim();
+NodeTable genEmptyNodeTable(const SparseGridSetup& setup, std::vector<LvlType> maxLvls,
+                            const bool sameDomain) {
+  assert(maxLvls.size() == setup.nDim());
+  std::vector<size_t> firstRowOfDim;
+  const size_t nRows =
+      layOutRows(findDimsWithSameNodes(setup, sameDomain), maxLvls, firstRowOfDim).size();
+  return NodeTable(std::move(firstRowOfDim), std::move(maxLvls), nRows);
+}
+
+void genUnitRow(const SparseGridSetup& setup, const size_t dim, const LvlType lvl,
+                base::DataVector& out) {
+  genRow(setup, dim, lvl, false, out);
+}
+
+void genDomainRow(const SparseGridSetup& setup, const size_t dim,
+                  const std::span<const double> unitNodes, base::DataVector& out) {
+  const std::pair<double, double> interval = setup.getDomainForDim(dim);
+  const double width = interval.second - interval.first;
+  out.resize(unitNodes.size());
+  for (size_t i = 0; i < unitNodes.size(); i++) {
+    out[i] = mapToDomain(unitNodes[i], interval.first, width);
+  }
+}
+
+std::vector<size_t> findDimsWithSameNodes(const SparseGridSetup& setup, const bool sameDomain) {
+  const size_t nDim = setup.nDim();
   std::vector<size_t> result(nDim);
 
   for (size_t dim = 0; dim < nDim; dim++) {
     result[dim] = dim;
     for (size_t other = 0; other < dim; other++) {
-      if (genInstr.getNodeGenFuncForDim(other) == genInstr.getNodeGenFuncForDim(dim) &&
-          genInstr.getLvl2GPCntFuncForDim(other) == genInstr.getLvl2GPCntFuncForDim(dim) &&
-          (!sameDomain || genInstr.getDomainForDim(other) == genInstr.getDomainForDim(dim))) {
+      if (setup.getNodeGenFuncForDim(other) == setup.getNodeGenFuncForDim(dim) &&
+          setup.getLvl2GPCntFuncForDim(other) == setup.getLvl2GPCntFuncForDim(dim) &&
+          (!sameDomain || setup.getDomainForDim(other) == setup.getDomainForDim(dim))) {
         result[dim] = other;
         break;
       }
@@ -168,10 +185,10 @@ std::vector<size_t> findDimsWithSameNodes(const SGGenInstr& genInstr, const bool
   return result;
 }
 
-GPCntType compNodeCnt(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl,
+GPCntType compNodeCnt(const SparseGridSetup& setup, const size_t dim, const LvlType lvl,
                       const bool deltaNodes) {
-  const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
-  const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
+  const Lvl2GPCntFunc lvl2GPCntFunc = setup.getLvl2GPCntFuncForDim(dim);
+  const LvlType boundaryLvlOffset = setup.getBoundaryLevelOffset();
 
   if (deltaNodes) {
     return getDeltaNodeCnt(lvl, lvl2GPCntFunc, lvl == boundaryLvlOffset);

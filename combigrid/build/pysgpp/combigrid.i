@@ -19,8 +19,10 @@
 //    generation instructions".
 
 // According to the SWIG documentation, shared pointers have to be declared before the classes
-// themselves. The SGGenInstr hierarchy is wrapped as shared_ptr proxies, so that clone (see
-// "Sparse grid generation instructions") returns an owning proxy of the polymorphic copy.
+// themselves. The SGGenInstr hierarchy (with its base SparseGridSetup) is wrapped as shared_ptr
+// proxies, so that clone (see "Sparse grid generation instructions") returns an owning proxy of
+// the polymorphic copy.
+%shared_ptr(sgpp::combigrid::SparseGridSetup)
 %shared_ptr(sgpp::combigrid::SGGenInstr)
 %shared_ptr(sgpp::combigrid::CompleteSGGenInstr)
 %shared_ptr(sgpp::combigrid::MIVecSGGenInstr)
@@ -80,9 +82,9 @@ namespace std {
 }
 
 // MIVecSGGenInstr stores a *reference* to the LvlMIVec passed to its constructor, and clone()
-// copies that reference (e.g. into every SparseGrid built from it). The Python LvlMIVec is therefore
-// kept alive by the instruction (_miVec), by its clones (_owner, see clone below) and, transitively,
-// by sparse grids built from it (_genInstr, see SparseGrid below).
+// copies that reference. The Python LvlMIVec is therefore kept alive by the instruction (_miVec)
+// and by its clones (_owner, see clone below). Grids copy only the setup of an instruction
+// (SparseGridSetup) and need neither the instruction nor its LvlMIVec after construction.
 %pythonappend sgpp::combigrid::MIVecSGGenInstr::MIVecSGGenInstr %{
   self._miVec = miVec
 %}
@@ -101,6 +103,7 @@ namespace std {
   std::shared_ptr<sgpp::combigrid::SGGenInstr> cloneShared() const { return $self->clone(); }
 }
 
+%include "combigrid/src/sgpp/combigrid/grids/sparse_grid_setup.hpp"
 %include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp"
 %include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp"
 %include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp"
@@ -189,21 +192,14 @@ namespace std {
 //    grid's domain / unit node table (NodeTable, not wrapped); nNodes(dim, lvl), maxLvl(dim): its
 //    size and the levels (the same for both tables).
 //  - operator== compares grids of the same class only.
-// Keep-alive references: getLevels and getGenInstr return a reference into the grid (_owner). The grid holds a clone of the generation instruction; the clone of an
-// MIVecSGGenInstr references the caller's LvlMIVec, so the instruction's Python proxy (which keeps
-// that vector alive) is kept alive by the grid (_genInstr). Note: SWIG drops the const of the
-// reference getGenInstr returns, so setters called on the returned object modify the instruction
-// the grid's operators use.
+//  - getSetup: a copy of the grid's setup (SparseGridSetup; the C++ getter returns a const
+//    reference, whose Python proxy would let setters change the grid's setup behind its node
+//    tables).
+// Keep-alive references: getLevels returns a reference into the grid (_owner).
 // (No '#' comments inside the %pythoncode of the macro: '#' is the stringification operator of
 // SWIG macros.)
 %define COMBIGRID_SPARSE_GRID_BASE_METHODS(Class)
-%pythonappend sgpp::combigrid::Class::Class %{
-  self._genInstr = genInstruction
-%}
 %pythonappend sgpp::combigrid::Class::getLevels %{
-  val._owner = self
-%}
-%pythonappend sgpp::combigrid::Class::getGenInstr %{
   val._owner = self
 %}
 %newobject sgpp::combigrid::Class::getDomainTensorGrid(const sgpp::combigrid::LvlMI&) const;
@@ -272,6 +268,10 @@ namespace std {
 
   sgpp::combigrid::LvlType maxLvl(size_t dim) const {
     return $self->getDomainNodeTable().maxLvl(dim);
+  }
+
+  std::shared_ptr<sgpp::combigrid::SparseGridSetup> getSetup() const {
+    return std::make_shared<sgpp::combigrid::SparseGridSetup>($self->getSetup());
   }
 
   size_t getMaxTGGPCnt() const { return $self->getMaxTGGPCnt(); }

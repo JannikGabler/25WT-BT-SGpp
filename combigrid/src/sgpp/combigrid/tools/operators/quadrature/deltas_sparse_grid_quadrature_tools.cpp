@@ -11,11 +11,11 @@
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_quadrature_index.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/cross_call/cross_call_operator_data_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
@@ -93,8 +93,8 @@ FlatNestedVec<double, 2> estimateDeltaTensorGrids(const GenericDSGOperatorContex
 // TODO: Functionaly decompose this function if feasible regarding runtime (?)
 FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid) {
   const size_t nDim = deltasSparseGrid.nDim();
-  const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
-  const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
+  const SparseGridSetup& setup = deltasSparseGrid.getSetup();
+  const LvlType boundaryLvlOffset = setup.getBoundaryLevelOffset();
   const std::vector<NodeIdxLvlMapFunc> nodeIdxLvlMapFuncs =
       compNodeIdxLvlMapFuncs(deltasSparseGrid);
 
@@ -106,8 +106,8 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
   base::DataVector sortedWeights;  // Weights of one level, sorted by node position
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
-    const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
+    const NodeGenFunc* const nodeGenFunc = setup.getNodeGenFuncForDim(dim);
+    const Lvl2GPCntFunc lvl2GPCntFunc = setup.getLvl2GPCntFuncForDim(dim);
 
     weights.appendSubVec(1);  // weights[dim]
 

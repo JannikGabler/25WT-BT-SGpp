@@ -47,6 +47,10 @@ once per call (thread-count independent); the `SparseGrid` operators implement t
 [operators/textbook/](combigrid/src/sgpp/combigrid/operators/textbook/)) are naive, serial
 per-tensor-grid reference versions for reading and as test oracles (same results within
 round-off, same evaluation points); not for production.
+**Dimension-adaptive refinement** (`DimensionAdaptiveRefinement` / `refine`,
+[refinement/](combigrid/src/sgpp/combigrid/refinement/)): grows a `SparseGrid` in place
+(Gerstner–Griebel, guided by a `RefinementTarget`: quadrature, global / linear interpolation at
+points, or any per-tensor-grid operator); afterwards the grid is an ordinary grid. Not in Python yet.
 User functions are wrapped in `SourceFunc` (f: Ω → ℝ^m: `VectorSourceFunc`); weights, basis values
 and interpolation cells live on [0,1]^d (`getUnitNodeTable()`), the source function is evaluated at
 the domain nodes (`getDomainNodeTable()`, mapped with `tools::mapToDomain`, bitwise the points of
@@ -174,7 +178,8 @@ covered by tests.
 ## 6. Gotchas
 
 - `MIVecSGGenInstr` stores a **reference** to its `LvlMIVec`: keep the vector alive as long as the
-  instruction and any derived `SparseGrid` (`clone()` copies the reference). Python keeps it alive.
+  instruction and its clones (`clone()` copies the reference). Grids copy only the instruction's
+  `SparseGridSetup` (`getSetup()`) and need neither afterwards. Python keeps it alive.
 - Node getters return raw `NodeGenFunc*` to static singletons — never delete or wrap them.
   `getClenshawCurtisNodeGenFunc()` and `getSecondTypeChebyshevNodeGenFunc()` are the **same**
   singleton.
@@ -206,8 +211,13 @@ covered by tests.
   [tools/defines/dependencies_defines.hpp](combigrid/src/sgpp/combigrid/tools/defines/dependencies_defines.hpp);
   public classes stay unconditional and throw without them, public headers include no library
   header (details, fallback flags and the header check: build-and-ci.md).
-- Not implemented (details: module reference): dimension-adaptive refinement (caller builds the loop
-  on `MIVecSGGenInstr`), dimension-wise boundary offsets, Leja nodes.
+- Dimension-adaptive refinement changes the grid in place: during a call the grid must not be used
+  (its node rows are borrowed); afterwards its TGs are in colexicographic order (as
+  `MIVecSGGenInstr` gives the same index set), its cross-call operator data is dropped and views /
+  iterators into it are invalid. The refinement object keeps its state between calls; a grid change
+  behind its back (storage version) makes it re-evaluate the grid.
+- Not implemented (details: module reference): direct refinement of a `DeltasSparseGrid`,
+  dimension-wise boundary offsets, Leja nodes.
 
 ## 7. Python bindings (pysgpp)
 

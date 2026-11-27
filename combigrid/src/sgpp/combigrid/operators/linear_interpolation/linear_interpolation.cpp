@@ -35,8 +35,7 @@ double interpolateLinear(const SourceFunc& sourceFunc, const base::DataVector& p
   }
 
   // The cell is computed in normalized coordinates, with the nodes on the unit interval
-  const base::DataVector normPoint =
-      normalizeDataVector(point, sparseGrid.getGenInstr().getDomain());
+  const base::DataVector normPoint = normalizeDataVector(point, sparseGrid.getSetup().getDomain());
 
   // One value per tensor grid, stored at its index
   const std::vector<double> tgValues = estimateTensorGrids(sourceFunc, normPoint, sparseGrid);
@@ -56,8 +55,7 @@ void interpolateLinear(const VectorSourceFunc& sourceFunc, const base::DataVecto
         "The size of the point doesn't match the dimensionality of the sparse grid.");
   }
 
-  const base::DataVector normPoint =
-      normalizeDataVector(point, sparseGrid.getGenInstr().getDomain());
+  const base::DataVector normPoint = normalizeDataVector(point, sparseGrid.getSetup().getDomain());
 
   // m values per tensor grid, stored at its index
   const FlatNestedVec<double, 2> tgValues = estimateTensorGrids(sourceFunc, normPoint, sparseGrid);

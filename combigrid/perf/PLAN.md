@@ -209,6 +209,7 @@ lower ranks are low / unsized (see their entries).
 | – | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG results in a TG-indexed buffer, compensated combination in TG order: `tools::numerics::CompensatedSum` / `compensatedDotProduct(s)`) (from WP-56; owner 2026-11-15: low; compensated sum owner 11-23; incl. the owner's rework 11-24) | accepted (2026-11-24; 1b8e1495f) | measured: judged 0.998x (rework 1.000x), `expensive/` 0.998x, memory 0.999 (0 flags); SG quad / mivec bitwise 1 = 2 = 3 = 16 t; combination round-off ≈ 1 ulp (b1 d15 L6 16 t error 3.5–5.0e-9 → 2.0e-10); 116 / 432 pinned 1 t values changed ≤ 15 ulp |
 | – | WP-48 | Operator drivers: ordered compensated CT combination (TG-indexed per-TG values + `tools::numerics` compensated sums, as WP-61) in DSG quadrature, SG `interpolate`, SG `interpolateLinear` (scalar + vector) + small-call gate (from WP-08 / WP-61; extension agreed by the owner 2026-11-24) | accepted (2026-11-24; functional; 4523e028b) | measured: all operators bitwise 1 = 2 = 3 = 16 t (0 of 146 reference cases vary, before 53); judged 36.347 → 36.343 s (1.000x; interplin/sg d2 L16 1.117x), `expensive/` 1.000x, memory 1.003 (0 flags); gate refuted (static schedule L2 locality), thread-local TG buffer dropped |
 | – | WP-77 | TG-loop load balance: largest-first TG order (cost ∝ TG points) in SG quadrature / mivec, DSG quadrature (delta TGs), SG global interpolation + SG `interplin` TG loop static → chunked dynamic; optional second variant: split TGs above the balanced share (owner 2026-11-18) (from WP-76 / RP-6; absorbs WP-59 and WP-51's order part) | accepted (2026-11-25; c997a57e1; split variant dropped by the owner; SG interplin dynamic: owner in-session) | measured: suite 36.326 → 35.935 s (1.011x), `expensive/` 17.751 → 15.894 s (1.117x; mivec/sg d15 c100us 1.38x, mivec/dsg 1.60x), interp/sg cc d2 L12 1.49x; bitwise unchanged 1/2/3/16 t; memory geomean 1.005 (3 MEM+ / 2 MEM−); cached SG quad c100us 0.927 (→ WP-87); generation DSG d20 L6 +2.9 ms |
+| – | WP-89 | Dimension-adaptive CT: architecture with the owner (decisions D-A … D-J, `results/WP-89/architecture.md`), then implementation: `DimensionAdaptiveRefinement` grows a `SparseGrid` in place (GG, any per-TG `RefinementTarget`), `SparseGridSetup` replaces the grid's instruction (`getSetup()`); settles D1–D9, does WP-64 / 65 / 66 / 67 / 72 (owner 2026-11-26) | accepted (2026-11-27; feature; commit pending; default schedule → next restructuring WP, owner) | measured: judged 35.915 → 35.918 s (1.000x), `expensive/` 1.000x, cached 0.998x, memory 1.005 (0 flags; floor 10.3 → 10.5 MiB); refcheck = known WARN; 137 / 146 bitwise, 9 CC quadratures ±1–2 ulp (Eigen kiss FFT under LTO); sync 16 t vs. 1 t: d10 / d50 c1us 7.2x / 7.0x, d3 / d5 c100us 1.8x / 2.3x; async up to 6.6x faster but much worse grids; bookkeeping d10 21 ns, d100 317 ns per point |
 | 1 | WP-74 | DSG linear interpolation: fused last transform (−1 of d + 1 barriers) + vectorized fiber transform (d ≥ 8) + evaluation chunks by reached slots / 1–4 leaves (from WP-49 / RP-6) | ready (low) | RP-6: ≈ 0.05–0.08 s on the suite (barrier ≈ 14 ms, transform ≈ 30 ms, chunks ≈ 0.03 s); `expensive/interplin/dsg` d5 0.345 → ≈ 0.19 s |
 | 2 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | RP-6: 0.1–0.15 s (builder 0.241 s: d20 0.143, d15 0.098 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 3 | WP-51 | DSG row loop at low d: split the rows of large delta TGs across threads (order part → WP-77) (from WP-45) | ready (low; measure first) | RP-6: ≤ 0.04 s (dsg d3 libgomp 23 %, interp/dsg cc d2 39 %); WP-77 accepted → re-measure first |
@@ -220,7 +221,7 @@ lower ranks are low / unsized (see their entries).
 | 9 | WP-33 | Base's global `operator new` replacement: drop / restrict / keep (from WP-23; base module) | needs decision (after WP-32's summary) | WP-23 variant: memory geomean 0.952 (16 `MEM−`, dsg b1 d15/d20 −24 / −23 MiB), generation 1.1–1.4x (ms); runtime after WP-32 to be measured |
 | 10 | WP-31 | MI-set: `isMIVecDownwardsClosed` in O(n·d) (from WP-03; dead helpers → code-hygiene backlog) | ready | e2e nil (not on pipeline paths); `isDownwardsClosed()` at d20 ≈ 2^d/d fewer lookups |
 | 11 | WP-85 | Exceptions inside the operators' OpenMP regions: generic capture-and-rethrow around the TG / point loops of all operators (user `evaluate` throws, `bad_alloc`, user node families) (from WP-83; owner 2026-11-22: plan it) | ready (low; WP-77 accepted) | runtime ≈ 0 (cost to measure); `std::terminate` → catchable exception |
-| – | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D` / `linear_func_unit_cube_1D`, timing-dependent `source_function_cache_adaptive/concurrent_operator_calls_on_one_function`, FMA-dependent `shared_cache_and_concurrent_operator_calls`, Eigen / Armadillo-dependent `grid_storage_pinning` + audit (test-only; from WP-29a, owner's PGO build, WP-61 rework; owner 2026-11-24: moved up) | accepted (2026-11-26; commit pending; incl. the owner's follow-up rounds: no-FFT CC fallback, pinning without stored bit patterns) | measured: 0 of 10 000 seeds fail (before 1.0 %), 50/50 normal suites; no-FFT CC weights 1.4e4 → ≤ 2.61 eps / m; `grid_storage_pinning` golden values with tolerance 1e-12 (1 + |g|) in every build (Eigen / Armadillo / no FFT / portable); e2e 1.000x (LTO placement only), memory 1.005 (0 flags); refcheck = known WARN |
+| – | WP-35 | Fragile tests: time-seeded `equidistant_nodes/sin_func_random_cube_3D` / `linear_func_unit_cube_1D`, timing-dependent `source_function_cache_adaptive/concurrent_operator_calls_on_one_function`, FMA-dependent `shared_cache_and_concurrent_operator_calls`, Eigen / Armadillo-dependent `grid_storage_pinning` + audit (test-only; from WP-29a, owner's PGO build, WP-61 rework; owner 2026-11-24: moved up) | accepted (2026-11-26; 765738082; incl. the owner's follow-up rounds: no-FFT CC fallback, pinning without stored bit patterns) | measured: 0 of 10 000 seeds fail (before 1.0 %), 50/50 normal suites; no-FFT CC weights 1.4e4 → ≤ 2.61 eps / m; `grid_storage_pinning` golden values with tolerance 1e-12 (1 + |g|) in every build (Eigen / Armadillo / no FFT / portable); e2e 1.000x (LTO placement only), memory 1.005 (0 flags); refcheck = known WARN |
 | 12 | WP-54 | TODO inventory of combigrid (all `TODO` / `FIXME` comments, categorized; measurement, no code change) (owner 2026-11-15) | ready (low; before WP-55) | e2e nil; input for WP-55 and the clean-up plan |
 | 13 | WP-55 | Code-hygiene exploration: verify the code-hygiene backlog, find unrecorded problems, propose clean-up WPs (owner 2026-11-15; measurement, no code change) | ready (low; after WP-54) | e2e nil; the master then plans the clean-up WPs |
 | – | WP-38 | Code hygiene: copyright-banner check + combigrid leftovers (from WP-29d) | dropped (owner 2026-11-15): merged into the code-hygiene backlog (→ WP-55 + clean-up WPs) | – |
@@ -235,6 +236,7 @@ lower ranks are low / unsized (see their entries).
 | 22 | WP-07 | Generic barycentric formula: cache the weights | ready (demoted by RP-4: ≈ 0 judged) | RP-4: ≈ 0.003 s judged (cheb1 d5 generic weights 1.1 % of 117 ms; dsg equi d3 ≈ 13 % of 6.5 ms); value only for generic-family users at higher levels; may merge into WP-09 |
 | 23 | WP-86 | SG interpolations: per-call overhead of tiny grids — run nTG = 1 calls on the calling thread (interplin), thread-local per-thread scratch (`GlobalInterpScratch` / `LinInterpScratch`) (from WP-48) | planned (low; tiny grids untracked) | judged 0; interplin/sg d1 L10 4.7 → ≈ 0.4 µs per call (WP-48 gate measurement); scratch reuse unsized (WP-48: a few-KiB malloc is negligible) |
 | – | WP-87 | Caching: wait on in-flight keys in `SourceFuncCache` (a second thread missing a key that is being evaluated waits instead of evaluating it again) (from WP-77) | planned (optional, later; owner 2026-11-25: not important, decides later) | WP-77: cached SG quad d10 L4 c100us 0.927 / interp cached 0.976 after the largest-first order (97.1–98.0 k instead of 90.56 k evaluations, ≈ 7 k duplicate 100 µs evaluations per call); waiting would turn the +7 % into a gain; caching callers only |
+| 24 | WP-88 | Test suite review: (1) faster tests at equal / similar coverage, (2) test-code hygiene (owner 2026-11-26) | planned (late; owner 2026-11-26) | e2e nil; shorter `perf.py test --repeat 3` (debug + normal) in every later session; times to be measured by the WP |
 | last | WP-43 | Final clean-up: phase references out of code documentation + phase leftovers | ready (always the last WP of the phase; owner 2026-11-03) | e2e nil (comments / dead code only); code docs readable without the phase's files |
 | – | D-1 | Multi-point interpolation API (evaluate once, interpolate many) | decided 2026-10-24 → WP-09 | – |
 | – | D-2 | Compiler flag `-fno-semantic-interposition` (or hidden visibility) | done: WP-13 accepted 2026-10-26 | measured: e2e 1.023x |
@@ -400,6 +402,15 @@ rule 7): no known flaky test; tests pin golden values with tolerances, no stored
 Pitfalls); the no-FFT CC fallback is accurate (≤ 2.61 eps / m). Hygiene leftovers → backlog M. All
 ranks −1 (WP-35 done): WP-74 1, WP-21 2, WP-51 3 (re-measure first), WP-57 4. Next: WP-74 (prompt on hold,
 owner 2026-11-26: wait).
+Owner 2026-11-26: new **WP-88** (test suite review: speed at equal coverage, then test hygiene; absorbs
+backlog M) placed late → rank 24, before WP-43.
+Owner 2026-11-26: **dimension-adaptive refinement next** (needed for later decisions, e.g. the TG ordering
+in sparse grids) → new **WP-89** (architecture with the owner, then implementation; settles D1–D9 and
+re-splits WP-63 … 72) at rank 1; all ranked WPs +1 (WP-74 2, WP-21 3, WP-51 4, WP-88 25).
+After WP-89 (accepted 2026-11-27; feature, judged 1.000x, does not count for rule 7): all ranks −1 again
+(WP-74 1, WP-21 2, WP-51 3, WP-88 24). The owner announced a **restructuring WP of the adaptive code** as
+the next WP (it also fixes the default schedule; owner's description pending → number 90). Adaptive
+follow-ups (WP-89 section) stay unranked until the owner has placed them.
 
 ---
 
@@ -3223,6 +3234,72 @@ owner 2026-11-26: wait).
   only); offset 0 makes the coarsest grid 3^d points; 16 threads slower than 1 for cheap
   integrands in short regions (→ WP-48 / driver's work gate).
 
+## WP-89 — Dimension-adaptive CT: architecture with the owner, then implementation (owner 2026-11-26)
+- **Source**: owner 2026-11-26: tackle dimension-adaptive refinement next — important for later
+  decisions such as the **ordering of tensor grids in sparse grids** (TG index order of the ordered
+  compensated combination, WP-61 / WP-48; per-grid largest-first processing order, WP-77). One work
+  session that first settles the architecture together with the owner, then implements it.
+- **Procedure** (owner): (1) study WP-62's results (summary, `results/WP-62/plan.md`, `literature.md`,
+  `progress.md`, prototypes `proto/`); (2) **ask the owner for the initial architecture vision**; (3)
+  think and plan, collect open questions and discrepancies (vision vs. WP-62 plan vs. current code),
+  settle them with the owner; (4) propose the complete architecture → owner approves; (5) implement.
+  The session may check code / run prototypes at any time.
+- **Discrepancies known to the master** (code changed since WP-62's base 14c1e3d16): cheb1 has a
+  quadrature rule since WP-83 (Fejér-1; plan says none); `NodeGenFunc::getQuadRule(n, includeBoundary)`
+  (WP-83) and equi / CC rules below an offset ≥ 2 are open (WP-84); cross-call operator data cache
+  (WP-73 / 82); textbook operators (WP-79, test oracles); ordered compensated combination in all
+  operators, bitwise thread-count independent (WP-61 / 48; `tools::numerics`); per-grid TG processing
+  order (WP-77); WP-48's small-call work gate was refuted (plan §3.4 counts on it); CLAUDE.md §4 test
+  portability (owner 2026-11-26); no stored bit patterns in tests (WP-35).
+- **Settles**: D1–D9 (plan §5) and the WP split (plan §6 → WP-63 … 72; the session may re-split,
+  merge or drop them; the master maps them afterwards).
+- **Deliverables**: `results/WP-89/architecture.md` (approved architecture: decisions with the owner's
+  answers, API C++ / Python, data structures, changes to existing code, implementation milestones),
+  `results/WP-89/progress.md` (updated after every milestone; a new session can resume), code + tests +
+  example + feature benchmarks (new unprotected `perf_adaptive.cpp`), summary. Implementation scope per
+  session agreed with the owner at the end of the planning phase; unfinished milestones → follow-up WPs.
+- **Checks**: tests first; judged suite neutral where judged code is touched (refcheck + `ab e2e`, e.g.
+  A1's DSG generation helpers); bitwise claims via the snapshot `perf_reference` diff.
+- **Status**: **accepted** (2026-11-27; commit pending). Summary `summaries/WP-89-dimension-adaptive-ct.md`.
+- **Result**: architecture D-A … D-J approved; `DimensionAdaptiveRefinement` (in place, θ-batches, indicators
+  gain / cost / profit, tolerance / grid-point budget (never exceeded) / index-set limit / time / max level;
+  `refine()` / `step()` / `setOptions()`; state kept, restart on a foreign grid change via a storage
+  version); engine without barriers: `Synchronized` (bitwise thread-count independent; optional
+  `speculationWindow`) and `Asynchronous` (timing-dependent); exceptions captured and rethrown.
+  `SparseGridSetup` (base of `SGGenInstr`; grids store a copy; `getGenInstr()` → `getSetup()`).
+  Judged 1.000x (2 SLOWER within placement noise: `quad/sg/equi-exp/b1/d20/L5` 0.983,
+  `quad/sg/cc-uq/b0/d2/L20` 0.951 bimodal), memory 1.005 (0 flags), micro sum 1.001x
+  (`crosscall/quad_sg/build/equi/b1/d20/L4` 0.941: +0.35 µs per SG quadrature call, rules via the growth
+  function). Feature: sync 16 t vs. 1 t d10 / d50 c1us 7.2x / 7.0x, d100 cheap 2.3x, d3 / d5 c100us
+  1.8x / 2.3x (idle 86–89 %); async vs. sync 6.6x (d3) … 1.04x (d100) but d10 rel. error 2.0e-3 vs.
+  5.8e-9; window 32: identical grids, +30–46 % at low d for up to +88 % evaluations. Bookkeeping per
+  evaluated point d10 21 ns (prototype 10.5), d100 317 ns (prototype 47.5).
+- **Owner 2026-11-27**: default schedule `Synchronized`, window 0 "for now"; much has to be restructured /
+  changed → **next WP = restructuring of the adaptive code** (owner describes it; includes the default
+  schedule).
+- **Follow-ups** (unnumbered until the owner's restructuring WP is defined; may be absorbed by it):
+  1. Bookkeeping at high d (d100 ≈ 317 ns / point: colex sort with O(d) compares at the hand-over 8.5 %,
+     page faults of the growing state ≈ 10 %, index lookups ≈ 7 %, O(d) growth-function cost per
+     candidate 2 %, O(d) kernel setup per tiny TG) → sort keys / incremental order, reserved state,
+     incremental costs, sparse levels.
+  2. Parallel kernels inside one TG (owner's idea 2; low d idles 86–89 % with few large TGs).
+  3. Async decision rule (decides after almost every result; e.g. wait for a share of the candidates).
+  4. Evaluation ahead bounded by grid points instead of a TG count.
+  5. Direct `DeltasSparseGrid` refinement. 6. Nested-aware cost model.
+  7. Multi-point interpolation kernel for the interpolation targets (P points evaluate a TG P times) —
+     interacts with WP-09.
+  8. More indicators / norms, GG work safeguard.
+  9. **TG ordering** (input for the owner's ordering decision): a refined grid stores its TGs in colex
+     order (= `MIVecSGGenInstr` order of the same set), re-sorted once per call; processing order
+     recomputed per call. Wishes: storage order as a deterministic, cheap sort key of the index set; the
+     same order for complete and MIVec grids of the same set (today they differ); processing order
+     derived at construction / hand-over; a DSG's full-set order by the same key; a cheaper key also
+     helps item 1 (colex sort 8.5 % at d100).
+  Remaining WP-62 items: WP-68 (Python bindings; docs done), WP-69 (predicted / lazy indicators),
+  WP-70 (dimension buffering), WP-63 (generic nestedness + standard CC growth 1, 3, 5, 9; WP-62: 5–48x
+  lower error at d100). Dropped: WP-71 (operators on stored values) + the value store (owner: no
+  function values in the machinery).
+
 ## WP-63 … WP-72 — Dimension-adaptive CT: implementation (from WP-62; plan §6)
 Common to all: **needs decision** (D1–D9 open) and **not ranked** (owner places them). Feature WPs:
 tests first, an example, feature benchmarks in a new **unprotected** `perf_adaptive.cpp`; the
@@ -3268,7 +3345,11 @@ sort in `computeMetaValues`) → a refined grid built anew from `MIVecSGGenInstr
 in-place-growing grid would need an incremental merge into the size-class buckets (the floor total/4096
 shifts slowly with the total).
 
-**Status** (all): needs decision · unranked.
+**Status** (settled / re-split by WP-89, accepted 2026-11-27): WP-64, 65, 66, 67, 72 **done** (by WP-89;
+operator-generic driver, interpolation via indicator points, the refinement object = resume); WP-68 (Python),
+WP-69 (lazy), WP-70 (buffering), WP-63 (nestedness + std CC growth) **planned · unranked** (owner places
+them; may be absorbed by the restructuring WP); WP-71 + value store **dropped** (owner: no function values
+in the machinery). Follow-ups: WP-89 section.
 
 ## WP-73 — Cross-call operator data cache: user control + per-operator flags (owner 2026-11-17; feature / API)
 - **Source**: owner 2026-11-17 (question on cross-call weight tables). The owner's rule: data is stored
@@ -4023,6 +4104,45 @@ shifts slowly with the total).
 - **Interactions**: WP-78 (same insert path; size together), WP-85 (exceptions).
 - **Status**: planned (optional, later; owner decides).
 
+## WP-88 — Test suite review: speed at equal coverage, then test hygiene (owner 2026-11-26)
+- **Source**: owner 2026-11-26: late WP that looks at `combigrid/tests/`. Goal 1: speed up testing
+  by finding tests that reach the same / similar coverage with less computation. Goal 2: improve the
+  code quality of the tests (hygiene) where there is room.
+- **Location**: `combigrid/tests/` (one Boost.Test executable `test_combigrid_boost`); library code
+  unchanged.
+- **Goal 1 (speed)**: measure per test case the run time in the debug build (`perf.py build debug`,
+  the sessions' main test build) and the normal build (`--log_level=test_suite` / `--report_level=detailed`
+  or per-case `--run_test` timing), rank by time; for the expensive cases determine what they
+  cover (lines / branches, e.g. a gcov `--coverage` debug build, before / after) and propose cheaper
+  equivalents: smaller grids / levels / dimensions / sample counts that hit the same code paths and
+  edge cases, merging redundant cases, sharing setup (fixtures, grids built once), sizes adapted to
+  the build (e.g. large sizes only with an FFT backend, as WP-35's CC rule test). Coverage of the
+  library must not drop (report line / branch coverage before / after); checks keep their strength
+  (tolerances justified as in WP-35; no stored bit patterns).
+- **Goal 2 (hygiene)**: duplicated test bodies → shared helpers / data-driven cases, naming, missing
+  or weak assertions (cases without a Boost assertion, `BOOST_ERROR`-only reporting), dead / disabled
+  tests, compiler warnings in test TUs, CLAUDE.md §4 / §5 conventions (banner, includes, one type per
+  file, methods > 30 lines where sensible for tests), **portability** (CLAUDE.md §4, owner
+  2026-11-26: no machine / architecture / compiler / build-option dependence except tests of
+  library- / flag-dependent functionality, with every branch of such a case distinction covered).
+  Includes backlog **M** (WP-35: `quadrature_test.cpp` equi / cc suites duplicate 11 cases per node
+  family; 3 `-Wsign-conversion` hints in `cached_source_function_test.cpp`).
+- **Evidence**: every work session runs `perf.py test --repeat 3` (debug), several also normal /
+  ASan / repeated runs (WP-35: 50 normal suites, seed sweeps); WP-35: the CC rule tests took ≈ 59 s
+  without an FFT backend (O(n²) fallback) → 1.7 s by restricting large sizes to FFT builds. Full
+  suite times not recorded yet → measured by the WP.
+- **Expected gain**: e2e nil; shorter test runs in every later session and in CI (linux-full).
+- **Risk**: coverage loss hidden by smaller cases (→ coverage report before / after, keep edge cases
+  d = 1, offsets 0 / 1, non-unit domains, empty / size-1 grids); weaker tolerances. Low otherwise
+  (tests only).
+- **Deliverables**: `results/WP-88/test-times.md` (per case, debug + normal, before / after),
+  coverage before / after, summary with the changes per file; if the hygiene part is large, the
+  session proposes a split (speed first, hygiene as a follow-up WP).
+- **Interactions**: WP-55 (code-hygiene exploration) — test items found there go to WP-88; WP-54
+  (TODOs in tests). Late, so that the tests added by the remaining WPs are included.
+- **Functional change**: none (tests only). **Dependencies**: none (late by owner's placement).
+  **Status**: planned (late; owner 2026-11-26).
+
 ## Code-hygiene backlog (owner 2026-11-15; input of WP-55, then clean-up WPs)
 Every reported, not yet completed hygiene / clean-up finding goes here (the master appends new ones
 from summaries; WP-55 verifies them; no piecemeal fixes before the clean-up WPs). Source in brackets.
@@ -4084,7 +4204,7 @@ from summaries; WP-55 verifies them; no piecemeal fixes before the clean-up WPs)
 - **H. From WP-56**: pinning part **done by WP-35** (no stored bit patterns; no-FFT CC fallback
   rewritten); remaining: naive CC weight path TODOs documented by WP-56 (→ WP-54 inventory; verify
   they survived WP-35's rewrite).
-- **M. From WP-35**: `quadrature_test.cpp` equi / cc suites still duplicate the other 11 cases per
+- **M. From WP-35** (→ WP-88, owner 2026-11-26): `quadrature_test.cpp` equi / cc suites still duplicate the other 11 cases per
   node family (could be parameterized like the 6 moved into shared helpers); 3 pre-existing
   `-Wsign-conversion` hints in `cached_source_function_test.cpp` (≈ lines 261, 539, 564).
 - **I. From WP-73**: stale `results/WP-50/python_checks.py` / `results/WP-29d/python_checks.py`
@@ -4123,6 +4243,10 @@ remarks; the numerics phase verifies, measures and plans them. Source in bracket
   (high d, many delta TGs; high-degree equi / Lebesgue cases, cf. WP-45's thread-count-dependent v1)
   and the cost; adopt the compensated sums only if accuracy gains at negligible cost (bits change
   once → functional, owner decides). Independent of WP-77 (does not touch the DSG interpolations).
+- **B. CC weights' last bits depend on unrelated code** (WP-89, `results/WP-89/bits/README.md`): Eigen's
+  header-only kiss FFT is compiled differently under LTO (inlining / FMA contraction) when unrelated code
+  changes → 9 CC quadratures (SG + DSG) moved 1–2 ulp with identical CC rule instructions. Reproducibility
+  across builds; relates to the `-ffp-contract=off` decision below ("not now").
 - Related, recorded elsewhere: CC weights with `-ffp-contract=off` (STATUS open decisions, "not now"
   11-15); the refcheck WARN case `interp/sg/equi/b0/d2/L5/cos-shifted` (Lebesgue ≈ 1e16; FMA placement
   in `BarycentricFormula::evaluateFormula`); textbook Lagrange product range (LESSONS.md, WP-79).

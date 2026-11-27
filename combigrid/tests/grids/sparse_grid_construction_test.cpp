@@ -7,8 +7,8 @@
  * @file sparse_grid_construction_test.cpp
  * @brief Boost.Test cases verifying the construction of @c SparseGrid objects from
  * @c CompleteSGGenInstr and @c MIVecSGGenInstr instructions (level multi-indices, combination
- * coefficients, node positions, boundary handling, cached meta values) and the generation
- * instruction stored in the grid.
+ * coefficients, node positions, boundary handling, cached meta values) and the setup of the
+ * generation instruction stored in the grid.
  *
  * The expected grids are assembled by hand in @c ExpectedSG, a list of owning
  * @c TensorGridCTData. Their multi-indices and coefficients are computed by closed formulas or
@@ -26,6 +26,7 @@
 #include <bit>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
@@ -320,7 +321,7 @@ void copySettings(const SGGenInstr& from, SGGenInstr& to) {
 }
 
 /// Checks that @p result has the same settings as @p expected.
-void checkSameSettings(const SGGenInstr& result, const SGGenInstr& expected) {
+void checkSameSettings(const SparseGridSetup& result, const SparseGridSetup& expected) {
   BOOST_CHECK_EQUAL(result.nDim(), expected.nDim());
   BOOST_CHECK_EQUAL(result.getBoundaryLevelOffset(), expected.getBoundaryLevelOffset());
   BOOST_CHECK(result.getDomain() == expected.getDomain());
@@ -563,7 +564,7 @@ BOOST_AUTO_TEST_CASE(Nodes_Mapped_Onto_Domain) {
       }
     }
   }
-  BOOST_CHECK(scaledSG.getGenInstr().getDomain() == domain);
+  BOOST_CHECK(scaledSG.getSetup().getDomain() == domain);
 }
 
 BOOST_AUTO_TEST_CASE(Coefficients_Sum_To_One) {
@@ -757,7 +758,7 @@ BOOST_AUTO_TEST_CASE(Consistent_With_Gen_Instr) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(Stores_Copy_Of_Complete_SG_Gen_Instr) {
+BOOST_AUTO_TEST_CASE(Stores_Setup_Of_Complete_SG_Gen_Instr) {
   const LvlType maxLvl = 2;
 
   CompleteSGGenInstr genInstr(maxLvl, 3);
@@ -770,48 +771,53 @@ BOOST_AUTO_TEST_CASE(Stores_Copy_Of_Complete_SG_Gen_Instr) {
 
   const CompleteSGGenInstr originalGenInstr = genInstr;
   const SparseGrid sg(genInstr);
-  const SGGenInstr& storedGenInstr = sg.getGenInstr();
+  const SparseGridSetup& storedSetup = sg.getSetup();
 
-  BOOST_CHECK(&storedGenInstr != &genInstr);
-  BOOST_CHECK(dynamic_cast<const CompleteSGGenInstr*>(&storedGenInstr) != nullptr);
-  checkSameSettings(storedGenInstr, originalGenInstr);
+  BOOST_CHECK(&storedSetup != &genInstr);
+  BOOST_CHECK(storedSetup == originalGenInstr);
+  checkSameSettings(storedSetup, originalGenInstr);
 
-  // Later changes of the original instruction affect neither the stored instruction nor the grid
+  // Later changes of the original instruction affect neither the stored setup nor the grid
   genInstr.setMaxLvl(4);
   genInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(0);
   genInstr.setDomain({-5.0, 5.0});
 
-  checkSameSettings(storedGenInstr, originalGenInstr);
-  checkSG(SparseGrid(storedGenInstr), SparseGrid(originalGenInstr));
+  checkSameSettings(storedSetup, originalGenInstr);
   checkSG(sg, genExpectedCompleteSG(originalGenInstr, maxLvl));
 }
 
-BOOST_AUTO_TEST_CASE(Stores_Copy_Of_MIVec_SG_Gen_Instr) {
-  const LvlMIVec mis{{3, 0}, {1, 2}};
+BOOST_AUTO_TEST_CASE(Stores_Setup_Of_MIVec_SG_Gen_Instr) {
+  // The grid keeps a copy of the setup only: neither the instruction nor the multi-index set it
+  // references are needed after the construction.
+  auto mis = std::make_unique<LvlMIVec>(LvlMIVec{{3, 0}, {1, 2}});
+  auto genInstr = std::make_unique<MIVecSGGenInstr>(*mis);
+  genInstr->setNodeGenFuncs({clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  genInstr->setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
+  genInstr->setBoundaryLevelOffset(2);
 
-  MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
-  genInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
-  genInstr.setBoundaryLevelOffset(2);
+  const SparseGrid sg(*genInstr);
+  const SparseGridSetup& storedSetup = sg.getSetup();
 
-  const MIVecSGGenInstr originalGenInstr = genInstr;
-  const SparseGrid sg(genInstr);
-  const SGGenInstr& storedGenInstr = sg.getGenInstr();
+  BOOST_CHECK(&storedSetup != genInstr.get());
+  BOOST_CHECK(storedSetup == *genInstr);
+  const SparseGridSetup originalSetup = *genInstr;
 
-  BOOST_CHECK(&storedGenInstr != &genInstr);
-  BOOST_CHECK(dynamic_cast<const MIVecSGGenInstr*>(&storedGenInstr) != nullptr);
-  checkSameSettings(storedGenInstr, originalGenInstr);
+  genInstr->setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr->setBoundaryLevelOffset(0);
+  checkSameSettings(storedSetup, originalSetup);
 
-  // Later changes of the original instruction affect neither the stored instruction nor the grid
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
-  genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
-  genInstr.setBoundaryLevelOffset(0);
+  genInstr.reset();
+  mis.reset();
 
-  checkSameSettings(storedGenInstr, originalGenInstr);
-  checkSG(SparseGrid(storedGenInstr), SparseGrid(originalGenInstr));
-  checkSG(sg, genExpectedMIVecSG({{3, 0}, {1, 2}}, originalGenInstr));
+  const LvlMIVec expectedMIs{{3, 0}, {1, 2}};
+  MIVecSGGenInstr expectedGenInstr(expectedMIs);
+  expectedGenInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  expectedGenInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
+  expectedGenInstr.setBoundaryLevelOffset(2);
+  checkSameSettings(storedSetup, expectedGenInstr);
+  checkSG(sg, genExpectedMIVecSG({{3, 0}, {1, 2}}, expectedGenInstr));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

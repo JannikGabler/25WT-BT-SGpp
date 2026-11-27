@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
@@ -385,7 +386,7 @@ void setRandomNestedSettings(SGGenInstr& genInstr) {
 }
 
 /// Checks that @p result has the same settings as @p expected.
-void checkSameSettings(const SGGenInstr& result, const SGGenInstr& expected) {
+void checkSameSettings(const SparseGridSetup& result, const SparseGridSetup& expected) {
   BOOST_CHECK_EQUAL(result.nDim(), expected.nDim());
   BOOST_CHECK_EQUAL(result.getBoundaryLevelOffset(), expected.getBoundaryLevelOffset());
   BOOST_CHECK(result.getDomain() == expected.getDomain());
@@ -976,7 +977,7 @@ BOOST_AUTO_TEST_CASE(Nodes_Mapped_Onto_Domain) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(Stores_Copy_Of_Complete_SG_Gen_Instr) {
+BOOST_AUTO_TEST_CASE(Stores_Setup_Of_Complete_SG_Gen_Instr) {
   const LvlType maxLvl = 3;
 
   CompleteSGGenInstr genInstr(maxLvl, 3);
@@ -988,45 +989,52 @@ BOOST_AUTO_TEST_CASE(Stores_Copy_Of_Complete_SG_Gen_Instr) {
 
   const CompleteSGGenInstr originalGenInstr = genInstr;
   const DeltasSparseGrid deltasSG(genInstr);
-  const SGGenInstr& storedGenInstr = deltasSG.getGenInstr();
+  const SparseGridSetup& storedSetup = deltasSG.getSetup();
 
-  BOOST_CHECK(&storedGenInstr != &genInstr);
-  BOOST_CHECK(dynamic_cast<const CompleteSGGenInstr*>(&storedGenInstr) != nullptr);
-  checkSameSettings(storedGenInstr, originalGenInstr);
+  BOOST_CHECK(&storedSetup != &genInstr);
+  BOOST_CHECK(storedSetup == originalGenInstr);
+  checkSameSettings(storedSetup, originalGenInstr);
 
-  // Later changes of the original instruction affect neither the stored instruction nor the grid
+  // Later changes of the original instruction affect neither the stored setup nor the grid
   genInstr.setMaxLvl(5);
   genInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
   genInstr.setBoundaryLevelOffset(0);
   genInstr.setDomain({-5.0, 5.0});
 
-  checkSameSettings(storedGenInstr, originalGenInstr);
-  checkSG(DeltasSparseGrid(storedGenInstr), DeltasSparseGrid(originalGenInstr));
+  checkSameSettings(storedSetup, originalGenInstr);
   checkSG(deltasSG, genExpectedCompleteDeltasSG(originalGenInstr, maxLvl));
 }
 
-BOOST_AUTO_TEST_CASE(Stores_Copy_Of_MIVec_SG_Gen_Instr) {
-  const LvlMIVec mis{{3, 0}, {1, 2}};
+BOOST_AUTO_TEST_CASE(Stores_Setup_Of_MIVec_SG_Gen_Instr) {
+  // The grid keeps a copy of the setup only: neither the instruction nor the multi-index set it
+  // references are needed after the construction.
+  auto mis = std::make_unique<LvlMIVec>(LvlMIVec{{3, 0}, {1, 2}});
+  auto genInstr = std::make_unique<MIVecSGGenInstr>(*mis);
+  genInstr->setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr->setLvl2GPCntFunc(doublingLvl2GPCntFunction);
+  genInstr->setBoundaryLevelOffset(2);
 
-  MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
-  genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
-  genInstr.setBoundaryLevelOffset(2);
+  const DeltasSparseGrid deltasSG(*genInstr);
+  const SparseGridSetup& storedSetup = deltasSG.getSetup();
 
-  const MIVecSGGenInstr originalGenInstr = genInstr;
-  const DeltasSparseGrid deltasSG(genInstr);
-  const SGGenInstr& storedGenInstr = deltasSG.getGenInstr();
+  BOOST_CHECK(&storedSetup != genInstr.get());
+  BOOST_CHECK(storedSetup == *genInstr);
+  const SparseGridSetup originalSetup = *genInstr;
 
-  BOOST_CHECK(&storedGenInstr != &genInstr);
-  BOOST_CHECK(dynamic_cast<const MIVecSGGenInstr*>(&storedGenInstr) != nullptr);
-  checkSameSettings(storedGenInstr, originalGenInstr);
+  genInstr->setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr->setBoundaryLevelOffset(0);
+  checkSameSettings(storedSetup, originalSetup);
 
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
-  genInstr.setBoundaryLevelOffset(0);
+  genInstr.reset();
+  mis.reset();
 
-  checkSameSettings(storedGenInstr, originalGenInstr);
-  checkSG(DeltasSparseGrid(storedGenInstr), DeltasSparseGrid(originalGenInstr));
-  checkSG(deltasSG, genExpectedMIVecDeltasSG({{3, 0}, {1, 2}}, originalGenInstr));
+  const LvlMIVec expectedMIs{{3, 0}, {1, 2}};
+  MIVecSGGenInstr expectedGenInstr(expectedMIs);
+  expectedGenInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  expectedGenInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
+  expectedGenInstr.setBoundaryLevelOffset(2);
+  checkSameSettings(storedSetup, expectedGenInstr);
+  checkSG(deltasSG, genExpectedMIVecDeltasSG({{3, 0}, {1, 2}}, expectedGenInstr));
 }
 
 BOOST_AUTO_TEST_CASE(One_Dimension) {

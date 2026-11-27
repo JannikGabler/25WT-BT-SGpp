@@ -79,6 +79,7 @@ using sgpp::combigrid::NodeGenFunc;
 using sgpp::combigrid::SGGenInstr;
 using sgpp::combigrid::SourceFunc;
 using sgpp::combigrid::SparseGrid;
+using sgpp::combigrid::SparseGridSetup;
 using sgpp::combigrid::VectorSourceFunc;
 using sgpp::combigrid::tools::numerics::CompensatedSum;
 
@@ -225,7 +226,7 @@ std::vector<double> sgInterpolations(const SparseGrid& grid) {
   const SourceFunc f(testFunc);
   const VectorSourceFunc fVec(testFuncVec, N_OUTPUTS);
   std::vector<double> values;
-  for (const DataVector& point : testPoints(grid.getGenInstr().getDomain())) {
+  for (const DataVector& point : testPoints(grid.getSetup().getDomain())) {
     append(values, sgpp::combigrid::interpolate(f, point, grid),
            sgpp::combigrid::interpolate(fVec, point, grid));
     append(values, sgpp::combigrid::interpolateLinear(f, point, grid),
@@ -243,7 +244,7 @@ std::vector<double> dsgOperators(const DeltasSparseGrid& grid,
   std::vector<double> values;
   append(values, sgpp::combigrid::quadrature(f, grid, options),
          sgpp::combigrid::quadrature(fVec, grid, options));
-  for (const DataVector& point : testPoints(grid.getGenInstr().getDomain())) {
+  for (const DataVector& point : testPoints(grid.getSetup().getDomain())) {
     append(values, sgpp::combigrid::interpolate(f, point, grid),
            sgpp::combigrid::interpolate(fVec, point, grid));
     append(values, sgpp::combigrid::interpolateLinear(f, point, grid),
@@ -282,7 +283,7 @@ std::vector<double> coefficientsOf(const SparseGrid& grid) {
 std::vector<double> sgInterpolationsInOrder(const SparseGrid& grid) {
   namespace global = sgpp::combigrid::tools::global_interpolation;
   namespace linear = sgpp::combigrid::tools::lin_interpolation;
-  const SGGenInstr& genInstr = grid.getGenInstr();
+  const SparseGridSetup& setup = grid.getSetup();
   const SourceFunc f(testFunc);
   const VectorSourceFunc fVec(testFuncVec, N_OUTPUTS);
   sgpp::combigrid::misc::LinInterpScratch linScratch(grid.nDim());
@@ -290,19 +291,19 @@ std::vector<double> sgInterpolationsInOrder(const SparseGrid& grid) {
   const std::vector<double> coefficients = coefficientsOf(grid);
 
   std::vector<double> values;
-  for (const DataVector& point : testPoints(genInstr.getDomain())) {
+  for (const DataVector& point : testPoints(setup.getDomain())) {
     const DataVector normPoint =
-        sgpp::combigrid::tools::normalizeDataVector(point, genInstr.getDomain());
+        sgpp::combigrid::tools::normalizeDataVector(point, setup.getDomain());
     std::vector<std::vector<double>> globalValues, linearValues;
     for (size_t tgIdx = 0; tgIdx < grid.nTG(); tgIdx++) {
       const auto tg = grid.getDomainTensorGrid(tgIdx).tensorGrid;
       const auto unitTG = grid.getUnitTensorGrid(tgIdx).tensorGrid;
       std::vector<double> global(1 + N_OUTPUTS), linear(1 + N_OUTPUTS);
-      global[0] = global::processTensorGrid(f, normPoint, tg, unitTG, genInstr);
-      global::processTensorGrid(fVec, normPoint, tg, unitTG, genInstr,
+      global[0] = global::processTensorGrid(f, normPoint, tg, unitTG, setup);
+      global::processTensorGrid(fVec, normPoint, tg, unitTG, setup,
                                 std::span<double>(global).subspan(1));
-      linear[0] = linear::processTensorGrid(f, normPoint, unitTG, genInstr, linScratch);
-      linear::processTensorGrid(fVec, normPoint, unitTG, genInstr, linVecScratch,
+      linear[0] = linear::processTensorGrid(f, normPoint, unitTG, setup, linScratch);
+      linear::processTensorGrid(fVec, normPoint, unitTG, setup, linVecScratch,
                                 std::span<double>(linear).subspan(1));
       globalValues.push_back(global);
       linearValues.push_back(linear);
@@ -340,7 +341,7 @@ std::vector<double> dsgQuadratureInOrder(const DeltasSparseGrid& grid) {
     tgValues.push_back(values);
   }
   std::vector<double> result = combineInOrder(std::vector<double>(grid.nTG(), 1.0), tgValues);
-  for (double& value : result) value *= grid.getGenInstr().getVolumeOfDomain();
+  for (double& value : result) value *= grid.getSetup().getVolumeOfDomain();
   return result;
 }
 

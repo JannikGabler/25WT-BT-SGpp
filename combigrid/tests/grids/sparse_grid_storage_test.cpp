@@ -58,16 +58,16 @@ bool bitwiseEqual(const double a, const double b) {
 /// Expected nodes of (dimension @p dim, level @p lvl): the regular nodes (sparse grid) or the
 /// delta nodes (deltas sparse grid) of the node-generation function, on the unit interval or
 /// mapped onto the domain with tools::mapToDomain (@p onDomain).
-DataVector expectedNodes(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl,
+DataVector expectedNodes(const SparseGridSetup& setup, const size_t dim, const LvlType lvl,
                          const bool deltaNodes, const bool onDomain) {
-  const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
-  const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
-  const LvlType offset = genInstr.getBoundaryLevelOffset();
+  const NodeGenFunc* const nodeGenFunc = setup.getNodeGenFuncForDim(dim);
+  const Lvl2GPCntFunc lvl2GPCntFunc = setup.getLvl2GPCntFuncForDim(dim);
+  const LvlType offset = setup.getBoundaryLevelOffset();
   DataVector nodes = deltaNodes ? nodeGenFunc->genDeltaNodes(lvl, lvl2GPCntFunc, lvl == offset)
                                 : nodeGenFunc->genNodes(
                                       lvl2GPCntFunc(lvl) + (lvl >= offset ? 2 : 0), lvl >= offset);
   if (onDomain) {
-    const auto [lower, upper] = genInstr.getDomainForDim(dim);
+    const auto [lower, upper] = setup.getDomainForDim(dim);
     for (double& node : nodes) node = tools::mapToDomain(node, lower, upper - lower);
   }
   return nodes;
@@ -78,7 +78,7 @@ DataVector expectedNodes(const SGGenInstr& genInstr, const size_t dim, const Lvl
 template <typename Grid>
 void checkNodeTable(const Grid& grid, const NodeTable& table, const bool deltaNodes,
                     const bool onDomain) {
-  const SGGenInstr& genInstr = grid.getGenInstr();
+  const SparseGridSetup& setup = grid.getSetup();
   BOOST_REQUIRE_EQUAL(table.nDim(), grid.nDim());
 
   for (size_t dim = 0; dim < grid.nDim(); dim++) {
@@ -88,7 +88,7 @@ void checkNodeTable(const Grid& grid, const NodeTable& table, const bool deltaNo
 
     for (LvlType lvl = 0; lvl <= table.maxLvl(dim); lvl++) {
       BOOST_TEST_CONTEXT("dim " << dim << " lvl " << lvl) {
-        const DataVector expected = expectedNodes(genInstr, dim, lvl, deltaNodes, onDomain);
+        const DataVector expected = expectedNodes(setup, dim, lvl, deltaNodes, onDomain);
         BOOST_REQUIRE_EQUAL(table.nNodes(dim, lvl), expected.size());
         for (size_t i = 0; i < expected.size(); i++) {
           BOOST_CHECK(bitwiseEqual(table.nodes(dim, lvl)[i], expected[i]));

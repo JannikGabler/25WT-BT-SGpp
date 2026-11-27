@@ -10,9 +10,11 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <ranges>
 #include <sgpp/combigrid/grids/cross_call_operator_data_info.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/cross_call_operator_data_cache/cross_call_operator_data_cache.hpp>
 #include <sgpp/combigrid/miscellaneous/iterators/tensor_grid_ct_data_iterator.hpp>
@@ -23,6 +25,10 @@
 
 namespace sgpp {
 namespace combigrid {
+
+namespace misc {
+struct SparseGridStorageAccess;
+}  // namespace misc
 
 /**
  * @brief Storage of the tensor grids of a combination-technique sparse grid (base class of
@@ -60,6 +66,12 @@ class SparseGridBase {
 
   /// @brief Returns the spatial dimensionality.
   size_t nDim() const noexcept { return nDim_; }
+
+  /**
+   * @brief Returns the setup of the grid (domain, node families, growth functions, boundary
+   * level offset): a copy of the setup of the generation instruction the grid was built from.
+   */
+  const SparseGridSetup& getSetup() const noexcept { return setup_; }
 
   /// @brief Returns the number of tensor grids.
   size_t nTG() const noexcept { return coefficients_.size(); }
@@ -204,10 +216,10 @@ class SparseGridBase {
   /// @{
 
   /**
-   * @brief Constructs an empty sparse grid with the given number of dimensions.
-   * @param nDim Number of spatial dimensions.
+   * @brief Constructs an empty sparse grid with a copy of @p setup.
+   * @param setup Setup of the grid (its dimensionality is the grid's).
    */
-  explicit SparseGridBase(size_t nDim);
+  explicit SparseGridBase(const SparseGridSetup& setup);
 
   /// @}
 
@@ -241,7 +253,11 @@ class SparseGridBase {
   /// @ref getTGProcessingOrder.
   void computeMetaValues();
 
+  /// The storage changes only through the dimension-adaptive refinement, which uses this accessor.
+  friend struct misc::SparseGridStorageAccess;
+
   const size_t nDim_;                      ///< Spatial dimensionality (fixed at construction).
+  SparseGridSetup setup_;                  ///< See @ref getSetup.
   LvlMIVec levels_;                        ///< Level multi-indices of the tensor grids.
   std::vector<CTCoeffType> coefficients_;  ///< Combination coefficients of the tensor grids.
   NodeTable domainNodeTable_;              ///< Node lists per (dimension, level), on the domain.
@@ -250,6 +266,8 @@ class SparseGridBase {
   size_t maxTGGPCnt_ = 0;                  ///< See @ref getMaxTGGPCnt.
   size_t maxTGSumOverGPCntsPerDim_ = 0;    ///< See @ref getMaxTGSumOverGPCntsPerDim.
   std::vector<size_t> tgProcessingOrder_;  ///< See @ref getTGProcessingOrder.
+  /// Process-wide unique number of the current storage (new with every @ref setStorage).
+  uint64_t storageVersion_ = 0;
 
   /// Operator data kept across calls (see @ref getCrossCallOperatorDataCacheEntries). Declared
   /// last: destroyed first, its data may refer to the members above.

@@ -60,6 +60,7 @@
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
@@ -81,6 +82,19 @@
 #include <sgpp/combigrid/operators/textbook/textbook_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_quadrature.hpp>
+
+// Dimension-adaptive refinement (not bound in Python yet: the headers are not %include'd in
+// combigrid.i)
+#include <sgpp/combigrid/refinement/dimension_adaptive_refinement.hpp>
+#include <sgpp/combigrid/refinement/refinement_indicator.hpp>
+#include <sgpp/combigrid/refinement/refinement_options.hpp>
+#include <sgpp/combigrid/refinement/refinement_schedule.hpp>
+#include <sgpp/combigrid/refinement/refinement_statistics.hpp>
+#include <sgpp/combigrid/refinement/refinement_stop_reason.hpp>
+#include <sgpp/combigrid/refinement/targets/global_interpolation_refinement_target.hpp>
+#include <sgpp/combigrid/refinement/targets/linear_interpolation_refinement_target.hpp>
+#include <sgpp/combigrid/refinement/targets/quadrature_refinement_target.hpp>
+#include <sgpp/combigrid/refinement/targets/refinement_target.hpp>
 
 // Tools
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>

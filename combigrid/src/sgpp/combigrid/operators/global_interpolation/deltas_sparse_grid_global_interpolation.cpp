@@ -37,7 +37,8 @@ double interpolate(const SourceFunc& sourceFunc, const base::DataVector& point,
     const std::shared_ptr<const DSGGlobalInterpIndex> indexPtr =
         getIndex(deltasSparseGrid, options.useCrossCallOperatorDataCache);
     const DSGGlobalInterpIndex& index = *indexPtr;
-    const HyperCubeArea& domain = deltasSparseGrid.getGenInstr().getDomain();
+    const HyperCubeArea& domain = deltasSparseGrid.getSetup().getDomain();
+
     result = evaluateInterpolant(index, deltasSparseGrid, tools::normalizeDataVector(point, domain),
                                  sourceFunc, runInParallel(index));
   }
@@ -60,7 +61,7 @@ void interpolate(const VectorSourceFunc& sourceFunc, const base::DataVector& poi
     const std::shared_ptr<const DSGGlobalInterpIndex> indexPtr =
         getIndex(deltasSparseGrid, options.useCrossCallOperatorDataCache);
     const DSGGlobalInterpIndex& index = *indexPtr;
-    const HyperCubeArea& domain = deltasSparseGrid.getGenInstr().getDomain();
+    const HyperCubeArea& domain = deltasSparseGrid.getSetup().getDomain();
     evaluateInterpolant(index, deltasSparseGrid, tools::normalizeDataVector(point, domain),
                         sourceFunc, runInParallel(index), result);
   }

@@ -10,9 +10,10 @@
 #include <mutex>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/collections/vector_bytes.hpp>
+#include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
@@ -22,15 +23,24 @@ namespace combigrid {
 
 namespace misc {
 
-QuadWeightTable::QuadWeightTable(const SparseGrid& sparseGrid)
-    : unitNodeTable_(sparseGrid.getUnitNodeTable()),
+namespace {
+
+/// Node count of a row from the growth function: equals the row's size once it is generated, so
+/// rows generated after the construction get their rule too.
+GPCntType nodeCnt(const SparseGridSetup& setup, const size_t dim, const LvlType lvl) {
+  return tools::node_table_generation::compNodeCnt(setup, dim, lvl, false);
+}
+
+}  // namespace
+
+QuadWeightTable::QuadWeightTable(const NodeTable& unitNodeTable, const SparseGridSetup& setup)
+    : unitNodeTable_(unitNodeTable),
       rowsBySize_(unitNodeTable_.nRows()),
       rules_(unitNodeTable_.nRows()),
       rows_(unitNodeTable_.nRows()),
       published_(unitNodeTable_.nRows()),
       onceFlags_(unitNodeTable_.nRows()) {
-  const SGGenInstr& genInstr = sparseGrid.getGenInstr();
-  const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
+  const LvlType boundaryLvlOffset = setup.getBoundaryLevelOffset();
 
   // Every row belongs to at least one (dimension, level) pair; dimensions sharing rows overwrite
   // each other's entries with equivalent ones (same node-generation function and node counts)
@@ -38,15 +48,18 @@ QuadWeightTable::QuadWeightTable(const SparseGrid& sparseGrid)
     for (LvlType lvl = 0; lvl <= unitNodeTable_.maxLvl(dim); lvl++) {
       const size_t row = unitNodeTable_.row(dim, lvl);
       rowsBySize_[row] = {dim, lvl};
-      rules_[row] = genInstr.getNodeGenFuncForDim(dim)->getQuadRule(unitNodeTable_.nNodes(dim, lvl),
-                                                                    lvl >= boundaryLvlOffset);
+      rules_[row] = setup.getNodeGenFuncForDim(dim)->getQuadRule(nodeCnt(setup, dim, lvl),
+                                                                 lvl >= boundaryLvlOffset);
     }
   }
 
-  std::ranges::stable_sort(rowsBySize_, std::ranges::greater{}, [this](const auto& dimLvl) {
-    return unitNodeTable_.nNodes(dimLvl.first, dimLvl.second);
+  std::ranges::stable_sort(rowsBySize_, std::ranges::greater{}, [&setup](const auto& dimLvl) {
+    return nodeCnt(setup, dimLvl.first, dimLvl.second);
   });
 }
+
+QuadWeightTable::QuadWeightTable(const SparseGrid& sparseGrid)
+    : QuadWeightTable(sparseGrid.getUnitNodeTable(), sparseGrid.getSetup()) {}
 
 void QuadWeightTable::computeAllRows() const {
 #pragma omp for schedule(dynamic, 1) nowait

@@ -209,8 +209,8 @@ std::vector<std::vector<double>> tensorGridEstimates(const SparseGrid& grid) {
   for (size_t tgIdx = 0; tgIdx < grid.nTG(); tgIdx++) {
     const auto tgData = grid.getDomainTensorGrid(tgIdx);
     std::vector<double> values(1 + N_OUTPUTS);
-    values[0] = quad_tools::processTensorGrid(context, f, tgData.tensorGrid, scratch);
-    quad_tools::processTensorGrid(context, fVec, tgData.tensorGrid, vecScratch,
+    values[0] = quad_tools::processTensorGrid(context.weightTable, f, tgData.tensorGrid, scratch);
+    quad_tools::processTensorGrid(context.weightTable, fVec, tgData.tensorGrid, vecScratch,
                                   std::span<double>(values).subspan(1));
     estimates.push_back(values);
   }

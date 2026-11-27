@@ -38,6 +38,17 @@ measurement notes that are not in [README.md](README.md). Maintained by the mast
   harness; WP-48 `micro-t16.md`) → judge small calls with 1-t micro + e2e only.
 - **Cross-call cache in e2e**: the pipelines build a new grid per run → the cache never hits in the
   judged suite; repeated-call gains need dedicated benchmarks (WP-73 / WP-82).
+- **CC bits vs. unrelated code** (WP-89, `results/WP-89/bits/README.md`): Eigen's header-only kiss FFT is
+  compiled differently under LTO when unrelated code changes → CC quadratures (SG + DSG) move 1–2 ulp with
+  identical CC rule instructions. A bitwise diff limited to CC cases is not by itself evidence of a CC
+  change (numerics backlog B).
+- **TSan with OpenMP** (WP-89): the uninstrumented libgomp makes every fork / join pair a report (445 in
+  WP-89) → classify with `results/WP-89/tsan/classify.py` (real races = two accesses within one parallel
+  region; WP-89: 0).
+- **`pkill -f` in sessions** (WP-89): the pattern also matches the agent's own shell command → use exact
+  PIDs or `pgrep -x`.
+- **Adaptive feature benchmarks** (WP-89): `perf_adaptive` (unprotected, not judged; `results/WP-89/adaptive/`)
+  and `micro/adaptive/*`; low d with expensive integrands is bound by a few large TGs (idle 86–89 % at 16 t).
 
 ## Test reliability (resolved by WP-35, 2026-11-26)
 

@@ -201,7 +201,7 @@ VectorSourceFunc recordingVectorFunc(const size_t nOutputs, std::vector<DataVect
  */
 std::vector<double> checkGlobalTensorGrids(const SparseGrid& sg, const DataVector& normPoint,
                                            const size_t nOutputs) {
-  const SGGenInstr& genInstr = sg.getGenInstr();
+  const SparseGridSetup& setup = sg.getSetup();
   std::vector<DataVector> vectorPoints, scalarPoints;
   const VectorSourceFunc vectorFunc = recordingVectorFunc(nOutputs, vectorPoints);
   std::vector<double> scales(nOutputs, 0.0);
@@ -212,9 +212,9 @@ std::vector<double> checkGlobalTensorGrids(const SparseGrid& sg, const DataVecto
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
     tools::global_interpolation::processTensorGrid(vectorFunc, normPoint, tgData.tensorGrid, unitTG,
-                                                   genInstr, out);
+                                                   setup, out);
     const std::vector<double> tgScales =
-        absLagrangeSums(unitTG, genInstr.getDomain(), normPoint, nOutputs);
+        absLagrangeSums(unitTG, setup.getDomain(), normPoint, nOutputs);
 
     for (size_t k = 0; k < nOutputs; k++) {
       scalarPoints.clear();
@@ -223,7 +223,7 @@ std::vector<double> checkGlobalTensorGrids(const SparseGrid& sg, const DataVecto
         return component(x, k);
       });
       const double scalar = tools::global_interpolation::processTensorGrid(
-          fk, normPoint, tgData.tensorGrid, unitTG, genInstr);
+          fk, normPoint, tgData.tensorGrid, unitTG, setup);
       BOOST_CHECK_SMALL(out[k] - scalar, ULP_TOL * EPS * tgScales[k] + 1e-300);
       BOOST_REQUIRE_EQUAL(vectorPoints.size(), scalarPoints.size());
       for (size_t i = 0; i < vectorPoints.size(); i++) {
@@ -242,7 +242,7 @@ std::vector<double> checkGlobalTensorGrids(const SparseGrid& sg, const DataVecto
  */
 std::vector<double> checkLinearTensorGrids(const SparseGrid& sg, const DataVector& normPoint,
                                            const size_t nOutputs) {
-  const SGGenInstr& genInstr = sg.getGenInstr();
+  const SparseGridSetup& setup = sg.getSetup();
   misc::LinInterpScratch scalarScratch(sg.nDim());
   misc::LinInterpScratch vectorScratch(sg.nDim(), nOutputs);
   std::vector<DataVector> vectorPoints, scalarPoints;
@@ -253,8 +253,8 @@ std::vector<double> checkLinearTensorGrids(const SparseGrid& sg, const DataVecto
     const TensorGridView unitTG = tgData.tensorGrid;
     std::vector<double> out(nOutputs, std::numeric_limits<double>::quiet_NaN());
     vectorPoints.clear();
-    tools::lin_interpolation::processTensorGrid(vectorFunc, normPoint, unitTG, genInstr,
-                                                vectorScratch, out);
+    tools::lin_interpolation::processTensorGrid(vectorFunc, normPoint, unitTG, setup, vectorScratch,
+                                                out);
 
     for (size_t k = 0; k < nOutputs; k++) {
       scalarPoints.clear();
@@ -262,10 +262,10 @@ std::vector<double> checkLinearTensorGrids(const SparseGrid& sg, const DataVecto
         scalarPoints.push_back(x);
         return component(x, k);
       });
-      const double scalar = tools::lin_interpolation::processTensorGrid(fk, normPoint, unitTG,
-                                                                        genInstr, scalarScratch);
+      const double scalar =
+          tools::lin_interpolation::processTensorGrid(fk, normPoint, unitTG, setup, scalarScratch);
       const double tgScale = tools::lin_interpolation::processTensorGrid(
-          scalarFunc(k, true), normPoint, unitTG, genInstr, scalarScratch);
+          scalarFunc(k, true), normPoint, unitTG, setup, scalarScratch);
       BOOST_CHECK_SMALL(out[k] - scalar, ULP_TOL * EPS * tgScale + 1e-300);
       BOOST_REQUIRE_EQUAL(vectorPoints.size(), scalarPoints.size());
       for (size_t i = 0; i < vectorPoints.size(); i++) {
@@ -366,7 +366,7 @@ BOOST_AUTO_TEST_SUITE(vector_global_interpolation)
 BOOST_AUTO_TEST_CASE(Outputs_Equal_Scalar_Interpolation) {
   forAllConfigs({"equi", "cc", "cheb1"}, [](const SparseGrid& sg, const DataVector& point,
                                             const size_t nOutputs) {
-    const DataVector normPoint = tools::normalizeDataVector(point, sg.getGenInstr().getDomain());
+    const DataVector normPoint = tools::normalizeDataVector(point, sg.getSetup().getDomain());
     const std::vector<double> scales = checkGlobalTensorGrids(sg, normPoint, nOutputs);
     checkOperator(
         sg, point, nOutputs, scales,
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_SUITE(vector_linear_interpolation)
 BOOST_AUTO_TEST_CASE(Outputs_Equal_Scalar_Interpolation) {
   forAllConfigs({"equi", "cc", "cheb1"}, [](const SparseGrid& sg, const DataVector& point,
                                             const size_t nOutputs) {
-    const DataVector normPoint = tools::normalizeDataVector(point, sg.getGenInstr().getDomain());
+    const DataVector normPoint = tools::normalizeDataVector(point, sg.getSetup().getDomain());
     const std::vector<double> scales = checkLinearTensorGrids(sg, normPoint, nOutputs);
     checkOperator(
         sg, point, nOutputs, scales,

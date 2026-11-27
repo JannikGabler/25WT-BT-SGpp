@@ -11,9 +11,9 @@
 #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
+#include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
 #include <sgpp/combigrid/tools/collections/vector_bytes.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -73,10 +73,10 @@ void DSGGlobalInterpIndex::setRowOffsets(const DeltasSparseGrid& deltasSparseGri
 
 void DSGGlobalInterpIndex::addRowsOfDim(const DeltasSparseGrid& deltasSparseGrid,
                                         const size_t dim) {
-  const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
-  const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
-  const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
-  const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
+  const SparseGridSetup& setup = deltasSparseGrid.getSetup();
+  const LvlType boundaryLvlOffset = setup.getBoundaryLevelOffset();
+  const NodeGenFunc* const nodeGenFunc = setup.getNodeGenFuncForDim(dim);
+  const Lvl2GPCntFunc lvl2GPCntFunc = setup.getLvl2GPCntFuncForDim(dim);
   const NodeIdxLvlMapFunc nodeIdxLvlMapFunc =
       nodeGenFunc->getNodeIdxMapFromDeltaTGLvlToRegularLvl(lvl2GPCntFunc);
 

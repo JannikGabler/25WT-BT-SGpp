@@ -22,6 +22,7 @@
 
 using sgpp::combigrid::misc::QuadratureContext;
 using sgpp::combigrid::misc::QuadratureScratch;
+using sgpp::combigrid::misc::QuadWeightTable;
 using sgpp::combigrid::misc::WeightedSumScratch;
 
 namespace sgpp {
@@ -47,8 +48,9 @@ std::vector<double> estimateTensorGrids(const QuadratureContext& context,
 #pragma omp for schedule(dynamic) nowait
     for (size_t orderIdx = 0; orderIdx < nTG; orderIdx++) {
       const size_t tgIdx = order[orderIdx];
-      estimates[tgIdx] = processTensorGrid(
-          context, sourceFunc, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid, scratch);
+      estimates[tgIdx] =
+          processTensorGrid(context.weightTable, sourceFunc,
+                            sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid, scratch);
     }
   }
 
@@ -73,31 +75,32 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const QuadratureContext& cont
 #pragma omp for schedule(dynamic) nowait
     for (size_t orderIdx = 0; orderIdx < nTG; orderIdx++) {
       const size_t tgIdx = order[orderIdx];
-      processTensorGrid(context, sourceFunc, sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid,
-                        scratch, estimates[tgIdx]);
+      processTensorGrid(context.weightTable, sourceFunc,
+                        sparseGrid.getDomainTensorGrid(tgIdx).tensorGrid, scratch,
+                        estimates[tgIdx]);
     }
   }
 
   return estimates;
 }
 
-double processTensorGrid(const QuadratureContext& context, const SourceFunc& sourceFunc,
+double processTensorGrid(const QuadWeightTable& weightTable, const SourceFunc& sourceFunc,
                          const TensorGridView tg, QuadratureScratch& scratch) {
-  assert(tg.nDim() == context.sparseGrid.nDim());
+  assert(tg.nDim() == weightTable.nDim());
 
   if (tg.nGP() == 0) {
     return 0;
   }
 
-  prepareTensorGrid(context, tg, scratch);
+  prepareTensorGrid(weightTable, tg, scratch);
 
   return weighted_sum::sumOverRows(misc::ScalarValues(sourceFunc), scratch.rows);
 }
 
-void processTensorGrid(const QuadratureContext& context, const VectorSourceFunc& sourceFunc,
+void processTensorGrid(const QuadWeightTable& weightTable, const VectorSourceFunc& sourceFunc,
                        const TensorGridView tg, QuadratureScratch& scratch,
                        const std::span<double> out) {
-  assert(tg.nDim() == context.sparseGrid.nDim());
+  assert(tg.nDim() == weightTable.nDim());
   assert(out.size() == sourceFunc.nOutputs());
   assert(scratch.rows.valueBuffer.size() ==
          misc::VectorValues::bufferSize(sourceFunc.nOutputs(), WeightedSumScratch::N_ACCS));
@@ -107,7 +110,7 @@ void processTensorGrid(const QuadratureContext& context, const VectorSourceFunc&
     return;
   }
 
-  prepareTensorGrid(context, tg, scratch);
+  prepareTensorGrid(weightTable, tg, scratch);
 
   const misc::VectorValues values(sourceFunc, scratch.rows.valueBuffer);
   values.store(weighted_sum::sumOverRows(values, scratch.rows), out.data());
@@ -117,19 +120,19 @@ void processTensorGrid(const QuadratureContext& context, const VectorSourceFunc&
  * Prepares the row loop over @p tg (weighted_sum::sumOverRows): 1D quadrature weights, iterated
  * dimensions.
  */
-void prepareTensorGrid(const QuadratureContext& context, const TensorGridView tg,
+void prepareTensorGrid(const QuadWeightTable& weightTable, const TensorGridView tg,
                        QuadratureScratch& scratch) {
-  getWeights(context, tg, scratch);
+  getWeights(weightTable, tg, scratch);
   weighted_sum::setUpIterDims(tg, scratch.rows);
 }
 
-void getWeights(const QuadratureContext& context, const TensorGridView tg,
+void getWeights(const QuadWeightTable& weightTable, const TensorGridView tg,
                 QuadratureScratch& scratch) {
   const LvlMIView lvls = tg.getLevels();
   const double** const weightsOfDim = scratch.rows.weightsOfDim.data();
 
   for (size_t dim = 0; dim < tg.nDim(); dim++) {
-    weightsOfDim[dim] = context.weightTable.weights(dim, lvls[dim]);
+    weightsOfDim[dim] = weightTable.weights(dim, lvls[dim]);
   }
 }
 

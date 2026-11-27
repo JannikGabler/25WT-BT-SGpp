@@ -139,20 +139,20 @@ bool bitwiseEqual(const std::span<const double> a, const std::span<const double>
  * weights of the quadrature rule of the dimension (bitwise).
  */
 void checkWeightsOfAllTensorGrids(const SparseGrid& sg) {
-  const SGGenInstr& genInstr = sg.getGenInstr();
+  const SparseGridSetup& setup = sg.getSetup();
   const misc::QuadWeightTable weightTable(sg);
   const misc::QuadratureContext context{.sparseGrid = sg, .weightTable = weightTable};
   misc::QuadratureScratch scratch(sg.nDim());
 
   for (const auto& tgData : sg.domainTensorGrids()) {
     const TensorGridView tg = tgData.tensorGrid;
-    tools::quadrature::getWeights(context, tg, scratch);
+    tools::quadrature::getWeights(context.weightTable, tg, scratch);
 
     for (size_t dim = 0; dim < sg.nDim(); dim++) {
       const GPCntType nNodes = tg.nGPInDim(dim);
       const DataVector expected =
-          genInstr.getNodeGenFuncForDim(dim)
-              ->getQuadRule(nNodes, tgData.mi[dim] >= genInstr.getBoundaryLevelOffset())
+          setup.getNodeGenFuncForDim(dim)
+              ->getQuadRule(nNodes, tgData.mi[dim] >= setup.getBoundaryLevelOffset())
               ->genWeights(nNodes);
       const std::span<const double> used(scratch.rows.weightsOfDim[dim], nNodes);
 

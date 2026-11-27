@@ -18,7 +18,7 @@ namespace combigrid {
 /// @{
 
 DeltasSparseGrid::DeltasSparseGrid(const SGGenInstr& genInstr)
-    : SparseGridBase(genInstr.nDim()), genInstr(genInstr.clone()) {
+    : SparseGridBase(static_cast<const SparseGridSetup&>(genInstr)) {
   // Checked up front: the node lists are generated in an OpenMP parallel region, which the
   // exception thrown by the delta node generation for non-nested nodes cannot leave.
   if (!genInstr.areNodesOfAllDimsNested()) {
@@ -40,8 +40,6 @@ DeltasSparseGrid::DeltasSparseGrid(const SGGenInstr& genInstr)
 
 /// @name Getters
 /// @{
-
-const SGGenInstr& DeltasSparseGrid::getGenInstr() const noexcept { return *genInstr; }
 
 /// @}
 
