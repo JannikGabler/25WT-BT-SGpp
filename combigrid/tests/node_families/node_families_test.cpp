@@ -4,7 +4,7 @@
 // sgpp.sparsegrids.org
 
 /**
- * @file node_generation_functions_test.cpp
+ * @file node_families_test.cpp
  * @brief Boost.Test cases for the built-in node generators (equidistant,
  * Chebyshev of the first / second kind, Clenshaw-Curtis).
  */
@@ -19,9 +19,9 @@
 #include <cmath>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/default_functions/equidistant_node_generation_function.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/default_functions/first_type_chebyshev_node_generation_function.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/default_functions/second_type_chebyshev_node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/clenshaw_curtis_nodes.hpp>
+#include <sgpp/combigrid/node_families/equidistant_nodes.hpp>
+#include <sgpp/combigrid/node_families/first_type_chebyshev_nodes.hpp>
 
 using namespace sgpp::combigrid;
 using namespace sgpp::base;
@@ -47,16 +47,16 @@ BOOST_AUTO_TEST_SUITE(op_genEquidistantNodes)
 
 BOOST_AUTO_TEST_CASE(ZeroNodes) {
   const size_t n = 0;
-  const node_gen_funcs::EquidistantNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genNodes(n, false);
+  const node_families::EquidistantNodes nodeFamily;
+  const DataVector nodes = nodeFamily.genNodes(n, false);
 
   BOOST_CHECK_EQUAL(nodes.size(), 0u);
 }
 
 BOOST_AUTO_TEST_CASE(BasicPropertiesSmallN) {
   const size_t n = 4;
-  const node_gen_funcs::EquidistantNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genNodes(n, false);
+  const node_families::EquidistantNodes nodeFamily;
+  const DataVector nodes = nodeFamily.genNodes(n, false);
 
   checkInteriorAndSorted(nodes, n);
 
@@ -68,8 +68,8 @@ BOOST_AUTO_TEST_CASE(BasicPropertiesSmallN) {
 
 BOOST_AUTO_TEST_CASE(UniformSpacingLargerN) {
   const size_t n = 10;
-  const node_gen_funcs::EquidistantNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genNodes(n, false);
+  const node_families::EquidistantNodes nodeFamily;
+  const DataVector nodes = nodeFamily.genNodes(n, false);
 
   // Adjacent differences should be equal to 1/(n+1)
   double expectedDiff = 1.0 / double(n + 1);
@@ -86,16 +86,16 @@ BOOST_AUTO_TEST_SUITE(op_genFirstTypeChebyshevNodes)
 
 BOOST_AUTO_TEST_CASE(ZeroNodes) {
   const size_t n = 0;
-  const node_gen_funcs::FirstTypeChebyshevNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genNodes(n, false);
+  const node_families::FirstTypeChebyshevNodes nodeFamily;
+  const DataVector nodes = nodeFamily.genNodes(n, false);
 
   BOOST_CHECK_EQUAL(nodes.size(), 0u);
 }
 
 BOOST_AUTO_TEST_CASE(BasicPropertiesAndValues) {
   const size_t n = 3;
-  const node_gen_funcs::FirstTypeChebyshevNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genNodes(n, false);
+  const node_families::FirstTypeChebyshevNodes nodeFamily;
+  const DataVector nodes = nodeFamily.genNodes(n, false);
 
   checkInteriorAndSorted(nodes, n);
 
@@ -118,16 +118,16 @@ BOOST_AUTO_TEST_SUITE(op_genSecondTypeChebyshevNodes)
 
 BOOST_AUTO_TEST_CASE(ZeroNodes) {
   const size_t n = 0;
-  const node_gen_funcs::SecondTypeChebyshevNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genNodes(n, false);
+  const node_families::ClenshawCurtisNodes nodeFamily;
+  const DataVector nodes = nodeFamily.genNodes(n, false);
 
   BOOST_CHECK_EQUAL(nodes.size(), 0u);
 }
 
 BOOST_AUTO_TEST_CASE(BasicPropertiesAndValues) {
   const size_t n = 3;
-  const node_gen_funcs::SecondTypeChebyshevNodeGenFunc nodeGenFunc;
-  const DataVector nodes = nodeGenFunc.genNodes(n, false);
+  const node_families::ClenshawCurtisNodes nodeFamily;
+  const DataVector nodes = nodeFamily.genNodes(n, false);
 
   checkInteriorAndSorted(nodes, n);
 

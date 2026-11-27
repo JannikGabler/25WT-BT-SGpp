@@ -17,10 +17,10 @@
 #include <cmath>
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/default_rules/fejer_first_quadrature_rule.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/fejer_first_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
@@ -30,7 +30,7 @@
 
 using sgpp::base::DataVector;
 using sgpp::combigrid::GPCntType;
-using sgpp::combigrid::NodeGenFunc;
+using sgpp::combigrid::NodeFamily;
 using sgpp::combigrid::QuadRule;
 using sgpp::combigrid::quadrature_rules::FejerFirstQuadRule;
 
@@ -61,8 +61,8 @@ std::vector<double> weightsOf(const QuadRule& rule, const size_t nNodes) {
 
 /// The nodes of the first-kind Chebyshev family on [0, 1] (increasing), without / with boundary.
 DataVector nodesOf(const size_t nNodes, const bool includeBoundary) {
-  return sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc()->genNodes(
-      static_cast<GPCntType>(nNodes), includeBoundary);
+  return sgpp::combigrid::getFirstTypeChebyshevNodes()->genNodes(static_cast<GPCntType>(nNodes),
+                                                                 includeBoundary);
 }
 
 /// The integral of T_k(2x - 1) over [0, 1].
@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE(gen_weights_matches_gen_weights_inplace) {
 }
 
 BOOST_AUTO_TEST_CASE(node_families_return_their_rules) {
-  const NodeGenFunc* const cheb1 = sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc();
+  const NodeFamily* const cheb1 = sgpp::combigrid::getFirstTypeChebyshevNodes();
   for (const GPCntType n : {1u, 3u, 5u, 17u}) {
     BOOST_CHECK(cheb1->getQuadRule(n, false) == sgpp::combigrid::getFejerFirstQuadRule(false));
     BOOST_CHECK(cheb1->getQuadRule(n, true) == sgpp::combigrid::getFejerFirstQuadRule(true));

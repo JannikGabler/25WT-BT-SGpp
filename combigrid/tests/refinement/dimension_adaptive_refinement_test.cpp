@@ -29,13 +29,13 @@
 #include <sgpp/base/datatypes/DataMatrix.hpp>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -64,16 +64,16 @@ namespace {
 struct Config {
   std::string name;
   size_t nDim;
-  std::vector<NodeGenFunc*> nodes;
+  std::vector<NodeFamily*> nodes;
   Lvl2GPCntFunc growth;
   LvlType offset;
   HyperCubeArea domain;
 };
 
 std::vector<Config> configs() {
-  NodeGenFunc* const cc = getClenshawCurtisNodeGenFunc();
-  NodeGenFunc* const equi = getEquidistantNodeGenFunc();
-  NodeGenFunc* const cheb1 = getFirstTypeChebyshevNodeGenFunc();
+  NodeFamily* const cc = getClenshawCurtisNodes();
+  NodeFamily* const equi = getEquidistantNodes();
+  NodeFamily* const cheb1 = getFirstTypeChebyshevNodes();
   return {
       {"d1 cc b0", 1, {cc}, doublingLvl2GPCntFunction, 0, {{0.0, 1.0}}},
       {"d2 equi b1 domain",
@@ -112,7 +112,7 @@ void vectorFunc(const DataVector& x, std::span<double> out) {
 /// A grid of maximum level @p maxLvl with the configuration's setup.
 CompleteSGGenInstr makeInstr(const Config& config, const LvlType maxLvl) {
   CompleteSGGenInstr instr(maxLvl, config.nDim);
-  instr.setNodeGenFuncs(config.nodes);
+  instr.setNodeFamilies(config.nodes);
   instr.setLvl2GPCntFunc(config.growth);
   instr.setBoundaryLevelOffset(config.offset);
   if (!config.domain.empty()) instr.setDomain(config.domain);
@@ -457,7 +457,7 @@ BOOST_AUTO_TEST_CASE(Empty_And_One_Dimensional_Grids) {
   {
     const LvlMIVec none(3, 0);
     MIVecSGGenInstr instr(none);
-    instr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    instr.setNodeFamily(getClenshawCurtisNodes());
     instr.setBoundaryLevelOffset(1);
     SparseGrid sg(instr);
     BOOST_REQUIRE_EQUAL(sg.nTG(), 0u);
@@ -561,7 +561,7 @@ BOOST_AUTO_TEST_CASE(Smooth_Function_Is_Integrated_Accurately) {
   // d = 5, unit cube: the exact integral of anisoExp is the product of (e^{a_k} - 1) / a_k
   Config config = configs()[2];
   config.nDim = 5;
-  config.nodes.assign(5, getClenshawCurtisNodeGenFunc());
+  config.nodes.assign(5, getClenshawCurtisNodes());
   config.domain.clear();
   double exact = 1.0;
   for (size_t k = 0; k < 5; k++) {

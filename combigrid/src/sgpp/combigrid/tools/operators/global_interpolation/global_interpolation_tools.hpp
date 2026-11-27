@@ -78,7 +78,7 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourc
  * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param tg         Tensor grid (of @p setup's sparse grid).
  * @param unitTG     The same tensor grid with its nodes on the unit interval.
- * @param setup   Setup of the grid (domain, node-generation functions and their 1D
+ * @param setup   Setup of the grid (domain, node families and their 1D
  *                   interpolation methods).
  * @param scratch    Scratch of the calling thread (sized for the sparse grid of @p tg).
  * @return Interpolated value on @p tg (0 for a tensor grid without grid points).

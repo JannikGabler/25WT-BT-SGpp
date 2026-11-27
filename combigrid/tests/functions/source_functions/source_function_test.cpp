@@ -29,11 +29,11 @@
 #include <set>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
@@ -47,7 +47,7 @@ using sgpp::combigrid::CompleteSGGenInstr;
 using sgpp::combigrid::DeltasSparseGrid;
 using sgpp::combigrid::HyperCubeArea;
 using sgpp::combigrid::LvlType;
-using sgpp::combigrid::NodeGenFunc;
+using sgpp::combigrid::NodeFamily;
 using sgpp::combigrid::SourceFunc;
 using sgpp::combigrid::SparseGrid;
 
@@ -101,11 +101,11 @@ bool onDomainBoundary(const std::vector<uint64_t>& bits, const HyperCubeArea& do
   return false;
 }
 
-void checkOperatorsEvaluateIdenticalPoints(NodeGenFunc* nodes, const LvlType boundary,
+void checkOperatorsEvaluateIdenticalPoints(NodeFamily* nodes, const LvlType boundary,
                                            const size_t nDim, const LvlType maxLvl,
                                            const HyperCubeArea& domain) {
   CompleteSGGenInstr genInstr(maxLvl, nDim);
-  genInstr.setNodeGenFunc(nodes);
+  genInstr.setNodeFamily(nodes);
   genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(boundary);
   genInstr.setDomain(domain);
@@ -204,8 +204,8 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE(source_function_points_of_the_operators)
 
 BOOST_AUTO_TEST_CASE(identical_points_unit_domain) {
-  for (NodeGenFunc* nodes : {sgpp::combigrid::getEquidistantNodeGenFunc(),
-                             sgpp::combigrid::getClenshawCurtisNodeGenFunc()}) {
+  for (NodeFamily* nodes :
+       {sgpp::combigrid::getEquidistantNodes(), sgpp::combigrid::getClenshawCurtisNodes()}) {
     for (const LvlType boundary : {0u, 1u}) {
       for (const size_t nDim : {1, 2, 3}) {
         checkOperatorsEvaluateIdenticalPoints(nodes, boundary, nDim, 4,
@@ -216,8 +216,8 @@ BOOST_AUTO_TEST_CASE(identical_points_unit_domain) {
 }
 
 BOOST_AUTO_TEST_CASE(identical_points_shifted_domain) {
-  for (NodeGenFunc* nodes : {sgpp::combigrid::getEquidistantNodeGenFunc(),
-                             sgpp::combigrid::getClenshawCurtisNodeGenFunc()}) {
+  for (NodeFamily* nodes :
+       {sgpp::combigrid::getEquidistantNodes(), sgpp::combigrid::getClenshawCurtisNodes()}) {
     for (const LvlType boundary : {0u, 1u}) {
       for (const size_t nDim : {1, 2, 3}) {
         checkOperatorsEvaluateIdenticalPoints(nodes, boundary, nDim, 4, shiftedDomain(nDim));

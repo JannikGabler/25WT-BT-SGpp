@@ -24,13 +24,13 @@
 #include <cstdint>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/cross_call_operator_data_info.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
@@ -62,8 +62,8 @@ CompleteSGGenInstr makeGenInstr(const bool clenshawCurtis, const size_t nDim,
                                 const sgpp::combigrid::LvlType maxLvl) {
   CompleteSGGenInstr genInstr(maxLvl, nDim);
   genInstr.setDomain({-0.5, 1.5});
-  genInstr.setNodeGenFunc(clenshawCurtis ? sgpp::combigrid::getClenshawCurtisNodeGenFunc()
-                                         : sgpp::combigrid::getEquidistantNodeGenFunc());
+  genInstr.setNodeFamily(clenshawCurtis ? sgpp::combigrid::getClenshawCurtisNodes()
+                                        : sgpp::combigrid::getEquidistantNodes());
   genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
   return genInstr;

@@ -9,7 +9,7 @@ namespace sgpp {
 namespace combigrid {
 
 namespace tools {
-namespace equidistant_node_gen_function {
+namespace equidistant_nodes {
 
 /**
  * TODO: Document
@@ -23,7 +23,7 @@ GPCntType mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction(GPCntType nodeIdx, L
 GPCntType mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction(
     GPCntType nodeIdxInDeltaTG, LvlType deltaTGLvl, LvlType targetLvl);
 
-}  // namespace equidistant_node_gen_function
+}  // namespace equidistant_nodes
 }  // namespace tools
 
 }  // namespace combigrid

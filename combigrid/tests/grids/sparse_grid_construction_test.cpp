@@ -12,7 +12,7 @@
  *
  * The expected grids are assembled by hand in @c ExpectedSG, a list of owning
  * @c TensorGridCTData. Their multi-indices and coefficients are computed by closed formulas or
- * brute force, and their node lists only from @c NodeGenFunc::genNodesWithoutBoundary (mapped
+ * brute force, and their node lists only from @c NodeFamily::genNodesWithoutBoundary (mapped
  * onto the domain with @c tools::mapToDomain), independently of the library's sparse grid
  * generation code.
  */
@@ -30,10 +30,6 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
@@ -42,6 +38,10 @@
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
@@ -56,9 +56,9 @@ using namespace sgpp::combigrid;
 
 static sgpp::base::RandomNumberGenerator& randGen =
     sgpp::base::RandomNumberGenerator::getInstance();
-static NodeGenFunc* const equidistantNodeGenFunc = getEquidistantNodeGenFunc();
-static NodeGenFunc* const clenshawCurtisNodeGenFunc = getClenshawCurtisNodeGenFunc();
-static NodeGenFunc* const firstTypeChebyshevNodeGenFunc = getFirstTypeChebyshevNodeGenFunc();
+static NodeFamily* const equidistantNodes = getEquidistantNodes();
+static NodeFamily* const clenshawCurtisNodes = getClenshawCurtisNodes();
+static NodeFamily* const firstTypeChebyshevNodes = getFirstTypeChebyshevNodes();
 
 namespace {
 
@@ -93,10 +93,10 @@ std::string toString(const LvlMI& mi) {
   return result + ")";
 }
 
-/// The @p nInnerNodes inner nodes of @p nodeGenFunc, framed by 0 and 1 if @p withBoundary.
-sgpp::base::DataVector expectedNodes(const NodeGenFunc* nodeGenFunc, const GPCntType nInnerNodes,
+/// The @p nInnerNodes inner nodes of @p nodeFamily, framed by 0 and 1 if @p withBoundary.
+sgpp::base::DataVector expectedNodes(const NodeFamily* nodeFamily, const GPCntType nInnerNodes,
                                      const bool withBoundary) {
-  const sgpp::base::DataVector innerNodes = nodeGenFunc->genNodesWithoutBoundary(nInnerNodes);
+  const sgpp::base::DataVector innerNodes = nodeFamily->genNodesWithoutBoundary(nInnerNodes);
 
   if (!withBoundary) {
     return innerNodes;
@@ -131,14 +131,14 @@ TensorGrid makeTG(const std::vector<sgpp::base::DataVector>& nodesPerDim) {
 
 /**
  * Tensor grid of level @p mi as it should be generated from @p genInstr: in dimension k,
- * Lvl2GPCntFunc_k(l_k) inner nodes of NodeGenFunc_k, plus the boundary nodes 0 and 1 iff
+ * Lvl2GPCntFunc_k(l_k) inner nodes of NodeFamily_k, plus the boundary nodes 0 and 1 iff
  * l_k >= boundary level offset, mapped onto the domain with tools::mapToDomain.
  */
 TensorGrid expectedTG(const LvlMI& mi, const SGGenInstr& genInstr) {
   std::vector<sgpp::base::DataVector> nodesPerDim;
 
   for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-    nodesPerDim.push_back(expectedNodes(genInstr.getNodeGenFuncForDim(dim),
+    nodesPerDim.push_back(expectedNodes(genInstr.getNodeFamilyForDim(dim),
                                         genInstr.getLvl2GPCntFuncForDim(dim)(mi[dim]),
                                         mi[dim] >= genInstr.getBoundaryLevelOffset()));
     const auto [lower, upper] = genInstr.getDomainForDim(dim);
@@ -300,22 +300,22 @@ CTCoeffType sumOfCoeffs(const SparseGridBase& sg) {
 /// Assigns random node generation and growth functions per dimension and a random boundary
 /// level offset in {0, 1, 2}.
 void setRandomSettings(SGGenInstr& genInstr) {
-  NodeGenFunc* const nodeGenFuncs[] = {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc,
-                                       firstTypeChebyshevNodeGenFunc};
+  NodeFamily* const nodeFamilies[] = {equidistantNodes, clenshawCurtisNodes,
+                                      firstTypeChebyshevNodes};
   const Lvl2GPCntFunc lvl2GPCntFuncs[] = {linearLvl2GPCntFunction, doublingLvl2GPCntFunction};
 
   for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-    genInstr.setNodeGenFuncForDim(nodeGenFuncs[randGen.getUniformIndexRN(3)], dim);
+    genInstr.setNodeFamilyForDim(nodeFamilies[randGen.getUniformIndexRN(3)], dim);
     genInstr.setLvl2GPCntFuncForDim(lvl2GPCntFuncs[randGen.getUniformIndexRN(2)], dim);
   }
 
   genInstr.setBoundaryLevelOffset(static_cast<LvlType>(randGen.getUniformIndexRN(3)));
 }
 
-/// Copies domain, node generation functions, growth functions and boundary level offset.
+/// Copies domain, node families, growth functions and boundary level offset.
 void copySettings(const SGGenInstr& from, SGGenInstr& to) {
   to.setDomain(from.getDomain());
-  to.setNodeGenFuncs(from.getNodeGenFuncs());
+  to.setNodeFamilies(from.getNodeFamilies());
   to.setLvl2GPCntFuncs(from.getLvl2GPCntFuncs());
   to.setBoundaryLevelOffset(from.getBoundaryLevelOffset());
 }
@@ -325,7 +325,7 @@ void checkSameSettings(const SparseGridSetup& result, const SparseGridSetup& exp
   BOOST_CHECK_EQUAL(result.nDim(), expected.nDim());
   BOOST_CHECK_EQUAL(result.getBoundaryLevelOffset(), expected.getBoundaryLevelOffset());
   BOOST_CHECK(result.getDomain() == expected.getDomain());
-  BOOST_CHECK(result.getNodeGenFuncs() == expected.getNodeGenFuncs());
+  BOOST_CHECK(result.getNodeFamilies() == expected.getNodeFamilies());
   BOOST_CHECK(result.getLvl2GPCntFuncs() == expected.getLvl2GPCntFuncs());
 }
 
@@ -364,14 +364,14 @@ BOOST_AUTO_TEST_CASE(Random_1D) {
     const LvlType maxLvl = static_cast<LvlType>(randGen.getUniformIndexRN(10000));
 
     CompleteSGGenInstr genInstr(maxLvl, 1);
-    genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+    genInstr.setNodeFamily(equidistantNodes);
     genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
     genInstr.setBoundaryLevelOffset(0);
 
     // A single full grid of level maxLvl: maxLvl + 1 inner nodes and the boundary
     ExpectedSG expected(1);
-    expected.addTensorGrid(TensorGridCTData{
-        {maxLvl}, 1, makeTG({expectedNodes(equidistantNodeGenFunc, maxLvl + 1, true)})});
+    expected.addTensorGrid(
+        TensorGridCTData{{maxLvl}, 1, makeTG({expectedNodes(equidistantNodes, maxLvl + 1, true)})});
 
     const SparseGrid result(genInstr);
 
@@ -384,14 +384,14 @@ BOOST_AUTO_TEST_CASE(Random_1D) {
 
 BOOST_AUTO_TEST_CASE(Complex_2D) {
   CompleteSGGenInstr genInstr(2, 2);
-  genInstr.setNodeGenFuncs({equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
+  genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes});
   genInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryLevelOffset(1);
 
   // Dimension 0: 2^(l+1) - 1 equidistant inner nodes, dimension 1: l + 1 Clenshaw-Curtis inner
   // nodes. Boundary nodes for every level >= 1. The tensor grid (0, 0) has coefficient 0.
-  const NodeGenFunc* const eq = equidistantNodeGenFunc;
-  const NodeGenFunc* const cc = clenshawCurtisNodeGenFunc;
+  const NodeFamily* const eq = equidistantNodes;
+  const NodeFamily* const cc = clenshawCurtisNodes;
 
   ExpectedSG expected(2);
   expected.addTensorGrid(TensorGridCTData{
@@ -415,7 +415,7 @@ BOOST_AUTO_TEST_CASE(Complex_2D) {
 
 BOOST_AUTO_TEST_CASE(Level0_3D) {
   CompleteSGGenInstr genInstr(0, 3);
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr.setNodeFamily(equidistantNodes);
   genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
 
@@ -431,8 +431,7 @@ BOOST_AUTO_TEST_CASE(Mixed_Settings_3D) {
   const LvlType maxLvl = 2;
 
   CompleteSGGenInstr genInstr(maxLvl, 3);
-  genInstr.setNodeGenFuncs(
-      {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes, firstTypeChebyshevNodes});
   genInstr.setLvl2GPCntFuncs(
       {doublingLvl2GPCntFunction, linearLvl2GPCntFunction, doublingLvl2GPCntFunction});
   genInstr.setBoundaryLevelOffset(1);
@@ -468,7 +467,7 @@ BOOST_AUTO_TEST_CASE(Omits_Zero_Coefficients) {
   const LvlType maxLvl = 4;
 
   CompleteSGGenInstr genInstr(maxLvl, 3);
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr.setNodeFamily(equidistantNodes);
   genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
 
   const SparseGrid result(genInstr);
@@ -497,8 +496,7 @@ BOOST_AUTO_TEST_CASE(Boundary_Level_Offset) {
   for (const LvlType boundaryLevelOffset : {0u, 1u, 2u, 1000u}) {
     BOOST_TEST_CONTEXT("Boundary level offset: " << boundaryLevelOffset) {
       CompleteSGGenInstr genInstr(maxLvl, 3);
-      genInstr.setNodeGenFuncs(
-          {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+      genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes, firstTypeChebyshevNodes});
       genInstr.setLvl2GPCntFuncs(
           {linearLvl2GPCntFunction, doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
       genInstr.setBoundaryLevelOffset(boundaryLevelOffset);
@@ -536,7 +534,7 @@ BOOST_AUTO_TEST_CASE(Nodes_Mapped_Onto_Domain) {
   // The node table holds the nodes of the unit domain mapped onto the domain with
   // tools::mapToDomain (bitwise); multi-indices and coefficients do not depend on the domain
   CompleteSGGenInstr unitGenInstr(3, 2);
-  unitGenInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  unitGenInstr.setNodeFamilies({clenshawCurtisNodes, equidistantNodes});
   unitGenInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   unitGenInstr.setBoundaryLevelOffset(1);
 
@@ -576,7 +574,7 @@ BOOST_AUTO_TEST_CASE(Coefficients_Sum_To_One) {
 
       BOOST_TEST_CONTEXT("Run: " << run << ", nDim: " << nDim << ", maxLvl: " << maxLvl) {
         CompleteSGGenInstr genInstr(maxLvl, nDim);
-        genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+        genInstr.setNodeFamily(equidistantNodes);
         genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
 
         BOOST_CHECK_EQUAL(sumOfCoeffs(SparseGrid(genInstr)), 1);
@@ -593,13 +591,13 @@ BOOST_AUTO_TEST_CASE(Downwards_Closed_2D) {
   const LvlMIVec mis{{0, 0}, {1, 0}, {2, 0}, {0, 1}, {1, 1}};
 
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setNodeFamilies({clenshawCurtisNodes, equidistantNodes});
   genInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryLevelOffset(1);
 
   // Inclusion-exclusion yields c(2, 0) = c(1, 1) = 1, c(1, 0) = -1 and c(0, 0) = c(0, 1) = 0
-  const NodeGenFunc* const cc = clenshawCurtisNodeGenFunc;
-  const NodeGenFunc* const eq = equidistantNodeGenFunc;
+  const NodeFamily* const cc = clenshawCurtisNodes;
+  const NodeFamily* const eq = equidistantNodes;
 
   ExpectedSG expected(2);
   expected.addTensorGrid(TensorGridCTData{
@@ -621,7 +619,7 @@ BOOST_AUTO_TEST_CASE(Non_Downwards_Closed_Input) {
   const LvlMIVec partialMIs{{1, 1}, {0, 1}, {2, 0}};
 
   MIVecSGGenInstr closedGenInstr(closedMIs);
-  closedGenInstr.setNodeGenFuncs({equidistantNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  closedGenInstr.setNodeFamilies({equidistantNodes, firstTypeChebyshevNodes});
   closedGenInstr.setBoundaryLevelOffset(1);
 
   MIVecSGGenInstr paretoGenInstr(paretoMaxima);
@@ -643,8 +641,7 @@ BOOST_AUTO_TEST_CASE(Single_MI_Gives_Full_Grid) {
   const LvlMIVec mis{mi};
 
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFuncs(
-      {clenshawCurtisNodeGenFunc, equidistantNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  genInstr.setNodeFamilies({clenshawCurtisNodes, equidistantNodes, firstTypeChebyshevNodes});
   genInstr.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, doublingLvl2GPCntFunction, doublingLvl2GPCntFunction});
   genInstr.setBoundaryLevelOffset(1);
@@ -762,8 +759,7 @@ BOOST_AUTO_TEST_CASE(Stores_Setup_Of_Complete_SG_Gen_Instr) {
   const LvlType maxLvl = 2;
 
   CompleteSGGenInstr genInstr(maxLvl, 3);
-  genInstr.setNodeGenFuncs(
-      {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes, firstTypeChebyshevNodes});
   genInstr.setLvl2GPCntFuncs(
       {linearLvl2GPCntFunction, doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr.setBoundaryLevelOffset(1);
@@ -779,7 +775,7 @@ BOOST_AUTO_TEST_CASE(Stores_Setup_Of_Complete_SG_Gen_Instr) {
 
   // Later changes of the original instruction affect neither the stored setup nor the grid
   genInstr.setMaxLvl(4);
-  genInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
+  genInstr.setNodeFamily(clenshawCurtisNodes);
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(0);
   genInstr.setDomain({-5.0, 5.0});
@@ -793,7 +789,7 @@ BOOST_AUTO_TEST_CASE(Stores_Setup_Of_MIVec_SG_Gen_Instr) {
   // references are needed after the construction.
   auto mis = std::make_unique<LvlMIVec>(LvlMIVec{{3, 0}, {1, 2}});
   auto genInstr = std::make_unique<MIVecSGGenInstr>(*mis);
-  genInstr->setNodeGenFuncs({clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  genInstr->setNodeFamilies({clenshawCurtisNodes, firstTypeChebyshevNodes});
   genInstr->setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   genInstr->setBoundaryLevelOffset(2);
 
@@ -804,7 +800,7 @@ BOOST_AUTO_TEST_CASE(Stores_Setup_Of_MIVec_SG_Gen_Instr) {
   BOOST_CHECK(storedSetup == *genInstr);
   const SparseGridSetup originalSetup = *genInstr;
 
-  genInstr->setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr->setNodeFamily(equidistantNodes);
   genInstr->setBoundaryLevelOffset(0);
   checkSameSettings(storedSetup, originalSetup);
 
@@ -813,7 +809,7 @@ BOOST_AUTO_TEST_CASE(Stores_Setup_Of_MIVec_SG_Gen_Instr) {
 
   const LvlMIVec expectedMIs{{3, 0}, {1, 2}};
   MIVecSGGenInstr expectedGenInstr(expectedMIs);
-  expectedGenInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  expectedGenInstr.setNodeFamilies({clenshawCurtisNodes, firstTypeChebyshevNodes});
   expectedGenInstr.setLvl2GPCntFuncs({doublingLvl2GPCntFunction, linearLvl2GPCntFunction});
   expectedGenInstr.setBoundaryLevelOffset(2);
   checkSameSettings(storedSetup, expectedGenInstr);

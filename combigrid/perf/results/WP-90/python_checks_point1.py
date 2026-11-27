@@ -11,7 +11,7 @@ for cls in (pysgpp.SGGenInstr, pysgpp.CompleteSGGenInstr, pysgpp.MIVecSGGenInstr
 g = pysgpp.CompleteSGGenInstr(2, 3)
 g.setDomain((-1.0, 2.0))
 g.setBoundaryLevelOffset(1)
-g.setNodeGenFunc(pysgpp.getClenshawCurtisNodeGenFunc())
+g.setNodeFamily(pysgpp.getClenshawCurtisNodes())  # P2 names
 g.setLvl2GPCntFuncs([pysgpp.doublingLvl2GPCntFunction] * 3)
 assert isinstance(g, pysgpp.SGGenInstr) and isinstance(g, pysgpp.SparseGridSetup)
 assert "shared_ptr" not in repr(g.this), repr(g.this)  # plain proxy

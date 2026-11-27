@@ -29,7 +29,7 @@
 namespace sgpp {
 namespace combigrid {
 
-class NodeGenFunc;  ///< Forward declaration to avoid circular includes.
+class NodeFamily;  ///< Forward declaration to avoid circular includes.
 
 /******************************************************************************************
 -Variable types-
@@ -104,24 +104,24 @@ using HyperCubeArea = std::vector<std::pair<double, double>>;
 // using SourceFunc =
 // std::function<double(const base::DataVector&)>;  // double (*)(const sgpp::base::DataVector&);
 
-// using NodeGenFunc = sgpp::base::DataVector (*)(GPCntType);
+// using NodeFamily = sgpp::base::DataVector (*)(GPCntType);
 
 /**
  * @brief Function pointer mapping a refinement level to the number of grid
  * points generated at that level (e.g. linear or doubling growth).
  */
 using Lvl2GPCntFunc = GPCntType (*)(LvlType);
-// using NodeGenFuncId = uint64_t;
+// using NodeFamilyId = uint64_t;
 
 /**
- * @brief Cache mapping a (node-generation function, requested point count)
+ * @brief Cache mapping a (node family, requested point count)
  * pair to the corresponding 1D node positions.
  *
  * Used to avoid recomputing node positions for tensor grids that share a
- * node-generation function and grid-point count along some dimension.
+ * node family and grid-point count along some dimension.
  */
-using SGGenNodeLookup = std::unordered_map<std::pair<NodeGenFunc*, GPCntType>, base::DataVector,
-                                           misc::PairHash<NodeGenFunc*, GPCntType>>;
+using SGGenNodeLookup = std::unordered_map<std::pair<NodeFamily*, GPCntType>, base::DataVector,
+                                           misc::PairHash<NodeFamily*, GPCntType>>;
 
 /**
  * TODO: Document

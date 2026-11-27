@@ -7,7 +7,8 @@ Session start: 2026-11-27 (HEAD 182f9cd30, branch `optimizations`). Resume from 
 - Phase 1 (orientation) done; orientation + candidate points (§3) given to the owner. The owner
   wants session findings that relate to an owner point reported with that point; the remaining
   candidates are reviewed by the owner after their own points.
-- P1 implemented (verification in progress, see §2). Benchmarks of judged code: one run at the end
+- P1 done and verified (§2; owner checkpoint commit). P2 done and verified; waiting for
+  the owner before P3 (owner 2026-11-27). Snapshots: `WP-90-before`, `WP-90-p1`, `WP-90-p2`. Benchmarks of judged code: one run at the end
   of the WP (owner 2026-11-27).
 - Environment at start: `verify` ✓ (40 files), `envcheck` ✓ (busy 0.3 %, boost 0, AC),
   `calibrate` 1.005 / 1.000 (e2e burst / sustained), 0.998 / 0.998 (micro).
@@ -54,9 +55,81 @@ Per point: request · options · decision · change · files · tests · measure
 - **Tests**: no behavior change; existing suite (construction / setup tests, all operator tests).
   Python: `results/WP-90/python_checks_point1.py` (no `clone`, plain proxies, `getSetup` copy,
   grids without their instruction) + the 12 examples.
-- **Checks**: debug build ✓, debug `test --repeat 3` (running); Python build + checks, normal build,
-  refcheck, `perf_reference` diff vs. `WP-90-before`: pending.
-- **Status**: implemented, verification in progress.
+- **Checks**: debug build ✓, debug `test --repeat 3` ✓; Python build (`SG_PYTHON=1`, OPT=0, in-tree)
+  ✓: `python_checks_point1.py` ✓, WP-89 `python_checks.py` ✓, 12 / 12 examples ✓; normal build + `test`
+  ✓ (snapshot `WP-90-p1`); `refcheck` (`refcheck_p1.txt`): WARN only the known
+  `interp/sg/equi/b0/d2/L5/cos-shifted` (x2.34, since WP-06); `perf_reference` at 1 and 16 threads
+  **bitwise identical** to `WP-90-before` (146 / 146). Benchmarks: at the end of the WP (owner).
+- **Status**: done (2026-11-27).
+
+### P2–P4 — node storage (owner's point 2, split into three steps)
+
+- **Request** (owner 2026-11-27): replace the per-grid node tables (unit + domain, handed between
+  grids and refinement objects) by a `NodeStorage` that manages 1D nodes for node families / counts;
+  grids (and refinement objects, …) reference a storage (via `SparseGridSetup`; default a global
+  static one, users may set their own) and read nodes from it; lazy generation, add-only at first;
+  domain nodes: proposals wanted. `NodeTable` etc. may be renamed / changed / deleted.
+- **Proposal and decisions** (owner 2026-11-27):
+  - Rows with / without boundary share memory: the storage keeps the row with boundary, "without"
+    is the span `[1, n−1)` (owner's idea; bitwise valid: the base class builds "with boundary" as
+    `[0] + genNodesWithoutBoundary(n−2) + [1]`, regular rows have ≥ 2 nodes; also for delta and
+    domain rows).
+  - D1 lifetime: **(b) reference-counted rows** (storage maps key → `weak_ptr`; a row dies with the
+    last holder); the `shared_ptr`s live **inside `NodeTable`** next to the spans (owner).
+    Reasons: no unbounded growth of the global storage; no artificial cross-sample reuse in the
+    judged e2e `generation` metric.
+  - D2 domain nodes: **(A)** domain rows in the storage, key (unit key, interval bits), mapped with
+    `tools::mapToDomain`; the identity domain reuses the unit row (`fma(u, 1, 0) == u`) → WP-58's
+    memory gain.
+  - D3: the global storage easy to reach for end users (e.g. a static `NodeStorage::global()`);
+    `SparseGridSetup::operator==` excludes the storage; **`NodeStorage` hidden from Python** (Python
+    grids always use the global storage).
+  - D4: owner first considered value objects for node families, then decided to **keep
+    pointer-based singletons** (passing objects is awkward with inheritance) and only rename
+    `NodeGenFunc` → `NodeFamily`; identity = the singleton pointer (with D1 (b) safe: rows exist only
+    while a grid holds them, and a grid's node families must outlive it, so a family address
+    cannot be reused while rows keyed by it exist). Getters keep returning pointers;
+    `NodeFamily` non-copyable.
+  - D5: `NodeStorage` (shared, owns rows) + `NodeTable` (per grid, non-owning index + row handles).
+  - Order (owner): **P2** NodeFamily rename → **P3** NodeStorage + non-owning NodeTable → **P4**
+    refinement simplification; the owner checks in after P2 before P3 starts.
+
+### P2 — rename `NodeGenFunc` → `NodeFamily` (pointer-based singletons kept)
+
+- **Decisions** (owner): pointers + non-copyable; class names `*Nodes`; files in a top-level
+  `node_families/` directory (not under `functions/`).
+- **Change**: classes `NodeGenFunc` → `NodeFamily` (copy constructor / assignment deleted),
+  `EquidistantNodeGenFunc` → `EquidistantNodes`, `SecondTypeChebyshevNodeGenFunc` →
+  `ClenshawCurtisNodes` (+ alias `SecondTypeChebyshevNodes`), `FirstTypeChebyshevNodeGenFunc` →
+  `FirstTypeChebyshevNodes`; getters `get{Equidistant,ClenshawCurtis,SecondTypeChebyshev,
+  FirstTypeChebyshev}Nodes()`; setup `setNodeFamily(ForDim)`, `setNodeFamilies`,
+  `getNodeFamily(ForDim)` / `getNodeFamilies`, `getUniqueNodeFamilies`, member `nodeFamilies`;
+  Python `NodeFamilyVector`; namespaces `node_families`, `tools::equidistant_nodes`; variables and
+  prose ("node-generation function" → "node family"). Files: `functions/node_generation_functions/**`
+  → `node_families/{node_family, equidistant_nodes, clenshaw_curtis_nodes, first_type_chebyshev_nodes}.*`
+  + `node_families/getter/*_nodes_getter.*`; `tools/functions/node_generation_functions/
+  equidistant_node_generation_function_utilities.*` → `tools/node_families/equidistant_nodes_utilities.*`;
+  `tests/node_generation_functions/` → `tests/node_families/{node_families_test, delta_node_families_test}.cpp`
+  (Boost suites `NodeFamily_*`). Family ids unchanged (the hashed name strings are kept). clang-format:
+  include re-sorting (55 files) + re-alignment of 6 renamed files. 116 files rewritten (not:
+  `perf/results`, summaries, PLAN / HISTORY / STATUS, `claude/bachelor-thesis/`). Protected files (6,
+  incl. `perf_problems.hpp`'s helper `nodeGenFuncByName` → `nodeFamilyByName`): edited and rehashed by
+  the owner. Docs: CLAUDE.md §2 example / §6 gotcha, module-reference (layout entry `node_families/`),
+  python-bindings.md.
+- **Related findings**: Doxygen still says "node generator(s)" / "node-generation rules" in a few
+  briefs; `NodeFamily::getQuadRule` / `getInterpolationMethod` return raw pointers of unclear
+  ownership; `TODO: Document` on several `NodeFamily` methods.
+- **Tests**: no behavior change; existing suite (incl. `tests/node_families/`). Python:
+  `python_checks_point2.py` (old names gone, new names, CC == second-type Chebyshev singleton, setup
+  setters / getters, `NodeFamilyVector`) + point-1 checks + 12 examples.
+- **Checks**: debug build ✓, debug `test --repeat 3` ✓; Python build ✓: `python_checks_point2.py` ✓,
+  `python_checks_point1.py` ✓ (updated to the P2 names), 12 / 12 examples ✓ (WP-89's
+  `python_checks.py` uses the old names: historical, not updated); normal build + `test` ✓ (snapshot
+  `WP-90-p2`); `refcheck` (`refcheck_p2.txt`): only the known WARN; `perf_reference` at 1 and 16
+  threads **bitwise identical** to `WP-90-p1` and `WP-90-before`. Benchmarks: at the end of the WP.
+- Note: `list(DataVector)` aborts in Python (no `__iter__`, reads past the end; known, WP-37) — hit
+  by a first version of the check script.
+- **Status**: done (2026-11-27).
 
 ## 3. Candidate points raised by the session (not implemented unless the owner pulls them in)
 

@@ -32,7 +32,6 @@
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
@@ -47,6 +46,7 @@
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
@@ -453,7 +453,7 @@ void addSolQuadTG(Suite& suite, const std::string& nodes, const LvlType boundary
             domain[k].first;
       }
       sg.getSetup()
-          .getNodeGenFuncForDim(k)
+          .getNodeFamilyForDim(k)
           ->getQuadRule(n, tgData.mi[k] >= boundary)
           ->genWeightsInplace(w[k]);
       offset += n;
@@ -837,10 +837,10 @@ void addBarycentric1D(Suite& suite, const bool optimized, const GPCntType nNodes
       std::string("micro/interp/barycentric_1d/") + (optimized ? "opt_cc" : "generic") + "/n" +
           std::to_string(nNodes),
       [=](MicroRun& run) {
-        cg::NodeGenFunc* const nodeGenFunc = perf::nodeGenFuncByName(optimized ? "cc" : "cheb1");
+        cg::NodeFamily* const nodeFamily = perf::nodeFamilyByName(optimized ? "cc" : "cheb1");
         cg::InterpolationMethod* const method =
-            optimized ? cg::getOptBarycentricFormula() : cg::getBarycentricFormula(nodeGenFunc);
-        const DataVector nodesVec = nodeGenFunc->genNodes(nNodes, optimized);
+            optimized ? cg::getOptBarycentricFormula() : cg::getBarycentricFormula(nodeFamily);
+        const DataVector nodesVec = nodeFamily->genNodes(nNodes, optimized);
         const std::vector<double> nodeValues(nodesVec.begin(), nodesVec.end());
         std::vector<double> values(nNodes);
         for (GPCntType i = 0; i < nNodes; i++) values[i] = std::cos(3.0 * nodeValues[i]);
@@ -913,7 +913,7 @@ void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, c
     sol::tgNodes(tg, domain, unit, mapped);
     std::vector<const cg::InterpolationMethod*> methods;
     for (size_t k = 0; k < nDim; k++) {
-      methods.push_back(sg.getSetup().getNodeGenFuncForDim(k)->getInterpolationMethod(
+      methods.push_back(sg.getSetup().getNodeFamilyForDim(k)->getInterpolationMethod(
           static_cast<GPCntType>(unit[k].size())));
     }
     sol::GlobalScratch scratch(nDim);
@@ -942,8 +942,8 @@ void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, c
 void addSolBarycentricCached(Suite& suite, const GPCntType nNodes) {
   suite.addMicro("micro/sol/barycentric_1d/generic_cached_weights/n" + std::to_string(nNodes),
                  [=](MicroRun& run) {
-                   cg::NodeGenFunc* const nodeGenFunc = perf::nodeGenFuncByName("cheb1");
-                   const DataVector nodesVec = nodeGenFunc->genNodes(nNodes, false);
+                   cg::NodeFamily* const nodeFamily = perf::nodeFamilyByName("cheb1");
+                   const DataVector nodesVec = nodeFamily->genNodes(nNodes, false);
                    const std::vector<double> x(nodesVec.begin(), nodesVec.end());
                    const std::vector<double> w = cg::tools::barycentricFormulaWeights(x);
                    std::vector<double> values(nNodes);
@@ -1544,7 +1544,7 @@ double adaptGauss(const DataVector& x) {
 /// A level-0 Clenshaw-Curtis grid (boundary offset 1) of dimension @p nDim.
 std::unique_ptr<SparseGrid> adaptStartGrid(const size_t nDim) {
   CompleteSGGenInstr genInstr(0, nDim);
-  genInstr.setNodeGenFunc(cg::getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(cg::getClenshawCurtisNodes());
   genInstr.setLvl2GPCntFunc(cg::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
   return std::make_unique<SparseGrid>(genInstr);

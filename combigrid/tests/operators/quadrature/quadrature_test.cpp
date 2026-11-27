@@ -21,9 +21,6 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -33,6 +30,9 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
@@ -145,12 +145,12 @@ double absSinIntegral(const double a, const double b) {
 }
 
 /// sin on [a, b] with random a in [-1, 0], b in [0.5, 2] (the integral vanishes for b = -a).
-void checkSinRandomInterval1D(NodeGenFunc* const nodes, const LvlType maxLvl, const double relTol) {
+void checkSinRandomInterval1D(NodeFamily* const nodes, const LvlType maxLvl, const double relTol) {
   const double a = randGen.getUniformRN(-1.0, 0.0);
   const double b = randGen.getUniformRN(0.5, 2.0);
 
   CompleteSGGenInstr genInstr(maxLvl, 1);
-  genInstr.setNodeGenFunc(nodes);
+  genInstr.setNodeFamily(nodes);
   genInstr.setDomainForDim({a, b}, 0);
   const SparseGrid sg(genInstr);
 
@@ -160,9 +160,9 @@ void checkSinRandomInterval1D(NodeGenFunc* const nodes, const LvlType maxLvl, co
 }
 
 /// prod_k sin(x_k) on a random cube (each interval as in checkSinRandomInterval1D).
-void checkSinRandomCube3D(NodeGenFunc* const nodes, const LvlType maxLvl, const double relTol) {
+void checkSinRandomCube3D(NodeFamily* const nodes, const LvlType maxLvl, const double relTol) {
   CompleteSGGenInstr genInstr(maxLvl, 3);
-  genInstr.setNodeGenFunc(nodes);
+  genInstr.setNodeFamily(nodes);
 
   double expected = 1.0;
   double magnitude = 1.0;
@@ -179,12 +179,12 @@ void checkSinRandomCube3D(NodeGenFunc* const nodes, const LvlType maxLvl, const 
 }
 
 /// a x + b on [0, 1] with random a in [-2, 2], b in [-1, 1] (the integral vanishes for b = -a/2).
-void checkLinearUnitCube1D(NodeGenFunc* const nodes, const LvlType maxLvl, const double relTol) {
+void checkLinearUnitCube1D(NodeFamily* const nodes, const LvlType maxLvl, const double relTol) {
   const double a = randGen.getUniformRN(-2.0, 2.0);
   const double b = randGen.getUniformRN(-1.0, 1.0);
 
   CompleteSGGenInstr genInstr(maxLvl, 1);
-  genInstr.setNodeGenFunc(nodes);
+  genInstr.setNodeFamily(nodes);
   const SparseGrid sg(genInstr);
 
   // ∫ |a x + b| dx <= |a| / 2 + |b|
@@ -193,7 +193,7 @@ void checkLinearUnitCube1D(NodeGenFunc* const nodes, const LvlType maxLvl, const
 }
 
 /// a x + b on a random interval (a, b, interval bounds random).
-void checkLinearRandomInterval1D(NodeGenFunc* const nodes, const LvlType maxLvl,
+void checkLinearRandomInterval1D(NodeFamily* const nodes, const LvlType maxLvl,
                                  const double relTol) {
   const double aCoeff = randGen.getUniformRN(-2.0, 2.0);
   const double bCoeff = randGen.getUniformRN(-1.0, 1.0);
@@ -201,7 +201,7 @@ void checkLinearRandomInterval1D(NodeGenFunc* const nodes, const LvlType maxLvl,
   const double b = randGen.getUniformRN(0.5, 3.0);
 
   CompleteSGGenInstr genInstr(maxLvl, 1);
-  genInstr.setNodeGenFunc(nodes);
+  genInstr.setNodeFamily(nodes);
   genInstr.setDomainForDim({a, b}, 0);
   const SparseGrid sg(genInstr);
 
@@ -213,11 +213,10 @@ void checkLinearRandomInterval1D(NodeGenFunc* const nodes, const LvlType maxLvl,
 }
 
 /// prod_k x_k^{e_k} on a random cube, e_k in 0..3 (odd e_k: the integral vanishes for b = -a).
-void checkMonomialRandomCubeND(NodeGenFunc* const nodes, const LvlType maxLvl,
-                               const double relTol) {
+void checkMonomialRandomCubeND(NodeFamily* const nodes, const LvlType maxLvl, const double relTol) {
   const size_t nDim = 1 + randGen.getUniformIndexRN(4);  // 1..4
   CompleteSGGenInstr genInstr(maxLvl, nDim);
-  genInstr.setNodeGenFunc(nodes);
+  genInstr.setNodeFamily(nodes);
 
   std::vector<int> exponents(nDim);
   double expected = 1.0;
@@ -247,7 +246,7 @@ void checkMonomialRandomCubeND(NodeGenFunc* const nodes, const LvlType maxLvl,
 }
 
 /// Random polynomial (1..4 terms, coefficients in [-2, 2], exponents 0..3) on the unit cube.
-void checkRandomPolynomialUnitCubeND(NodeGenFunc* const nodes, const double relTol) {
+void checkRandomPolynomialUnitCubeND(NodeFamily* const nodes, const double relTol) {
   const size_t nDim = 1 + randGen.getUniformIndexRN(4);                           // 1..4
   const LvlType maxLvl = static_cast<LvlType>(6 + randGen.getUniformIndexRN(3));  // 6..8
   const size_t nTerms = 1 + randGen.getUniformIndexRN(4);                         // 1..4
@@ -288,7 +287,7 @@ void checkRandomPolynomialUnitCubeND(NodeGenFunc* const nodes, const double relT
   }
 
   CompleteSGGenInstr genInstr(maxLvl, nDim);
-  genInstr.setNodeGenFunc(nodes);
+  genInstr.setNodeFamily(nodes);
   const SparseGrid sg(genInstr);
 
   checkIntegral(quadrature(sourceFunc, sg), expected, magnitude, relTol);
@@ -412,12 +411,12 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
-  withClockSeed([] { checkSinRandomInterval1D(getEquidistantNodeGenFunc(), 9, 1e-12); });
+  withClockSeed([] { checkSinRandomInterval1D(getEquidistantNodes(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D_pinned_seeds) {
   withSeeds(SIN_INTERVAL_1D_PINNED_SEEDS,
-            [] { checkSinRandomInterval1D(getEquidistantNodeGenFunc(), 9, 1e-12); });
+            [] { checkSinRandomInterval1D(getEquidistantNodes(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D) {
@@ -461,30 +460,30 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_3D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
-  withClockSeed([] { checkSinRandomCube3D(getEquidistantNodeGenFunc(), 9, 1e-12); });
+  withClockSeed([] { checkSinRandomCube3D(getEquidistantNodes(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D_pinned_seeds) {
   withSeeds(SIN_CUBE_3D_PINNED_SEEDS,
-            [] { checkSinRandomCube3D(getEquidistantNodeGenFunc(), 9, 1e-12); });
+            [] { checkSinRandomCube3D(getEquidistantNodes(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D) {
-  withClockSeed([] { checkLinearUnitCube1D(getEquidistantNodeGenFunc(), 4, 1e-14); });
+  withClockSeed([] { checkLinearUnitCube1D(getEquidistantNodes(), 4, 1e-14); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D_pinned_seeds) {
   withSeeds(LINEAR_UNIT_CUBE_1D_PINNED_SEEDS,
-            [] { checkLinearUnitCube1D(getEquidistantNodeGenFunc(), 4, 1e-14); });
+            [] { checkLinearUnitCube1D(getEquidistantNodes(), 4, 1e-14); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
-  withClockSeed([] { checkLinearRandomInterval1D(getEquidistantNodeGenFunc(), 6, 1e-12); });
+  withClockSeed([] { checkLinearRandomInterval1D(getEquidistantNodes(), 6, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_pinned_seeds) {
   withSeeds(LINEAR_INTERVAL_1D_PINNED_SEEDS,
-            [] { checkLinearRandomInterval1D(getEquidistantNodeGenFunc(), 6, 1e-12); });
+            [] { checkLinearRandomInterval1D(getEquidistantNodes(), 6, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(quadratic_func_unit_cube_1D) {
@@ -571,16 +570,16 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
 }
 
 BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
-  withClockSeed([] { checkMonomialRandomCubeND(getEquidistantNodeGenFunc(), 8, 1e-11); });
+  withClockSeed([] { checkMonomialRandomCubeND(getEquidistantNodes(), 8, 1e-11); });
 }
 
 BOOST_AUTO_TEST_CASE(monomial_random_cube_nD_pinned_seeds) {
   withSeeds(MONOMIAL_CUBE_PINNED_SEEDS,
-            [] { checkMonomialRandomCubeND(getEquidistantNodeGenFunc(), 8, 1e-11); });
+            [] { checkMonomialRandomCubeND(getEquidistantNodes(), 8, 1e-11); });
 }
 
 BOOST_AUTO_TEST_CASE(random_polynomial_unit_cube_nD) {
-  withClockSeed([] { checkRandomPolynomialUnitCubeND(getEquidistantNodeGenFunc(), 1e-11); });
+  withClockSeed([] { checkRandomPolynomialUnitCubeND(getEquidistantNodes(), 1e-11); });
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -594,7 +593,7 @@ BOOST_AUTO_TEST_CASE(zero_func_unit_cube) {
     const LvlType maxLvl = static_cast<LvlType>(4 + randGen.getUniformIndexRN(3));  // 4...6
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genContantSourceFunction(0);
 
     const SparseGrid sg(genInstr);
@@ -613,7 +612,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_1D) {
     const double value = randGen.getUniformRN(-1, 1);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genContantSourceFunction(value);
 
     const SparseGrid sg(genInstr);
@@ -634,7 +633,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_nD) {
     const double value = randGen.getUniformRN(-1, 1);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genContantSourceFunction(value);
 
     const SparseGrid sg(genInstr);
@@ -655,7 +654,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD) {
     const double value = randGen.getUniformRN(-2.0, 2.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
 
     double volume = 1.0;
     for (size_t d = 0; d < nDim; ++d) {
@@ -682,7 +681,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
     const LvlType maxLvl = static_cast<LvlType>(10 + randGen.getUniformIndexRN(3));  // 10...12
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genSinSourceFunction();
 
     const SparseGrid sg(genInstr);
@@ -696,12 +695,12 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_1D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D) {
-  withClockSeed([] { checkSinRandomInterval1D(getClenshawCurtisNodeGenFunc(), 9, 1e-12); });
+  withClockSeed([] { checkSinRandomInterval1D(getClenshawCurtisNodes(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_interval_1D_pinned_seeds) {
   withSeeds(SIN_INTERVAL_1D_PINNED_SEEDS,
-            [] { checkSinRandomInterval1D(getClenshawCurtisNodeGenFunc(), 9, 1e-12); });
+            [] { checkSinRandomInterval1D(getClenshawCurtisNodes(), 9, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D) {
@@ -711,7 +710,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D) {
     const LvlType maxLvl = static_cast<LvlType>(10 + randGen.getUniformIndexRN(3));  // 10...12
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genSinSourceFunction();
 
     const SparseGrid sg(genInstr);
@@ -732,7 +731,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_3D) {
     const LvlType maxLvl = static_cast<LvlType>(10 + randGen.getUniformIndexRN(3));  // 10..12
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genSinSourceFunction();
 
     const SparseGrid sg(genInstr);
@@ -747,30 +746,30 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_3D) {
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D) {
-  withClockSeed([] { checkSinRandomCube3D(getClenshawCurtisNodeGenFunc(), 12, 1e-10); });
+  withClockSeed([] { checkSinRandomCube3D(getClenshawCurtisNodes(), 12, 1e-10); });
 }
 
 BOOST_AUTO_TEST_CASE(sin_func_random_cube_3D_pinned_seeds) {
   withSeeds(SIN_CUBE_3D_PINNED_SEEDS,
-            [] { checkSinRandomCube3D(getClenshawCurtisNodeGenFunc(), 12, 1e-10); });
+            [] { checkSinRandomCube3D(getClenshawCurtisNodes(), 12, 1e-10); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D) {
-  withClockSeed([] { checkLinearUnitCube1D(getClenshawCurtisNodeGenFunc(), 5, 1e-14); });
+  withClockSeed([] { checkLinearUnitCube1D(getClenshawCurtisNodes(), 5, 1e-14); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D_pinned_seeds) {
   withSeeds(LINEAR_UNIT_CUBE_1D_PINNED_SEEDS,
-            [] { checkLinearUnitCube1D(getClenshawCurtisNodeGenFunc(), 5, 1e-14); });
+            [] { checkLinearUnitCube1D(getClenshawCurtisNodes(), 5, 1e-14); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D) {
-  withClockSeed([] { checkLinearRandomInterval1D(getClenshawCurtisNodeGenFunc(), 6, 1e-12); });
+  withClockSeed([] { checkLinearRandomInterval1D(getClenshawCurtisNodes(), 6, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_pinned_seeds) {
   withSeeds(LINEAR_INTERVAL_1D_PINNED_SEEDS,
-            [] { checkLinearRandomInterval1D(getClenshawCurtisNodeGenFunc(), 6, 1e-12); });
+            [] { checkLinearRandomInterval1D(getClenshawCurtisNodes(), 6, 1e-12); });
 }
 
 BOOST_AUTO_TEST_CASE(quadratic_func_unit_cube_1D) {
@@ -781,7 +780,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_unit_cube_1D) {
     const LvlType maxLvl = 12;
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genQuadraticSourceFunction(1, 0, 0);
 
     const SparseGrid sg(genInstr);
@@ -803,7 +802,7 @@ BOOST_AUTO_TEST_CASE(quadratic_func_random_interval_1D) {
     const double b = randGen.getUniformRN(0.5, 2.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genQuadraticSourceFunction(1, 0, 0);
@@ -832,7 +831,7 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
     }
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc([exponents](const DataVector& point) {
       double v = 1.0;
       for (size_t i = 0; i < point.getSize(); ++i) {
@@ -860,16 +859,16 @@ BOOST_AUTO_TEST_CASE(monomial_unit_cube_random_nD) {
 }
 
 BOOST_AUTO_TEST_CASE(monomial_random_cube_nD) {
-  withClockSeed([] { checkMonomialRandomCubeND(getClenshawCurtisNodeGenFunc(), 8, 1e-11); });
+  withClockSeed([] { checkMonomialRandomCubeND(getClenshawCurtisNodes(), 8, 1e-11); });
 }
 
 BOOST_AUTO_TEST_CASE(monomial_random_cube_nD_pinned_seeds) {
   withSeeds(MONOMIAL_CUBE_PINNED_SEEDS,
-            [] { checkMonomialRandomCubeND(getClenshawCurtisNodeGenFunc(), 8, 1e-11); });
+            [] { checkMonomialRandomCubeND(getClenshawCurtisNodes(), 8, 1e-11); });
 }
 
 BOOST_AUTO_TEST_CASE(random_polynomial_unit_cube_nD) {
-  withClockSeed([] { checkRandomPolynomialUnitCubeND(getClenshawCurtisNodeGenFunc(), 1e-11); });
+  withClockSeed([] { checkRandomPolynomialUnitCubeND(getClenshawCurtisNodes(), 1e-11); });
 }
 
 BOOST_AUTO_TEST_CASE(multiindex_vector_sg_gen_instr) {
@@ -878,7 +877,7 @@ BOOST_AUTO_TEST_CASE(multiindex_vector_sg_gen_instr) {
   // nDim = 3
   const LvlMIVec mis{{5, 5, 0}, {0, 4, 1}, {5, 3, 2}, {0, 2, 3}, {0, 1, 4}, {0, 0, 5}};
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(getClenshawCurtisNodes());
   genInstr.setDomain({0, 2 * M_PI});
 
   const SparseGrid sg(genInstr);
@@ -898,8 +897,8 @@ Tensor grids of the quadrature operator, compared with a naive sum over the grid
 
 namespace {
 
-NodeGenFunc* const equidistantNodeGenFunc = getEquidistantNodeGenFunc();
-NodeGenFunc* const clenshawCurtisNodeGenFunc = getClenshawCurtisNodeGenFunc();
+NodeFamily* const equidistantNodes = getEquidistantNodes();
+NodeFamily* const clenshawCurtisNodes = getClenshawCurtisNodes();
 
 /// f(x) = exp(-|x - 0.3|^2) * (1 + x_0): not separable, distinguishes the grid points
 double gaussianFunc(const DataVector& x) {
@@ -943,7 +942,7 @@ struct NaiveTGQuadrature {
 /**
  * Naive tensor-product quadrature of @p tg on the unit domain (i.e. without the volume): for
  * every linear grid-point index, TensorGrid::getGridPointAndMI, the product of the 1D weights of
- * the quadrature rules of the node generation functions, and f at the point mapped onto the
+ * the quadrature rules of the node families, and f at the point mapped onto the
  * domain.
  */
 NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGridCTDataView tgView,
@@ -955,7 +954,7 @@ NaiveTGQuadrature naiveTGQuadrature(const SourceFunc& sourceFunc, const TensorGr
   std::vector<DataVector> weights1D(nDim);
   for (size_t dim = 0; dim < nDim; dim++) {
     weights1D[dim].resize(nGPPerDim[dim]);
-    genInstr.getNodeGenFuncForDim(dim)
+    genInstr.getNodeFamilyForDim(dim)
         ->getQuadRule(nGPPerDim[dim], tgView.mi[dim] >= genInstr.getBoundaryLevelOffset())
         ->genWeightsInplace(weights1D[dim]);
   }
@@ -1080,12 +1079,12 @@ BOOST_AUTO_TEST_CASE(Process_Tensor_Grid_Matches_Naive_Sum) {
               for (SGGenInstr* const genInstr : {static_cast<SGGenInstr*>(&completeGenInstr),
                                                  static_cast<SGGenInstr*>(&miVecGenInstr)}) {
                 for (size_t dim = 0; dim < nDim; dim++) {
-                  NodeGenFunc* const nodeGenFunc =
+                  NodeFamily* const nodeFamily =
                       (nodes == "equidistant" ||
                        (nodes == "mixed" && randGen.getUniformIndexRN(2) == 0))
-                          ? equidistantNodeGenFunc
-                          : clenshawCurtisNodeGenFunc;
-                  genInstr->setNodeGenFuncForDim(nodeGenFunc, dim);
+                          ? equidistantNodes
+                          : clenshawCurtisNodes;
+                  genInstr->setNodeFamilyForDim(nodeFamily, dim);
                 }
                 genInstr->setLvl2GPCntFunc(lvl2GPCntFunc);
                 genInstr->setBoundaryLevelOffset(boundaryLvlOffset);

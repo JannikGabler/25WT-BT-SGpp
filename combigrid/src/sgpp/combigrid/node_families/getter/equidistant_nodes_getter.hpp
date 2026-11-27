@@ -1,10 +1,10 @@
 /**
- * @file equidistant_node_generation_function_getter.hpp
- * @brief Accessor for the shared equidistant node-generation function.
+ * @file equidistant_nodes_getter.hpp
+ * @brief Accessor for the shared equidistant node family.
  */
 #pragma once
 
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -14,7 +14,7 @@ namespace combigrid {
  * function.
  * @return Non-owning pointer to a singleton instance.
  */
-NodeGenFunc* getEquidistantNodeGenFunc();
+NodeFamily* getEquidistantNodes();
 
 }  // namespace combigrid
 }  // namespace sgpp

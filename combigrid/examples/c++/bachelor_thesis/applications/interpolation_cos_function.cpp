@@ -1,10 +1,10 @@
 #include <cmath>
 #include <ios>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/second_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
@@ -36,7 +36,7 @@ double perform(const size_t nDim, const LvlType maxLvl, const DataVector& point)
   CompleteSGGenInstr genInstr(maxLvl, nDim);
 
   // Use Chebyshev nodes of the second kind
-  genInstr.setNodeGenFunc(getSecondTypeChebyshevNodeGenFunc());
+  genInstr.setNodeFamily(getSecondTypeChebyshevNodes());
   // Change the domain to [-2 * pi, 2 * pi]^d
   genInstr.setDomain({-2 * M_PI, 2 * M_PI});
 

@@ -3,7 +3,7 @@
 //  */
 // #pragma once
 
-// #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+// #include <sgpp/combigrid/node_families/node_family.hpp>
 // #include <sgpp/combigrid/grids/sparse_grid.hpp>
 // #include <sgpp/combigrid/grids/tensor_grid.hpp>
 // #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>

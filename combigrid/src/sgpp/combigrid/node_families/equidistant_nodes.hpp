@@ -1,11 +1,11 @@
 /**
- * @file equidistant_node_generation_function.hpp
+ * @file equidistant_nodes.hpp
  * @brief Equidistant 1D node generator on @f$[0,1]@f$.
  */
 #pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/simpson_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/trapezoidal_quadrature_rule_getter.hpp>
@@ -17,9 +17,9 @@ namespace sgpp {
 namespace combigrid {
 
 /**
- * @brief Concrete @c NodeGenFunc implementations.
+ * @brief Concrete @c NodeFamily implementations.
  */
-namespace node_gen_funcs {
+namespace node_families {
 
 /**
  * @brief Equidistant nodes on @f$[0,1]@f$.
@@ -29,35 +29,35 @@ namespace node_gen_funcs {
  * (and @c >=3) and trapezoidal otherwise. The default 1D interpolation
  * method is the generic barycentric Lagrange formula.
  */
-class EquidistantNodeGenFunc : public NodeGenFunc {
+class EquidistantNodes : public NodeFamily {
  public:
   /***********
   Constructors
   ***********/
-  /// @brief Constructs the function with a deterministic id derived from its name.
-  EquidistantNodeGenFunc();
+  /// @brief Constructs the node family with a deterministic id derived from its name.
+  EquidistantNodes();
 
   /**************
   Node generation
   **************/
-  /// @copydoc NodeGenFunc::genNodesWithoutBoundary
+  /// @copydoc NodeFamily::genNodesWithoutBoundary
   void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
                                size_t startIdx = 0) const override;
 
-  /// @copydoc NodeGenFunc::genDeltaNodesWithoutBoundary
+  /// @copydoc NodeFamily::genDeltaNodesWithoutBoundary
   void genDeltaNodesWithoutBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc,
                                     std::span<double> out) const override;
 
   /******
   Getters
   ******/
-  /// @copydoc NodeGenFunc::getQuadRule
+  /// @copydoc NodeFamily::getQuadRule
   QuadRule* getQuadRule(GPCntType nNodes, bool includeBoundary) const override;
 
-  /// @copydoc NodeGenFunc::getInterpolationMethod
+  /// @copydoc NodeFamily::getInterpolationMethod
   InterpolationMethod* getInterpolationMethod(GPCntType nNodes) const override;
 
-  /// @copydoc NodeGenFunc::isNested
+  /// @copydoc NodeFamily::isNested
   bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
   /********
@@ -77,11 +77,11 @@ class EquidistantNodeGenFunc : public NodeGenFunc {
   /********
   Operators
   ********/
-  /// @copydoc NodeGenFunc::operator==(const NodeGenFunc&) const
-  bool operator==(const NodeGenFunc& other) const override;
+  /// @copydoc NodeFamily::operator==(const NodeFamily&) const
+  bool operator==(const NodeFamily& other) const override;
 };
 
-}  // namespace node_gen_funcs
+}  // namespace node_families
 
 }  // namespace combigrid
 }  // namespace sgpp

@@ -22,7 +22,7 @@
 
 // SGGenNodeLookup genSGNodeLookup(const SGGenInstr& genInstr, const LvlMIVec& miVec,
 //                                 const std::vector<CTCoeffType> coeff) {
-//   const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> nodeCntPerType =
+//   const misc::VecMap<NodeFamily*, std::vector<GPCntType>> nodeCntPerType =
 //       sg_gen_node_lookup::getNodeCntRequiredPerNodeType(genInstr, miVec);
 
 //   return sg_gen_node_lookup::genLookupBasedOnNodeCntPerType(nodeCntPerType);
@@ -30,36 +30,36 @@
 
 // namespace sg_gen_node_lookup {
 
-// misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
+// misc::VecMap<NodeFamily*, std::vector<GPCntType>> getNodeCntRequiredPerNodeType(
 //     const SGGenInstr& genInstr, const LvlMIVec& miVec) {
 //   const std::shared_ptr<LvlMI> componentWiseMax = miVec.componentWiseMax();
-//   const std::vector<NodeGenFunc*> uniqueNodeGenFuncs = genInstr.getUniqueNodeGenFuncs();
+//   const std::vector<NodeFamily*> uniqueNodeFamilies = genInstr.getUniqueNodeFamilies();
 //   const std::vector<size_t> dimWithUniqueNodes = getDimWithUniqueNodes(genInstr);
 
-//   std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>> vecOfLocalNodeCnts(
+//   std::vector<std::pair<NodeFamily*, std::vector<GPCntType>>> vecOfLocalNodeCnts(
 //       dimWithUniqueNodes.size());
 
 // #pragma omp parallel for schedule(static) if (dimWithUniqueNodes.size() >= 2)
 //   for (const size_t dim : dimWithUniqueNodes) {
-//     NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+//     NodeFamily* const nodeFamily = genInstr.getNodeFamilyForDim(dim);
 //     const std::vector<GPCntType> localGPCnts =
 //         getNodeCntRequiredByDim(dim, genInstr, *componentWiseMax);
-//     vecOfLocalNodeCnts[dim] = {nodeGenFunc, localGPCnts};
+//     vecOfLocalNodeCnts[dim] = {nodeFamily, localGPCnts};
 //   }
 
-//   return turnVecOfLocalNodeCntsIntoMap(vecOfLocalNodeCnts, genInstr, uniqueNodeGenFuncs);
+//   return turnVecOfLocalNodeCntsIntoMap(vecOfLocalNodeCnts, genInstr, uniqueNodeFamilies);
 // }
 
 // std::vector<size_t> getDimWithUniqueNodes(const SGGenInstr& genInstr) {
 //   std::vector<size_t> result;
 
 //   for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-//     const NodeGenFunc* nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+//     const NodeFamily* nodeFamily = genInstr.getNodeFamilyForDim(dim);
 //     const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
 //     bool duplicate = false;
 
 //     for (const size_t prevDim : result) {
-//       if (nodeGenFunc == genInstr.getNodeGenFuncForDim(prevDim) &&
+//       if (nodeFamily == genInstr.getNodeFamilyForDim(prevDim) &&
 //           lvl2GPCntFunc == genInstr.getLvl2GPCntFuncForDim(prevDim)) {
 //         duplicate = true;
 //         break;
@@ -87,36 +87,36 @@
 //   return gpCnts;
 // }
 
-// misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
-//     const std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>>& vecOfLocalNodeCnts,
-//     const SGGenInstr& genInstr, const std::vector<NodeGenFunc*>& uniqueNodeGenFuncs) {
-//   misc::VecMap<NodeGenFunc*, std::vector<GPCntType>> result(uniqueNodeGenFuncs.size());
+// misc::VecMap<NodeFamily*, std::vector<GPCntType>> turnVecOfLocalNodeCntsIntoMap(
+//     const std::vector<std::pair<NodeFamily*, std::vector<GPCntType>>>& vecOfLocalNodeCnts,
+//     const SGGenInstr& genInstr, const std::vector<NodeFamily*>& uniqueNodeFamilies) {
+//   misc::VecMap<NodeFamily*, std::vector<GPCntType>> result(uniqueNodeFamilies.size());
 
 //   if (vecOfLocalNodeCnts.size() == 1) {
 //     result.insert_or_assign(vecOfLocalNodeCnts[0].first, vecOfLocalNodeCnts[0].second);
 //     return result;
 //   }
 
-//   std::vector<std::pair<NodeGenFunc*, std::vector<GPCntType>>> localEntries(
-//       uniqueNodeGenFuncs.size());  // Required because VecMap is not thread safe
+//   std::vector<std::pair<NodeFamily*, std::vector<GPCntType>>> localEntries(
+//       uniqueNodeFamilies.size());  // Required because VecMap is not thread safe
 
 // #pragma omp parallel for schedule(static)
-//   for (size_t i = 0; i < uniqueNodeGenFuncs.size(); i++) {
-//     NodeGenFunc* const nodeGenFunc = uniqueNodeGenFuncs[i];
+//   for (size_t i = 0; i < uniqueNodeFamilies.size(); i++) {
+//     NodeFamily* const nodeFamily = uniqueNodeFamilies[i];
 //     std::vector<
 //         std::pair<std::vector<GPCntType>::const_iterator,
 //         std::vector<GPCntType>::const_iterator>> iterators;
 
 //     for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-//       // There should be only one object per unique NodeGenFunc
-//       if (vecOfLocalNodeCnts[dim].first == nodeGenFunc) {
+//       // There should be only one object per unique NodeFamily
+//       if (vecOfLocalNodeCnts[dim].first == nodeFamily) {
 //         iterators.push_back(
 //             {vecOfLocalNodeCnts[dim].second.begin(), vecOfLocalNodeCnts[dim].second.end()});
 //       }
 //     }
 
 //     const std::vector<GPCntType> mergedNodeCnts =
-//     kway_unique_merge_sorted_collections(iterators); localEntries[i] = {nodeGenFunc,
+//     kway_unique_merge_sorted_collections(iterators); localEntries[i] = {nodeFamily,
 //     mergedNodeCnts};
 //   }
 
@@ -128,7 +128,7 @@
 // }
 
 // SGGenNodeLookup genLookupBasedOnNodeCntPerType(
-//     const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType) {
+//     const misc::VecMap<NodeFamily*, std::vector<GPCntType>>& nodeCntPerType) {
 //   const std::vector<size_t> idxBoundaries = getIdxBoundaries(nodeCntPerType);
 
 //   SGGenNodeLookup lookup(idxBoundaries[idxBoundaries.size() - 1]);
@@ -143,7 +143,7 @@
 // }
 
 // void populateTaskQueueForLookup(
-//     const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType,
+//     const misc::VecMap<NodeFamily*, std::vector<GPCntType>>& nodeCntPerType,
 //     const std::vector<size_t>& idxBoundaries,
 //     ConcurrentTaskQueue<std::vector<SGGenNodeLookupInsert>>& queue) {
 //   const size_t localBufferSize =
@@ -166,7 +166,7 @@
 //       }
 
 //       const size_t vecMapIdx = getVecMapIdxByNodeCntIdx(i, idxBoundaries);
-//       const std::pair<NodeGenFunc*, std::vector<GPCntType>> vecMapEntry =
+//       const std::pair<NodeFamily*, std::vector<GPCntType>> vecMapEntry =
 //       nodeCntPerType[vecMapIdx];
 
 //       const GPCntType nodeCnt = vecMapEntry.second[i - idxBoundaries[vecMapIdx]];
@@ -195,7 +195,7 @@
 //       }
 
 //       for (const SGGenNodeLookupInsert& insert : output) {
-//         std::pair<NodeGenFunc*, GPCntType> key{insert.gpGenFunc, insert.gpCnt};
+//         std::pair<NodeFamily*, GPCntType> key{insert.gpGenFunc, insert.gpCnt};
 //         lookup.emplace(std::move(key), std::move(insert.nodes));
 //       }
 //     }
@@ -206,11 +206,11 @@
 // Always adds a leading 0 for less edge cases in the other methods
 // */
 // std::vector<size_t> getIdxBoundaries(
-//     const misc::VecMap<NodeGenFunc*, std::vector<GPCntType>>& nodeCntPerType) {
+//     const misc::VecMap<NodeFamily*, std::vector<GPCntType>>& nodeCntPerType) {
 //   std::vector<size_t> idxBoundaries(nodeCntPerType.size() + 1);
 
 //   for (size_t i = 0; i < nodeCntPerType.size(); i++) {
-//     const std::pair<NodeGenFunc*, std::vector<GPCntType>>& p = nodeCntPerType[i];
+//     const std::pair<NodeFamily*, std::vector<GPCntType>>& p = nodeCntPerType[i];
 //     idxBoundaries[i + 1] = idxBoundaries[i] + p.second.size();
 //   }
 

@@ -18,7 +18,7 @@ namespace misc {
  *
  * Combines the standard hashes of the two elements with a small
  * multiplicative mixer. Sufficient for the cache key types used by the
- * combigrid module (e.g. @c (NodeGenFunc*, GPCntType)).
+ * combigrid module (e.g. @c (NodeFamily*, GPCntType)).
  *
  * @tparam T1 First element type.
  * @tparam T2 Second element type.

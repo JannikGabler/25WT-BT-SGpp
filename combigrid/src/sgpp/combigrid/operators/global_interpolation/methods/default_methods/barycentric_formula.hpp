@@ -10,7 +10,7 @@
 #pragma once
 
 #include <cstddef>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <span>
 #include <vector>
@@ -25,7 +25,7 @@ namespace global_interpolation {
  * node families.
  *
  * The barycentric weights @f$w_i@f$ are derived from the node family
- * provided by the associated @c NodeGenFunc; given a query @f$x@f$ the
+ * provided by the associated @c NodeFamily; given a query @f$x@f$ the
  * interpolant is evaluated as
  * @f[
  *   p(x) = \frac{\sum_i \tfrac{w_i}{x - x_i}\, f_i}
@@ -35,10 +35,10 @@ namespace global_interpolation {
 class BarycentricFormula : public InterpolationMethod {
  public:
   /**
-   * @brief Constructs the formula and binds it to a node-generation function.
-   * @param nodeGenFunc Non-owning pointer used as identity for cache keying.
+   * @brief Constructs the formula and binds it to a node family.
+   * @param nodeFamily Non-owning pointer used as identity for cache keying.
    */
-  BarycentricFormula(const NodeGenFunc* nodeGenFunc);
+  BarycentricFormula(const NodeFamily* nodeFamily);
 
   /**
    * @brief Evaluates the 1D interpolant at @p pos (scalar formula).

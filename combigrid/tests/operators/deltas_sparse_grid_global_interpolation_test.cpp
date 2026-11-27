@@ -33,14 +33,14 @@
 #include <numeric>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
@@ -120,8 +120,7 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const Config& config, LvlMIVec& miVec) 
   } else {
     genInstr = std::make_unique<CompleteSGGenInstr>(config.maxLvl, config.nDim);
   }
-  genInstr->setNodeGenFunc(config.nodes == "cc" ? getClenshawCurtisNodeGenFunc()
-                                                : getEquidistantNodeGenFunc());
+  genInstr->setNodeFamily(config.nodes == "cc" ? getClenshawCurtisNodes() : getEquidistantNodes());
   genInstr->setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr->setBoundaryLevelOffset(config.boundary);
   genInstr->setDomain(config.unitDomain ? HyperCubeArea(config.nDim, {0.0, 1.0})
@@ -194,12 +193,12 @@ double roundOffScale(const SparseGrid& sg, const DataVector& point) {
     double product = 1.0;
     for (size_t j = 0; j < sg.nDim(); j++) {
       const GPCntType nNodes = tgData.tensorGrid.getGPCntPerDim()[j];
-      const NodeGenFunc* nodeGenFunc = setup.getNodeGenFuncForDim(j);
+      const NodeFamily* nodeFamily = setup.getNodeFamilyForDim(j);
       const DataVector nodesVec =
-          nodeGenFunc->genNodes(nNodes, tgData.mi[j] >= setup.getBoundaryLevelOffset());
+          nodeFamily->genNodes(nNodes, tgData.mi[j] >= setup.getBoundaryLevelOffset());
       const std::vector<double> nodes(nodesVec.begin(), nodesVec.end());
       std::vector<double> weights(nNodes);
-      nodeGenFunc->getInterpolationMethod(nNodes)->basisValues(normPoint[j], nodes, weights);
+      nodeFamily->getInterpolationMethod(nNodes)->basisValues(normPoint[j], nodes, weights);
       double lebesgue = 0.0;
       for (const double w : weights) lebesgue += std::abs(w);
       product *= lebesgue;
@@ -374,7 +373,7 @@ BOOST_AUTO_TEST_CASE(Serial_Path_Equals_Parallel_Path) {
 
 BOOST_AUTO_TEST_CASE(Wrong_Result_Size_Is_Rejected) {
   CompleteSGGenInstr genInstr(2, 2);
-  genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
+  genInstr.setNodeFamily(getEquidistantNodes());
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   const DeltasSparseGrid dsg(genInstr);
   const VectorSourceFunc vecFunc(testFuncVec, 3);
@@ -451,7 +450,7 @@ BOOST_AUTO_TEST_CASE(Index_Rows_Match_Quadrature_Layout) {
 BOOST_AUTO_TEST_CASE(Single_Point_Grid) {
   // Level 0, boundary level offset 1: one grid point; the interpolant is constant
   CompleteSGGenInstr genInstr(0, 2);
-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(getClenshawCurtisNodes());
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
   const DeltasSparseGrid dsg(genInstr);

@@ -5,9 +5,9 @@
 
 #include <algorithm>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
@@ -18,7 +18,7 @@ namespace combigrid {
 SparseGridSetup::SparseGridSetup(const size_t nDim)
     : boundaryLevelOffset(0),
       domain(nDim, {0, 1}),
-      nodeGenFuncs(nDim, getEquidistantNodeGenFunc()),
+      nodeFamilies(nDim, getEquidistantNodes()),
       lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {}
 
 size_t SparseGridSetup::nDim() const { return domain.size(); }
@@ -31,10 +31,10 @@ std::pair<double, double> SparseGridSetup::getDomainForDim(const size_t dim) con
   return domain[dim];
 }
 
-const std::vector<NodeGenFunc*>& SparseGridSetup::getNodeGenFuncs() const { return nodeGenFuncs; }
+const std::vector<NodeFamily*>& SparseGridSetup::getNodeFamilies() const { return nodeFamilies; }
 
-NodeGenFunc* SparseGridSetup::getNodeGenFuncForDim(const size_t dim) const {
-  return nodeGenFuncs[dim];
+NodeFamily* SparseGridSetup::getNodeFamilyForDim(const size_t dim) const {
+  return nodeFamilies[dim];
 }
 
 const std::vector<Lvl2GPCntFunc>& SparseGridSetup::getLvl2GPCntFuncs() const {
@@ -62,17 +62,17 @@ void SparseGridSetup::setDomain(const HyperCubeArea& domain) {
   std::copy_n(domain.begin(), nElemsToCopy, this->domain.begin());
 }
 
-void SparseGridSetup::setNodeGenFuncForDim(NodeGenFunc* const nodeGenFunc, const size_t dim) {
-  nodeGenFuncs[dim] = nodeGenFunc;
+void SparseGridSetup::setNodeFamilyForDim(NodeFamily* const nodeFamily, const size_t dim) {
+  nodeFamilies[dim] = nodeFamily;
 }
 
-void SparseGridSetup::setNodeGenFunc(NodeGenFunc* const nodeGenFunc) {
-  std::fill(nodeGenFuncs.begin(), nodeGenFuncs.end(), nodeGenFunc);
+void SparseGridSetup::setNodeFamily(NodeFamily* const nodeFamily) {
+  std::fill(nodeFamilies.begin(), nodeFamilies.end(), nodeFamily);
 }
 
-void SparseGridSetup::setNodeGenFuncs(const std::vector<NodeGenFunc*>& nodeGenFuncs) {
-  const size_t nElemsToCopy = std::min(this->nodeGenFuncs.size(), nodeGenFuncs.size());
-  std::copy_n(nodeGenFuncs.begin(), nElemsToCopy, this->nodeGenFuncs.begin());
+void SparseGridSetup::setNodeFamilies(const std::vector<NodeFamily*>& nodeFamilies) {
+  const size_t nElemsToCopy = std::min(this->nodeFamilies.size(), nodeFamilies.size());
+  std::copy_n(nodeFamilies.begin(), nElemsToCopy, this->nodeFamilies.begin());
 }
 
 void SparseGridSetup::setLvl2GPCntFuncForDim(const Lvl2GPCntFunc lvl2GPCntFunc, const size_t dim) {
@@ -90,7 +90,7 @@ void SparseGridSetup::setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GP
 
 void SparseGridSetup::resize(const size_t newDimCnt) {
   domain.resize(newDimCnt);
-  nodeGenFuncs.resize(newDimCnt);
+  nodeFamilies.resize(newDimCnt);
   lvl2GPCntFuncs.resize(newDimCnt);
 }
 
@@ -107,22 +107,22 @@ double SparseGridSetup::getVolumeOfDomain() const {
   return volume;
 }
 
-std::vector<NodeGenFunc*> SparseGridSetup::getUniqueNodeGenFuncs() const {
-  std::vector<NodeGenFunc*> uniqueNodeGenFuncs;
+std::vector<NodeFamily*> SparseGridSetup::getUniqueNodeFamilies() const {
+  std::vector<NodeFamily*> uniqueNodeFamilies;
 
   // There is only one object per node family (singletons): pointer identity suffices
-  for (NodeGenFunc* const candidate : nodeGenFuncs) {
-    if (std::ranges::find(uniqueNodeGenFuncs, candidate) == uniqueNodeGenFuncs.end()) {
-      uniqueNodeGenFuncs.push_back(candidate);
+  for (NodeFamily* const candidate : nodeFamilies) {
+    if (std::ranges::find(uniqueNodeFamilies, candidate) == uniqueNodeFamilies.end()) {
+      uniqueNodeFamilies.push_back(candidate);
     }
   }
 
-  return uniqueNodeGenFuncs;
+  return uniqueNodeFamilies;
 }
 
 bool SparseGridSetup::areNodesOfAllDimsNested() const {
   for (size_t dim = 0; dim < nDim(); dim++) {
-    if (!nodeGenFuncs[dim]->isNested(lvl2GPCntFuncs[dim])) {
+    if (!nodeFamilies[dim]->isNested(lvl2GPCntFuncs[dim])) {
       return false;
     }
   }

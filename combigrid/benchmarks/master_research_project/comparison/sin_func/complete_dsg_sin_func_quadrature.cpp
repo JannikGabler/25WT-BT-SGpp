@@ -6,10 +6,10 @@
 #include <omp.h>
 #include <cmath>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
@@ -41,7 +41,7 @@ inline double perform(const size_t nDim, const size_t maxLvl,
   // SG gen instr
   CompleteSGGenInstr genInstr(maxLvl, nDim);
   genInstr.setBoundaryLevelOffset(1);
-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(getClenshawCurtisNodes());
 
   ctx.markCheckpoint("Creation SG Gen. Instruction");
 

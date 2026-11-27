@@ -5,7 +5,7 @@
 
 #include <cassert>
 #include <cstddef>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
@@ -19,9 +19,9 @@ namespace combigrid {
 
 namespace global_interpolation {
 
-BarycentricFormula::BarycentricFormula(const NodeGenFunc* nodeGenFunc)
+BarycentricFormula::BarycentricFormula(const NodeFamily* nodeFamily)
     : InterpolationMethod(tools::fnv1aHashCombine(
-          tools::fnv1aHash("Barycentric Formula Interpolation Method"), nodeGenFunc->id())) {}
+          tools::fnv1aHash("Barycentric Formula Interpolation Method"), nodeFamily->id())) {}
 
 double BarycentricFormula::interpolate(const double pos, const std::vector<double>& nodes,
                                        const std::vector<double>& values) const {

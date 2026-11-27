@@ -22,11 +22,11 @@
 // #include
 // <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
 // #include
-// <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
+// <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
 // #include
-// <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
+// <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 // #include
-// <sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp>
+// <sgpp/combigrid/node_families/getter/second_type_chebyshev_nodes_getter.hpp>
 // #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 // #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 // #include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation_node_lookup.hpp>
@@ -37,9 +37,9 @@
 
 // static sgpp::base::RandomNumberGenerator& randGen =
 //     sgpp::base::RandomNumberGenerator::getInstance();
-// static NodeGenFunc* equidistantNodeGenFunc = getEquidistantNodeGenFunc();
-// static NodeGenFunc* firstTypeChebyshevNodeGenFunc = getFirstTypeChebyshevNodeGenFunc();
-// static NodeGenFunc* secondTypeChebyshevNodeGenFunc = getSecondTypeChebyshevNodeGenFunc();
+// static NodeFamily* equidistantNodes = getEquidistantNodes();
+// static NodeFamily* firstTypeChebyshevNodes = getFirstTypeChebyshevNodes();
+// static NodeFamily* secondTypeChebyshevNodes = getSecondTypeChebyshevNodes();
 
 // BOOST_AUTO_TEST_SUITE(Tools_genSGNodeLookup)
 
@@ -67,9 +67,9 @@
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
 
 //   const SGGenNodeLookup expected{
-//       {{equidistantNodeGenFunc, 1}, equidistantNodeGenFunc->genGPs(1, false)},
-//       {{equidistantNodeGenFunc, 3}, equidistantNodeGenFunc->genGPs(3, false)},
-//       {{equidistantNodeGenFunc, 7}, equidistantNodeGenFunc->genGPs(7, false)}};
+//       {{equidistantNodes, 1}, equidistantNodes->genGPs(1, false)},
+//       {{equidistantNodes, 3}, equidistantNodes->genGPs(3, false)},
+//       {{equidistantNodes, 7}, equidistantNodes->genGPs(7, false)}};
 
 //   BOOST_CHECK(result == expected);
 // }
@@ -83,17 +83,17 @@
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
 
 //   const SGGenNodeLookup expected{
-//       {{equidistantNodeGenFunc, 1}, equidistantNodeGenFunc->genGPs(1, false)},
-//       {{equidistantNodeGenFunc, 3}, equidistantNodeGenFunc->genGPs(3, false)},
-//       {{equidistantNodeGenFunc, 7}, equidistantNodeGenFunc->genGPs(7, false)},
-//       {{equidistantNodeGenFunc, 15}, equidistantNodeGenFunc->genGPs(15, false)}};
+//       {{equidistantNodes, 1}, equidistantNodes->genGPs(1, false)},
+//       {{equidistantNodes, 3}, equidistantNodes->genGPs(3, false)},
+//       {{equidistantNodes, 7}, equidistantNodes->genGPs(7, false)},
+//       {{equidistantNodes, 15}, equidistantNodes->genGPs(15, false)}};
 
 //   BOOST_CHECK(result == expected);
 // }
 
 // BOOST_AUTO_TEST_CASE(Complex2D) {
 //   CompleteSGGenInstr instr(2, 2);
-//   instr.setNodeGenFuncForDim(firstTypeChebyshevNodeGenFunc, 1);
+//   instr.setNodeFamilyForDim(firstTypeChebyshevNodes, 1);
 //   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 1);
 
 //   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff =
@@ -103,25 +103,25 @@
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
 
 //   const SGGenNodeLookup expected{
-//       {{equidistantNodeGenFunc, 1}, equidistantNodeGenFunc->genGPs(1, false)},
-//       {{equidistantNodeGenFunc, 3}, equidistantNodeGenFunc->genGPs(3, false)},
-//       {{equidistantNodeGenFunc, 7}, equidistantNodeGenFunc->genGPs(7, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 1}, firstTypeChebyshevNodeGenFunc->genGPs(1, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 2}, firstTypeChebyshevNodeGenFunc->genGPs(2, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 3}, firstTypeChebyshevNodeGenFunc->genGPs(3, false)}};
+//       {{equidistantNodes, 1}, equidistantNodes->genGPs(1, false)},
+//       {{equidistantNodes, 3}, equidistantNodes->genGPs(3, false)},
+//       {{equidistantNodes, 7}, equidistantNodes->genGPs(7, false)},
+//       {{firstTypeChebyshevNodes, 1}, firstTypeChebyshevNodes->genGPs(1, false)},
+//       {{firstTypeChebyshevNodes, 2}, firstTypeChebyshevNodes->genGPs(2, false)},
+//       {{firstTypeChebyshevNodes, 3}, firstTypeChebyshevNodes->genGPs(3, false)}};
 
 //   BOOST_CHECK(result == expected);
 // }
 
 // BOOST_AUTO_TEST_CASE(Complex3D) {
 //   CompleteSGGenInstr instr(4, 4);
-//   instr.setNodeGenFuncForDim(firstTypeChebyshevNodeGenFunc, 0);
+//   instr.setNodeFamilyForDim(firstTypeChebyshevNodes, 0);
 //   instr.setLvl2GPCntFuncForDim(doublingLvl2GPCntFunction, 0);
-//   instr.setNodeGenFuncForDim(equidistantNodeGenFunc, 1);
+//   instr.setNodeFamilyForDim(equidistantNodes, 1);
 //   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 1);
-//   instr.setNodeGenFuncForDim(firstTypeChebyshevNodeGenFunc, 2);
+//   instr.setNodeFamilyForDim(firstTypeChebyshevNodes, 2);
 //   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 2);
-//   instr.setNodeGenFuncForDim(secondTypeChebyshevNodeGenFunc, 3);
+//   instr.setNodeFamilyForDim(secondTypeChebyshevNodes, 3);
 //   instr.setLvl2GPCntFuncForDim(linearLvl2GPCntFunction, 3);
 
 //   const std::pair<LvlMIVec, std::vector<CTCoeffType>> miVecWithCoeff =
@@ -131,24 +131,24 @@
 //       tools::genSGNodeLookup(instr, miVecWithCoeff.first, miVecWithCoeff.second);
 
 //   const SGGenNodeLookup expected{
-//       {{equidistantNodeGenFunc, 1}, equidistantNodeGenFunc->genGPs(1, false)},
-//       {{equidistantNodeGenFunc, 2}, equidistantNodeGenFunc->genGPs(2, false)},
-//       {{equidistantNodeGenFunc, 3}, equidistantNodeGenFunc->genGPs(3, false)},
-//       {{equidistantNodeGenFunc, 4}, equidistantNodeGenFunc->genGPs(4, false)},
-//       {{equidistantNodeGenFunc, 5}, equidistantNodeGenFunc->genGPs(5, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 1}, firstTypeChebyshevNodeGenFunc->genGPs(1, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 2}, firstTypeChebyshevNodeGenFunc->genGPs(2, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 3}, firstTypeChebyshevNodeGenFunc->genGPs(3, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 4}, firstTypeChebyshevNodeGenFunc->genGPs(4, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 5}, firstTypeChebyshevNodeGenFunc->genGPs(5, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 7}, firstTypeChebyshevNodeGenFunc->genGPs(7, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 15}, firstTypeChebyshevNodeGenFunc->genGPs(15, false)},
-//       {{firstTypeChebyshevNodeGenFunc, 31}, firstTypeChebyshevNodeGenFunc->genGPs(31, false)},
-//       {{secondTypeChebyshevNodeGenFunc, 1}, secondTypeChebyshevNodeGenFunc->genGPs(1, false)},
-//       {{secondTypeChebyshevNodeGenFunc, 2}, secondTypeChebyshevNodeGenFunc->genGPs(2, false)},
-//       {{secondTypeChebyshevNodeGenFunc, 3}, secondTypeChebyshevNodeGenFunc->genGPs(3, false)},
-//       {{secondTypeChebyshevNodeGenFunc, 4}, secondTypeChebyshevNodeGenFunc->genGPs(4, false)},
-//       {{secondTypeChebyshevNodeGenFunc, 5}, secondTypeChebyshevNodeGenFunc->genGPs(5, false)}};
+//       {{equidistantNodes, 1}, equidistantNodes->genGPs(1, false)},
+//       {{equidistantNodes, 2}, equidistantNodes->genGPs(2, false)},
+//       {{equidistantNodes, 3}, equidistantNodes->genGPs(3, false)},
+//       {{equidistantNodes, 4}, equidistantNodes->genGPs(4, false)},
+//       {{equidistantNodes, 5}, equidistantNodes->genGPs(5, false)},
+//       {{firstTypeChebyshevNodes, 1}, firstTypeChebyshevNodes->genGPs(1, false)},
+//       {{firstTypeChebyshevNodes, 2}, firstTypeChebyshevNodes->genGPs(2, false)},
+//       {{firstTypeChebyshevNodes, 3}, firstTypeChebyshevNodes->genGPs(3, false)},
+//       {{firstTypeChebyshevNodes, 4}, firstTypeChebyshevNodes->genGPs(4, false)},
+//       {{firstTypeChebyshevNodes, 5}, firstTypeChebyshevNodes->genGPs(5, false)},
+//       {{firstTypeChebyshevNodes, 7}, firstTypeChebyshevNodes->genGPs(7, false)},
+//       {{firstTypeChebyshevNodes, 15}, firstTypeChebyshevNodes->genGPs(15, false)},
+//       {{firstTypeChebyshevNodes, 31}, firstTypeChebyshevNodes->genGPs(31, false)},
+//       {{secondTypeChebyshevNodes, 1}, secondTypeChebyshevNodes->genGPs(1, false)},
+//       {{secondTypeChebyshevNodes, 2}, secondTypeChebyshevNodes->genGPs(2, false)},
+//       {{secondTypeChebyshevNodes, 3}, secondTypeChebyshevNodes->genGPs(3, false)},
+//       {{secondTypeChebyshevNodes, 4}, secondTypeChebyshevNodes->genGPs(4, false)},
+//       {{secondTypeChebyshevNodes, 5}, secondTypeChebyshevNodes->genGPs(5, false)}};
 
 //   BOOST_CHECK(result == expected);
 // }

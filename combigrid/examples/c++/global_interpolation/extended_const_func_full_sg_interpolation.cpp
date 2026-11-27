@@ -2,9 +2,9 @@
 #include <ostream>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 
@@ -18,7 +18,7 @@ int main() {
 
   CompleteSGGenInstr genInstr(16, 2);
   genInstr.setDomain({-1, 1});
-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(getClenshawCurtisNodes());
   genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(2);
 

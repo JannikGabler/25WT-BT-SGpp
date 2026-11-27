@@ -8,9 +8,9 @@
 #include <numeric>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
@@ -69,16 +69,16 @@ std::vector<std::pair<size_t, LvlType>> layOutRows(const std::vector<size_t>& sa
 /// Writes the unit nodes (delta or regular) of (dimension @p dim, level @p lvl) to @p out.
 void genRow(const SparseGridSetup& setup, const size_t dim, const LvlType lvl,
             const bool deltaNodes, base::DataVector& out) {
-  const NodeGenFunc* const nodeGenFunc = setup.getNodeGenFuncForDim(dim);
+  const NodeFamily* const nodeFamily = setup.getNodeFamilyForDim(dim);
   const LvlType boundaryLvlOffset = setup.getBoundaryLevelOffset();
   const GPCntType nNodes = compNodeCnt(setup, dim, lvl, deltaNodes);
   out.resize(nNodes);
 
   if (deltaNodes) {
-    nodeGenFunc->genDeltaNodes(lvl, setup.getLvl2GPCntFuncForDim(dim), std::span<double>(out),
-                               lvl == boundaryLvlOffset);
+    nodeFamily->genDeltaNodes(lvl, setup.getLvl2GPCntFuncForDim(dim), std::span<double>(out),
+                              lvl == boundaryLvlOffset);
   } else {
-    nodeGenFunc->genNodes(nNodes, out, lvl >= boundaryLvlOffset);
+    nodeFamily->genNodes(nNodes, out, lvl >= boundaryLvlOffset);
   }
 }
 
@@ -173,7 +173,7 @@ std::vector<size_t> findDimsWithSameNodes(const SparseGridSetup& setup, const bo
   for (size_t dim = 0; dim < nDim; dim++) {
     result[dim] = dim;
     for (size_t other = 0; other < dim; other++) {
-      if (setup.getNodeGenFuncForDim(other) == setup.getNodeGenFuncForDim(dim) &&
+      if (setup.getNodeFamilyForDim(other) == setup.getNodeFamilyForDim(dim) &&
           setup.getLvl2GPCntFuncForDim(other) == setup.getLvl2GPCntFuncForDim(dim) &&
           (!sameDomain || setup.getDomainForDim(other) == setup.getDomainForDim(dim))) {
         result[dim] = other;

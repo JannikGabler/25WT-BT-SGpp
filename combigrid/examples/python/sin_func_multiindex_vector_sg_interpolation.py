@@ -35,7 +35,7 @@ mis = pysgpp.LvlMIVec([[0, 5, 0], [0, 4, 1], [0, 3, 2], [0, 2, 3], [0, 1, 4], [0
 
 genInstr = pysgpp.MIVecSGGenInstr(mis)
 genInstr.setDomain((0, 1))
-genInstr.setNodeGenFunc(pysgpp.getClenshawCurtisNodeGenFunc())
+genInstr.setNodeFamily(pysgpp.getClenshawCurtisNodes())
 genInstr.setLvl2GPCntFunc(pysgpp.doublingLvl2GPCntFunction)
 genInstr.setBoundaryLevelOffset(0)
 

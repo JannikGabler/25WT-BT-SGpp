@@ -1,15 +1,15 @@
 /**
- * @file first_type_chebyshev_node_generation_function.hpp
+ * @file first_type_chebyshev_nodes.hpp
  * @brief Chebyshev nodes of the first kind (Gauss-Chebyshev nodes).
  */
 #pragma once
 
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 
 namespace sgpp {
 namespace combigrid {
 
-namespace node_gen_funcs {
+namespace node_families {
 
 /**
  * @brief Chebyshev nodes of the first kind, mapped to @f$[0,1]@f$.
@@ -19,22 +19,22 @@ namespace node_gen_funcs {
  * @f$n@f$-th Chebyshev polynomial of the first kind shifted onto the
  * unit interval. These nodes are not nested across different @c nNodes.
  */
-class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
+class FirstTypeChebyshevNodes : public NodeFamily {
  public:
   /***********
   Constructors
   ***********/
-  /// @brief Constructs the function with a deterministic id derived from its name.
-  FirstTypeChebyshevNodeGenFunc();
+  /// @brief Constructs the node family with a deterministic id derived from its name.
+  FirstTypeChebyshevNodes();
 
   /**************
   Node generation
   **************/
-  /// @copydoc NodeGenFunc::genNodesWithoutBoundary
+  /// @copydoc NodeFamily::genNodesWithoutBoundary
   void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
                                size_t startIdx = 0) const override;
 
-  /// @copydoc NodeGenFunc::genDeltaNodesWithoutBoundary
+  /// @copydoc NodeFamily::genDeltaNodesWithoutBoundary
   void genDeltaNodesWithoutBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc,
                                     std::span<double> out) const override;
 
@@ -48,10 +48,10 @@ class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
    */
   QuadRule* getQuadRule(GPCntType nNodes, bool includeBoundary) const override;
 
-  /// @copydoc NodeGenFunc::getInterpolationMethod
+  /// @copydoc NodeFamily::getInterpolationMethod
   InterpolationMethod* getInterpolationMethod(const GPCntType nNodes) const override;
 
-  /// @copydoc NodeGenFunc::isNested
+  /// @copydoc NodeFamily::isNested
   bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
   /********
@@ -71,11 +71,11 @@ class FirstTypeChebyshevNodeGenFunc : public NodeGenFunc {
   /********
   Operators
   ********/
-  /// @copydoc NodeGenFunc::operator==(const NodeGenFunc&) const
-  bool operator==(const NodeGenFunc& other) const override;
+  /// @copydoc NodeFamily::operator==(const NodeFamily&) const
+  bool operator==(const NodeFamily& other) const override;
 };
 
-}  // namespace node_gen_funcs
+}  // namespace node_families
 
 }  // namespace combigrid
 }  // namespace sgpp

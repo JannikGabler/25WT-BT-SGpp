@@ -27,8 +27,8 @@ namespace node_table_generation {
 /**
  * @brief Generates the node table of the tensor grids of @p levels on the unit interval: per
  * dimension the node lists of the levels 0, ..., (maximum level of the dimension in @p levels), as
- * the node-generation function of the dimension generates them. Dimensions with the same
- * node-generation function and level-to-grid-point-count function share their lists.
+ * the node family of the dimension generates them. Dimensions with the same
+ * node family and level-to-grid-point-count function share their lists.
  *
  * @param setup   Setup of the grid (nodes, counts, boundary level offset).
  * @param levels     Level multi-indices of the tensor grids.
@@ -39,7 +39,7 @@ NodeTable genUnitNodeTable(const SparseGridSetup& setup, const LvlMIVec& levels,
 
 /**
  * @brief Maps the node table @p unitNodeTable (see @ref genUnitNodeTable) onto the domain of
- * @p setup with @c tools::mapToDomain. Dimensions with the same node-generation function,
+ * @p setup with @c tools::mapToDomain. Dimensions with the same node family,
  * level-to-grid-point-count function and domain interval share their lists.
  *
  * @param setup      Setup of the grid (the same as for @p unitNodeTable).
@@ -74,7 +74,7 @@ void genDomainRow(const SparseGridSetup& setup, size_t dim, std::span<const doub
 
 /**
  * @brief Returns, per dimension, the first dimension with the same node lists (the same
- * node-generation function and level-to-grid-point-count function, and, if @p sameDomain, the
+ * node family and level-to-grid-point-count function, and, if @p sameDomain, the
  * same domain interval); the dimension itself if there is none before it.
  *
  * @param setup   Setup of the grid.

@@ -28,7 +28,7 @@
  *     single-point implementation);
  *   - multi (global only): prototype of a multi-point interpolation: per TG (parallel over the
  *     TGs) the values at all its points once, then per query point the d nested 1D interpolations
- *     with the production 1D rules (nodes from the node generation function, as the operator);
+ *     with the production 1D rules (nodes from the node family, as the operator);
  *     "multi cached weights" as above;
  *   - sol_multi (global only): the integrand alone at every TG point once (floor of multi);
  *   - api + cache: the p single-point calls with a CachedSourceFunc (default configuration),
@@ -74,13 +74,13 @@
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/dependency_exception.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
@@ -226,7 +226,7 @@ Global interpolation
 std::vector<const cg::InterpolationMethod*> methodsOf(const Problem& pr, const size_t t) {
   std::vector<const cg::InterpolationMethod*> methods;
   for (size_t k = 0; k < pr.cfg.nDim; k++) {
-    methods.push_back(pr.genInstr.getNodeGenFuncForDim(k)->getInterpolationMethod(
+    methods.push_back(pr.genInstr.getNodeFamilyForDim(k)->getInterpolationMethod(
         static_cast<GPCntType>(pr.unit[t][k].size())));
   }
   return methods;
@@ -269,7 +269,7 @@ void rulesOf(const Problem& pr, const TensorGridCTData& tgData, sol::NodesPerDim
              std::vector<const cg::InterpolationMethod*>& methods) {
   for (size_t k = 0; k < pr.cfg.nDim; k++) {
     const GPCntType n = tgData.tensorGrid.getGPCntPerDim()[k];
-    const cg::NodeGenFunc* ngf = pr.genInstr.getNodeGenFuncForDim(k);
+    const cg::NodeFamily* ngf = pr.genInstr.getNodeFamilyForDim(k);
     const DataVector gen = ngf->genNodes(n, tgData.mi[k] >= pr.genInstr.getBoundaryLevelOffset());
     nodes[k].assign(gen.begin(), gen.end());
     methods[k] = ngf->getInterpolationMethod(n);

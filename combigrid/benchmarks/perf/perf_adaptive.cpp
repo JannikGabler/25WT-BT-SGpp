@@ -31,9 +31,9 @@
 #include <optional>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
 #include <sgpp/combigrid/refinement/dimension_adaptive_refinement.hpp>
 #include <sgpp/combigrid/refinement/refinement_options.hpp>
 #include <sgpp/combigrid/refinement/targets/quadrature_refinement_target.hpp>
@@ -95,7 +95,7 @@ void addCase(Suite& suite, const size_t nDim, const std::string& cost,
     std::optional<cg::SparseGrid> sg;
     run.phase("generation", [&]() {
       cg::CompleteSGGenInstr instr(0, nDim);
-      instr.setNodeGenFunc(cg::getClenshawCurtisNodeGenFunc());
+      instr.setNodeFamily(cg::getClenshawCurtisNodes());
       instr.setLvl2GPCntFunc(cg::doublingLvl2GPCntFunction);
       instr.setBoundaryLevelOffset(1);
       sg.emplace(instr);

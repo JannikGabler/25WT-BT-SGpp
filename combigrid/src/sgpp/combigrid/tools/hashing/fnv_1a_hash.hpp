@@ -3,7 +3,7 @@
  * @brief @c constexpr FNV-1a hash for short C strings and 64-bit values.
  *
  * Used to derive deterministic numeric ids for quadrature rules,
- * interpolation methods, and node-generation functions from their string
+ * interpolation methods, and node families from their string
  * names. Computed at compile-time so equality comparisons remain cheap.
  */
 #pragma once

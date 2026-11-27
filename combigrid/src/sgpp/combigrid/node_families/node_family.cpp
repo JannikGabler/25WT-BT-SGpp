@@ -1,14 +1,14 @@
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
 namespace combigrid {
 
-void NodeGenFunc::genNodes(const GPCntType nNodes, base::DataVector& out,
-                           const bool includeBoundary, const size_t startIdx) const {
+void NodeFamily::genNodes(const GPCntType nNodes, base::DataVector& out, const bool includeBoundary,
+                          const size_t startIdx) const {
   assert(out.size() >= nNodes + startIdx);
 
   if (includeBoundary) {
@@ -18,14 +18,14 @@ void NodeGenFunc::genNodes(const GPCntType nNodes, base::DataVector& out,
   }
 }
 
-base::DataVector NodeGenFunc::genNodes(const GPCntType nNodes, const bool includeBoundary) const {
+base::DataVector NodeFamily::genNodes(const GPCntType nNodes, const bool includeBoundary) const {
   base::DataVector result(nNodes);
   genNodes(nNodes, result, includeBoundary);
   return result;
 }
 
-void NodeGenFunc::genNodesWithBoundary(const GPCntType nNodes, base::DataVector& out,
-                                       const size_t startIdx) const {
+void NodeFamily::genNodesWithBoundary(const GPCntType nNodes, base::DataVector& out,
+                                      const size_t startIdx) const {
   assert(out.size() >= nNodes + startIdx);
 
   if (nNodes <= 2) {
@@ -42,20 +42,20 @@ void NodeGenFunc::genNodesWithBoundary(const GPCntType nNodes, base::DataVector&
   }
 }
 
-base::DataVector NodeGenFunc::genNodesWithBoundary(const GPCntType nNodes) const {
+base::DataVector NodeFamily::genNodesWithBoundary(const GPCntType nNodes) const {
   base::DataVector result(nNodes);
   genNodesWithBoundary(nNodes, result);
   return result;
 }
 
-base::DataVector NodeGenFunc::genNodesWithoutBoundary(const GPCntType nNodes) const {
+base::DataVector NodeFamily::genNodesWithoutBoundary(const GPCntType nNodes) const {
   base::DataVector result(nNodes);
   genNodesWithoutBoundary(nNodes, result);
   return result;
 }
 
-void NodeGenFunc::genDeltaNodes(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
-                                std::span<double> out, const bool includeBoundary) const {
+void NodeFamily::genDeltaNodes(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
+                               std::span<double> out, const bool includeBoundary) const {
   assert(out.size() == tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, includeBoundary));
 
   if (includeBoundary) {
@@ -65,8 +65,8 @@ void NodeGenFunc::genDeltaNodes(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCnt
   }
 }
 
-base::DataVector NodeGenFunc::genDeltaNodes(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
-                                            const bool includeBoundary) const {
+base::DataVector NodeFamily::genDeltaNodes(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
+                                           const bool includeBoundary) const {
   const GPCntType nNodes = tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, includeBoundary);
 
   base::DataVector result(nNodes);
@@ -74,8 +74,8 @@ base::DataVector NodeGenFunc::genDeltaNodes(const LvlType lvl, const Lvl2GPCntFu
   return result;
 }
 
-void NodeGenFunc::genDeltaNodesWithBoundary(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
-                                            std::span<double> out) const {
+void NodeFamily::genDeltaNodesWithBoundary(const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc,
+                                           std::span<double> out) const {
   const GPCntType nNodes = tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, true);
 
   assert(out.size() == nNodes);
@@ -94,8 +94,8 @@ void NodeGenFunc::genDeltaNodesWithBoundary(const LvlType lvl, const Lvl2GPCntFu
   }
 }
 
-base::DataVector NodeGenFunc::genDeltaNodesWithBoundary(const LvlType lvl,
-                                                        const Lvl2GPCntFunc lvl2GPCntFunc) const {
+base::DataVector NodeFamily::genDeltaNodesWithBoundary(const LvlType lvl,
+                                                       const Lvl2GPCntFunc lvl2GPCntFunc) const {
   const GPCntType nNodes = tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, true);
 
   base::DataVector result(nNodes);
@@ -103,8 +103,8 @@ base::DataVector NodeGenFunc::genDeltaNodesWithBoundary(const LvlType lvl,
   return result;
 }
 
-base::DataVector NodeGenFunc::genDeltaNodesWithoutBoundary(
-    const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc) const {
+base::DataVector NodeFamily::genDeltaNodesWithoutBoundary(const LvlType lvl,
+                                                          const Lvl2GPCntFunc lvl2GPCntFunc) const {
   const GPCntType nNodes = tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, false);
 
   base::DataVector result(nNodes);

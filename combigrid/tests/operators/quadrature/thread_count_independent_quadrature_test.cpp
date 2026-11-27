@@ -28,9 +28,6 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -38,6 +35,9 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
@@ -60,7 +60,7 @@ using sgpp::combigrid::LvlMI;
 using sgpp::combigrid::LvlMIVec;
 using sgpp::combigrid::LvlType;
 using sgpp::combigrid::MIVecSGGenInstr;
-using sgpp::combigrid::NodeGenFunc;
+using sgpp::combigrid::NodeFamily;
 using sgpp::combigrid::QuadratureOptions;
 using sgpp::combigrid::SGGenInstr;
 using sgpp::combigrid::SourceFunc;
@@ -93,7 +93,7 @@ void testFuncVec(const DataVector& x, const std::span<double> out) {
 
 struct Config {
   std::string name;
-  NodeGenFunc* nodes;
+  NodeFamily* nodes;
   LvlType boundary;
   bool mivec;
   size_t nDim;
@@ -127,7 +127,7 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const Config& config, LvlMIVec& miVec) 
   } else {
     genInstr = std::make_unique<CompleteSGGenInstr>(config.level, config.nDim);
   }
-  genInstr->setNodeGenFunc(config.nodes);
+  genInstr->setNodeFamily(config.nodes);
   genInstr->setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr->setBoundaryLevelOffset(config.boundary);
   HyperCubeArea domain(config.nDim, {0.0, 1.0});
@@ -142,10 +142,10 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const Config& config, LvlMIVec& miVec) 
 
 std::vector<Config> configs() {
   std::vector<Config> result;
-  const std::vector<std::pair<std::string, NodeGenFunc*>> families{
-      {"cc", sgpp::combigrid::getClenshawCurtisNodeGenFunc()},
-      {"equi", sgpp::combigrid::getEquidistantNodeGenFunc()},
-      {"cheb1", sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc()}};
+  const std::vector<std::pair<std::string, NodeFamily*>> families{
+      {"cc", sgpp::combigrid::getClenshawCurtisNodes()},
+      {"equi", sgpp::combigrid::getEquidistantNodes()},
+      {"cheb1", sgpp::combigrid::getFirstTypeChebyshevNodes()}};
   for (const auto& [family, nodes] : families) {
     for (const LvlType boundary : {LvlType{0}, LvlType{1}}) {
       const std::string prefix = family + " b" + std::to_string(boundary);

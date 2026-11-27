@@ -6,7 +6,6 @@
 #include <cassert>
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
@@ -16,6 +15,7 @@
 #include <sgpp/combigrid/miscellaneous/data_contexts/generic_dsg_operator_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/delta_weighted_sum_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/tools/operators/cross_call/cross_call_operator_data_tools.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
@@ -106,7 +106,7 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
   base::DataVector sortedWeights;  // Weights of one level, sorted by node position
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    const NodeGenFunc* const nodeGenFunc = setup.getNodeGenFuncForDim(dim);
+    const NodeFamily* const nodeFamily = setup.getNodeFamilyForDim(dim);
     const Lvl2GPCntFunc lvl2GPCntFunc = setup.getLvl2GPCntFuncForDim(dim);
 
     weights.appendSubVec(1);  // weights[dim]
@@ -116,7 +116,7 @@ FlatNestedVec<double, 3> comp1DWeights(const DeltasSparseGrid& deltasSparseGrid)
       const GPCntType nNodes = lvl2GPCntFunc(lvl) + (includeBoundary ? 2 : 0);
 
       sortedWeights.resize(nNodes);
-      nodeGenFunc->getQuadRule(nNodes, includeBoundary)->genWeightsInplace(sortedWeights);
+      nodeFamily->getQuadRule(nNodes, includeBoundary)->genWeightsInplace(sortedWeights);
 
       weights.appendSubVec(2, nNodes);  // weights[dim][lvl]
       // The sub-vector just appended consists of the last nNodes elements.

@@ -2,8 +2,8 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/default_functions/first_type_chebyshev_node_generation_function.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/first_type_chebyshev_nodes.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/fejer_first_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
@@ -13,22 +13,21 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace node_gen_funcs {
+namespace node_families {
 
 /***********
 Constructors
 ***********/
 
-FirstTypeChebyshevNodeGenFunc::FirstTypeChebyshevNodeGenFunc()
-    : NodeGenFunc(tools::fnv1aHash("First Type Chebyshev Node Generation Function")) {}
+FirstTypeChebyshevNodes::FirstTypeChebyshevNodes()
+    : NodeFamily(tools::fnv1aHash("First Type Chebyshev Node Generation Function")) {}
 
 /**************
 Node generation
 **************/
 
-void FirstTypeChebyshevNodeGenFunc::genNodesWithoutBoundary(const GPCntType nNodes,
-                                                            base::DataVector& out,
-                                                            size_t startIdx) const {
+void FirstTypeChebyshevNodes::genNodesWithoutBoundary(const GPCntType nNodes, base::DataVector& out,
+                                                      size_t startIdx) const {
   assert(out.size() >= startIdx + nNodes);
 
   const double f1 = M_PI / (2 * static_cast<double>(nNodes));
@@ -40,8 +39,9 @@ void FirstTypeChebyshevNodeGenFunc::genNodesWithoutBoundary(const GPCntType nNod
   }
 }
 
-void FirstTypeChebyshevNodeGenFunc::genDeltaNodesWithoutBoundary(
-    const LvlType lvl, const Lvl2GPCntFunc lvl2GPCntFunc, const std::span<double> out) const {
+void FirstTypeChebyshevNodes::genDeltaNodesWithoutBoundary(const LvlType lvl,
+                                                           const Lvl2GPCntFunc lvl2GPCntFunc,
+                                                           const std::span<double> out) const {
   assert(out.size() == tools::getDeltaNodeCnt(lvl, lvl2GPCntFunc, false));
 
   if (isNested(lvl2GPCntFunc)) {
@@ -57,24 +57,23 @@ void FirstTypeChebyshevNodeGenFunc::genDeltaNodesWithoutBoundary(
 Getters
 ******/
 
-QuadRule* FirstTypeChebyshevNodeGenFunc::getQuadRule(const GPCntType nNodes,
-                                                     const bool includeBoundary) const {
+QuadRule* FirstTypeChebyshevNodes::getQuadRule(const GPCntType nNodes,
+                                               const bool includeBoundary) const {
   return getFejerFirstQuadRule(includeBoundary);
 }
 
-InterpolationMethod* FirstTypeChebyshevNodeGenFunc::getInterpolationMethod(
-    const GPCntType nNodes) const {
+InterpolationMethod* FirstTypeChebyshevNodes::getInterpolationMethod(const GPCntType nNodes) const {
   return getBarycentricFormula(this);
 }
 
-bool FirstTypeChebyshevNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) const {
+bool FirstTypeChebyshevNodes::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) const {
   if (lvl2GPCntFunc == linearLvl2GPCntFunction) {
     return false;
   } else if (lvl2GPCntFunc == doublingLvl2GPCntFunction) {
     return false;
   } else {
     throw base::not_implemented_exception(
-        "FirstTypeChebyshevNodeGenFunc::isNested: Unknown level-to-grid-point-count function.");
+        "FirstTypeChebyshevNodes::isNested: Unknown level-to-grid-point-count function.");
   }
 }
 
@@ -82,7 +81,7 @@ bool FirstTypeChebyshevNodeGenFunc::isNested(const Lvl2GPCntFunc lvl2GPCntFunc) 
 Utilities
 ********/
 
-NodeIdxLvlMapFunc FirstTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls(
+NodeIdxLvlMapFunc FirstTypeChebyshevNodes::getNodeIdxMapBetweenLvls(
     const Lvl2GPCntFunc lvl2GPCntFunc) const {
   if (isNested(lvl2GPCntFunc)) {
     throw base::not_implemented_exception("Unknown level-to-grid-point-count function.");
@@ -93,7 +92,7 @@ NodeIdxLvlMapFunc FirstTypeChebyshevNodeGenFunc::getNodeIdxMapBetweenLvls(
   }
 }
 
-NodeIdxLvlMapFunc FirstTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRegularLvl(
+NodeIdxLvlMapFunc FirstTypeChebyshevNodes::getNodeIdxMapFromDeltaTGLvlToRegularLvl(
     const Lvl2GPCntFunc lvl2GPCntFunc) const {
   if (isNested(lvl2GPCntFunc)) {
     throw base::not_implemented_exception("Unknown level-to-grid-point-count function.");
@@ -108,11 +107,11 @@ NodeIdxLvlMapFunc FirstTypeChebyshevNodeGenFunc::getNodeIdxMapFromDeltaTGLvlToRe
 Operators
 ********/
 
-bool FirstTypeChebyshevNodeGenFunc::operator==(const NodeGenFunc& other) const {
+bool FirstTypeChebyshevNodes::operator==(const NodeFamily& other) const {
   return typeid(*this) == typeid(other);
 }
 
-}  // namespace node_gen_funcs
+}  // namespace node_families
 
 }  // namespace combigrid
 }  // namespace sgpp

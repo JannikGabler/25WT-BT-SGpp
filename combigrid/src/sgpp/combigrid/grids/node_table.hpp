@@ -38,10 +38,10 @@ class TensorGridView;
  * stored once.
  *
  * A sparse grid has two tables with the same levels and node counts (see @c SparseGridBase): the
- * nodes on the unit interval, as the node-generation functions generate them, and the nodes in
+ * nodes on the unit interval, as the node families generate them, and the nodes in
  * domain coordinates (mapped with @c tools::mapToDomain, i.e. bitwise the coordinates at which the
  * operators evaluate the source function). On the unit interval, dimensions with the same
- * node-generation function and level-to-grid-point-count function share their rows; on the
+ * node family and level-to-grid-point-count function share their rows; on the
  * domain, only those with the same domain interval too (see
  * @c tools::node_table_generation::findDimsWithSameNodes).
  */

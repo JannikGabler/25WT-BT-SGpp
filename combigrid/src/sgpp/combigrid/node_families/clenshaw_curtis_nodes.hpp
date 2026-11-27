@@ -1,12 +1,12 @@
 /**
- * @file second_type_chebyshev_node_generation_function.hpp
+ * @file clenshaw_curtis_nodes.hpp
  * @brief Chebyshev nodes of the second kind (Clenshaw-Curtis-style).
  */
 #pragma once
 
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
@@ -15,7 +15,7 @@
 namespace sgpp {
 namespace combigrid {
 
-namespace node_gen_funcs {
+namespace node_families {
 
 /**
  * @brief Chebyshev nodes of the second kind on @f$[0,1]@f$ (also known as
@@ -24,22 +24,22 @@ namespace node_gen_funcs {
  * The matching 1D quadrature is Clenshaw-Curtis and the matching
  * interpolation method is the optimized barycentric Lagrange formula.
  */
-class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
+class ClenshawCurtisNodes : public NodeFamily {
  public:
   /***********
   Constructors
   ***********/
-  /// @brief Constructs the function with a deterministic id derived from its name.
-  SecondTypeChebyshevNodeGenFunc();
+  /// @brief Constructs the node family with a deterministic id derived from its name.
+  ClenshawCurtisNodes();
 
   /// @name Node generation
   /// @{
 
-  /// @copydoc NodeGenFunc::genNodesWithoutBoundary
+  /// @copydoc NodeFamily::genNodesWithoutBoundary
   void genNodesWithoutBoundary(GPCntType nNodes, base::DataVector& out,
                                size_t startIdx = 0) const override;
 
-  /// @copydoc NodeGenFunc::genDeltaNodesWithoutBoundary
+  /// @copydoc NodeFamily::genDeltaNodesWithoutBoundary
   void genDeltaNodesWithoutBoundary(LvlType lvl, Lvl2GPCntFunc lvl2GPCntFunc,
                                     std::span<double> out) const override;
 
@@ -48,13 +48,13 @@ class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
   /// @name Getters
   /// @{
 
-  /// @copydoc NodeGenFunc::getQuadRule
+  /// @copydoc NodeFamily::getQuadRule
   QuadRule* getQuadRule(GPCntType nNodes, bool includeBoundary) const override;
 
-  /// @copydoc NodeGenFunc::getInterpolationMethod
+  /// @copydoc NodeFamily::getInterpolationMethod
   InterpolationMethod* getInterpolationMethod(const GPCntType nNodes) const override;
 
-  /// @copydoc NodeGenFunc::isNested
+  /// @copydoc NodeFamily::isNested
   bool isNested(Lvl2GPCntFunc lvl2GPCntFunc) const override;
 
   /// @}
@@ -78,13 +78,16 @@ class SecondTypeChebyshevNodeGenFunc : public NodeGenFunc {
   /// @name Operators
   /// @{
 
-  /// @copydoc NodeGenFunc::operator==(const NodeGenFunc&) const
-  bool operator==(const NodeGenFunc& other) const override;
+  /// @copydoc NodeFamily::operator==(const NodeFamily&) const
+  bool operator==(const NodeFamily& other) const override;
 
   /// @}
 };
 
-}  // namespace node_gen_funcs
+/// The Clenshaw-Curtis nodes are the Chebyshev nodes of the second kind.
+using SecondTypeChebyshevNodes = ClenshawCurtisNodes;
+
+}  // namespace node_families
 
 }  // namespace combigrid
 }  // namespace sgpp

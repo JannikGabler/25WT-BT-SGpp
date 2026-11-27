@@ -11,7 +11,7 @@
 #pragma once
 
 #include <cstddef>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
 #include <vector>
@@ -66,11 +66,11 @@ class SparseGridSetup {
   /// @brief Returns the @c (min, max) interval of dimension @p dim.
   std::pair<double, double> getDomainForDim(size_t dim) const;
 
-  /// @brief Returns the per-dimension node-generation functions.
-  const std::vector<NodeGenFunc*>& getNodeGenFuncs() const;
+  /// @brief Returns the per-dimension node families.
+  const std::vector<NodeFamily*>& getNodeFamilies() const;
 
-  /// @brief Returns the node-generation function of dimension @p dim.
-  NodeGenFunc* getNodeGenFuncForDim(size_t dim) const;
+  /// @brief Returns the node family of dimension @p dim.
+  NodeFamily* getNodeFamilyForDim(size_t dim) const;
 
   /// @brief Returns the per-dimension level-to-grid-point-count growth functions.
   const std::vector<Lvl2GPCntFunc>& getLvl2GPCntFuncs() const;
@@ -93,12 +93,12 @@ class SparseGridSetup {
   /// @brief Replaces the domain (at most @ref nDim intervals are copied).
   void setDomain(const HyperCubeArea& domain);
 
-  /// @brief Sets the node-generation function of dimension @p dim.
-  void setNodeGenFuncForDim(NodeGenFunc* nodeGenFunc, size_t dim);
-  /// @brief Uses the same node-generation function in every dimension.
-  void setNodeGenFunc(NodeGenFunc* nodeGenFunc);
-  /// @brief Replaces the per-dimension node-generation functions (at most @ref nDim are copied).
-  void setNodeGenFuncs(const std::vector<NodeGenFunc*>& nodeGenFuncs);
+  /// @brief Sets the node family of dimension @p dim.
+  void setNodeFamilyForDim(NodeFamily* nodeFamily, size_t dim);
+  /// @brief Uses the same node family in every dimension.
+  void setNodeFamily(NodeFamily* nodeFamily);
+  /// @brief Replaces the per-dimension node families (at most @ref nDim are copied).
+  void setNodeFamilies(const std::vector<NodeFamily*>& nodeFamilies);
 
   /// @brief Sets the growth function of dimension @p dim.
   void setLvl2GPCntFuncForDim(Lvl2GPCntFunc lvl2GPCntFunc, size_t dim);
@@ -115,7 +115,7 @@ class SparseGridSetup {
   /**
    * @brief Resizes the setup to a different dimensionality.
    *
-   * New dimensions get default-constructed entries (empty interval, no node-generation function,
+   * New dimensions get default-constructed entries (empty interval, no node family,
    * no growth function); surplus dimensions are dropped.
    *
    * @param newDimCnt New dimensionality.
@@ -125,11 +125,11 @@ class SparseGridSetup {
   /// @brief Returns the volume of the domain (@c 0 for a 0-dimensional setup).
   double getVolumeOfDomain() const;
 
-  /// @brief Returns the distinct node-generation functions of all dimensions.
-  std::vector<NodeGenFunc*> getUniqueNodeGenFuncs() const;
+  /// @brief Returns the distinct node families of all dimensions.
+  std::vector<NodeFamily*> getUniqueNodeFamilies() const;
 
   /**
-   * @brief Returns whether the nodes are nested (see @c NodeGenFunc::isNested) in every
+   * @brief Returns whether the nodes are nested (see @c NodeFamily::isNested) in every
    * dimension w.r.t. that dimension's level-to-grid-point-count function.
    *
    * @throws sgpp::base::not_implemented_exception if the nestedness of some node-generation
@@ -150,7 +150,7 @@ class SparseGridSetup {
  private:
   LvlType boundaryLevelOffset;                ///< See @ref getBoundaryLevelOffset.
   HyperCubeArea domain;                       ///< Per-dimension @c (min, max) intervals.
-  std::vector<NodeGenFunc*> nodeGenFuncs;     ///< Per-dimension node generators (non-owning).
+  std::vector<NodeFamily*> nodeFamilies;      ///< Per-dimension node generators (non-owning).
   std::vector<Lvl2GPCntFunc> lvl2GPCntFuncs;  ///< Per-dimension growth functions.
 };
 

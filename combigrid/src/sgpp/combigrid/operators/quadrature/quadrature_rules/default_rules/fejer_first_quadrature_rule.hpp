@@ -22,7 +22,7 @@ namespace quadrature_rules {
 
 /**
  * @brief Interpolatory quadrature on the Chebyshev nodes of the first kind
- * (@c FirstTypeChebyshevNodeGenFunc), on @f$[0,1]@f$.
+ * (@c FirstTypeChebyshevNodes), on @f$[0,1]@f$.
  *
  * Without boundary nodes the @f$n@f$ nodes are @f$x_k = \tfrac12(1 + \cos\theta_k)@f$,
  * @f$\theta_k = \tfrac{(2k+1)\pi}{2n}@f$, and the weights are those of Fejér's first rule,
@@ -33,7 +33,7 @@ namespace quadrature_rules {
  * positive, summing to 1 and exact for polynomials of degree @f$n - 1@f$ (@f$n@f$ for odd
  * @f$n@f$, by symmetry).
  *
- * With boundary nodes (@c NodeGenFunc::genNodesWithBoundary: 0, the @f$m = n - 2@f$ first-kind
+ * With boundary nodes (@c NodeFamily::genNodesWithBoundary: 0, the @f$m = n - 2@f$ first-kind
  * nodes, 1) the rule is the interpolatory rule on all @f$n@f$ nodes, i.e. the integral of the
  * polynomial interpolant of degree @f$n - 1@f$ through them (exact for degree @f$n - 1@f$, @f$n@f$
  * for odd @f$n@f$). Writing the interpolant as the one through the inner nodes plus
@@ -53,7 +53,7 @@ class FejerFirstQuadRule : public QuadRule {
    * @brief Constructs the rule for the node set without or with the boundary nodes 0 and 1; the
    * two variants have distinct ids.
    * @param includeBoundary Whether the nodes include 0 and 1 (as
-   * @c NodeGenFunc::genNodesWithBoundary).
+   * @c NodeFamily::genNodesWithBoundary).
    */
   explicit FejerFirstQuadRule(bool includeBoundary);
 

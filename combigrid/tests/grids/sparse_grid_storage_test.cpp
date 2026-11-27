@@ -11,7 +11,7 @@
  * the domain, shared by the dimensions with the same nodes), the views (@c TensorGridView,
  * @c TensorGridCTDataView), the iterator, the cached maxima and the equality.
  *
- * The expected node lists are generated from the node-generation functions (and mapped with
+ * The expected node lists are generated from the node families (and mapped with
  * @c tools::mapToDomain), independently of the generation code of the grids, and compared
  * bitwise.
  */
@@ -28,10 +28,6 @@
 #include <ranges>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -39,6 +35,10 @@
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
@@ -56,16 +56,16 @@ bool bitwiseEqual(const double a, const double b) {
 }
 
 /// Expected nodes of (dimension @p dim, level @p lvl): the regular nodes (sparse grid) or the
-/// delta nodes (deltas sparse grid) of the node-generation function, on the unit interval or
+/// delta nodes (deltas sparse grid) of the node family, on the unit interval or
 /// mapped onto the domain with tools::mapToDomain (@p onDomain).
 DataVector expectedNodes(const SparseGridSetup& setup, const size_t dim, const LvlType lvl,
                          const bool deltaNodes, const bool onDomain) {
-  const NodeGenFunc* const nodeGenFunc = setup.getNodeGenFuncForDim(dim);
+  const NodeFamily* const nodeFamily = setup.getNodeFamilyForDim(dim);
   const Lvl2GPCntFunc lvl2GPCntFunc = setup.getLvl2GPCntFuncForDim(dim);
   const LvlType offset = setup.getBoundaryLevelOffset();
-  DataVector nodes = deltaNodes ? nodeGenFunc->genDeltaNodes(lvl, lvl2GPCntFunc, lvl == offset)
-                                : nodeGenFunc->genNodes(
-                                      lvl2GPCntFunc(lvl) + (lvl >= offset ? 2 : 0), lvl >= offset);
+  DataVector nodes = deltaNodes ? nodeFamily->genDeltaNodes(lvl, lvl2GPCntFunc, lvl == offset)
+                                : nodeFamily->genNodes(lvl2GPCntFunc(lvl) + (lvl >= offset ? 2 : 0),
+                                                       lvl >= offset);
   if (onDomain) {
     const auto [lower, upper] = setup.getDomainForDim(dim);
     for (double& node : nodes) node = tools::mapToDomain(node, lower, upper - lower);
@@ -133,10 +133,10 @@ CompleteSGGenInstr makeGenInstr(const LvlType maxLvl, const std::string& familie
                                 const HyperCubeArea& domain, const LvlType boundary) {
   CompleteSGGenInstr genInstr(maxLvl, families.size());
   for (size_t dim = 0; dim < families.size(); dim++) {
-    genInstr.setNodeGenFuncForDim(families[dim] == 'e'   ? getEquidistantNodeGenFunc()
-                                  : families[dim] == 'c' ? getClenshawCurtisNodeGenFunc()
-                                                         : getFirstTypeChebyshevNodeGenFunc(),
-                                  dim);
+    genInstr.setNodeFamilyForDim(families[dim] == 'e'   ? getEquidistantNodes()
+                                 : families[dim] == 'c' ? getClenshawCurtisNodes()
+                                                        : getFirstTypeChebyshevNodes(),
+                                 dim);
   }
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setDomain(domain);
@@ -232,7 +232,7 @@ BOOST_AUTO_TEST_CASE(Unit_And_Domain_Tables_Group_Dimensions_Differently) {
   // own
   const LvlMIVec mis{{1, 0, 0}, {0, 4, 0}, {0, 0, 3}};
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(getClenshawCurtisNodes());
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setDomain({{0.0, 1.0}, {-1.0, 1.0}, {0.0, 1.0}});
   genInstr.setBoundaryLevelOffset(1);
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE(Unit_And_Domain_Tables_Group_Dimensions_Differently) {
 BOOST_AUTO_TEST_CASE(Shared_Rows_Reach_The_Maximum_Level_Of_All_Sharing_Dimensions) {
   const LvlMIVec mis{{1, 4}, {3, 0}};
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(getClenshawCurtisNodes());
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   for (const bool delta : {false, true}) {
     BOOST_TEST_CONTEXT("deltas " << delta) {
@@ -386,7 +386,7 @@ BOOST_AUTO_TEST_CASE(Equality) {
   LvlMIVec reversed(2, 0);
   for (size_t i = miVec.size(); i-- > 0;) reversed.push_back(miVec[i]);
   MIVecSGGenInstr reversedInstr(reversed);
-  reversedInstr.setNodeGenFuncs(genInstr.getNodeGenFuncs());
+  reversedInstr.setNodeFamilies(genInstr.getNodeFamilies());
   reversedInstr.setLvl2GPCntFuncs(genInstr.getLvl2GPCntFuncs());
   reversedInstr.setBoundaryLevelOffset(1);
   BOOST_CHECK(sg == SparseGrid(reversedInstr));

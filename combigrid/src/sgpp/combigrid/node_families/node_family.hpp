@@ -1,7 +1,6 @@
 /**
- * @file node_generation_function.hpp
- * @brief Abstract interface for 1D node-generation rules used to construct
- * tensor grids.
+ * @file node_family.hpp
+ * @brief Abstract interface of the 1D node families used to construct tensor grids.
  */
 #pragma once
 
@@ -14,26 +13,31 @@ namespace sgpp {
 namespace combigrid {
 
 /**
- * @brief Abstract base class for 1D node-generation rules.
+ * @brief Abstract base class of the 1D node families.
  *
  * Each subclass produces a sequence of @f$n@f$ nodes in the unit interval
  * @f$[0,1]@f$. Implementations differ both in the node distribution
  * (equidistant, Chebyshev, Clenshaw-Curtis, ...) and in their growth
  * behavior with respect to @f$n@f$ (nested vs. non-nested families).
  *
- * A node-generation function also exposes the matching 1D quadrature rule
+ * A node family also exposes the matching 1D quadrature rule
  * and 1D interpolation method, so that downstream operators can integrate
  * or interpolate consistently.
  */
-class NodeGenFunc {
+class NodeFamily {
  public:
   /**
-   * @brief Constructs the node-generation function with a unique numeric id.
+   * @brief Constructs the node family with a unique numeric id.
    * @param id Identifier used for caching and equality.
    */
-  NodeGenFunc(const uint64_t id) noexcept : id_(id) {}
+  NodeFamily(const uint64_t id) noexcept : id_(id) {}
 
-  virtual ~NodeGenFunc() = default;
+  virtual ~NodeFamily() = default;
+
+  /// Node families are process-wide singletons used through pointers (see the getters, e.g.
+  /// @c getClenshawCurtisNodes): they are neither copied nor moved.
+  NodeFamily(const NodeFamily&) = delete;
+  NodeFamily& operator=(const NodeFamily&) = delete;
 
   /// @name Node generation
   /// @{
@@ -197,11 +201,11 @@ class NodeGenFunc {
   /// @{
 
   /**
-   * @brief Type-safe equality between node-generation functions.
+   * @brief Type-safe equality between node families.
    * @param other Other instance.
    * @return @c true if @c *this represents the same node family as @p other.
    */
-  virtual bool operator==(const NodeGenFunc& other) const = 0;
+  virtual bool operator==(const NodeFamily& other) const = 0;
 
   /// @}
 

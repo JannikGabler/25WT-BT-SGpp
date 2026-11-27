@@ -26,12 +26,12 @@
 #include <mutex>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
@@ -92,10 +92,10 @@ HyperCubeArea shiftedDomain(const size_t nDim) {
   return domain;
 }
 
-NodeGenFunc* nodeGenFuncByName(const std::string& nodes) {
-  if (nodes == "equi") return getEquidistantNodeGenFunc();
-  if (nodes == "cc") return getClenshawCurtisNodeGenFunc();
-  return getFirstTypeChebyshevNodeGenFunc();
+NodeFamily* nodeFamilyByName(const std::string& nodes) {
+  if (nodes == "equi") return getEquidistantNodes();
+  if (nodes == "cc") return getClenshawCurtisNodes();
+  return getFirstTypeChebyshevNodes();
 }
 
 /// One test configuration: grid generation parameters (complete grid of @c level, or the
@@ -126,7 +126,7 @@ SparseGrid makeGrid(const Config& config, LvlMIVec& miVec) {
   } else {
     genInstr = std::make_unique<CompleteSGGenInstr>(config.level, config.nDim);
   }
-  genInstr->setNodeGenFunc(nodeGenFuncByName(config.nodes));
+  genInstr->setNodeFamily(nodeFamilyByName(config.nodes));
   genInstr->setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr->setBoundaryLevelOffset(config.boundary);
   genInstr->setDomain(config.unitDomain ? HyperCubeArea(config.nDim, {0.0, 1.0})

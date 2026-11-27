@@ -16,8 +16,6 @@ constants.hpp          parallelism thresholds per subsystem (mi_vec, sg_gen_inst
 type_defs.hpp          LvlType, GPCntType, CTCoeffType, MI/MIVec aliases, HyperCubeArea
 functions/
   level_to_grid_point_count_functions/  linear / doubling growth (level → #inner nodes)
-  node_generation_functions/            1D node families; default_functions/ (concrete),
-                                        getter/ (static singletons)
   source_functions/                     SourceFunc, VectorSourceFunc (m outputs; virtual
                                         end-of-operator hook); caching/ (always compiled):
                                         SourceFuncCache, SourceFuncCacheConfig, CachePolicy,
@@ -117,6 +115,10 @@ miscellaneous/         (namespace misc)
   multiindex_vector_lookup*, multiindex_lookup_equal   MI → index hash map
 multiindices/          MI<T>, MIVec<T> (flat array ~ matrix), views, references, iterators, hashes,
                        lexicographic less
+node_families/         1D node families: NodeFamily (abstract, non-copyable), EquidistantNodes,
+                       ClenshawCurtisNodes (= SecondTypeChebyshevNodes), FirstTypeChebyshevNodes;
+                       getter/ (static singletons, get*Nodes()); renamed from
+                       functions/node_generation_functions/ (NodeGenFunc) in WP-90
 operators/
   global_interpolation/  interpolate() for SparseGrid (global_interpolation.cpp) and
                          DeltasSparseGrid (deltas_sparse_grid_global_interpolation.cpp); methods/
@@ -271,12 +273,12 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   ([miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp](../src/sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp)):
   `{LvlMI mi, CTCoeffType coefficient, TensorGrid tensorGrid}`.
 - `SparseGridSetup` ([grids/sparse_grid_setup.hpp](../src/sgpp/combigrid/grids/sparse_grid_setup.hpp),
-  WP-89): domain, per-dim `NodeGenFunc*`, per-dim `Lvl2GPCntFunc`, boundary level offset with their
+  WP-89): domain, per-dim `NodeFamily*`, per-dim `Lvl2GPCntFunc`, boundary level offset with their
   getters / setters; base class of `SGGenInstr`; the grids store a copy (`SparseGridBase::getSetup()`;
   until WP-89 a clone of the instruction, `getGenInstr()`).
 - `SGGenInstr`
   ([sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp](../src/sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp)):
-  abstract generator holding domain, per-dim `NodeGenFunc*`, per-dim `Lvl2GPCntFunc`, boundary level
+  abstract generator holding domain, per-dim `NodeFamily*`, per-dim `Lvl2GPCntFunc`, boundary level
   offset; subclasses implement `genFullMIVec()` / `genReducedMIVec()` (+ `…WithCoeffs()`); no `clone()` (removed in WP-90: grids copy only the setup).
   - `CompleteSGGenInstr(maxLvl, nDim)`: `|ℓ|₁ ≤ maxLvl`; closed-form coefficient `(−1)^q · C(d−1, q)`
     with `q = maxLvl − |ℓ|₁`, so zero-coefficient MIs are never materialized.
@@ -366,8 +368,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   Output k equals the scalar run of component k within round-off (not bitwise). For m = 1 use
   `SourceFunc` (the vector path is slower there). Python: `VectorSourceFunc(callable, nOutputs)`
   (callable returns a sequence of m numbers; [python-bindings.md](python-bindings.md)).
-- `NodeGenFunc`
-  ([functions/node_generation_functions/node_generation_function.hpp](../src/sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp)):
+- `NodeFamily`
+  ([node_families/node_family.hpp](../src/sgpp/combigrid/node_families/node_family.hpp)):
   abstract 1D node family; also returns the matching 1D `QuadRule*` and `InterpolationMethod*`.
   `getQuadRule(n)` is the rule of the n nodes with the boundary nodes; the virtual overload
   `getQuadRule(n, includeBoundary)` (WP-83; default: `getQuadRule(n)`) is what the operators call
@@ -375,9 +377,9 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   nodes, so for levels below an offset ≥ 2 their weights are not the interpolatory weights of the
   inner nodes (pre-existing; e.g. Simpson on {¼, ½, ¾}: x² off by 0.0625; convergence order kept).
   Getters (raw pointers to process-lifetime singletons — never delete or wrap):
-  `getEquidistantNodeGenFunc()` (Simpson / trapezoidal by parity),
-  `getClenshawCurtisNodeGenFunc()` = `getSecondTypeChebyshevNodeGenFunc()` (same singleton; CC
-  quadrature, closed-form barycentric weights), `getFirstTypeChebyshevNodeGenFunc()` (generic
+  `getEquidistantNodes()` (Simpson / trapezoidal by parity),
+  `getClenshawCurtisNodes()` = `getSecondTypeChebyshevNodes()` (same singleton; CC
+  quadrature, closed-form barycentric weights), `getFirstTypeChebyshevNodes()` (generic
   barycentric weights; quadrature since WP-83: `FejerFirstQuadRule`, see "Quadrature rules").
 - `Lvl2GPCntFunc`: function pointer; `linearLvl2GPCntFunction` (ℓ+1),
   `doublingLvl2GPCntFunction` (2^{ℓ+1}−1 inner nodes, CC-compatible; the Doxygen comment has a typo,
@@ -489,7 +491,7 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   a_k, b_k−a_k)` = `std::fma` of the unit nodes of `getUnitNodeTable()`, bitwise the evaluated
   points; weights, basis values and interpolation cells are computed from the unit table) and (2) as the
   factor |Ω| of quadrature results. `SourceFunc` + `SGGenInstr::setDomain()` handle it.
-- **Node generation**: `NodeGenFunc` receives the number of *inner* nodes; `SGGenInstr` appends
+- **Node generation**: `NodeFamily` receives the number of *inner* nodes; `SGGenInstr` appends
   boundary nodes per `boundaryLevelOffset`. Level → count (`Lvl2GPCntFunc`) and node positions are
   independent abstractions.
 - **On-demand assembly**: tensor grids store only 1D node lists (O(d·n) instead of O(n^d); since
@@ -572,5 +574,5 @@ operation machinery.
 Markdown conversion in [bachelor-thesis/](bachelor-thesis/) (read-only; its
 [README.md](bachelor-thesis/README.md) has a "what to read for which task" table). It predates
 refactors; known discrepancies (code is truth): `setBoundaryUsage()` → `setBoundaryLevelOffset(LvlType)`;
-`MIVecSGGenInstr` takes `const LvlMIVec&` (not `shared_ptr`); node getters return `NodeGenFunc*`
+`MIVecSGGenInstr` takes `const LvlMIVec&` (not `shared_ptr`); node getters return `NodeFamily*`
 (not `shared_ptr`).

@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cassert>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
@@ -18,6 +17,7 @@
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/scalar_values.hpp>
 #include <sgpp/combigrid/miscellaneous/operators/value_types/vector_values.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/weighted_sum_tools.hpp>
@@ -154,7 +154,7 @@ void fillBasisValues(const base::DataVector& normPoint, const TensorGridView& un
     const GPCntType nNodes = unitTG.nGPInDim(dim);
     const double* const nodes = unitTG.nodesInDim(dim);
     const InterpolationMethod* const method =
-        setup.getNodeGenFuncForDim(dim)->getInterpolationMethod(nNodes);
+        setup.getNodeFamilyForDim(dim)->getInterpolationMethod(nNodes);
 
     // The interpolation methods take the nodes of one dimension as a vector of their own
     scratch.nodes1D.assign(nodes, nodes + nNodes);

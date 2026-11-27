@@ -12,13 +12,13 @@
 
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_quadrature.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -44,7 +44,7 @@ std::vector<base::DataVector> quadratureWeights1D(const TensorGridView& tg,
     const GPCntType nNodes = tg.nGPInDim(dim);
     const bool includeBoundary = levels[dim] >= setup.getBoundaryLevelOffset();
     const QuadRule* const rule =
-        setup.getNodeGenFuncForDim(dim)->getQuadRule(nNodes, includeBoundary);
+        setup.getNodeFamilyForDim(dim)->getQuadRule(nNodes, includeBoundary);
     weights.push_back(rule->genWeights(nNodes));
   }
 

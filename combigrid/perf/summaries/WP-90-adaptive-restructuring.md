@@ -12,6 +12,11 @@ Per point (details: `results/WP-90/points.md`):
   `multiindex_vector_sparse_grid_generation_instruction.*` (owner: all three); Python: `clone` and the
   `%shared_ptr` wrapping of `SparseGridSetup` / the instructions removed (owner), `getSetup` returns a copy by
   value. Protected include lines (8 files) changed and rehashed by the owner.
+- **P2** (owner; first step of the owner's node-storage point P2–P4): `NodeGenFunc` → `NodeFamily`
+  (pointer-based singletons kept, now non-copyable), concrete classes `EquidistantNodes`, `ClenshawCurtisNodes`
+  (+ alias `SecondTypeChebyshevNodes`), `FirstTypeChebyshevNodes`, getters `get*Nodes()`, setup
+  `set/getNodeFamily(ForDim)` / `set/getNodeFamilies` / `getUniqueNodeFamilies`, Python `NodeFamilyVector`;
+  files moved to a top-level `node_families/`. Protected files (6) edited and rehashed by the owner.
 - Files: (at the end)
 
 ## Gain vs. cost

@@ -1,13 +1,13 @@
 #include <limits>
-#include <sgpp/combigrid/tools/functions/node_generation_functions/equidistant_node_generation_function_utilities.hpp>
 #include <sgpp/combigrid/tools/math/power.hpp>
+#include <sgpp/combigrid/tools/node_families/equidistant_nodes_utilities.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
 namespace combigrid {
 
 namespace tools {
-namespace equidistant_node_gen_function {
+namespace equidistant_nodes {
 
 GPCntType mapNodeIdxBetweenLvlsForDoublingLvl2GPCntFunction(const GPCntType nodeIdx,
                                                             const LvlType originLvl,
@@ -27,7 +27,7 @@ GPCntType mapNodeIdxFromDeltaTGLvlToRegularLvlForDoublingLvl2GPCntFunction(
                                                            targetLvl);
 }
 
-}  // namespace equidistant_node_gen_function
+}  // namespace equidistant_nodes
 }  // namespace tools
 
 }  // namespace combigrid

@@ -32,7 +32,7 @@ namespace misc {
  * The weights of a tensor grid in dimension @f$k@f$ depend only on the quadrature rule of
  * dimension @f$k@f$ and the number of nodes of level @f$\ell_k@f$, i.e. on the row of the unit
  * node table of the sparse grid (@c SparseGridBase::getUnitNodeTable): dimensions sharing their
- * rows have the same node-generation function and node counts. The table therefore holds one
+ * rows have the same node family and node counts. The table therefore holds one
  * weight list per row, @c getQuadRule(n, includeBoundary)->genWeightsInplace for the @c n nodes
  * of the row (bitwise the weights of the rule; @c includeBoundary iff the level is at least the
  * boundary level offset), on the unit interval (the domain volume is applied by the operator).
@@ -52,7 +52,7 @@ class QuadWeightTable {
    * row of the node table may be generated after the construction, before its first use).
    * @param unitNodeTable Unit node table of a sparse grid (e.g. @c SparseGrid::getUnitNodeTable);
    *                      must outlive the table.
-   * @param setup         Setup of that grid (node-generation functions, boundary level offset).
+   * @param setup         Setup of that grid (node families, boundary level offset).
    */
   QuadWeightTable(const NodeTable& unitNodeTable, const SparseGridSetup& setup);
 
