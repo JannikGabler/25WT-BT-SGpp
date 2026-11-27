@@ -1,13 +1,12 @@
 /**
- * @file complete_sg_gen_instruction.hpp
+ * @file complete_sparse_grid_generation_instruction.hpp
  * @brief Generation instruction for the standard "complete" combination
  * sparse grid up to a given maximum @f$\ell_1@f$ level.
  */
 #ifndef COMBIGRID_FULL_SPARSE_GRID_GENERATION_INSTRUCTION_HPP
 #define COMBIGRID_FULL_SPARSE_GRID_GENERATION_INSTRUCTION_HPP
 
-#include <memory>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -46,9 +45,6 @@ class CompleteSGGenInstr : public SGGenInstr {
 
   /// @copydoc SGGenInstr::genReducedMIVecWithCoeffs
   std::pair<LvlMIVec, std::vector<CTCoeffType>> genReducedMIVecWithCoeffs() const override;
-
-  /// @copydoc SGGenInstr::clone
-  std::unique_ptr<SGGenInstr> clone() const override;
 
  private:
   LvlType maxLvl;  ///< Maximum @f$\ell_1@f$ level used by this generator.

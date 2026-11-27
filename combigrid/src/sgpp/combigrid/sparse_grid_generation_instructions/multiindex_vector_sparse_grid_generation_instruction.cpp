@@ -5,8 +5,8 @@
 
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/extensive_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -30,10 +30,6 @@ std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::genFullMIVecWithC
 
 std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::genReducedMIVecWithCoeffs() const {
   return internalGenMIVecWithCoeffs(false);
-}
-
-std::unique_ptr<SGGenInstr> MIVecSGGenInstr::clone() const {
-  return std::make_unique<MIVecSGGenInstr>(*this);
 }
 
 std::pair<LvlMIVec, std::vector<CTCoeffType>> MIVecSGGenInstr::internalGenMIVecWithCoeffs(

@@ -4,7 +4,7 @@
 // #include <sgpp/combigrid/grids/extensive_sparse_grid.hpp>
 // #include <sgpp/combigrid/grids/sparse_grid.hpp>
 // #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
-// #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+// #include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 // #include <sgpp/combigrid/tools/sparse_grid_generation/sparse_grid_generation.hpp>
 // #include <sgpp/combigrid/type_defs.hpp>
 // #include <span>

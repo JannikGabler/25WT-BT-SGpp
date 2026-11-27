@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-89 (2026-11-27; accepted, commit pending) · Next free WP number: 91 ·
+Last processed: WP-89 (2026-11-27; accepted, 182f9cd30) · Next free WP number: 91 ·
 Last re-profiling: RP-6 (2026-11-18) · Finished WPs, results, archive: [HISTORY.md](HISTORY.md) ·
 Dropped-earlier list, measurement notes: [LESSONS.md](LESSONS.md)
 
@@ -61,7 +61,7 @@ Dropped-earlier list, measurement notes: [LESSONS.md](LESSONS.md)
 | – | WP-84 | Quadrature rules for inner-only nodes: equi / CC below an offset ≥ 2 override `getQuadRule(n, includeBoundary)` (CC → Fejér-2; equi: session proposes; results at b ≥ 2 change, agreed 11-22) | ready · **unranked** (owner places it) |
 | – | WP-80 | Grid-evaluation operator: `f` once per distinct grid point (cache warm-up, testing; name / result / dedup in-session; owner's request) | ready · **unranked** (owner places it) |
 | – | WP-81 | Explanation / visualization foundations: exploration + requirements with the owner in-session (info helpers, strings, plots) → implementation WPs | ready · **unranked** (owner places it) |
-| – | WP-90 | **Restructuring of the dimension-adaptive code** (owner 11-27: "a lot has to be re-structured / changed"; incl. the default schedule, for now `Synchronized`, window 0) | **owner describes it** · next |
+| – | WP-90 | **Restructuring of the dimension-adaptive code** (owner 11-27: "a lot has to be re-structured / changed"; incl. the default schedule, for now `Synchronized`, window 0) | **in progress** (prompt 11-27; points one by one with the owner) |
 | – | WP-63, 68, 69, 70 + WP-89 follow-ups | Adaptive: std CC growth / nestedness, Python, lazy indicators, buffering; high-d bookkeeping (d100 317 ns / point), parallel kernels in a TG, async rule, DSG refinement, cost model, multi-point targets, indicators, TG ordering (PLAN WP-89 section) | planned · **unranked** (owner places them; may go into WP-90) |
 | 1 | WP-74 | DSG lin. interp.: fused last transform + vectorized fiber transform + 1–4-leaf evaluation chunks (RP-6: 0.05–0.08 s = 6–10 % of interplin/dsg; `expensive/` d5 −45 %) | ready (low) |
 | 2 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse (RP-6: 0.1–0.15 s, b1 d15 / d20 only) | ready |
@@ -92,15 +92,15 @@ Dropped-earlier list, measurement notes: [LESSONS.md](LESSONS.md)
 
 ## Next action
 
-The owner commits "Accept WP-89" first. **Next: WP-90, restructuring of the dimension-adaptive code**
-(owner 11-27) — **prompt on hold until the owner has described it** (then PLAN entry + prompt). Afterwards
+**WP-90 in progress** (prompt 11-27; restructuring of the dimension-adaptive code, the owner's points one by
+one in-session; default schedule included). Afterwards
 WP-74 / WP-21 / WP-51 (re-measure). WPs 84, 80, 81 and the adaptive follow-ups wait for the owner. Hygiene → **Code-hygiene
 backlog** → WP-54 → WP-55; tests → WP-88 (late); numerics → **Numerics backlog** (end of PLAN.md).
 
 ## Open decisions for the owner
 
-- **WP-90** (restructuring of the adaptive code): scope from the owner (default schedule: `Synchronized`,
-  window 0 for now). Placement of WP-63 / 68 / 69 / 70 and the WP-89 follow-ups (PLAN WP-89 section).
+- **WP-90** (in progress): the owner's points in-session (default schedule: `Synchronized`, window 0 for
+  now). Placement of WP-63 / 68 / 69 / 70 and the WP-89 follow-ups (PLAN WP-89 section).
 - **TG ordering** (owner: WP-89 was needed for it): WP-89's wishes in PLAN (WP-89 follow-up 9): one cheap
   deterministic sort key of the index set for storage order (complete == MIVec == refined; DSG too),
   processing order at construction / hand-over.
@@ -134,6 +134,8 @@ values (`expensive/` history: `results/WP-76/history/`, `results/RP-6/e2e-expens
 
 ## Log (newest first; older entries in HISTORY.md)
 
+- 2026-11-27 Owner committed WP-89 (182f9cd30). WP-90 (restructuring, owner's points one by one) PLAN entry
+  + prompt issued.
 - 2026-11-27 WP-89 processed: **accepted** by the owner (commit pending). Dimension-adaptive refinement
   (in place, operator-generic, sync / async engine, `SparseGridSetup`); judged 1.000x, memory 1.005 (0 flags),
   refcheck = known WARN, 9 CC cases ±1–2 ulp (LTO / kiss FFT → numerics backlog B). Default schedule:

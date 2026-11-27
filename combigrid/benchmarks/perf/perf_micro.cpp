@@ -64,8 +64,8 @@
 #include <sgpp/combigrid/refinement/dimension_adaptive_refinement.hpp>
 #include <sgpp/combigrid/refinement/refinement_options.hpp>
 #include <sgpp/combigrid/refinement/targets/quadrature_refinement_target.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/numerics/compensated_sum_tools.hpp>

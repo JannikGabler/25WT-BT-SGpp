@@ -19,14 +19,7 @@
 //    generation instructions".
 
 // According to the SWIG documentation, shared pointers have to be declared before the classes
-// themselves. The SGGenInstr hierarchy (with its base SparseGridSetup) is wrapped as shared_ptr
-// proxies, so that clone (see "Sparse grid generation instructions") returns an owning proxy of
-// the polymorphic copy.
-%shared_ptr(sgpp::combigrid::SparseGridSetup)
-%shared_ptr(sgpp::combigrid::SGGenInstr)
-%shared_ptr(sgpp::combigrid::CompleteSGGenInstr)
-%shared_ptr(sgpp::combigrid::MIVecSGGenInstr)
-// The source-function cache (CachedSourceFunc.i) is shared between Python and the cached
+// themselves. The source-function cache (CachedSourceFunc.i) is shared between Python and the cached
 // functions through std::shared_ptr.
 %shared_ptr(sgpp::combigrid::SourceFuncCache)
 
@@ -81,32 +74,18 @@ namespace std {
   PyTuple_SET_ITEM($result, 1, coeffs);
 }
 
-// MIVecSGGenInstr stores a *reference* to the LvlMIVec passed to its constructor, and clone()
-// copies that reference. The Python LvlMIVec is therefore kept alive by the instruction (_miVec)
-// and by its clones (_owner, see clone below). Grids copy only the setup of an instruction
-// (SparseGridSetup) and need neither the instruction nor its LvlMIVec after construction.
+// MIVecSGGenInstr stores a *reference* to the LvlMIVec passed to its constructor. The Python
+// LvlMIVec is therefore kept alive by the instruction (_miVec). Grids copy only the setup of an
+// instruction (SparseGridSetup) and need neither the instruction nor its LvlMIVec after
+// construction.
 %pythonappend sgpp::combigrid::MIVecSGGenInstr::MIVecSGGenInstr %{
   self._miVec = miVec
 %}
-// clone() returns a std::unique_ptr, but the hierarchy is wrapped as shared_ptr proxies (a class
-// cannot be wrapped as both). It is replaced by a helper converting the clone to a std::shared_ptr,
-// which is renamed to clone and inherited by the subclasses. (A differently named helper plus
-// %rename is needed because an %ignore of clone would also hide an %extend method of that name.)
-%ignore sgpp::combigrid::SGGenInstr::clone;
-%ignore sgpp::combigrid::CompleteSGGenInstr::clone;
-%ignore sgpp::combigrid::MIVecSGGenInstr::clone;
-%rename(clone) sgpp::combigrid::SGGenInstr::cloneShared;
-%pythonappend sgpp::combigrid::SGGenInstr::cloneShared %{
-  val._owner = self
-%}
-%extend sgpp::combigrid::SGGenInstr {
-  std::shared_ptr<sgpp::combigrid::SGGenInstr> cloneShared() const { return $self->clone(); }
-}
 
 %include "combigrid/src/sgpp/combigrid/grids/sparse_grid_setup.hpp"
-%include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp"
-%include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp"
-%include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp"
+%include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp"
+%include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp"
+%include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp"
 
 // ---------------------------------------------------------------------------
 // Grids
@@ -270,9 +249,7 @@ namespace std {
     return $self->getDomainNodeTable().maxLvl(dim);
   }
 
-  std::shared_ptr<sgpp::combigrid::SparseGridSetup> getSetup() const {
-    return std::make_shared<sgpp::combigrid::SparseGridSetup>($self->getSetup());
-  }
+  sgpp::combigrid::SparseGridSetup getSetup() const { return $self->getSetup(); }
 
   size_t getMaxTGGPCnt() const { return $self->getMaxTGGPCnt(); }
 

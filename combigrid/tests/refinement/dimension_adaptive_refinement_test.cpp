@@ -45,8 +45,8 @@
 #include <sgpp/combigrid/refinement/targets/global_interpolation_refinement_target.hpp>
 #include <sgpp/combigrid/refinement/targets/linear_interpolation_refinement_target.hpp>
 #include <sgpp/combigrid/refinement/targets/quadrature_refinement_target.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <stdexcept>

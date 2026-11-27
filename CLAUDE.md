@@ -174,11 +174,15 @@ covered by tests.
   new code could completely replace the existing one).
 - **Errors**: `assert` for internal invariants; otherwise throw an exception
 - **Parallelism**: OpenMP in the operator drivers and internally (gated by `constants.hpp`).
+- **Reproducibility** (guideline): results that do not depend on runtime environment factors such as
+  the number of threads or timing (bitwise equal across thread counts and runs) are appreciated, a
+  nice-to-have property, but not required. Suggest it where it is easy to achieve and / or important
+  to have; Document it where it does not hold.
 
 ## 6. Gotchas
 
 - `MIVecSGGenInstr` stores a **reference** to its `LvlMIVec`: keep the vector alive as long as the
-  instruction and its clones (`clone()` copies the reference). Grids copy only the instruction's
+  instruction. Grids copy only the instruction's
   `SparseGridSetup` (`getSetup()`) and need neither afterwards. Python keeps it alive.
 - Node getters return raw `NodeGenFunc*` to static singletons — never delete or wrap them.
   `getClenshawCurtisNodeGenFunc()` and `getSecondTypeChebyshevNodeGenFunc()` are the **same**

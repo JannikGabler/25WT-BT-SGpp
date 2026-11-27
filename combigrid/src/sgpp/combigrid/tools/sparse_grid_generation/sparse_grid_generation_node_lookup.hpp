@@ -15,7 +15,7 @@
 // #include <sgpp/combigrid/miscellaneous/concurrency/concurrent_task_queue.hpp>
 // #include <sgpp/combigrid/miscellaneous/vector_map/vector_map.hpp>
 // #include <sgpp/combigrid/multiindices/multiindex.hpp>
-// #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+// #include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 // #include <sgpp/combigrid/type_defs.hpp>
 // #include <thread>
 

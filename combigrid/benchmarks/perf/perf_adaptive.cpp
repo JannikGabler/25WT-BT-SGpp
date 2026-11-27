@@ -37,7 +37,7 @@
 #include <sgpp/combigrid/refinement/dimension_adaptive_refinement.hpp>
 #include <sgpp/combigrid/refinement/refinement_options.hpp>
 #include <sgpp/combigrid/refinement/targets/quadrature_refinement_target.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <string>
 #include <vector>

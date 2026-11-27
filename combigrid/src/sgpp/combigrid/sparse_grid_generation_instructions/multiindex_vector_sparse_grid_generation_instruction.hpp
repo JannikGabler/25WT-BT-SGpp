@@ -1,12 +1,12 @@
 /**
- * @file multiindex_vector_sg_gen_instruction.hpp
+ * @file multiindex_vector_sparse_grid_generation_instruction.hpp
  * @brief Generation instruction that uses an externally supplied set of
  * level multi-indices.
  */
 #ifndef COMBIGRID_MISETSGGENINSTR_HPP
 #define COMBIGRID_MISETSGGENINSTR_HPP
 
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -42,9 +42,6 @@ class MIVecSGGenInstr : public SGGenInstr {
 
   /// @copydoc SGGenInstr::genReducedMIVecWithCoeffs
   std::pair<LvlMIVec, std::vector<CTCoeffType>> genReducedMIVecWithCoeffs() const override;
-
-  /// @copydoc SGGenInstr::clone
-  std::unique_ptr<SGGenInstr> clone() const override;
 
  private:
   std::pair<LvlMIVec, std::vector<CTCoeffType>> internalGenMIVecWithCoeffs(

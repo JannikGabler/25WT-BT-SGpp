@@ -209,7 +209,8 @@ lower ranks are low / unsized (see their entries).
 | – | WP-61 | SG quadrature: bitwise thread-count-independent results (per-TG results in a TG-indexed buffer, compensated combination in TG order: `tools::numerics::CompensatedSum` / `compensatedDotProduct(s)`) (from WP-56; owner 2026-11-15: low; compensated sum owner 11-23; incl. the owner's rework 11-24) | accepted (2026-11-24; 1b8e1495f) | measured: judged 0.998x (rework 1.000x), `expensive/` 0.998x, memory 0.999 (0 flags); SG quad / mivec bitwise 1 = 2 = 3 = 16 t; combination round-off ≈ 1 ulp (b1 d15 L6 16 t error 3.5–5.0e-9 → 2.0e-10); 116 / 432 pinned 1 t values changed ≤ 15 ulp |
 | – | WP-48 | Operator drivers: ordered compensated CT combination (TG-indexed per-TG values + `tools::numerics` compensated sums, as WP-61) in DSG quadrature, SG `interpolate`, SG `interpolateLinear` (scalar + vector) + small-call gate (from WP-08 / WP-61; extension agreed by the owner 2026-11-24) | accepted (2026-11-24; functional; 4523e028b) | measured: all operators bitwise 1 = 2 = 3 = 16 t (0 of 146 reference cases vary, before 53); judged 36.347 → 36.343 s (1.000x; interplin/sg d2 L16 1.117x), `expensive/` 1.000x, memory 1.003 (0 flags); gate refuted (static schedule L2 locality), thread-local TG buffer dropped |
 | – | WP-77 | TG-loop load balance: largest-first TG order (cost ∝ TG points) in SG quadrature / mivec, DSG quadrature (delta TGs), SG global interpolation + SG `interplin` TG loop static → chunked dynamic; optional second variant: split TGs above the balanced share (owner 2026-11-18) (from WP-76 / RP-6; absorbs WP-59 and WP-51's order part) | accepted (2026-11-25; c997a57e1; split variant dropped by the owner; SG interplin dynamic: owner in-session) | measured: suite 36.326 → 35.935 s (1.011x), `expensive/` 17.751 → 15.894 s (1.117x; mivec/sg d15 c100us 1.38x, mivec/dsg 1.60x), interp/sg cc d2 L12 1.49x; bitwise unchanged 1/2/3/16 t; memory geomean 1.005 (3 MEM+ / 2 MEM−); cached SG quad c100us 0.927 (→ WP-87); generation DSG d20 L6 +2.9 ms |
-| – | WP-89 | Dimension-adaptive CT: architecture with the owner (decisions D-A … D-J, `results/WP-89/architecture.md`), then implementation: `DimensionAdaptiveRefinement` grows a `SparseGrid` in place (GG, any per-TG `RefinementTarget`), `SparseGridSetup` replaces the grid's instruction (`getSetup()`); settles D1–D9, does WP-64 / 65 / 66 / 67 / 72 (owner 2026-11-26) | accepted (2026-11-27; feature; commit pending; default schedule → next restructuring WP, owner) | measured: judged 35.915 → 35.918 s (1.000x), `expensive/` 1.000x, cached 0.998x, memory 1.005 (0 flags; floor 10.3 → 10.5 MiB); refcheck = known WARN; 137 / 146 bitwise, 9 CC quadratures ±1–2 ulp (Eigen kiss FFT under LTO); sync 16 t vs. 1 t: d10 / d50 c1us 7.2x / 7.0x, d3 / d5 c100us 1.8x / 2.3x; async up to 6.6x faster but much worse grids; bookkeeping d10 21 ns, d100 317 ns per point |
+| – | WP-89 | Dimension-adaptive CT: architecture with the owner (decisions D-A … D-J, `results/WP-89/architecture.md`), then implementation: `DimensionAdaptiveRefinement` grows a `SparseGrid` in place (GG, any per-TG `RefinementTarget`), `SparseGridSetup` replaces the grid's instruction (`getSetup()`); settles D1–D9, does WP-64 / 65 / 66 / 67 / 72 (owner 2026-11-26) | accepted (2026-11-27; 182f9cd30; feature; default schedule → next restructuring WP, owner) | measured: judged 35.915 → 35.918 s (1.000x), `expensive/` 1.000x, cached 0.998x, memory 1.005 (0 flags; floor 10.3 → 10.5 MiB); refcheck = known WARN; 137 / 146 bitwise, 9 CC quadratures ±1–2 ulp (Eigen kiss FFT under LTO); sync 16 t vs. 1 t: d10 / d50 c1us 7.2x / 7.0x, d3 / d5 c100us 1.8x / 2.3x; async up to 6.6x faster but much worse grids; bookkeeping d10 21 ns, d100 317 ns per point |
+| – | WP-90 | Dimension-adaptive CT: restructuring of WP-89's implementation, point by point with the owner (owner's points; incl. the default schedule, for now `Synchronized`, window 0) (owner 2026-11-27) | in progress (prompt 2026-11-27) | feature / refactoring; judged suite neutral where judged code is touched |
 | 1 | WP-74 | DSG linear interpolation: fused last transform (−1 of d + 1 barriers) + vectorized fiber transform (d ≥ 8) + evaluation chunks by reached slots / 1–4 leaves (from WP-49 / RP-6) | ready (low) | RP-6: ≈ 0.05–0.08 s on the suite (barrier ≈ 14 ms, transform ≈ 30 ms, chunks ≈ 0.03 s); `expensive/interplin/dsg` d5 0.345 → ≈ 0.19 s |
 | 2 | WP-21 | DSG b1: slack break in the projection DFS + sub-trie reuse per single-node-dimension set (from WP-02) | ready | RP-6: 0.1–0.15 s (builder 0.241 s: d20 0.143, d15 0.098 s); optional serial preparation ≤ 0.03–0.05 s, −8 MB at b1 d20 |
 | 3 | WP-51 | DSG row loop at low d: split the rows of large delta TGs across threads (order part → WP-77) (from WP-45) | ready (low; measure first) | RP-6: ≤ 0.04 s (dsg d3 libgomp 23 %, interp/dsg cc d2 39 %); WP-77 accepted → re-measure first |
@@ -3260,7 +3261,7 @@ follow-ups (WP-89 section) stay unranked until the owner has placed them.
   session agreed with the owner at the end of the planning phase; unfinished milestones → follow-up WPs.
 - **Checks**: tests first; judged suite neutral where judged code is touched (refcheck + `ab e2e`, e.g.
   A1's DSG generation helpers); bitwise claims via the snapshot `perf_reference` diff.
-- **Status**: **accepted** (2026-11-27; commit pending). Summary `summaries/WP-89-dimension-adaptive-ct.md`.
+- **Status**: **accepted** (2026-11-27; 182f9cd30). Summary `summaries/WP-89-dimension-adaptive-ct.md`.
 - **Result**: architecture D-A … D-J approved; `DimensionAdaptiveRefinement` (in place, θ-batches, indicators
   gain / cost / profit, tolerance / grid-point budget (never exceeded) / index-set limit / time / max level;
   `refine()` / `step()` / `setOptions()`; state kept, restart on a foreign grid change via a storage
@@ -3299,6 +3300,25 @@ follow-ups (WP-89 section) stay unranked until the owner has placed them.
   WP-70 (dimension buffering), WP-63 (generic nestedness + standard CC growth 1, 3, 5, 9; WP-62: 5–48x
   lower error at d100). Dropped: WP-71 (operators on stored values) + the value store (owner: no
   function values in the machinery).
+
+## WP-90 — Dimension-adaptive CT: restructuring with the owner, point by point (owner 2026-11-27)
+- **Source**: owner 2026-11-27 after accepting WP-89 (182f9cd30, "first implementation draft"): "a lot has
+  to be re-structured / changed"; the owner works through the points they have noticed one by one together
+  with the session. Includes the default schedule (for now `Synchronized`, `speculationWindow` 0).
+- **Procedure**: (1) the session gets familiar with WP-89 (summary, `results/WP-89/architecture.md`
+  incl. §10 implementation notes, `progress.md`, the code under `refinement/`, `miscellaneous/refinement/`,
+  `tools/refinement/`, `grids/sparse_grid_setup.*`, the tests, `perf_adaptive.cpp`) and reports readiness
+  with a short map of the code; (2) per owner point: understand → propose (options, effect on API /
+  results / performance) → owner decides → implement + tests → record in `results/WP-90/points.md`;
+  (3) the session's own observations go to the owner as candidate points, never implemented unasked.
+- **Scope**: the owner's points; API / behavior changes of the refinement agreed per point in-session.
+  Judged code (operators, grids, generation) only where a point needs it → refcheck + `ab e2e` neutral.
+  WP-89 follow-ups (WP-89 section) and WP-63 / 68 / 69 / 70 are in scope only if the owner pulls them in.
+- **Deliverables**: `results/WP-90/points.md` (per point: request, decision, change, tests, status;
+  resumable), updated `architecture.md` deltas or `results/WP-90/architecture-delta.md`, code + tests,
+  docs (CLAUDE.md §2 / §6, module-reference, python-bindings.md where touched), feature benchmarks before /
+  after (`perf_adaptive`, `micro/adaptive/*`), summary; points left open → follow-up WP proposal.
+- **Status**: in progress (prompt 2026-11-27; owner).
 
 ## WP-63 … WP-72 — Dimension-adaptive CT: implementation (from WP-62; plan §6)
 Common to all: **needs decision** (D1–D9 open) and **not ranked** (owner places them). Feature WPs:

@@ -275,9 +275,9 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   getters / setters; base class of `SGGenInstr`; the grids store a copy (`SparseGridBase::getSetup()`;
   until WP-89 a clone of the instruction, `getGenInstr()`).
 - `SGGenInstr`
-  ([sparse_grid_generation_instructions/sg_gen_instruction.hpp](../src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp)):
+  ([sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp](../src/sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp)):
   abstract generator holding domain, per-dim `NodeGenFunc*`, per-dim `Lvl2GPCntFunc`, boundary level
-  offset; subclasses implement `genFullMIVec()` / `genReducedMIVec()` (+ `…WithCoeffs()`) / `clone()`.
+  offset; subclasses implement `genFullMIVec()` / `genReducedMIVec()` (+ `…WithCoeffs()`); no `clone()` (removed in WP-90: grids copy only the setup).
   - `CompleteSGGenInstr(maxLvl, nDim)`: `|ℓ|₁ ≤ maxLvl`; closed-form coefficient `(−1)^q · C(d−1, q)`
     with `q = maxLvl − |ℓ|₁`, so zero-coefficient MIs are never materialized.
   - `MIVecSGGenInstr(const LvlMIVec&)`: external MI set (entry point for adaptive schemes). Stores a

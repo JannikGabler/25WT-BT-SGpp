@@ -4,7 +4,7 @@
 // sgpp.sparsegrids.org
 
 /**
- * @file sg_gen_instruction.hpp
+ * @file sparse_grid_generation_instruction.hpp
  * @brief Abstract base class for sparse-grid generation instructions.
  *
  * A "generation instruction" carries everything needed to materialize a
@@ -79,14 +79,6 @@ class SGGenInstr : public SparseGridSetup {
    * unequal to 0.
    */
   virtual std::pair<LvlMIVec, std::vector<CTCoeffType>> genReducedMIVecWithCoeffs() const = 0;
-
-  /****************
-  Helper operations
-  ****************/
-  /**
-   * TODO: Document
-   */
-  virtual std::unique_ptr<SGGenInstr> clone() const = 0;
 };
 
 }  // namespace combigrid
