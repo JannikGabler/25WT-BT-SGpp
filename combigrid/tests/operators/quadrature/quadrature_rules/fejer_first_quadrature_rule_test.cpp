@@ -122,7 +122,6 @@ BOOST_AUTO_TEST_CASE(small_rules) {
   }
   BOOST_CHECK(WITH_BOUNDARY.includesBoundary());
   BOOST_CHECK(!WITHOUT_BOUNDARY.includesBoundary());
-  BOOST_CHECK_NE(WITH_BOUNDARY.id(), WITHOUT_BOUNDARY.id());
 }
 
 BOOST_AUTO_TEST_CASE(weights_match_high_precision_reference) {

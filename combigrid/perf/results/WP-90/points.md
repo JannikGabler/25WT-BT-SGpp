@@ -7,8 +7,9 @@ Session start: 2026-11-27 (HEAD 182f9cd30, branch `optimizations`). Resume from 
 - Phase 1 (orientation) done; orientation + candidate points (§3) given to the owner. The owner
   wants session findings that relate to an owner point reported with that point; the remaining
   candidates are reviewed by the owner after their own points.
-- P1 done and verified (§2; owner checkpoint commit). P2 done and verified; waiting for
-  the owner before P3 (owner 2026-11-27). Snapshots: `WP-90-before`, `WP-90-p1`, `WP-90-p2`. Benchmarks of judged code: one run at the end
+- P1 done and verified (§2; owner checkpoint commit). P2 done and verified; P5 (ids, owner's
+  third point) done and verified; waiting for the owner before P3 (owner 2026-11-27). Snapshots:
+  `WP-90-before`, `WP-90-p1`, `WP-90-p2`, `WP-90-p5`. Benchmarks of judged code: one run at the end
   of the WP (owner 2026-11-27).
 - Environment at start: `verify` ✓ (40 files), `envcheck` ✓ (busy 0.3 %, boost 0, AC),
   `calibrate` 1.005 / 1.000 (e2e burst / sustained), 0.998 / 0.998 (micro).
@@ -129,6 +130,42 @@ Per point: request · options · decision · change · files · tests · measure
   threads **bitwise identical** to `WP-90-p1` and `WP-90-before`. Benchmarks: at the end of the WP.
 - Note: `list(DataVector)` aborts in Python (no `__iter__`, reads past the end; known, WP-37) — hit
   by a first version of the check script.
+- **Status**: done (2026-11-27).
+
+### P5 — remove the FNV-1a id concept where unused (owner's third point; before P3 / P4)
+
+- **Request** (owner 2026-11-27): several concepts use `fnv1aHash` ids (e.g. node families); remove
+  the id concept where it is not used / unnecessary.
+- **Finding**: three id concepts, none used functionally: `NodeFamily::id()` (only consumed by
+  `BarycentricFormula`'s own id; Python `id`), `QuadRule::id()` (only a Fejér test checking that the
+  two rules' ids differ; source comment "TODO: Is the id still necessary?"), `InterpolationMethod::id()`
+  (only printed in a test context). Equality of node families is `typeid`-based. `fnv_1a_hash.hpp` had
+  no other users. → all removed.
+- **Decision** (owner): also make `getBarycentricFormula` a single instance — it kept one identical
+  `BarycentricFormula` per node family in a mutex-guarded map only because of the family-dependent id
+  (the formula derives its weights from the given nodes). Now `getBarycentricFormula()` (no argument)
+  returns one static instance, like `getOptBarycentricFormula()`; no lock on the equi / cheb1
+  `getInterpolationMethod` path any more (WP-07 had listed that mutex as a cost).
+- **Change**: `NodeFamily` (id constructor / `id()` / `id_` removed; default constructor), the three
+  families' id constructors removed; `QuadRule` (id constructor / `id()` / `id_` + TODO removed),
+  `ClenshawCurtisQuadRule` / `SimpsonQuadRule` / `TrapezoidalQuadRule` constructors removed,
+  `FejerFirstQuadRule` keeps its `includeBoundary` constructor; `InterpolationMethod` (id constructor /
+  `id()` / `id_` removed), `BarycentricFormula(const NodeFamily*)` / `OptBarycentricFormula()`
+  constructors removed; `getBarycentricFormula()` without argument (map, mutex, `<unordered_map>` etc.
+  gone), callers in `equidistant_nodes.cpp` / `first_type_chebyshev_nodes.cpp`;
+  `tools/hashing/fnv_1a_hash.hpp` deleted (directory gone). Tests: Fejér id check removed; two test
+  methods' id constructors removed; `vector_interpolation_test` context prints `typeid` names;
+  `barycentric_formula_test` / `vector_interpolation_test` use `getBarycentricFormula()`. Benchmark:
+  `perf_micro.cpp` (`micro/interp/barycentric_1d/generic/*`, same meaning). Docs: module-reference
+  (tools layout), python-bindings.md (`NodeFamily` without `id`). Python: `id` gone (check in
+  `python_checks_point2.py`).
+- **Judged code touched** (interpolation-method lookup on the global-interpolation path) → refcheck,
+  bitwise diff; e2e at the end of the WP.
+- **Checks**: debug build ✓, debug `test --repeat 3` ✓; Python build ✓: point-1 / point-2 checks ✓
+  (`id` gone), 12 / 12 examples ✓; normal build + `test` ✓ (snapshot `WP-90-p5`); `refcheck`
+  (`refcheck_p5.txt`): only the known WARN; `perf_reference` at 1 and 16 threads **bitwise
+  identical** to `WP-90-p2`. Benchmarks (e.g. `micro/interp/barycentric_1d/generic/*`, equi / cheb1
+  interpolation e2e): at the end of the WP.
 - **Status**: done (2026-11-27).
 
 ## 3. Candidate points raised by the session (not implemented unless the owner pulls them in)

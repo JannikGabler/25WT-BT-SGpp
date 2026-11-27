@@ -9,7 +9,6 @@
 #include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
-#include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -29,8 +28,6 @@ class ClenshawCurtisNodes : public NodeFamily {
   /***********
   Constructors
   ***********/
-  /// @brief Constructs the node family with a deterministic id derived from its name.
-  ClenshawCurtisNodes();
 
   /// @name Node generation
   /// @{

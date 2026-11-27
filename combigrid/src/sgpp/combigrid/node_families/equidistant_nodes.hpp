@@ -10,7 +10,6 @@
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/simpson_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/trapezoidal_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -34,8 +33,6 @@ class EquidistantNodes : public NodeFamily {
   /***********
   Constructors
   ***********/
-  /// @brief Constructs the node family with a deterministic id derived from its name.
-  EquidistantNodes();
 
   /**************
   Node generation

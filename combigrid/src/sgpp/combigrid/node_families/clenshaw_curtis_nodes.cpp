@@ -5,7 +5,6 @@
 #include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
-#include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/tools/node_families/equidistant_nodes_utilities.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -23,8 +22,6 @@ namespace node_families {
 Constructors
 ***********/
 
-ClenshawCurtisNodes::ClenshawCurtisNodes()
-    : NodeFamily(tools::fnv1aHash("Second Type Chebyshev Node Generation Function")) {}
 
 /**************
 Node generation

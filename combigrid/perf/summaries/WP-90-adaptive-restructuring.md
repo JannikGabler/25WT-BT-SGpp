@@ -17,6 +17,9 @@ Per point (details: `results/WP-90/points.md`):
   (+ alias `SecondTypeChebyshevNodes`), `FirstTypeChebyshevNodes`, getters `get*Nodes()`, setup
   `set/getNodeFamily(ForDim)` / `set/getNodeFamilies` / `getUniqueNodeFamilies`, Python `NodeFamilyVector`;
   files moved to a top-level `node_families/`. Protected files (6) edited and rehashed by the owner.
+- **P5** (owner): unused FNV-1a ids removed (`NodeFamily::id`, `QuadRule::id`, `InterpolationMethod::id`,
+  `tools/hashing/fnv_1a_hash.hpp`); `getBarycentricFormula()` is one static instance instead of a
+  mutex-guarded map per node family (owner).
 - Files: (at the end)
 
 ## Gain vs. cost

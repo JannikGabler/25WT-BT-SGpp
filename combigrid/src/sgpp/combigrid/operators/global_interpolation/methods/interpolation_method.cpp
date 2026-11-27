@@ -15,10 +15,6 @@
 namespace sgpp {
 namespace combigrid {
 
-InterpolationMethod::InterpolationMethod(const uint64_t id) : id_(id) {}
-
-uint64_t InterpolationMethod::id() const { return id_; }
-
 void InterpolationMethod::interpolate(const double pos, const std::vector<double>& nodes,
                                       const std::vector<double>& values, const size_t nOutputs,
                                       double* const out) const {

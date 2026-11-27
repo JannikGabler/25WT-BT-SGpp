@@ -15,7 +15,6 @@
 #include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/default_rules/fejer_first_quadrature_rule.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
-#include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -158,9 +157,7 @@ void convolveCyclicallyConjugated(std::vector<std::complex<double>>& input,
 }  // namespace
 
 FejerFirstQuadRule::FejerFirstQuadRule(const bool includeBoundary)
-    : QuadRule(tools::fnv1aHash(includeBoundary ? "Fejer First Quadrature Rule With Boundary"
-                                                : "Fejer First Quadrature Rule")),
-      includeBoundary_(includeBoundary) {}
+    : includeBoundary_(includeBoundary) {}
 
 base::DataVector FejerFirstQuadRule::genWeights(const GPCntType nNodes) const {
   base::DataVector weights(nNodes);

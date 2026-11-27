@@ -4,7 +4,6 @@
  */
 #pragma once
 
-#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 
 namespace sgpp {
@@ -12,11 +11,11 @@ namespace combigrid {
 
 /**
  * @brief Returns a pointer to the (process-wide) generic barycentric Lagrange
- * formula bound to the given node family.
- * @param nodeFamily Node family the formula should use.
+ * formula (it derives the barycentric weights from the nodes it is given, so one
+ * instance serves every node family).
  * @return Non-owning pointer to a singleton method instance.
  */
-InterpolationMethod* getBarycentricFormula(const NodeFamily* const nodeFamily);
+InterpolationMethod* getBarycentricFormula();
 
 }  // namespace combigrid
 }  // namespace sgpp

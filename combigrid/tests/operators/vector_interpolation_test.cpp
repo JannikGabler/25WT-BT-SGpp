@@ -55,6 +55,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <typeinfo>
 #include <utility>
 #include <vector>
 
@@ -328,8 +329,6 @@ void checkOperator(const SparseGrid& sg, const DataVector& point, const size_t n
 /// An external interpolation method that overrides only the scalar overload (Lagrange form).
 class LagrangeMethod : public InterpolationMethod {
  public:
-  LagrangeMethod() : InterpolationMethod(42) {}
-
   double interpolate(const double pos, const std::vector<double>& nodes,
                      const std::vector<double>& values) const override {
     double result = 0.0;
@@ -451,8 +450,8 @@ BOOST_AUTO_TEST_CASE(Default_Applies_Scalar_Formula_Per_Output) {
 BOOST_AUTO_TEST_CASE(Built_In_Overrides_Equal_Default) {
   const std::vector<std::pair<NodeFamily*, InterpolationMethod*>> methods = {
       {getClenshawCurtisNodes(), getOptBarycentricFormula()},
-      {getEquidistantNodes(), getBarycentricFormula(getEquidistantNodes())},
-      {getFirstTypeChebyshevNodes(), getBarycentricFormula(getFirstTypeChebyshevNodes())}};
+      {getEquidistantNodes(), getBarycentricFormula()},
+      {getFirstTypeChebyshevNodes(), getBarycentricFormula()}};
 
   for (const auto& [nodeFamily, method] : methods) {
     for (const GPCntType nNodes : {1u, 2u, 3u, 5u, 9u, 17u}) {
@@ -461,8 +460,9 @@ BOOST_AUTO_TEST_CASE(Built_In_Overrides_Equal_Default) {
       const std::vector<double> nodes(nodesVec.begin(), nodesVec.end());
       for (const double pos : {0.3141, 0.5, nodes.back()}) {
         for (const size_t nOutputs : {1, 3, 4}) {
-          BOOST_TEST_CONTEXT("method " << method->id() << " n" << nNodes << " pos " << pos << " m"
-                                       << nOutputs) {
+          BOOST_TEST_CONTEXT("method " << typeid(*method).name() << " nodes "
+                                       << typeid(*nodeFamily).name() << " n" << nNodes << " pos "
+                                       << pos << " m" << nOutputs) {
             const std::vector<double> values = nodeValues(nodes, nOutputs);
             std::vector<double> out(nOutputs), expected(nOutputs);
             method->interpolate(pos, nodes, values, nOutputs, out.data());

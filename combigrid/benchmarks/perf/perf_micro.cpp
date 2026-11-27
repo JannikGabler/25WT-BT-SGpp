@@ -839,7 +839,7 @@ void addBarycentric1D(Suite& suite, const bool optimized, const GPCntType nNodes
       [=](MicroRun& run) {
         cg::NodeFamily* const nodeFamily = perf::nodeFamilyByName(optimized ? "cc" : "cheb1");
         cg::InterpolationMethod* const method =
-            optimized ? cg::getOptBarycentricFormula() : cg::getBarycentricFormula(nodeFamily);
+            optimized ? cg::getOptBarycentricFormula() : cg::getBarycentricFormula();
         const DataVector nodesVec = nodeFamily->genNodes(nNodes, optimized);
         const std::vector<double> nodeValues(nodesVec.begin(), nodesVec.end());
         std::vector<double> values(nNodes);

@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_SUITE(equidistant_nodes)
 BOOST_AUTO_TEST_CASE(empty_case) {
   const NodeFamily* nodeFamily = getEquidistantNodes();
   const DataVector nodes = nodeFamily->genNodes(0, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
   const std::vector<double> values(0);
 
   const double expected = 0;
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(one_value_case) {
 
     const NodeFamily* nodeFamily = getEquidistantNodes();
     const DataVector nodes = nodeFamily->genNodes(1, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
     const std::vector<double> values{randGen.getUniformRN(-1, 1)};
 
     const double expected = values[0];
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(two_value_case) {
 
     const NodeFamily* nodeFamily = getEquidistantNodes();
     const DataVector nodes = nodeFamily->genNodes(2, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
     const std::vector<double> values{randGen.getUniformRN(-1, 1), randGen.getUniformRN(-1, 1)};
 
     const double expected =
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(eval_at_node_case) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const NodeFamily* nodeFamily = getEquidistantNodes();
     const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
 
     std::vector<double> values(nNodes);
     for (size_t i = 0; i < nNodes; i++) {
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(constant_function_case) {
   const NodeFamily* nodeFamily = getEquidistantNodes();
 
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   const double c = 3.141592653589793;
   const std::vector<double> values(nNodes, c);
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE(linear_polynomial_case) {
   const NodeFamily* nodeFamily = getEquidistantNodes();
 
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE(quadratic_polynomial_case) {
 
   const NodeFamily* nodeFamily = getEquidistantNodes();
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {
@@ -176,7 +176,7 @@ BOOST_AUTO_TEST_CASE(extrapolation_case) {
 
   const NodeFamily* nodeFamily = getEquidistantNodes();
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_SUITE(first_type_chebyshev_nodes)
 BOOST_AUTO_TEST_CASE(empty_case) {
   const NodeFamily* nodeFamily = getFirstTypeChebyshevNodes();
   const DataVector nodes = nodeFamily->genNodes(0, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
   const std::vector<double> values(0);
 
   const double expected = 0;
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE(one_value_case) {
 
     const NodeFamily* nodeFamily = getFirstTypeChebyshevNodes();
     const DataVector nodes = nodeFamily->genNodes(1, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
     const std::vector<double> values{randGen.getUniformRN(-1, 1)};
 
     const double expected = values[0];
@@ -232,7 +232,7 @@ BOOST_AUTO_TEST_CASE(two_value_case) {
 
     const NodeFamily* nodeFamily = getFirstTypeChebyshevNodes();
     const DataVector nodes = nodeFamily->genNodes(2, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
     const std::vector<double> values{randGen.getUniformRN(-1, 1), randGen.getUniformRN(-1, 1)};
 
     const double expected =
@@ -250,7 +250,7 @@ BOOST_AUTO_TEST_CASE(eval_at_node_case) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const NodeFamily* nodeFamily = getFirstTypeChebyshevNodes();
     const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
 
     std::vector<double> values(nNodes);
     for (size_t i = 0; i < nNodes; i++) {
@@ -271,7 +271,7 @@ BOOST_AUTO_TEST_CASE(constant_function_case) {
   const NodeFamily* nodeFamily = getFirstTypeChebyshevNodes();
 
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   const double c = 3.141592653589793;
   const std::vector<double> values(nNodes, c);
@@ -290,7 +290,7 @@ BOOST_AUTO_TEST_CASE(linear_polynomial_case) {
   const NodeFamily* nodeFamily = getFirstTypeChebyshevNodes();
 
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {
@@ -313,7 +313,7 @@ BOOST_AUTO_TEST_CASE(quadratic_polynomial_case) {
 
   const NodeFamily* nodeFamily = getFirstTypeChebyshevNodes();
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {
@@ -333,7 +333,7 @@ BOOST_AUTO_TEST_CASE(extrapolation_case) {
 
   const NodeFamily* nodeFamily = getFirstTypeChebyshevNodes();
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {
@@ -356,7 +356,7 @@ BOOST_AUTO_TEST_SUITE(second_type_chebyshev_nodes)
 BOOST_AUTO_TEST_CASE(empty_case) {
   const NodeFamily* nodeFamily = getSecondTypeChebyshevNodes();
   const DataVector nodes = nodeFamily->genNodes(0, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
   const std::vector<double> values(0);
 
   const double expected = 0;
@@ -372,7 +372,7 @@ BOOST_AUTO_TEST_CASE(one_value_case) {
 
     const NodeFamily* nodeFamily = getSecondTypeChebyshevNodes();
     const DataVector nodes = nodeFamily->genNodes(1, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
     const std::vector<double> values{randGen.getUniformRN(-1, 1)};
 
     const double expected = values[0];
@@ -389,7 +389,7 @@ BOOST_AUTO_TEST_CASE(two_value_case) {
 
     const NodeFamily* nodeFamily = getSecondTypeChebyshevNodes();
     const DataVector nodes = nodeFamily->genNodes(2, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
     const std::vector<double> values{randGen.getUniformRN(-1, 1), randGen.getUniformRN(-1, 1)};
 
     const double expected =
@@ -407,7 +407,7 @@ BOOST_AUTO_TEST_CASE(eval_at_node_case) {
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
     const NodeFamily* nodeFamily = getSecondTypeChebyshevNodes();
     const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-    const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+    const InterpolationMethod* formula = getBarycentricFormula();
 
     std::vector<double> values(nNodes);
     for (size_t i = 0; i < nNodes; i++) {
@@ -428,7 +428,7 @@ BOOST_AUTO_TEST_CASE(constant_function_case) {
   const NodeFamily* nodeFamily = getSecondTypeChebyshevNodes();
 
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   const double c = 3.141592653589793;
   const std::vector<double> values(nNodes, c);
@@ -447,7 +447,7 @@ BOOST_AUTO_TEST_CASE(linear_polynomial_case) {
   const NodeFamily* nodeFamily = getSecondTypeChebyshevNodes();
 
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(quadratic_polynomial_case) {
 
   const NodeFamily* nodeFamily = getSecondTypeChebyshevNodes();
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {
@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE(extrapolation_case) {
 
   const NodeFamily* nodeFamily = getSecondTypeChebyshevNodes();
   const DataVector nodes = nodeFamily->genNodes(nNodes, false);
-  const InterpolationMethod* formula = getBarycentricFormula(nodeFamily);
+  const InterpolationMethod* formula = getBarycentricFormula();
 
   std::vector<double> values(nNodes);
   for (size_t i = 0; i < nNodes; i++) {

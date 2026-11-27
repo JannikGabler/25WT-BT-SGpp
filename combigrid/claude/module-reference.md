@@ -169,8 +169,8 @@ tools/                 (namespace tools; sub-namespaces per operator, e.g. tools
   math/ (binomial, pow, ceil), numerics/ (namespace tools::numerics: compensated summation,
   CompensatedSum + compensatedSum(s) / compensatedDotProduct(s)), comparison/ (nearly_equal), data_vector/ (normalization
   [0,1]^d ↔ domain; mapToDomain = std::fma, the one unit → domain mapping of all operators),
-  hashing/ (FNV-1a), collections/ (k-way unique merge), functions/ (equidistant
-  node utilities), os/, concurrency.hpp (range partitioning), iterators.hpp, benchmarking/
+  collections/ (k-way unique merge), node_families/ (equidistant node utilities; the FNV-1a ids
+  of node families / quadrature rules / interpolation methods were removed in WP-90), os/, concurrency.hpp (range partitioning), iterators.hpp, benchmarking/
 ```
 
 Benchmarks live outside `src/` in [combigrid/benchmarks/](../benchmarks/) (`perf/` = the

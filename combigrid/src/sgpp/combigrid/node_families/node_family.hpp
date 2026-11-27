@@ -26,11 +26,7 @@ namespace combigrid {
  */
 class NodeFamily {
  public:
-  /**
-   * @brief Constructs the node family with a unique numeric id.
-   * @param id Identifier used for caching and equality.
-   */
-  NodeFamily(const uint64_t id) noexcept : id_(id) {}
+  NodeFamily() noexcept = default;
 
   virtual ~NodeFamily() = default;
 
@@ -171,9 +167,6 @@ class NodeFamily {
    */
   virtual InterpolationMethod* getInterpolationMethod(GPCntType nNodes) const = 0;
 
-  /// @brief Returns the unique identifier.
-  uint64_t id() const noexcept { return id_; }
-
   /**
    * TODO: Document
    */
@@ -209,13 +202,6 @@ class NodeFamily {
 
   /// @}
 
- private:
-  /// @name Attributes
-  /// @{
-
-  const uint64_t id_;  ///< Unique identifier (used for caching).
-
-  /// @}
 };
 
 }  // namespace combigrid

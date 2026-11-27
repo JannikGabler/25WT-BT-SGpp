@@ -17,8 +17,9 @@ cheb2 = pysgpp.getSecondTypeChebyshevNodes()
 cheb1 = pysgpp.getFirstTypeChebyshevNodes()
 for f in (equi, cc, cheb1):
     assert isinstance(f, pysgpp.NodeFamily)
-assert cc == cheb2 and cc.id() == cheb2.id()  # the same singleton
-assert not (cc == equi) and cc.id() != cheb1.id()
+assert cc == cheb2  # the same singleton
+assert not hasattr(cc, "id")  # ids removed (WP-90)
+assert not (cc == equi) and not (cc == cheb1)
 
 g = pysgpp.CompleteSGGenInstr(3, 3)
 g.setNodeFamily(cc)

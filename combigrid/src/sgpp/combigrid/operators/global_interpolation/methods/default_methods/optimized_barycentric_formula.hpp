@@ -30,9 +30,6 @@ namespace global_interpolation {
  */
 class OptBarycentricFormula : public InterpolationMethod {
  public:
-  /// @brief Constructs the formula with a deterministic identity.
-  OptBarycentricFormula();
-
   /**
    * @brief Evaluates the 1D interpolant at @p pos (scalar formula).
    * @param pos    Evaluation position.

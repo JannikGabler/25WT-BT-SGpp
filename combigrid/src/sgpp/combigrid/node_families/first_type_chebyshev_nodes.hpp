@@ -24,8 +24,6 @@ class FirstTypeChebyshevNodes : public NodeFamily {
   /***********
   Constructors
   ***********/
-  /// @brief Constructs the node family with a deterministic id derived from its name.
-  FirstTypeChebyshevNodes();
 
   /**************
   Node generation

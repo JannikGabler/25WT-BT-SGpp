@@ -43,12 +43,6 @@ namespace combigrid {
  */
 class InterpolationMethod {
  public:
-  /**
-   * @brief Constructs the method with the given identifier.
-   * @param id Unique numeric id for this method.
-   */
-  InterpolationMethod(uint64_t id);
-
   virtual ~InterpolationMethod() = default;
 
   /**
@@ -99,9 +93,6 @@ class InterpolationMethod {
   virtual void basisValues(double pos, const std::vector<double>& nodes,
                            std::span<double> out) const;
 
-  /// @brief Returns the unique identifier of this method.
-  uint64_t id() const;
-
  protected:
   /**
    * @brief Detects trivial cases where the result follows immediately from
@@ -148,9 +139,6 @@ class InterpolationMethod {
    */
   bool hasTrivialBasisValues(double pos, const std::vector<double>& nodes,
                              std::span<double> out) const;
-
- private:
-  const uint64_t id_;  ///< Unique identifier.
 };
 
 }  // namespace combigrid

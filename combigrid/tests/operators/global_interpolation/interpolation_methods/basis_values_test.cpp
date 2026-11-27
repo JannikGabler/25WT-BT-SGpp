@@ -35,8 +35,6 @@ namespace {
 /// default basisValues.
 class LinearCombinationMethod : public InterpolationMethod {
  public:
-  LinearCombinationMethod() : InterpolationMethod(12345) {}
-
   double interpolate(const double pos, const std::vector<double>& nodes,
                      const std::vector<double>& values) const override {
     double sum = 0.0;

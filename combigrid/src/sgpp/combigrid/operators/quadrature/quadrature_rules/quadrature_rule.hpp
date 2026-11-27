@@ -19,12 +19,6 @@ namespace combigrid {
  */
 class QuadRule {
  public:
-  /**
-   * @brief Constructs a rule with the given identifier.
-   * @param id Unique numeric id for this rule.
-   */
-  QuadRule(const uint64_t id) : id_(id) {}
-
   virtual ~QuadRule() = default;
 
   // /*
@@ -51,13 +45,6 @@ class QuadRule {
    * @param startIdx Offset at which to start writing (default @c 0).
    */
   virtual void genWeightsInplace(std::span<double> out) const = 0;
-
-  /// @brief Returns the unique identifier of this quadrature rule.
-  uint64_t id() const { return id_; }
-
- private:
-  // TODO: Is the id still necessary?
-  const uint64_t id_;  ///< Unique identifier (used for deduplication).
 };
 
 }  // namespace combigrid
