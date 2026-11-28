@@ -23,7 +23,7 @@ sourceFunc = pysgpp.SourceFunc(func)
 
 genInstr = pysgpp.CompleteSGGenInstr(16, 2)
 genInstr.setDomain((-1, 1))
-genInstr.setNodeGenFunc(pysgpp.getClenshawCurtisNodeGenFunc())
+genInstr.setNodeFamily(pysgpp.getClenshawCurtisNodes())
 genInstr.setLvl2GPCntFunc(pysgpp.linearLvl2GPCntFunction)
 genInstr.setBoundaryLevelOffset(2)
 

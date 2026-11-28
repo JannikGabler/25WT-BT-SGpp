@@ -3,8 +3,8 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
-// Python bindings for the level-to-grid-point-count (growth) functions and the node generation
-// functions of the combigrid module.
+// Python bindings for the level-to-grid-point-count (growth) functions and the node families
+// of the combigrid module.
 
 // ---------------------------------------------------------------------------
 // Lvl2GPCntFunc = GPCntType (*)(LvlType)
@@ -54,24 +54,24 @@
 }
 
 // ---------------------------------------------------------------------------
-// NodeGenFunc
+// NodeFamily
 // ---------------------------------------------------------------------------
 
-// NodeGenFunc is exposed without a director: it is used only through the singletons returned by
-// the get*NodeGenFunc() getters below. Those return raw pointers to process-lifetime static
+// NodeFamily is exposed without a director: it is used only through the singletons returned by
+// the get*Nodes() getters below. Those return raw pointers to process-lifetime static
 // objects; SWIG proxies for them are non-owning (no %newobject), so Python never deletes them.
 // The quadrature rule / interpolation method accessors are extension machinery (their return
 // types are not wrapped).
-%ignore sgpp::combigrid::NodeGenFunc::getQuadRule;
-%ignore sgpp::combigrid::NodeGenFunc::getInterpolationMethod;
-%include "combigrid/src/sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp"
+%ignore sgpp::combigrid::NodeFamily::getQuadRule;
+%ignore sgpp::combigrid::NodeFamily::getInterpolationMethod;
+%include "combigrid/src/sgpp/combigrid/node_families/node_family.hpp"
 
-%include "combigrid/src/sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp"
-%include "combigrid/src/sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp"
-%include "combigrid/src/sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp"
-%include "combigrid/src/sgpp/combigrid/functions/node_generation_functions/getter/second_type_chebyshev_node_generation_function_getter.hpp"
+%include "combigrid/src/sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp"
+%include "combigrid/src/sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp"
+%include "combigrid/src/sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp"
+%include "combigrid/src/sgpp/combigrid/node_families/getter/second_type_chebyshev_nodes_getter.hpp"
 
 namespace std {
-  // SGGenInstr::getNodeGenFuncs / setNodeGenFuncs / getUniqueNodeGenFuncs (elements non-owning).
-  %template(NodeGenFuncVector) vector<sgpp::combigrid::NodeGenFunc*>;
+  // SGGenInstr::getNodeFamilies / setNodeFamilies / getUniqueNodeFamilies (elements non-owning).
+  %template(NodeFamilyVector) vector<sgpp::combigrid::NodeFamily*>;
 }

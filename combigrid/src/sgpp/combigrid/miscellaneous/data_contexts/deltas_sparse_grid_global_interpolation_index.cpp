@@ -8,12 +8,12 @@
 #include <cstddef>
 #include <numeric>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/miscellaneous/ct_coefficient_trie/ct_coefficient_trie.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_global_interpolation_index.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/collections/vector_bytes.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -75,10 +75,10 @@ void DSGGlobalInterpIndex::addRowsOfDim(const DeltasSparseGrid& deltasSparseGrid
                                         const size_t dim) {
   const SGGenInstr& genInstr = deltasSparseGrid.getGenInstr();
   const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
-  const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+  const NodeFamily* const nodeFamily = genInstr.getNodeFamilyForDim(dim);
   const Lvl2GPCntFunc lvl2GPCntFunc = genInstr.getLvl2GPCntFuncForDim(dim);
   const NodeIdxLvlMapFunc nodeIdxLvlMapFunc =
-      nodeGenFunc->getNodeIdxMapFromDeltaTGLvlToRegularLvl(lvl2GPCntFunc);
+      nodeFamily->getNodeIdxMapFromDeltaTGLvlToRegularLvl(lvl2GPCntFunc);
 
   weightLayout_.appendSubVec(1);  // weights[dim]
 
@@ -86,10 +86,10 @@ void DSGGlobalInterpIndex::addRowsOfDim(const DeltasSparseGrid& deltasSparseGrid
     // The nodes and the method of the tensor grids of level lvl in the SparseGrid operator
     const bool withBoundary = (lvl >= boundaryLvlOffset);
     const GPCntType nNodes = lvl2GPCntFunc(lvl) + (withBoundary ? 2 : 0);
-    const base::DataVector nodes = nodeGenFunc->genNodes(nNodes, withBoundary);
+    const base::DataVector nodes = nodeFamily->genNodes(nNodes, withBoundary);
     rowNodes.emplace_back(nodes.begin(), nodes.end());
     rowDim_.push_back(dim);
-    rowMethods.push_back(nodeGenFunc->getInterpolationMethod(nNodes));
+    rowMethods.push_back(nodeFamily->getInterpolationMethod(nNodes));
     weightStart_.push_back(deltaOrder_.size());
 
     for (LvlType deltaLvl = 0; deltaLvl <= lvl; deltaLvl++) {

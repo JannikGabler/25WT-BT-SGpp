@@ -30,7 +30,7 @@
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/global_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/flat_nested_vector/flat_nested_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <span>
 #include <vector>
 
@@ -78,7 +78,7 @@ misc::FlatNestedVec<double, 2> estimateTensorGrids(const VectorSourceFunc& sourc
  * @param normPoint  Query point in normalized @f$[0,1]^d@f$ coordinates.
  * @param tg         Tensor grid (of @p genInstr's sparse grid).
  * @param unitTG     The same tensor grid with its nodes on the unit interval.
- * @param genInstr   Generation instruction (domain, node-generation functions and their 1D
+ * @param genInstr   Generation instruction (domain, node families and their 1D
  *                   interpolation methods).
  * @param scratch    Scratch of the calling thread (sized for the sparse grid of @p tg).
  * @return Interpolated value on @p tg (0 for a tensor grid without grid points).

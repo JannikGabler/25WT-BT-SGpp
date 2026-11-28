@@ -16,13 +16,14 @@ constants.hpp          parallelism thresholds per subsystem (mi_vec, sg_gen_inst
 type_defs.hpp          LvlType, GPCntType, CTCoeffType, MI/MIVec aliases, HyperCubeArea
 functions/
   level_to_grid_point_count_functions/  linear / doubling growth (level → #inner nodes)
-  node_generation_functions/            1D node families; default_functions/ (concrete),
-                                        getter/ (static singletons)
   source_functions/                     SourceFunc, VectorSourceFunc (m outputs; virtual
                                         end-of-operator hook); caching/ (always compiled):
                                         SourceFuncCache, SourceFuncCacheConfig, CachePolicy,
                                         AdaptiveCacheMode, CacheStatistics, CachedSourceFunc,
                                         CachedVectorSourceFunc
+node_families/         NodeFamily (abstract 1D node family), EquidistantNodes,
+                       FirstTypeChebyshevNodes, SecondTypeChebyshevNodes (= Clenshaw-Curtis;
+                       namespace node_families), getter/ (static singletons, get*Nodes())
 grids/
   tensor_grid            stand-alone anisotropic tensor grid (per-dim node lists)
   tensor_grid_view       TensorGridView: a tensor grid of a sparse grid (levels + shared node table)
@@ -103,7 +104,6 @@ miscellaneous/         (namespace misc)
   exceptions/            CacheFileException (namespace sgpp::combigrid; file_exception owning
                          its message)
   concurrency/           ConcurrentTaskQueue (node-lookup pipeline, commented out), SpinLock
-  hashing/               std::pair hasher
   vector_map/            VectorMap (tiny linear-search map)
   multiindex_vector_lookup*, multiindex_lookup_equal   MI → index hash map
 multiindices/          MI<T>, MIVec<T> (flat array ~ matrix), views, references, iterators, hashes,
@@ -150,8 +150,8 @@ tools/                 (namespace tools; sub-namespaces per operator, e.g. tools
   math/ (binomial, pow, ceil), numerics/ (namespace tools::numerics: compensated summation,
   CompensatedSum + compensatedSum(s) / compensatedDotProduct(s)), comparison/ (nearly_equal), data_vector/ (normalization
   [0,1]^d ↔ domain; mapToDomain = std::fma, the one unit → domain mapping of all operators),
-  hashing/ (FNV-1a), collections/ (k-way unique merge), functions/ (equidistant
-  node utilities), os/, concurrency.hpp (range partitioning), iterators.hpp, benchmarking/
+  collections/ (k-way unique merge), node_families/ (equidistant node index maps,
+  namespace tools::equidistant_nodes), os/, concurrency.hpp (range partitioning), iterators.hpp, benchmarking/
 ```
 
 Benchmarks live outside `src/` in [combigrid/benchmarks/](../benchmarks/) (`perf/` = the
@@ -252,8 +252,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   ([miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp](../src/sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp)):
   `{LvlMI mi, CTCoeffType coefficient, TensorGrid tensorGrid}`.
 - `SGGenInstr`
-  ([sparse_grid_generation_instructions/sg_gen_instruction.hpp](../src/sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp)):
-  abstract generator holding domain, per-dim `NodeGenFunc*`, per-dim `Lvl2GPCntFunc`, boundary level
+  ([sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp](../src/sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp)):
+  abstract generator holding domain, per-dim `NodeFamily*`, per-dim `Lvl2GPCntFunc`, boundary level
   offset; subclasses implement `genFullMIVec()` / `genReducedMIVec()` (+ `…WithCoeffs()`) / `clone()`.
   - `CompleteSGGenInstr(maxLvl, nDim)`: `|ℓ|₁ ≤ maxLvl`; closed-form coefficient `(−1)^q · C(d−1, q)`
     with `q = maxLvl − |ℓ|₁`, so zero-coefficient MIs are never materialized.
@@ -343,8 +343,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   Output k equals the scalar run of component k within round-off (not bitwise). For m = 1 use
   `SourceFunc` (the vector path is slower there). Python: `VectorSourceFunc(callable, nOutputs)`
   (callable returns a sequence of m numbers; [python-bindings.md](python-bindings.md)).
-- `NodeGenFunc`
-  ([functions/node_generation_functions/node_generation_function.hpp](../src/sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp)):
+- `NodeFamily`
+  ([node_families/node_family.hpp](../src/sgpp/combigrid/node_families/node_family.hpp)):
   abstract 1D node family; also returns the matching 1D `QuadRule*` and `InterpolationMethod*`.
   `getQuadRule(n)` is the rule of the n nodes with the boundary nodes; the virtual overload
   `getQuadRule(n, includeBoundary)` (WP-83; default: `getQuadRule(n)`) is what the operators call
@@ -352,10 +352,15 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   nodes, so for levels below an offset ≥ 2 their weights are not the interpolatory weights of the
   inner nodes (pre-existing; e.g. Simpson on {¼, ½, ¾}: x² off by 0.0625; convergence order kept).
   Getters (raw pointers to process-lifetime singletons — never delete or wrap):
-  `getEquidistantNodeGenFunc()` (Simpson / trapezoidal by parity),
-  `getClenshawCurtisNodeGenFunc()` = `getSecondTypeChebyshevNodeGenFunc()` (same singleton; CC
-  quadrature, closed-form barycentric weights), `getFirstTypeChebyshevNodeGenFunc()` (generic
+  `getEquidistantNodes()` (Simpson / trapezoidal by parity),
+  `getClenshawCurtisNodes()` = `getSecondTypeChebyshevNodes()` (same singleton; CC
+  quadrature, closed-form barycentric weights), `getFirstTypeChebyshevNodes()` (generic
   barycentric weights; quadrature since WP-83: `FejerFirstQuadRule`, see "Quadrature rules").
+  Identity is the singleton pointer (node-table row sharing compares `NodeFamily*`; `operator==`
+  compares the dynamic type); node families, interpolation methods and quadrature rules carry no
+  ids (removed in WP-88 with their FNV-1a hashing). The generic `getBarycentricFormula()` is one
+  stateless instance shared by every family that uses it (equi, cheb1), the CC formula is
+  `getOptBarycentricFormula()`.
 - `Lvl2GPCntFunc`: function pointer; `linearLvl2GPCntFunction` (ℓ+1),
   `doublingLvl2GPCntFunction` (2^{ℓ+1}−1 inner nodes, CC-compatible; the Doxygen comment has a typo,
   the code is `tools::pow(2, lvl+1) - 1`).
@@ -440,7 +445,7 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   a_k, b_k−a_k)` = `std::fma` of the unit nodes of `getUnitNodeTable()`, bitwise the evaluated
   points; weights, basis values and interpolation cells are computed from the unit table) and (2) as the
   factor |Ω| of quadrature results. `SourceFunc` + `SGGenInstr::setDomain()` handle it.
-- **Node generation**: `NodeGenFunc` receives the number of *inner* nodes; `SGGenInstr` appends
+- **Node generation**: `NodeFamily` receives the number of *inner* nodes; `SGGenInstr` appends
   boundary nodes per `boundaryLevelOffset`. Level → count (`Lvl2GPCntFunc`) and node positions are
   independent abstractions.
 - **On-demand assembly**: tensor grids store only 1D node lists (O(d·n) instead of O(n^d); since
@@ -521,5 +526,6 @@ operation machinery.
 Markdown conversion in [bachelor-thesis/](bachelor-thesis/) (read-only; its
 [README.md](bachelor-thesis/README.md) has a "what to read for which task" table). It predates
 refactors; known discrepancies (code is truth): `setBoundaryUsage()` → `setBoundaryLevelOffset(LvlType)`;
-`MIVecSGGenInstr` takes `const LvlMIVec&` (not `shared_ptr`); node getters return `NodeGenFunc*`
-(not `shared_ptr`).
+`MIVecSGGenInstr` takes `const LvlMIVec&` (not `shared_ptr`); node getters return `NodeFamily*`
+(not `shared_ptr`); `NodeGenFunc` / `get*NodeGenFunc()` / `setNodeGenFunc` / `sg_gen_instruction.hpp` are
+`NodeFamily` / `get*Nodes()` / `setNodeFamily` / `sparse_grid_generation_instruction.hpp` (WP-88).

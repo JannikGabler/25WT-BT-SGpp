@@ -33,7 +33,7 @@ namespace combigrid {
  * weighted sum @f$\sum_{\vec{\ell}} c_{\vec{\ell}}\,
  * I^{\mathrm{glob}}_{\vec{\ell}} f(\vec{x})@f$. The 1D interpolation rule
  * used in each dimension is the one returned by the dimension's
- * node-generation function (e.g. a barycentric Lagrange formula for
+ * node family (e.g. a barycentric Lagrange formula for
  * Chebyshev nodes).
  *
  * @note Every grid point of every tensor grid enters with its weight, also with a weight of 0

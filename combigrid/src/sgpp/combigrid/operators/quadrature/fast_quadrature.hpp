@@ -36,7 +36,7 @@
 // /**
 // TODO: Document
 // */
-// void getQuadRules(const TensorGrid& tg, const std::vector<NodeGenFunc*>& nodeGenFuncs);
+// void getQuadRules(const TensorGrid& tg, const std::vector<NodeFamily*>& nodeFamilies);
 
 // }  // namespace fast_quadrature_operator
 

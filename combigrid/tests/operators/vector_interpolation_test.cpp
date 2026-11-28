@@ -30,9 +30,6 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
@@ -41,13 +38,16 @@
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/global_interpolation/global_interpolation_tools.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
@@ -55,6 +55,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -98,10 +99,10 @@ LvlMIVec anisotropicMIs(const size_t nDim) {
   return LvlMIVec(std::vector<LvlMI>{first, ones, last});
 }
 
-NodeGenFunc* nodeGenFuncByName(const std::string& nodes) {
-  if (nodes == "equi") return getEquidistantNodeGenFunc();
-  if (nodes == "cc") return getClenshawCurtisNodeGenFunc();
-  return getFirstTypeChebyshevNodeGenFunc();
+NodeFamily* nodeFamilyByName(const std::string& nodes) {
+  if (nodes == "equi") return getEquidistantNodes();
+  if (nodes == "cc") return getClenshawCurtisNodes();
+  return getFirstTypeChebyshevNodes();
 }
 
 /// The generation instruction of a test configuration (complete grid: maximum level 3; else
@@ -116,7 +117,7 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const std::string& nodes, const LvlType
   } else {
     genInstr = std::make_unique<CompleteSGGenInstr>(3, nDim);
   }
-  genInstr->setNodeGenFunc(nodeGenFuncByName(nodes));
+  genInstr->setNodeFamily(nodeFamilyByName(nodes));
   genInstr->setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr->setBoundaryLevelOffset(boundary);
   genInstr->setDomain(unitDomain ? HyperCubeArea(nDim, {0.0, 1.0}) : shiftedDomain(nDim));
@@ -328,7 +329,7 @@ void checkOperator(const SparseGrid& sg, const DataVector& point, const size_t n
 /// An external interpolation method that overrides only the scalar overload (Lagrange form).
 class LagrangeMethod : public InterpolationMethod {
  public:
-  LagrangeMethod() : InterpolationMethod(42) {}
+  LagrangeMethod() = default;
 
   double interpolate(const double pos, const std::vector<double>& nodes,
                      const std::vector<double>& values) const override {
@@ -434,7 +435,7 @@ BOOST_AUTO_TEST_CASE(Default_Applies_Scalar_Formula_Per_Output) {
   const InterpolationMethod& base = method;
 
   for (const GPCntType nNodes : {1u, 2u, 3u, 5u, 9u}) {
-    const DataVector nodesVec = getClenshawCurtisNodeGenFunc()->genNodes(nNodes, nNodes > 1);
+    const DataVector nodesVec = getClenshawCurtisNodes()->genNodes(nNodes, nNodes > 1);
     const std::vector<double> nodes(nodesVec.begin(), nodesVec.end());
     for (const size_t nOutputs : {1, 3, 4}) {
       const std::vector<double> values = nodeValues(nodes, nOutputs);
@@ -449,20 +450,19 @@ BOOST_AUTO_TEST_CASE(Default_Applies_Scalar_Formula_Per_Output) {
 }
 
 BOOST_AUTO_TEST_CASE(Built_In_Overrides_Equal_Default) {
-  const std::vector<std::pair<NodeGenFunc*, InterpolationMethod*>> methods = {
-      {getClenshawCurtisNodeGenFunc(), getOptBarycentricFormula()},
-      {getEquidistantNodeGenFunc(), getBarycentricFormula(getEquidistantNodeGenFunc())},
-      {getFirstTypeChebyshevNodeGenFunc(),
-       getBarycentricFormula(getFirstTypeChebyshevNodeGenFunc())}};
+  const std::vector<std::tuple<const char*, NodeFamily*, InterpolationMethod*>> methods = {
+      {"cc", getClenshawCurtisNodes(), getOptBarycentricFormula()},
+      {"equi", getEquidistantNodes(), getBarycentricFormula()},
+      {"cheb1", getFirstTypeChebyshevNodes(), getBarycentricFormula()}};
 
-  for (const auto& [nodeGenFunc, method] : methods) {
+  for (const auto& [name, nodeFamily, method] : methods) {
     for (const GPCntType nNodes : {1u, 2u, 3u, 5u, 9u, 17u}) {
-      const bool boundary = nodeGenFunc != getFirstTypeChebyshevNodeGenFunc() && nNodes > 1;
-      const DataVector nodesVec = nodeGenFunc->genNodes(nNodes, boundary);
+      const bool boundary = nodeFamily != getFirstTypeChebyshevNodes() && nNodes > 1;
+      const DataVector nodesVec = nodeFamily->genNodes(nNodes, boundary);
       const std::vector<double> nodes(nodesVec.begin(), nodesVec.end());
       for (const double pos : {0.3141, 0.5, nodes.back()}) {
         for (const size_t nOutputs : {1, 3, 4}) {
-          BOOST_TEST_CONTEXT("method " << method->id() << " n" << nNodes << " pos " << pos << " m"
+          BOOST_TEST_CONTEXT("method " << name << " n" << nNodes << " pos " << pos << " m"
                                        << nOutputs) {
             const std::vector<double> values = nodeValues(nodes, nOutputs);
             std::vector<double> out(nOutputs), expected(nOutputs);

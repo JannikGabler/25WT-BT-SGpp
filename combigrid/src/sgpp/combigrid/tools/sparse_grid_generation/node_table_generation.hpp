@@ -11,7 +11,7 @@
 
 #include <cstddef>
 #include <sgpp/combigrid/grids/node_table.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
 
@@ -25,8 +25,8 @@ namespace node_table_generation {
 /**
  * @brief Generates the node table of the tensor grids of @p levels on the unit interval: per
  * dimension the node lists of the levels 0, ..., (maximum level of the dimension in @p levels), as
- * the node-generation function of the dimension generates them. Dimensions with the same
- * node-generation function and level-to-grid-point-count function share their lists.
+ * the node family of the dimension generates them. Dimensions with the same
+ * node family and level-to-grid-point-count function share their lists.
  *
  * @param genInstr   Generation instruction (nodes, counts, boundary level offset).
  * @param levels     Level multi-indices of the tensor grids.
@@ -37,7 +37,7 @@ NodeTable genUnitNodeTable(const SGGenInstr& genInstr, const LvlMIVec& levels, b
 
 /**
  * @brief Maps the node table @p unitNodeTable (see @ref genUnitNodeTable) onto the domain of
- * @p genInstr with @c tools::mapToDomain. Dimensions with the same node-generation function,
+ * @p genInstr with @c tools::mapToDomain. Dimensions with the same node family,
  * level-to-grid-point-count function and domain interval share their lists.
  *
  * @param genInstr      Generation instruction (the same as for @p unitNodeTable).
@@ -47,7 +47,7 @@ NodeTable mapOntoDomain(const SGGenInstr& genInstr, const NodeTable& unitNodeTab
 
 /**
  * @brief Returns, per dimension, the first dimension with the same node lists (the same
- * node-generation function and level-to-grid-point-count function, and, if @p sameDomain, the
+ * node family and level-to-grid-point-count function, and, if @p sameDomain, the
  * same domain interval); the dimension itself if there is none before it.
  *
  * @param genInstr   Generation instruction.

@@ -1,11 +1,11 @@
 #include <cmath>
 #include <ios>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -46,7 +46,7 @@ double perform(const size_t nDim, const LvlType maxLvl) {
   CompleteSGGenInstr genInstr(maxLvl, nDim);
 
   // Use equidistant nodes
-  genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
+  genInstr.setNodeFamily(getEquidistantNodes());
 
   /* === 3. Generate Sparse Grid === */
   SparseGrid sg(genInstr);

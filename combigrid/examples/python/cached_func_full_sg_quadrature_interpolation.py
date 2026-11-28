@@ -43,7 +43,7 @@ def func(point):
 
 genInstr = pysgpp.CompleteSGGenInstr(5, 4)
 genInstr.setDomain((-1, 1))
-genInstr.setNodeGenFunc(pysgpp.getClenshawCurtisNodeGenFunc())
+genInstr.setNodeFamily(pysgpp.getClenshawCurtisNodes())
 genInstr.setLvl2GPCntFunc(pysgpp.doublingLvl2GPCntFunction)
 genInstr.setBoundaryLevelOffset(0)
 sg = pysgpp.SparseGrid(genInstr)

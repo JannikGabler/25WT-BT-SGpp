@@ -37,8 +37,6 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
@@ -47,9 +45,11 @@
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/linear_interpolation_scratch.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/linear_interpolation_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -104,8 +104,7 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const std::string& nodes, const LvlType
   } else {
     genInstr = std::make_unique<CompleteSGGenInstr>(maxLvl, nDim);
   }
-  genInstr->setNodeGenFunc(nodes == "equi" ? getEquidistantNodeGenFunc()
-                                           : getClenshawCurtisNodeGenFunc());
+  genInstr->setNodeFamily(nodes == "equi" ? getEquidistantNodes() : getClenshawCurtisNodes());
   genInstr->setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr->setBoundaryLevelOffset(boundary);
   genInstr->setDomain(unitDomain ? HyperCubeArea(nDim, {0.0, 1.0}) : shiftedDomain(nDim));

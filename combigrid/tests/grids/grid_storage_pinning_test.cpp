@@ -42,21 +42,21 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <span>
 #include <string>
 #include <vector>
@@ -179,13 +179,13 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const Config& config, LvlMIVec& miVec) 
     genInstr = std::make_unique<CompleteSGGenInstr>(3, config.nDim);
   }
   for (size_t dim = 0; dim < config.nDim; dim++) {
-    NodeGenFunc* nodeGenFunc = getEquidistantNodeGenFunc();
+    NodeFamily* nodeFamily = getEquidistantNodes();
     if (config.nodes == "cc" || (config.nodes == "mixed" && dim % 2 == 0)) {
-      nodeGenFunc = getClenshawCurtisNodeGenFunc();
+      nodeFamily = getClenshawCurtisNodes();
     } else if (config.nodes == "cheb1") {
-      nodeGenFunc = getFirstTypeChebyshevNodeGenFunc();
+      nodeFamily = getFirstTypeChebyshevNodes();
     }
-    genInstr->setNodeGenFuncForDim(nodeGenFunc, dim);
+    genInstr->setNodeFamilyForDim(nodeFamily, dim);
   }
   genInstr->setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr->setBoundaryLevelOffset(config.boundary);

@@ -20,11 +20,11 @@
 #include <cmath>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <string>
 #include <vector>
@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE(constant_func_unit_cube_nD_interpolation) {
     const double value = randGen.getUniformRN(-3.0, 3.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genContantSourceFunction(value);
     const SparseGrid sg(genInstr);
 
@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE(constant_func_random_cube_nD_interpolation) {
     const double value = randGen.getUniformRN(-2.0, 2.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     std::vector<std::pair<double, double>> bounds(nDim);
     for (size_t d = 0; d < nDim; ++d) {
       double a = randGen.getUniformRN(-2.0, 0.0);
@@ -284,7 +284,7 @@ BOOST_AUTO_TEST_CASE(linear_func_unit_cube_1D_interpolation) {
     const double b = randGen.getUniformRN(-2.0, 2.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     const SourceFunc sourceFunc = genLinearSourceFunction(a, b);
     const SparseGrid sg(genInstr);
     const double fMax = maxAbsOfLinearFunc(a, b, 0.0, 1.0);
@@ -312,7 +312,7 @@ BOOST_AUTO_TEST_CASE(linear_func_random_interval_1D_interpolation) {
     const double b = randGen.getUniformRN(0.5, 4.0);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     genInstr.setDomainForDim({a, b}, 0);
 
     const SourceFunc sourceFunc = genLinearSourceFunction(aCoeff, bCoeff);
@@ -335,7 +335,7 @@ BOOST_AUTO_TEST_CASE(sin_func_unit_cube_2D_interpolation_accuracy) {
     const LvlType maxLvl = static_cast<LvlType>(10);
 
     CompleteSGGenInstr genInstr(maxLvl, nDim);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
 
     const SourceFunc sourceFunc = genSinSourceFunction();
     const SparseGrid sg(genInstr);
@@ -365,7 +365,7 @@ Convergence test: Error should decrease with increasing level.
 
 //     for (const LvlType lvl : std::vector<LvlType>{1, 2, 3, 4, 5, 6, 7}) {
 //       CompleteSGGenInstr genInstr(lvl, nDim);
-//       genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+//       genInstr.setNodeFamily(getClenshawCurtisNodes());
 
 //       const SparseGrid sg(genInstr);
 //       const double result = interpolate(sourceFunc, testPoint, sg);

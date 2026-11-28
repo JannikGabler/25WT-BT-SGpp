@@ -12,7 +12,7 @@
 
 #include <memory>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 
 namespace sgpp {
 namespace combigrid {
@@ -45,7 +45,7 @@ class SparseGrid : public SparseGridBase {
    *
    * The generation instruction provides the level multi-indices and
    * combination coefficients of the tensor grids that participate in the
-   * combination, plus the per-dimension node generation rules.
+   * combination, plus the per-dimension node families.
    *
    * @param genInstruction Generation instruction that fully describes the
    * sparse grid.

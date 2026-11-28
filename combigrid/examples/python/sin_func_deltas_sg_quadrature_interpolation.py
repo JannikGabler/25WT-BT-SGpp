@@ -57,7 +57,7 @@ sourceFunc = pysgpp.SourceFunc(func)
 
 genInstr = pysgpp.CompleteSGGenInstr(6, 3)
 genInstr.setDomain((0, 1))
-genInstr.setNodeGenFunc(pysgpp.getClenshawCurtisNodeGenFunc())
+genInstr.setNodeFamily(pysgpp.getClenshawCurtisNodes())
 genInstr.setLvl2GPCntFunc(pysgpp.doublingLvl2GPCntFunction)
 genInstr.setBoundaryLevelOffset(0)
 
@@ -84,7 +84,7 @@ print(f"vector quadrature on the DeltasSparseGrid: {integrals[0]:.15g}, {integra
       f"(exact 0, 0.125)")
 
 ## Non-nested nodes cannot form a deltas sparse grid.
-genInstr.setNodeGenFunc(pysgpp.getFirstTypeChebyshevNodeGenFunc())
+genInstr.setNodeFamily(pysgpp.getFirstTypeChebyshevNodes())
 try:
   pysgpp.DeltasSparseGrid(genInstr)
   raise AssertionError("DeltasSparseGrid accepted non-nested nodes")

@@ -1,35 +1,18 @@
-#include <memory>
-#include <mutex>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+// Copyright (C) 2008-today The SG++ project
+// This file is part of the SG++ project. For conditions of distribution and
+// use, please see the copyright notice provided with SG++ or at
+// sgpp.sparsegrids.org
+
 #include <sgpp/combigrid/operators/global_interpolation/methods/default_methods/barycentric_formula.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
-#include <unordered_map>
-#include <utility>
 
 namespace sgpp {
 namespace combigrid {
 
-InterpolationMethod* getBarycentricFormula(const NodeGenFunc* const nodeGenFunc) {
-  static std::mutex m;
-  static std::unordered_map<const NodeGenFunc*, std::unique_ptr<InterpolationMethod>> instances;
-
-  {
-    std::lock_guard<std::mutex> lock(m);
-    const auto it = instances.find(nodeGenFunc);
-
-    if (it != instances.end()) {
-      return it->second.get();
-    }
-
-    std::unique_ptr<InterpolationMethod> instance = std::unique_ptr<InterpolationMethod>(
-        new global_interpolation::BarycentricFormula(nodeGenFunc));
-    InterpolationMethod* result = instance.get();
-
-    instances.emplace(nodeGenFunc, std::move(instance));
-
-    return result;
-  }
+InterpolationMethod* getBarycentricFormula() {
+  static global_interpolation::BarycentricFormula instance;
+  return &instance;
 }
 
 }  // namespace combigrid

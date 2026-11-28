@@ -10,7 +10,6 @@
 #include <sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/tools/comparison/nearly_equal.hpp>
-#include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <span>
 #include <vector>
 
@@ -25,9 +24,6 @@ namespace {
 constexpr size_t FACTOR_BLOCK_SIZE = 64;
 
 }  // namespace
-
-OptBarycentricFormula::OptBarycentricFormula()
-    : InterpolationMethod(tools::fnv1aHash("Optimized Barycentric Formula Interpolation Method")) {}
 
 double OptBarycentricFormula::interpolate(const double pos, const std::vector<double>& nodes,
                                           const std::vector<double>& values) const {

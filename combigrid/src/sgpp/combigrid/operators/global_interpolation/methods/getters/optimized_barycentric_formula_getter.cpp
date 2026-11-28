@@ -1,4 +1,4 @@
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/default_methods/optimized_barycentric_formula.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/getters/optimized_barycentric_formula_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>

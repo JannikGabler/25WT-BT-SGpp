@@ -3,12 +3,13 @@
 //  */
 // #pragma once
 
-// #include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+// #include <sgpp/combigrid/node_families/node_family.hpp>
 // #include <sgpp/combigrid/grids/sparse_grid.hpp>
 // #include <sgpp/combigrid/grids/tensor_grid.hpp>
 // #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 // #include <sgpp/combigrid/multiindices/multiindex.hpp>
-// #include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+// #include
+// <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 // #include <sgpp/combigrid/type_defs.hpp>
 // #include <span>
 // #include <vector>

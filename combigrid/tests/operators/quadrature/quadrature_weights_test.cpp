@@ -27,20 +27,20 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_context.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
 #include <sgpp/combigrid/miscellaneous/data_scratches/quadrature_scratch.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/getters/clenshaw_curtis_quadrature_rule_getter.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/quadrature_tools.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -109,11 +109,11 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const WeightConfig& config, const LvlMI
 
   HyperCubeArea domain(nDim, {0.0, 1.0});
   for (size_t dim = 0; dim < nDim; dim++) {
-    NodeGenFunc* const nodeGenFunc =
+    NodeFamily* const nodeFamily =
         (config.nodes == "equi" || (config.nodes == "mixed" && dim % 2 == 1))
-            ? getEquidistantNodeGenFunc()
-            : getClenshawCurtisNodeGenFunc();
-    genInstr->setNodeGenFuncForDim(nodeGenFunc, dim);
+            ? getEquidistantNodes()
+            : getClenshawCurtisNodes();
+    genInstr->setNodeFamilyForDim(nodeFamily, dim);
     if (config.shiftedDomain) {
       domain[dim] = {-1.5 + 0.25 * static_cast<double>(dim), 0.5 + 0.75 * static_cast<double>(dim)};
     }
@@ -151,7 +151,7 @@ void checkWeightsOfAllTensorGrids(const SparseGrid& sg) {
     for (size_t dim = 0; dim < sg.nDim(); dim++) {
       const GPCntType nNodes = tg.nGPInDim(dim);
       const DataVector expected =
-          genInstr.getNodeGenFuncForDim(dim)
+          genInstr.getNodeFamilyForDim(dim)
               ->getQuadRule(nNodes, tgData.mi[dim] >= genInstr.getBoundaryLevelOffset())
               ->genWeights(nNodes);
       const std::span<const double> used(scratch.rows.weightsOfDim[dim], nNodes);
@@ -200,7 +200,7 @@ BOOST_AUTO_TEST_CASE(Tensor_Grids_Use_The_Rule_Weights_Bitwise) {
 
 BOOST_AUTO_TEST_CASE(Weight_Table_Shares_Rows_Of_Dimensions_With_The_Same_Rule) {
   // Unequal domains do not matter (the weights are those on [0, 1]); dimensions with different
-  // node-generation functions have rows of their own
+  // node families have rows of their own
   for (const std::string nodes : {"cc", "mixed"}) {
     const WeightConfig config{nodes, false, 1, true, 3, false};
     BOOST_TEST_CONTEXT(toString(config)) {

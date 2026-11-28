@@ -10,8 +10,8 @@
  *
  * Each contained tensor grid contributes a tensor-product quadrature
  * (Clenshaw-Curtis, Simpson, trapezoidal, Fejér's first rule, etc.) whose
- * 1D rule is selected per dimension and level by the node-generation function
- * (@c NodeGenFunc::getQuadRule with the level's boundary nodes). The combination
+ * 1D rule is selected per dimension and level by the node family
+ * (@c NodeFamily::getQuadRule with the level's boundary nodes). The combination
  * coefficients yield the final sparse-grid integral approximation.
  */
 #pragma once

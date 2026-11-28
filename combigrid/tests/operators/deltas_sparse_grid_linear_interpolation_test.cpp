@@ -32,17 +32,17 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/deltas_sparse_grid_linear_interpolation_index.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation_tools.hpp>
 #include <span>
 #include <stdexcept>
@@ -117,8 +117,7 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const Config& config, LvlMIVec& miVec) 
   } else {
     genInstr = std::make_unique<CompleteSGGenInstr>(config.maxLvl, config.nDim);
   }
-  genInstr->setNodeGenFunc(config.nodes == "cc" ? getClenshawCurtisNodeGenFunc()
-                                                : getEquidistantNodeGenFunc());
+  genInstr->setNodeFamily(config.nodes == "cc" ? getClenshawCurtisNodes() : getEquidistantNodes());
   genInstr->setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr->setBoundaryLevelOffset(config.boundary);
   genInstr->setDomain(config.unitDomain ? HyperCubeArea(config.nDim, {0.0, 1.0})
@@ -352,7 +351,7 @@ BOOST_AUTO_TEST_CASE(Results_Independent_Of_Thread_Count) {
 
 BOOST_AUTO_TEST_CASE(Wrong_Result_Size_Is_Rejected) {
   CompleteSGGenInstr genInstr(2, 2);
-  genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
+  genInstr.setNodeFamily(getEquidistantNodes());
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   const DeltasSparseGrid dsg(genInstr);
   const VectorSourceFunc vecFunc(testFuncVec, 3);
@@ -422,7 +421,7 @@ BOOST_AUTO_TEST_CASE(Index_Slots_Of_Doubling_Growth) {
   // block of a multi-index has 2^(number of zero levels) slots
   for (const LvlType boundary : {0u, 1u, 2u}) {
     CompleteSGGenInstr genInstr(4, 3);
-    genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+    genInstr.setNodeFamily(getClenshawCurtisNodes());
     genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
     genInstr.setBoundaryLevelOffset(boundary);
     const DeltasSparseGrid dsg(genInstr);

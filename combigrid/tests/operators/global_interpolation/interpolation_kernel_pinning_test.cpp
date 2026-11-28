@@ -33,10 +33,6 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
@@ -44,9 +40,13 @@
 #include <sgpp/combigrid/grids/tensor_grid.hpp>
 #include <sgpp/combigrid/grids/tensor_grid_view.hpp>
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <span>
 #include <string>
@@ -90,10 +90,10 @@ LvlMIVec anisotropicMIs(const size_t nDim) {
   return LvlMIVec(std::vector<LvlMI>{first, ones, last});
 }
 
-NodeGenFunc* nodeGenFuncByName(const std::string& nodes) {
-  if (nodes == "equi") return getEquidistantNodeGenFunc();
-  if (nodes == "cc") return getClenshawCurtisNodeGenFunc();
-  return getFirstTypeChebyshevNodeGenFunc();
+NodeFamily* nodeFamilyByName(const std::string& nodes) {
+  if (nodes == "equi") return getEquidistantNodes();
+  if (nodes == "cc") return getClenshawCurtisNodes();
+  return getFirstTypeChebyshevNodes();
 }
 
 /// A grid of a test configuration: a complete grid of maximum level @c maxLvl, or (mivec) the
@@ -140,7 +140,7 @@ std::unique_ptr<SGGenInstr> makeGenInstr(const Config& config, LvlMIVec& miVec) 
   } else {
     genInstr = std::make_unique<CompleteSGGenInstr>(config.grid.maxLvl, nDim);
   }
-  genInstr->setNodeGenFunc(nodeGenFuncByName(config.nodes));
+  genInstr->setNodeFamily(nodeFamilyByName(config.nodes));
   genInstr->setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr->setBoundaryLevelOffset(config.grid.boundary);
   genInstr->setDomain(config.unitDomain ? HyperCubeArea(nDim, {0.0, 1.0}) : shiftedDomain(nDim));
@@ -338,7 +338,7 @@ void checkResult(const SparseGrid& sg, const DataVector& point, const size_t k, 
 }
 
 /// The grid points of all tensor grids of @p sg (in no particular order): the unit nodes of the
-/// node-generation functions, mapped onto the domain with tools::mapToDomain.
+/// node families, mapped onto the domain with tools::mapToDomain.
 std::vector<DataVector> allGridPoints(const SparseGrid& sg) {
   const SGGenInstr& genInstr = sg.getGenInstr();
   const HyperCubeArea& domain = genInstr.getDomain();
@@ -347,7 +347,7 @@ std::vector<DataVector> allGridPoints(const SparseGrid& sg) {
   for (const auto& tgData : sg.domainTensorGrids()) {
     std::vector<DataVector> nodes;
     for (size_t dim = 0; dim < nDim; dim++) {
-      nodes.push_back(genInstr.getNodeGenFuncForDim(dim)->genNodes(
+      nodes.push_back(genInstr.getNodeFamilyForDim(dim)->genNodes(
           tgData.tensorGrid.nGPInDim(dim), tgData.mi[dim] >= genInstr.getBoundaryLevelOffset()));
     }
     for (size_t idx = 0; idx < tgData.tensorGrid.nGP(); idx++) {

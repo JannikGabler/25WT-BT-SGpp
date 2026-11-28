@@ -19,11 +19,11 @@
 #include <cstdint>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <stdexcept>
 #include <string>
@@ -63,17 +63,17 @@ class Rng {
 
 /// @brief Node family by short name: "equi", "cc" (Clenshaw-Curtis = Chebyshev 2nd kind),
 /// "cheb1" (Chebyshev 1st kind).
-inline NodeGenFunc* nodeGenFuncByName(const std::string& name) {
-  if (name == "equi") return getEquidistantNodeGenFunc();
-  if (name == "cc") return getClenshawCurtisNodeGenFunc();
-  if (name == "cheb1") return getFirstTypeChebyshevNodeGenFunc();
+inline NodeFamily* nodeFamilyByName(const std::string& name) {
+  if (name == "equi") return getEquidistantNodes();
+  if (name == "cc") return getClenshawCurtisNodes();
+  if (name == "cheb1") return getFirstTypeChebyshevNodes();
   throw std::invalid_argument("Unknown node family " + name);
 }
 
 /// @brief Applies the common settings (doubling growth) to a generation instruction.
 inline void configure(SGGenInstr& genInstr, const std::string& nodes,
                       const LvlType boundaryLvlOffset, const HyperCubeArea& domain) {
-  genInstr.setNodeGenFunc(nodeGenFuncByName(nodes));
+  genInstr.setNodeFamily(nodeFamilyByName(nodes));
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
   genInstr.setDomain(domain);

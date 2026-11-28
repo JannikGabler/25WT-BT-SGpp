@@ -20,19 +20,19 @@
 #include <iostream>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <span>
 #include <stdexcept>
 
@@ -76,7 +76,7 @@ int main() {
 
   CompleteSGGenInstr genInstr(6, 3);
   genInstr.setDomain({0, 1});
-  genInstr.setNodeGenFunc(sgpp::combigrid::getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(sgpp::combigrid::getClenshawCurtisNodes());
   genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(0);
 
@@ -111,7 +111,7 @@ int main() {
             << " (exact 0, 0.125)\n";
 
   // Non-nested nodes cannot form a deltas sparse grid.
-  genInstr.setNodeGenFunc(sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc());
+  genInstr.setNodeFamily(sgpp::combigrid::getFirstTypeChebyshevNodes());
   try {
     const DeltasSparseGrid invalid(genInstr);
     return EXIT_FAILURE;

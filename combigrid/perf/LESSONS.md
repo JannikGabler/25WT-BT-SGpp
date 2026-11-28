@@ -17,7 +17,10 @@ measurement notes that are not in [README.md](README.md). Maintained by the mast
   ±2–6 % on `exp` cases across snapshots (not pinned, WP-53 dropped) → check with a hybrid snapshot
   (same libraries, other `perf_e2e`; RP-4 `rp-4-binWP45`). WP-76's `perf_e2e.cpp` edit: cross-snapshot
   ratios spanning it carry ≈ 0.30 s / ±4–8 % on dsg / sg equi b0 and mivec d5 (reference:
-  `results/WP-76/e2e-aa-old.md`).
+  `results/WP-76/e2e-aa-old.md`). A WP that renames exported symbols (WP-88) cannot be checked with a hybrid
+  snapshot (the renamed symbols do not link across snapshots) → compare instruction counts and op-cache
+  misses instead (`results/WP-88/placement-check.md`: dsg equi d5 L12 0.996x, same instructions, op-cache
+  misses ×1.96).
 - **Load-balance model** (RP-6, `results/RP-6/schedule_sim.py`): makespan with cost of a TG = its
   points reproduces `expensive/mivec/sg` c100us exactly (dynamic / guided); WP-77 confirmed it
   (largest-first predicted 1.56, measured 1.564 s). SG `interpolateLinear` has uniform per-TG cost (2^d

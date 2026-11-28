@@ -43,7 +43,7 @@ namespace deltas_sparse_grid_generation {
  * of the same node in the (inner) nodes of a higher or equal level.
  *
  * @param deltasSparseGrid Deltas sparse grid (its generation instruction provides the
- *                         node-generation and level-to-grid-point-count functions).
+ *                         node families and level-to-grid-point-count functions).
  */
 std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const DeltasSparseGrid& deltasSparseGrid);
 

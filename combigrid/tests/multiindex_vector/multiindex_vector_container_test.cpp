@@ -24,7 +24,7 @@
 #include <sgpp/combigrid/multiindices/multiindex_reference.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_view.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <stdexcept>
 #include <utility>

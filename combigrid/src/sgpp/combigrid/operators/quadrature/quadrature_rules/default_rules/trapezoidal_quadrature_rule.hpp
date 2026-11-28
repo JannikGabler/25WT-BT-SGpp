@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/tools/hashing/fnv_1a_hash.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 
 namespace sgpp {
@@ -25,9 +24,6 @@ namespace quadrature_rules {
  */
 class TrapezoidalQuadRule : public QuadRule {
  public:
-  /// @brief Constructs the rule with a deterministic id derived from its name.
-  TrapezoidalQuadRule() : QuadRule(tools::fnv1aHash("Trapezoidal Quadrature Rule")) {}
-
   /// @copydoc QuadRule::genWeights
   base::DataVector genWeights(const GPCntType nNodes) const override {
     base::DataVector weights(nNodes);

@@ -21,16 +21,16 @@
 #include <limits>
 #include <memory>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_base.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid/tensor_grid_processing_order.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -83,8 +83,8 @@ void checkProcessingOrder(const SparseGridBase& grid) {
 
 /// Configures @p genInstr (Clenshaw-Curtis or first-kind Chebyshev nodes, boundary offset).
 void configure(SGGenInstr& genInstr, const bool chebyshev, const LvlType boundary) {
-  genInstr.setNodeGenFunc(chebyshev ? sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc()
-                                    : sgpp::combigrid::getClenshawCurtisNodeGenFunc());
+  genInstr.setNodeFamily(chebyshev ? sgpp::combigrid::getFirstTypeChebyshevNodes()
+                                   : sgpp::combigrid::getClenshawCurtisNodes());
   genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(boundary);
 }
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(Grid_Of_Small_Tensor_Grids_Keeps_Index_Order) {
   // Deltas sparse grid d15 L7, boundary offset 1: 170544 delta tensor grids of at most 2^14 points,
   // each below 1/4096 of all points
   sgpp::combigrid::CompleteSGGenInstr genInstr(7, 15);
-  genInstr.setNodeGenFunc(sgpp::combigrid::getEquidistantNodeGenFunc());
+  genInstr.setNodeFamily(sgpp::combigrid::getEquidistantNodes());
   genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
   const sgpp::combigrid::DeltasSparseGrid grid(genInstr);

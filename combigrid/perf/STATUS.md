@@ -1,6 +1,6 @@
 # Optimization status — combigrid (master file)
 
-Last processed: WP-35 (2026-11-26; accepted, commit pending) · Next free WP number: 88 ·
+Last processed: WP-88 (2026-11-28; accepted, commit pending) · Next free WP number: 89 ·
 Last re-profiling: RP-6 (2026-11-18) · Finished WPs, results, archive: [HISTORY.md](HISTORY.md) ·
 Dropped-earlier list, measurement notes: [LESSONS.md](LESSONS.md)
 
@@ -91,10 +91,12 @@ Dropped-earlier list, measurement notes: [LESSONS.md](LESSONS.md)
 ## Next action
 
 **WP-74** (DSG lin. interp.: fused last transform + vectorized fiber transform + evaluation chunks) next —
-**prompt on hold** (owner 11-26: wait); the owner commits "Accept WP-35" first. Then WP-21 / WP-51 (re-measure). Since WP-77 all TG loops run a per-grid
-largest-first order (`schedule(dynamic)`; SG interplin dynamic in index order), still bitwise
-thread-count independent. WPs 63–72, 84, 80, 81 wait for the owner. Hygiene → **Code-hygiene backlog**
-→ WP-54 → WP-55; numerics → **Numerics backlog** (both at the end of PLAN.md).
+**prompt on hold** (owner 11-28: wait); the owner commits "Accept WP-88" first. Then WP-21 / WP-51 (re-measure).
+WP-88 renamed `NodeGenFunc` → `NodeFamily` and the generation-instruction files: PLAN entries before it use
+the old names (map in the PLAN header). Since WP-77 all TG loops run a per-grid largest-first order
+(`schedule(dynamic)`; SG interplin dynamic in index order), still bitwise thread-count independent. WPs
+63–72, 84, 80, 81 wait for the owner. Hygiene → **Code-hygiene backlog** → WP-54 → WP-55; numerics →
+**Numerics backlog** (both at the end of PLAN.md).
 
 ## Open decisions for the owner
 
@@ -123,17 +125,17 @@ thread-count independent. WPs 63–72, 84, 80, 81 wait for the owner. Hygiene �
 ## Re-profiling
 
 Last: RP-6 (2026-11-18; rp-6 = 37a84e1af; accepted). Accepted optimizations since: **1** (WP-77: suite
-1.011x, `expensive/` 1.117x, no group ≥ 1.3x, no hot-spot shift). WP-79 / 83 / 61 / 48 (features /
-functional, ≈ 1.000x) do not count. Rule: features / refactorings / measurement WPs count only if a group
+1.011x, `expensive/` 1.117x, no group ≥ 1.3x, no hot-spot shift). WP-79 / 83 / 61 / 48 / 35 / 88 (features /
+functional / tests / refactoring, ≈ 1.000x) do not count. Rule: features / refactorings / measurement WPs count only if a group
 changes ≥ 1.3x or a hot-spot ranking shifts. `interp/dsg`, `interplin/dsg`, `expensive/` have no baseline
 values (`expensive/` history: `results/WP-76/history/`, `results/RP-6/e2e-expensive-rp-5-vs-rp-6.md`).
 
 ## Log (newest first; older entries in HISTORY.md)
 
-- 2026-11-26 WP-35 processed: **accepted** by the owner (commit pending). Fragile tests fixed (0 of 10 000
-  seeds, 50/50 suites; before 1.0 % of seeds) + owner's follow-up rounds: no-FFT CC fallback accurate
-  (1.4e4 → ≤ 2.61 eps / m; library change, only without Eigen / Armadillo), no stored bit patterns in tests
-  (golden values, 1e-12 (1 + |g|)); e2e 1.000x, memory 1.005, refcheck = known WARN. Does not count for
-  rule 7 (RP counter stays 1). LESSONS "Recurring test failures" → "Test reliability", 2 "Dropped
-  earlier" lines; PLAN backlog H done, new backlog M (test hygiene); perf-work skill "Known flaky" line
-  updated (owner permitted). Ranks −1 (WP-74 → 1). WP-74 prompt **on hold** (owner: wait).
+- 2026-11-28 WP-88 processed: **accepted** by the owner (commit pending). Renames as agreed (`NodeGenFunc` →
+  `NodeFamily`, `get*Nodes()`, `node_families/`, `…sparse_grid_generation_instruction` files; class names
+  `SGGenInstr` etc. kept), ids + FNV hashing removed, one static `BarycentricFormula` (no map / mutex).
+  Bitwise unchanged (146 reference cases), suite 1.000x, `expensive/` 1.000x, memory 1.004 (0 flags),
+  refcheck = known WARN; by-product interp/sg equi d3 1.116x, cheb1 d3 1.030x (≈ 2 ms). Does not count for
+  rule 7 (RP counter stays 1). PLAN: rename note in the header; follow-ups to WP-07, WP-63 … 72, WP-37,
+  hygiene backlog N; LESSONS: no hybrid snapshot across renames. No rank change. WP-74 next, prompt on hold.

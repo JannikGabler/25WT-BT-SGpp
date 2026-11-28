@@ -58,7 +58,7 @@
 #include <sgpp/combigrid/operators/textbook/textbook_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/numerics/compensated_sum_tools.hpp>
@@ -442,7 +442,7 @@ void addSolQuadTG(Suite& suite, const std::string& nodes, const LvlType boundary
             domain[k].first;
       }
       sg.getGenInstr()
-          .getNodeGenFuncForDim(k)
+          .getNodeFamilyForDim(k)
           ->getQuadRule(n, tgData.mi[k] >= boundary)
           ->genWeightsInplace(w[k]);
       offset += n;
@@ -826,10 +826,10 @@ void addBarycentric1D(Suite& suite, const bool optimized, const GPCntType nNodes
       std::string("micro/interp/barycentric_1d/") + (optimized ? "opt_cc" : "generic") + "/n" +
           std::to_string(nNodes),
       [=](MicroRun& run) {
-        cg::NodeGenFunc* const nodeGenFunc = perf::nodeGenFuncByName(optimized ? "cc" : "cheb1");
+        cg::NodeFamily* const nodeFamily = perf::nodeFamilyByName(optimized ? "cc" : "cheb1");
         cg::InterpolationMethod* const method =
-            optimized ? cg::getOptBarycentricFormula() : cg::getBarycentricFormula(nodeGenFunc);
-        const DataVector nodesVec = nodeGenFunc->genNodes(nNodes, optimized);
+            optimized ? cg::getOptBarycentricFormula() : cg::getBarycentricFormula();
+        const DataVector nodesVec = nodeFamily->genNodes(nNodes, optimized);
         const std::vector<double> nodeValues(nodesVec.begin(), nodesVec.end());
         std::vector<double> values(nNodes);
         for (GPCntType i = 0; i < nNodes; i++) values[i] = std::cos(3.0 * nodeValues[i]);
@@ -902,7 +902,7 @@ void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, c
     sol::tgNodes(tg, domain, unit, mapped);
     std::vector<const cg::InterpolationMethod*> methods;
     for (size_t k = 0; k < nDim; k++) {
-      methods.push_back(sg.getGenInstr().getNodeGenFuncForDim(k)->getInterpolationMethod(
+      methods.push_back(sg.getGenInstr().getNodeFamilyForDim(k)->getInterpolationMethod(
           static_cast<GPCntType>(unit[k].size())));
     }
     sol::GlobalScratch scratch(nDim);
@@ -931,8 +931,8 @@ void addSolInterpTG(Suite& suite, const std::string& nodes, const size_t nDim, c
 void addSolBarycentricCached(Suite& suite, const GPCntType nNodes) {
   suite.addMicro("micro/sol/barycentric_1d/generic_cached_weights/n" + std::to_string(nNodes),
                  [=](MicroRun& run) {
-                   cg::NodeGenFunc* const nodeGenFunc = perf::nodeGenFuncByName("cheb1");
-                   const DataVector nodesVec = nodeGenFunc->genNodes(nNodes, false);
+                   cg::NodeFamily* const nodeFamily = perf::nodeFamilyByName("cheb1");
+                   const DataVector nodesVec = nodeFamily->genNodes(nNodes, false);
                    const std::vector<double> x(nodesVec.begin(), nodesVec.end());
                    const std::vector<double> w = cg::tools::barycentricFormulaWeights(x);
                    std::vector<double> values(nNodes);

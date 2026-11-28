@@ -29,11 +29,11 @@
 #include <functional>
 #include <random>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
     const LvlMIVec input = randomMIVec(4, 25, 7, 4);
     run("SparseGrid(MIVecSGGenInstr) d=4", reps, [&input]() {
       sgpp::combigrid::MIVecSGGenInstr genInstr(input);
-      genInstr.setNodeGenFunc(sgpp::combigrid::getClenshawCurtisNodeGenFunc());
+      genInstr.setNodeFamily(sgpp::combigrid::getClenshawCurtisNodes());
       genInstr.setLvl2GPCntFunc(sgpp::combigrid::linearLvl2GPCntFunction);
       const sgpp::combigrid::SparseGrid sg(genInstr);
       return sg.nTG();

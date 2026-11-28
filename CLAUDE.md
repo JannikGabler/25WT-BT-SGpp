@@ -67,7 +67,7 @@ reference:
 ```cpp
 CompleteSGGenInstr genInstr(/*maxLvl=*/10, /*nDim=*/3);
 genInstr.setDomain({0, 1});
-genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
+genInstr.setNodeFamily(getClenshawCurtisNodes());
 genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
 genInstr.setBoundaryLevelOffset(0);
 const SparseGrid sg(genInstr);
@@ -175,8 +175,8 @@ covered by tests.
 
 - `MIVecSGGenInstr` stores a **reference** to its `LvlMIVec`: keep the vector alive as long as the
   instruction and any derived `SparseGrid` (`clone()` copies the reference). Python keeps it alive.
-- Node getters return raw `NodeGenFunc*` to static singletons — never delete or wrap them.
-  `getClenshawCurtisNodeGenFunc()` and `getSecondTypeChebyshevNodeGenFunc()` are the **same**
+- Node getters return raw `NodeFamily*` to static singletons — never delete or wrap them.
+  `getClenshawCurtisNodes()` and `getSecondTypeChebyshevNodes()` are the **same**
   singleton.
 - `setBoundaryLevelOffset(k)`: boundary nodes in dimension j only if ℓ[j] ≥ k (0 = always).
 - Zero-coefficient tensor grids are never stored in a `SparseGrid` (`CompleteSGGenInstr` and
@@ -191,7 +191,7 @@ covered by tests.
   parallel region and split the call's work across the caller's team.
 - An exception that leaves an OpenMP region calls `std::terminate`: obtain everything that may
   throw (e.g. quadrature rules) serially before the region. Operators get 1D rules from
-  `NodeGenFunc::getQuadRule(n, includeBoundary)` (`lvl >= offset`); its default returns
+  `NodeFamily::getQuadRule(n, includeBoundary)` (`lvl >= offset`); its default returns
   `getQuadRule(n)`, which assumes the boundary nodes (equi / CC are not interpolatory for levels
   below an offset ≥ 2; cheb1 overrides it).
 - `.lint` / `.os` / `.gcda` files without a matching source are stale artifacts — do not resurrect

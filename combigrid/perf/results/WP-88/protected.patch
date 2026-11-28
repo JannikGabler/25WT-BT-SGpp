@@ -1,0 +1,195 @@
+--- a/combigrid/benchmarks/perf/perf_problems.hpp
++++ b/combigrid/benchmarks/perf/perf_problems.hpp
+@@ -19,11 +19,11 @@
+ #include <cstdint>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+ #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
++#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
++#include <sgpp/combigrid/node_families/node_family.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
+ #include <stdexcept>
+ #include <string>
+@@ -63,17 +63,17 @@
+ 
+ /// @brief Node family by short name: "equi", "cc" (Clenshaw-Curtis = Chebyshev 2nd kind),
+ /// "cheb1" (Chebyshev 1st kind).
+-inline NodeGenFunc* nodeGenFuncByName(const std::string& name) {
+-  if (name == "equi") return getEquidistantNodeGenFunc();
+-  if (name == "cc") return getClenshawCurtisNodeGenFunc();
+-  if (name == "cheb1") return getFirstTypeChebyshevNodeGenFunc();
++inline NodeFamily* nodeFamilyByName(const std::string& name) {
++  if (name == "equi") return getEquidistantNodes();
++  if (name == "cc") return getClenshawCurtisNodes();
++  if (name == "cheb1") return getFirstTypeChebyshevNodes();
+   throw std::invalid_argument("Unknown node family " + name);
+ }
+ 
+ /// @brief Applies the common settings (doubling growth) to a generation instruction.
+ inline void configure(SGGenInstr& genInstr, const std::string& nodes,
+                       const LvlType boundaryLvlOffset, const HyperCubeArea& domain) {
+-  genInstr.setNodeGenFunc(nodeGenFuncByName(nodes));
++  genInstr.setNodeFamily(nodeFamilyByName(nodes));
+   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
+   genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
+   genInstr.setDomain(domain);
+--- a/combigrid/benchmarks/perf/perf_e2e.cpp
++++ b/combigrid/benchmarks/perf/perf_e2e.cpp
+@@ -50,8 +50,8 @@
+ #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
+ #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
+ #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
+ #include <string>
+ #include <vector>
+--- a/combigrid/benchmarks/perf/perf_reference.cpp
++++ b/combigrid/benchmarks/perf/perf_reference.cpp
+@@ -44,8 +44,8 @@
+ #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
+ #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
+ #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
+ #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
+ #include <string>
+--- a/combigrid/benchmarks/bachelor_thesis/comparison/sin_example_template.cpp
++++ b/combigrid/benchmarks/bachelor_thesis/comparison/sin_example_template.cpp
+@@ -1,10 +1,10 @@
+ #include <cmath>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
+ #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+ #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
+ #include <vector>
+ 
+@@ -39,7 +39,7 @@
+ 
+   // SG gen instr
+   CompleteSGGenInstr genInstr(maxLvl, nDim);
+-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
++  genInstr.setNodeFamily(getClenshawCurtisNodes());
+ 
+   ctx.markCheckpoint("SG Gen. Instruction");
+ 
+--- a/combigrid/benchmarks/bachelor_thesis/comparison/uq_electron_beam_template.cpp
++++ b/combigrid/benchmarks/bachelor_thesis/comparison/uq_electron_beam_template.cpp
+@@ -1,10 +1,10 @@
+ #include <cmath>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
+ #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+ #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
+ #include <vector>
+ 
+@@ -50,7 +50,7 @@
+ 
+   // SG gen instr
+   CompleteSGGenInstr genInstr(maxLvl, nDim);
+-  genInstr.setNodeGenFunc(getClenshawCurtisNodeGenFunc());
++  genInstr.setNodeFamily(getClenshawCurtisNodes());
+ 
+   ctx.markCheckpoint("SG Gen. Instruction");
+ 
+--- a/combigrid/benchmarks/dsg_quadrature/template_complete_dsg_quadrature.hpp
++++ b/combigrid/benchmarks/dsg_quadrature/template_complete_dsg_quadrature.hpp
+@@ -6,12 +6,12 @@
+ #include <omp.h>
+ #include <cmath>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+ #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+ #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+ #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
+ #include <sgpp/combigrid/tools/math/power.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
+@@ -44,7 +44,7 @@
+ 
+   // SG gen instr
+   CompleteSGGenInstr genInstr(maxLvl, nDim);
+-  genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
++  genInstr.setNodeFamily(getEquidistantNodes());
+ 
+   ctx.markCheckpoint("Creation SG Gen. Instruction");
+ 
+--- a/combigrid/benchmarks/multiindex_vector/multiindex_vector_benchmark.cpp
++++ b/combigrid/benchmarks/multiindex_vector/multiindex_vector_benchmark.cpp
+@@ -29,11 +29,11 @@
+ #include <functional>
+ #include <random>
+ #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
+ #include <sgpp/combigrid/multiindices/multiindex.hpp>
+ #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
+ #include <sgpp/combigrid/tools/combitech_coefficients/combitech_coefficients.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
+ #include <vector>
+@@ -187,7 +187,7 @@
+     const LvlMIVec input = randomMIVec(4, 25, 7, 4);
+     run("SparseGrid(MIVecSGGenInstr) d=4", reps, [&input]() {
+       sgpp::combigrid::MIVecSGGenInstr genInstr(input);
+-      genInstr.setNodeGenFunc(sgpp::combigrid::getClenshawCurtisNodeGenFunc());
++      genInstr.setNodeFamily(sgpp::combigrid::getClenshawCurtisNodes());
+       genInstr.setLvl2GPCntFunc(sgpp::combigrid::linearLvl2GPCntFunction);
+       const sgpp::combigrid::SparseGrid sg(genInstr);
+       return sg.nTG();
+--- a/combigrid/benchmarks/quadrature/template_complete_sg_quadrature.hpp
++++ b/combigrid/benchmarks/quadrature/template_complete_sg_quadrature.hpp
+@@ -6,12 +6,12 @@
+ #include <omp.h>
+ #include <cmath>
+ #include <sgpp/base/datatypes/DataVector.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
+-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
++#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+ #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
+ #include <sgpp/combigrid/grids/sparse_grid.hpp>
+ #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
+-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
++#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+ #include <sgpp/combigrid/tools/benchmarking/benchmarker.hpp>
+ #include <sgpp/combigrid/type_defs.hpp>
+ #include <vector>
+@@ -43,7 +43,7 @@
+ 
+   // SG gen instr
+   CompleteSGGenInstr genInstr(maxLvl, nDim);
+-  genInstr.setNodeGenFunc(getEquidistantNodeGenFunc());
++  genInstr.setNodeFamily(getEquidistantNodes());
+ 
+   ctx.markCheckpoint("Creation SG Gen. Instruction");
+ 

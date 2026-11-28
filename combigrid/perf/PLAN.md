@@ -66,6 +66,18 @@ summary; no extra implementation for it. Storage since WP-18: `NodeTable` rows a
 / reserved row storage and an incremental storage update; DSG operator data needs invalidation
 (`results/WP-18/design-and-obsolete-code.md`). The master copies this note into the prompts of such
 WPs.
+**Renames (WP-88, accepted 2026-11-28)**: entries written before WP-88 use the old names. `NodeGenFunc` →
+`NodeFamily`; `node_gen_funcs::{Equidistant,FirstTypeChebyshev,SecondTypeChebyshev}NodeGenFunc` →
+`node_families::{Equidistant,FirstTypeChebyshev,SecondTypeChebyshev}Nodes`; `get*NodeGenFunc()` →
+`get*Nodes()`; `setNodeGenFunc*` / `getNodeGenFunc*` / `getUniqueNodeGenFuncs` → `…NodeFamily…` /
+`getUniqueNodeFamilies`; Python `NodeGenFuncVector` → `NodeFamilyVector`. Files:
+`functions/node_generation_functions/**` → `node_families/**` (+ `getter/`),
+`tools/functions/node_generation_functions/` → `tools/node_families/`, `tests/node_generation_functions/`
+→ `tests/node_families/`, `sparse_grid_generation_instructions/*sg_gen_instruction.*` →
+`*sparse_grid_generation_instruction.*` (class names `SGGenInstr`, `CompleteSGGenInstr`, `MIVecSGGenInstr`
+and `constants::sg_gen_instr` unchanged). Removed: the ids of node families / interpolation methods /
+quadrature rules and `tools/hashing/fnv_1a_hash.hpp`; `getBarycentricFormula()` takes no parameter (one
+static instance, no map / mutex). Full map: `results/WP-88/rename-map.md`.
 **Python venv** (owner 2026-10-30): every work session (all WPs and RP-k) runs all Python through
 the repo's virtual environment `.venv/` (Python 3.14 with NumPy, SciPy, SymPy, mpmath): activate it
 with `source .venv/bin/activate` before running `perf.py`, helper scripts, `SG_PYTHON=1` builds and
@@ -827,6 +839,12 @@ owner 2026-11-26: wait).
 - **From WP-73** (accepted 2026-11-18): SG `interpolate` keeps no cross-call data today; if WP-07 is
   done, its per-(dim, level) weights become a `GlobalInterpolationOptions`-controlled entry
   (`tools::cross_call::getOperatorData`, `memoryBytes()`, key per reuse condition).
+- **From WP-88** (accepted 2026-11-28): the mutex-guarded per-family map in `getBarycentricFormula` is gone
+  (one static, stateless `BarycentricFormula`; ≈ 2 ms of the "mutex per TG and dimension" part above is
+  taken: interp/sg equi d3 1.116x, cheb1 d3 1.030x). The generic formula no longer knows its family → key
+  a weights cache by the shared `NodeTable` row (rows are shared per family and n) or pass the family in.
+  Also: SG `interpolate` (`fillBasisValues`) calls the virtual `getInterpolationMethod` per point × TG ×
+  dim; hoisting it per TG is now cheap (low priority, same path).
 
 ## WP-08 — Linear interpolation: corner loop
 - **Location**: `operators/linear_interpolation/linear_interpolation.cpp`, `TensorGrid::getNeighborsForLinInterpolation`.
@@ -3268,6 +3286,13 @@ sort in `computeMetaValues`) → a refined grid built anew from `MIVecSGGenInstr
 in-place-growing grid would need an incremental merge into the size-class buckets (the floor total/4096
 shifts slowly with the total).
 
+**From WP-88** (accepted 2026-11-28): node families are now `NodeFamily` in `node_families/` (WP-63's
+`functions/node_generation_functions/**` → `node_families/**`); the unused name-hash ids are removed, so a
+family's identity is its singleton pointer (stable within a process). A persistent resume (C2 / WP-72,
+D4) that serializes the setup needs a stable family name → a `name()` / enum would be cleaner than the
+removed hashes (decide with D4). `NodeFamily` is copyable now that `const id_` is gone (the owner's
+snapshot branch deleted its copy operations; → hygiene backlog N).
+
 **Status** (all): needs decision · unranked.
 
 ## WP-73 — Cross-call operator data cache: user control + per-operator flags (owner 2026-11-17; feature / API)
@@ -3388,6 +3413,7 @@ shifts slowly with the total).
   revert the workaround notes in python-bindings.md / the example.
 - **Expected gain**: e2e nil (Python usability / safety). **Risk**: low; base module (other
   modules' Python code may rely on the current behavior — check `SG_ALL=1` Python tests).
+- **From WP-88** (2026-11-28): hit again (`list(DataVector)` → debug assertion in `__getitem__`).
 - **Functional change**: yes (base's Python API) → **needs decision** (owner: do it, scope base vs.
   combigrid-only docs, placement). **Dependencies**: none.
 
@@ -4023,6 +4049,53 @@ shifts slowly with the total).
 - **Interactions**: WP-78 (same insert path; size together), WP-85 (exceptions).
 - **Status**: planned (optional, later; owner decides).
 
+## WP-88 — Preparation for dimension-adaptive refinement: renames + removal of the unused ids (owner 2026-11-28; refactoring / API)
+- **Source**: owner 2026-11-28 (first WP of the preparation for the dimension-adaptive refinement).
+  **Placement**: owner — next WP (before WP-74).
+- **Scope** (owner's list):
+  1. Files `sg_gen_instr.{hpp,cpp}` → `sparse_grid_generation_instruction.{hpp,cpp}` (consistency).
+  2. `NodeGenFunc` → `NodeFamily`: the base class, all descendants, their file names (directory names:
+     session proposes, e.g. `functions/node_generation_functions/` → `node_families/`), the getters
+     `get*NodeGenFunc()` → `get*Nodes()` (e.g. `getClenshawCurtisNodes()`), and all uses (C++, tests,
+     examples, benchmarks, SWIG `.i`, Python examples / tests, docs in `combigrid/claude/`). Owner:
+     "search and report anything additionally that I have forgotten" → the session lists every further
+     candidate (e.g. setter `setNodeGenFunc`, type aliases, members / parameters named `nodeGenFunc`,
+     `NodeGenFuncs` containers, Doxygen text, Python constants) in the summary **and asks the owner
+     in-session before applying** anything beyond the owner's list.
+  3. Remove the unused id attributes of the node families, interpolation methods, … (all such ids:
+     session inventories them) and everything obsolete afterwards (e.g. the hashing built on them);
+     simplify the barycentric formula machinery (fewer states without ids: e.g. the formula lookup /
+     `getBarycentricFormula` with its mutex, per-id variants).
+- **Agreed interface changes** (owner 2026-11-28): the renames above (C++ and Python names; no
+  deprecated aliases unless the owner asks) and the removal of the ids, their getters and the hashing.
+  Anything else observable (results beyond bitwise, behavior of equality / cache keys / node-table row
+  sharing if any of them uses an id today) → ask the owner in-session or BLOCKED.
+- **Protected files**: protected benchmarks (`perf_e2e.cpp`, `perf_reference.cpp`, problems / harness,
+  pre-existing benchmarks) use the old names → the session prepares a patch
+  (`results/WP-88/protected.patch`) and the **owner applies it in-session** + `perf.py protect
+  --authorized-by-owner` before the after-snapshot. Benchmark-binary placement (PLAN header, RP-4): an
+  edit of `perf_e2e.cpp` can shift cheap `exp` cases by ±2–6 % → check suspicious shifts with a hybrid
+  snapshot.
+- **Expected gain**: none (refactoring); results bitwise unchanged (`perf_reference` snapshot diff),
+  e2e ≈ 1.000x, memory ≈ 1.000. A simplified barycentric path may change FMA placement → known WARN
+  case `interp/sg/equi/b0/d2/L5/cos-shifted`; any other change → report.
+- **Tests**: existing tests renamed (no weakened checks), all suites pass; Python bindings rebuilt
+  (`SG_PYTHON=1`), Python examples / tests run; build without Eigen / Armadillo and the ASan build
+  compile and pass; no leftover old names (`grep` of the whole repo outside `perf/` history files and
+  the thesis).
+- **Micro / e2e**: `micro/interp/barycentric_1d/*`, `micro/interp/global_tg/*`; full `ab e2e` (renames
+  touch every case's generation).
+- **Interactions**: WP-07 (barycentric weights cache per node family and n — keyed by pointer after
+  this WP), WP-63 (A1: generic nestedness, same node-family files), WP-84 (equi / CC `getQuadRule`
+  overrides, same classes), WP-73 (cross-call operator data keys: check whether they use ids). PLAN
+  entries keep the old names (functions located by name); after acceptance the master adds a rename
+  note to the PLAN header (done).
+- **Result** (summary `summaries/WP-88-renames-and-id-removal.md`): as scoped; owner's in-session answers
+  Q1–Q4 in `results/WP-88/inventory.md` (CC class `SecondTypeChebyshevNodes` without alias; class names
+  `SGGenInstr` etc. kept; `SGGenInstr::clone()` kept). Bitwise unchanged, suite 1.000x, memory 1.004;
+  by-product interp/sg equi d3 1.116x, cheb1 d3 1.030x. New test `node_family_singletons_test.cpp`.
+- **Status**: accepted (2026-11-28, commit pending).
+
 ## Code-hygiene backlog (owner 2026-11-15; input of WP-55, then clean-up WPs)
 Every reported, not yet completed hygiene / clean-up finding goes here (the master appends new ones
 from summaries; WP-55 verifies them; no piecemeal fixes before the clean-up WPs). Source in brackets.
@@ -4100,6 +4173,10 @@ from summaries; WP-55 verifies them; no piecemeal fixes before the clean-up WPs)
   in the SWIG interface → drop it (removes SWIG warning 509; then `python-bindings.md` expects 389
   only); rebuild with `SG_PYTHON=1`, run the Python examples. (`cpp_concepts.hpp` with four concepts in
   one header: kept by the owner.)
+- **N. From WP-88**: the `node_families/getter/*.{hpp,cpp}` files lack the banner (pre-existing, = A1 / B2
+  "node getters"; only the two rewritten barycentric getters got it); `NodeFamily` keeps `TODO: Document`
+  blocks; `NodeFamily` is copyable since `const id_` is gone (delete its copy operations, as the owner's
+  snapshot branch does); stale git-ignored `*.os` / `*.lint` of the snapshot branch under `node_families/`.
 - **E. Owner files / docs outdated** (report to the owner; STATUS): CLAUDE.md §5 banner claim (B1);
   ANALYSIS.md WP-29c symbol names; SG++ install docs (optional Boost ≥ 1.81 / xxHash ≥ 0.8, LMDB, CI
   `liblmdb-dev`).

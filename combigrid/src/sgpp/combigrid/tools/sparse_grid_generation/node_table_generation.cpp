@@ -8,9 +8,9 @@
 #include <numeric>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/constants.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/node_table_generation.hpp>
@@ -69,16 +69,16 @@ std::vector<std::pair<size_t, LvlType>> layOutRows(const std::vector<size_t>& sa
 /// Writes the unit nodes of (dimension @p dim, level @p lvl) to @p out.
 void genRow(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl, const bool deltaNodes,
             base::DataVector& out) {
-  const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+  const NodeFamily* const nodeFamily = genInstr.getNodeFamilyForDim(dim);
   const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
   const GPCntType nNodes = compNodeCnt(genInstr, dim, lvl, deltaNodes);
   out.resize(nNodes);
 
   if (deltaNodes) {
-    nodeGenFunc->genDeltaNodes(lvl, genInstr.getLvl2GPCntFuncForDim(dim), std::span<double>(out),
-                               lvl == boundaryLvlOffset);
+    nodeFamily->genDeltaNodes(lvl, genInstr.getLvl2GPCntFuncForDim(dim), std::span<double>(out),
+                              lvl == boundaryLvlOffset);
   } else {
-    nodeGenFunc->genNodes(nNodes, out, lvl >= boundaryLvlOffset);
+    nodeFamily->genNodes(nNodes, out, lvl >= boundaryLvlOffset);
   }
 }
 
@@ -156,7 +156,7 @@ std::vector<size_t> findDimsWithSameNodes(const SGGenInstr& genInstr, const bool
   for (size_t dim = 0; dim < nDim; dim++) {
     result[dim] = dim;
     for (size_t other = 0; other < dim; other++) {
-      if (genInstr.getNodeGenFuncForDim(other) == genInstr.getNodeGenFuncForDim(dim) &&
+      if (genInstr.getNodeFamilyForDim(other) == genInstr.getNodeFamilyForDim(dim) &&
           genInstr.getLvl2GPCntFuncForDim(other) == genInstr.getLvl2GPCntFuncForDim(dim) &&
           (!sameDomain || genInstr.getDomainForDim(other) == genInstr.getDomainForDim(dim))) {
         result[dim] = other;

@@ -22,17 +22,17 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/exception/not_implemented_exception.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/default_functions/equidistant_node_generation_function.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/equidistant_nodes.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_options.hpp>
 #include <sgpp/combigrid/operators/textbook/textbook_quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
 #include <vector>
@@ -95,7 +95,7 @@ double meanOfFactor(const size_t k) {
 void checkExact(SGGenInstr& genInstr, const LvlMI& ell, const LvlType boundary,
                 const bool shifted) {
   const size_t nDim = ell.size();
-  genInstr.setNodeGenFunc(sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc());
+  genInstr.setNodeFamily(sgpp::combigrid::getFirstTypeChebyshevNodes());
   genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(boundary);
   const HyperCubeArea domain = shifted ? shiftedDomain(nDim) : HyperCubeArea(nDim, {0.0, 1.0});
@@ -133,7 +133,7 @@ void checkExact(SGGenInstr& genInstr, const LvlMI& ell, const LvlType boundary,
 }
 
 /// Equidistant nodes whose quadrature rule is missing (a user-defined family without a rule).
-class NoRuleNodeGenFunc : public sgpp::combigrid::node_gen_funcs::EquidistantNodeGenFunc {
+class NoRuleNodeFamily : public sgpp::combigrid::node_families::EquidistantNodes {
  public:
   QuadRule* getQuadRule(GPCntType /*nNodes*/, bool) const override {
     throw sgpp::base::not_implemented_exception("No quadrature rule");
@@ -191,9 +191,9 @@ BOOST_AUTO_TEST_CASE(anisotropic_grids_are_exact_on_their_polynomial_spaces) {
 }
 
 BOOST_AUTO_TEST_CASE(missing_rule_throws_catchable_exception_at_any_thread_count) {
-  NoRuleNodeGenFunc noRule;
+  NoRuleNodeFamily noRule;
   CompleteSGGenInstr genInstr(4, 3);
-  genInstr.setNodeGenFunc(&noRule);
+  genInstr.setNodeFamily(&noRule);
   genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
   const SparseGrid sg(genInstr);

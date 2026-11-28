@@ -15,7 +15,7 @@
  * one of @c quadrature up to round-off, for every source function.
  *
  * The internal helpers are tested in isolation, with delta tensor grids assembled by hand from
- * @c NodeGenFunc::genNodesWithoutBoundary (independently of the deltas sparse grid generation).
+ * @c NodeFamily::genNodesWithoutBoundary (independently of the deltas sparse grid generation).
  */
 
 #define BOOST_TEST_DYN_LINK
@@ -36,9 +36,6 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -51,12 +48,15 @@
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data_view.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature_rules/quadrature_rule.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/operators/quadrature/deltas_sparse_grid_quadrature_tools.hpp>
 #include <sgpp/combigrid/tools/operators/weighted_sum/deltas_sparse_grid_weighted_sum_tools.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
@@ -72,8 +72,8 @@ using DataVector = sgpp::base::DataVector;
 
 static sgpp::base::RandomNumberGenerator& randGen =
     sgpp::base::RandomNumberGenerator::getInstance();
-static NodeGenFunc* const equidistantNodeGenFunc = getEquidistantNodeGenFunc();
-static NodeGenFunc* const clenshawCurtisNodeGenFunc = getClenshawCurtisNodeGenFunc();
+static NodeFamily* const equidistantNodes = getEquidistantNodes();
+static NodeFamily* const clenshawCurtisNodes = getClenshawCurtisNodes();
 
 namespace {
 
@@ -116,9 +116,9 @@ double combinationTol(const SGGenInstr& genInstr) {
   return std::max(TOL, 64.0 * 0x1p-52 * sumOfAbsCoeffs);
 }
 
-std::string nameOf(const NodeGenFunc* nodeGenFunc) {
-  if (nodeGenFunc == equidistantNodeGenFunc) return "equidistant";
-  if (nodeGenFunc == clenshawCurtisNodeGenFunc) return "Clenshaw-Curtis";
+std::string nameOf(const NodeFamily* nodeFamily) {
+  if (nodeFamily == equidistantNodes) return "equidistant";
+  if (nodeFamily == clenshawCurtisNodes) return "Clenshaw-Curtis";
   return "unknown";
 }
 
@@ -218,7 +218,7 @@ Hand-made delta tensor grids
 
 /// Regular 1D nodes of level @p lvl in dimension @p dim (boundary iff lvl >= offset).
 DataVector regularNodes(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl) {
-  const DataVector innerNodes = genInstr.getNodeGenFuncForDim(dim)->genNodesWithoutBoundary(
+  const DataVector innerNodes = genInstr.getNodeFamilyForDim(dim)->genNodesWithoutBoundary(
       genInstr.getLvl2GPCntFuncForDim(dim)(lvl));
 
   if (lvl < genInstr.getBoundaryLevelOffset()) {
@@ -482,7 +482,7 @@ std::pair<std::vector<size_t>, std::vector<MIWithCoeff>> expectedProjectedSubTri
     const std::optional<GPCntType> idx =
         findNode(nodes, expectedDeltaNodes(genInstr, dim, m[dim])[0]);
     BOOST_REQUIRE(idx.has_value());
-    return genInstr.getNodeGenFuncForDim(dim)
+    return genInstr.getNodeFamilyForDim(dim)
         ->getQuadRule(nNodes, lvl >= genInstr.getBoundaryLevelOffset())
         ->genWeights(nNodes)[*idx];
   };
@@ -602,7 +602,7 @@ void checkSubTries(const DeltasSparseGrid& deltasSG) {
 class BruteForceGlobalWeights {
  public:
   explicit BruteForceGlobalWeights(const SparseGrid& sg) {
-    const std::vector<NodeGenFunc*>& nodeGenFuncs = sg.getGenInstr().getNodeGenFuncs();
+    const std::vector<NodeFamily*>& nodeFamilies = sg.getGenInstr().getNodeFamilies();
 
     for (const auto& tg : sg.domainTensorGrids()) {
       const GPMI& gpCntPerDim = tg.tensorGrid.getGPCntPerDim();
@@ -616,7 +616,7 @@ class BruteForceGlobalWeights {
 
         entry.nodes.emplace_back(std::vector<double>(nodesBegin, nodesBegin + nNodes));
         entry.weights.push_back(
-            nodeGenFuncs[dim]
+            nodeFamilies[dim]
                 ->getQuadRule(nNodes, tg.mi[dim] >= sg.getGenInstr().getBoundaryLevelOffset())
                 ->genWeights(nNodes));
         offset += nNodes;
@@ -725,13 +725,13 @@ BOOST_AUTO_TEST_SUITE(quadratureDelta_operator)
 
 BOOST_AUTO_TEST_CASE(Single_Tensor_Grid) {
   // Level 0: the sparse grid is the single tensor grid (0, ..., 0) with coefficient 1
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u}) {
       for (size_t nDim = 1; nDim <= 4; nDim++) {
-        BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                               << boundaryLvlOffset << ", nDim " << nDim) {
+        BOOST_TEST_CONTEXT(nameOf(nodeFamily) << " nodes, boundary level offset "
+                                              << boundaryLvlOffset << ", nDim " << nDim) {
           CompleteSGGenInstr genInstr(0, nDim);
-          genInstr.setNodeGenFunc(nodeGenFunc);
+          genInstr.setNodeFamily(nodeFamily);
           genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
           checkQuadResult(runQuadratureDelta(genProductFunc(), genInstr),
@@ -745,17 +745,17 @@ BOOST_AUTO_TEST_CASE(Single_Tensor_Grid) {
 BOOST_AUTO_TEST_CASE(Constant_Function_Is_Exact) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+    for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
       for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
         for (size_t nDim = 1; nDim <= 4; nDim++) {
           for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+            BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                                << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                                << nDim << ", max. level " << maxLvl) {
               const double value = randGen.getUniformRN(-2.0, 2.0);
 
               CompleteSGGenInstr genInstr(maxLvl, nDim);
-              genInstr.setNodeGenFunc(nodeGenFunc);
+              genInstr.setNodeFamily(nodeFamily);
               genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
               genInstr.setDomain(randomDomain(nDim));
 
@@ -772,11 +772,11 @@ BOOST_AUTO_TEST_CASE(Constant_Function_Is_Exact) {
 BOOST_AUTO_TEST_CASE(Multilinear_Function_Is_Exact) {
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+    for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
       for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
         for (size_t nDim = 1; nDim <= 4; nDim++) {
           for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+            BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                                << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                                << nDim << ", max. level " << maxLvl) {
               std::vector<double> a(nDim);
@@ -787,7 +787,7 @@ BOOST_AUTO_TEST_CASE(Multilinear_Function_Is_Exact) {
               }
 
               CompleteSGGenInstr genInstr(maxLvl, nDim);
-              genInstr.setNodeGenFunc(nodeGenFunc);
+              genInstr.setNodeFamily(nodeFamily);
               genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
               genInstr.setDomain(randomDomain(nDim));
 
@@ -802,15 +802,15 @@ BOOST_AUTO_TEST_CASE(Multilinear_Function_Is_Exact) {
 }
 
 BOOST_AUTO_TEST_CASE(Matches_Quadrature_Complete) {
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
       for (size_t nDim = 1; nDim <= 4; nDim++) {
         for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+          BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                              << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                              << nDim << ", max. level " << maxLvl) {
             CompleteSGGenInstr genInstr(maxLvl, nDim);
-            genInstr.setNodeGenFunc(nodeGenFunc);
+            genInstr.setNodeFamily(nodeFamily);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
             for (const SourceFunc& sourceFunc : {genProductFunc(), genGaussianFunc()}) {
@@ -826,15 +826,15 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Complete) {
 
 BOOST_AUTO_TEST_CASE(Matches_Quadrature_Higher_Dimensions) {
   // Deeper tries: most partial sums of the global weights are factored over several dimensions
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
       for (size_t nDim = 5; nDim <= 7; nDim++) {
         for (LvlType maxLvl = 0; maxLvl <= 3; maxLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+          BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                              << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                              << nDim << ", max. level " << maxLvl) {
             CompleteSGGenInstr genInstr(maxLvl, nDim);
-            genInstr.setNodeGenFunc(nodeGenFunc);
+            genInstr.setNodeFamily(nodeFamily);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
             checkQuadResult(runQuadratureDelta(genGaussianFunc(), genInstr),
@@ -852,15 +852,15 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_High_Dimensions_Boundary_Offsets) {
   // tensor grid has at least 3^nDim grid points.)
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+    for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
       for (const LvlType boundaryLvlOffset : {1u, 2u}) {
         for (const size_t nDim : {8, 10, 12}) {
           for (LvlType maxLvl = 2; maxLvl <= 4; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+            BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                                << " nodes, complete, boundary level offset " << boundaryLvlOffset
                                << ", nDim " << nDim << ", max. level " << maxLvl) {
               CompleteSGGenInstr genInstr(maxLvl, nDim);
-              genInstr.setNodeGenFunc(nodeGenFunc);
+              genInstr.setNodeFamily(nodeFamily);
               genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
               checkQuadResult(runQuadratureDelta(genGaussianFunc(), genInstr),
@@ -872,14 +872,14 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_High_Dimensions_Boundary_Offsets) {
         for (const size_t nDim : {8, 10}) {
           for (const LvlType maxWeightedSum : {4u, 6u}) {
             for (const bool increasing : {true, false}) {
-              BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+              BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                                  << " nodes, anisotropic, boundary level offset "
                                  << boundaryLvlOffset << ", nDim " << nDim << ", max. weighted sum "
                                  << maxWeightedSum << (increasing ? ", increasing" : ", decreasing")
                                  << " weights") {
                 const LvlMIVec levels = anisotropicLevels(nDim, maxWeightedSum, increasing);
                 MIVecSGGenInstr genInstr(levels);
-                genInstr.setNodeGenFunc(nodeGenFunc);
+                genInstr.setNodeFamily(nodeFamily);
                 genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
                 genInstr.setDomain(randomDomain(nDim));
 
@@ -899,12 +899,12 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Full_Grid) {
   // A single input multi-index: the sparse grid is one full tensor grid of a non-zero level
   const LvlMIVec mis{{3, 2}};
 
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
-      BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+      BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                          << " nodes, boundary level offset " << boundaryLvlOffset) {
         MIVecSGGenInstr genInstr(mis);
-        genInstr.setNodeGenFunc(nodeGenFunc);
+        genInstr.setNodeFamily(nodeFamily);
         genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
         checkQuadResult(runQuadratureDelta(genGaussianFunc(), genInstr),
@@ -933,10 +933,8 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Random_Settings) {
       for (SGGenInstr* const genInstr : {static_cast<SGGenInstr*>(&completeGenInstr),
                                          static_cast<SGGenInstr*>(&miVecGenInstr)}) {
         for (size_t dim = 0; dim < nDim; dim++) {
-          genInstr->setNodeGenFuncForDim(randGen.getUniformIndexRN(2) == 0
-                                             ? equidistantNodeGenFunc
-                                             : clenshawCurtisNodeGenFunc,
-                                         dim);
+          genInstr->setNodeFamilyForDim(
+              randGen.getUniformIndexRN(2) == 0 ? equidistantNodes : clenshawCurtisNodes, dim);
         }
         genInstr->setBoundaryLevelOffset(static_cast<LvlType>(randGen.getUniformIndexRN(4)));
         genInstr->setDomain(randomDomain(nDim));
@@ -955,15 +953,15 @@ BOOST_AUTO_TEST_CASE(Matches_Quadrature_Random_Settings) {
 
 BOOST_AUTO_TEST_CASE(Evaluates_Every_Grid_Point_Once) {
   // The purpose of the delta quadrature: no grid point is evaluated twice
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 1000u}) {
       for (size_t nDim = 2; nDim <= 3; nDim++) {
         for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+          BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                              << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                              << nDim << ", max. level " << maxLvl) {
             CompleteSGGenInstr genInstr(maxLvl, nDim);
-            genInstr.setNodeGenFunc(nodeGenFunc);
+            genInstr.setNodeFamily(nodeFamily);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
             // The source function may be called concurrently. Points are recorded rounded to
@@ -1003,10 +1001,10 @@ BOOST_AUTO_TEST_CASE(Evaluates_Every_Grid_Point_Once) {
 
 BOOST_AUTO_TEST_CASE(Non_Nested_Nodes_Throw) {
   // quadratureDelta requires nested nodes
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
-    BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes") {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
+    BOOST_TEST_CONTEXT(nameOf(nodeFamily) << " nodes") {
       CompleteSGGenInstr genInstr(2, 2);
-      genInstr.setNodeGenFunc(nodeGenFunc);
+      genInstr.setNodeFamily(nodeFamily);
       genInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
 
       BOOST_CHECK_THROW(runQuadratureDelta(genProductFunc(), genInstr), std::invalid_argument);
@@ -1181,8 +1179,7 @@ BOOST_AUTO_TEST_CASE(One_Dimensional_Weights) {
       constexpr LvlType maxLvl = 4;
 
       CompleteSGGenInstr genInstr(maxLvl, 3);
-      genInstr.setNodeGenFuncs(
-          {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+      genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes, equidistantNodes});
       genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
       const DeltasSparseGrid deltasSG(genInstr);
 
@@ -1196,7 +1193,7 @@ BOOST_AUTO_TEST_CASE(One_Dimensional_Weights) {
         for (LvlType lvl = 0; lvl <= maxLvl; lvl++) {
           const DataVector nodes = regularNodes(genInstr, dim, lvl);
           const GPCntType nNodes = static_cast<GPCntType>(nodes.size());
-          const DataVector expected = genInstr.getNodeGenFuncForDim(dim)
+          const DataVector expected = genInstr.getNodeFamilyForDim(dim)
                                           ->getQuadRule(nNodes, lvl >= boundaryLvlOffset)
                                           ->genWeights(nNodes);
           const std::span<const double> weightsOfLvl = weights[dim][lvl];
@@ -1242,7 +1239,7 @@ BOOST_AUTO_TEST_CASE(Sub_Trie_Of_Delta_Tensor_Grids) {
         BOOST_TEST_CONTEXT("Boundary level offset " << boundaryLvlOffset << ", nDim " << nDim
                                                     << ", max. level " << maxLvl) {
           CompleteSGGenInstr genInstr(maxLvl, nDim);
-          genInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
+          genInstr.setNodeFamily(clenshawCurtisNodes);
           genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
           checkSubTries(DeltasSparseGrid(genInstr));
@@ -1262,7 +1259,7 @@ BOOST_AUTO_TEST_CASE(Sub_Trie_Of_Delta_Tensor_Grids_High_Dimensions) {
         BOOST_TEST_CONTEXT("Complete, boundary level offset "
                            << boundaryLvlOffset << ", nDim " << nDim << ", max. level " << maxLvl) {
           CompleteSGGenInstr genInstr(maxLvl, nDim);
-          genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+          genInstr.setNodeFamily(equidistantNodes);
           genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
           checkSubTries(DeltasSparseGrid(genInstr));
@@ -1277,7 +1274,7 @@ BOOST_AUTO_TEST_CASE(Sub_Trie_Of_Delta_Tensor_Grids_High_Dimensions) {
                              << " weights") {
             const LvlMIVec levels = anisotropicLevels(nDim, maxWeightedSum, increasing);
             MIVecSGGenInstr genInstr(levels);
-            genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+            genInstr.setNodeFamily(equidistantNodes);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
             checkSubTries(DeltasSparseGrid(genInstr));
@@ -1309,8 +1306,7 @@ BOOST_AUTO_TEST_CASE(Sub_Trie_Of_Delta_Tensor_Grids_High_Dimensions) {
 
 BOOST_AUTO_TEST_CASE(Node_Index_Map_Functions) {
   CompleteSGGenInstr genInstr(2, 3);
-  genInstr.setNodeGenFuncs(
-      {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes, equidistantNodes});
   const DeltasSparseGrid deltasSG(genInstr);
 
   const std::vector<NodeIdxLvlMapFunc> maps =
@@ -1318,30 +1314,30 @@ BOOST_AUTO_TEST_CASE(Node_Index_Map_Functions) {
 
   BOOST_REQUIRE_EQUAL(maps.size(), size_t{3});
   for (size_t dim = 0; dim < 3; dim++) {
-    const NodeGenFunc* const nodeGenFunc = genInstr.getNodeGenFuncForDim(dim);
+    const NodeFamily* const nodeFamily = genInstr.getNodeFamilyForDim(dim);
 
     BOOST_CHECK(maps[dim] ==
-                nodeGenFunc->getNodeIdxMapFromDeltaTGLvlToRegularLvl(doublingLvl2GPCntFunction));
+                nodeFamily->getNodeIdxMapFromDeltaTGLvlToRegularLvl(doublingLvl2GPCntFunction));
   }
 }
 
 BOOST_AUTO_TEST_CASE(Map_Node_Idx_Preserves_The_Node) {
   // Maps the index of a delta node (with the boundary nodes on the boundary level offset) to the
   // index of the same node in a regular tensor grid of a higher or equal level
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 5u, 1000u}) {
       CompleteSGGenInstr genInstr(0, 1);
-      genInstr.setNodeGenFunc(nodeGenFunc);
+      genInstr.setNodeFamily(nodeFamily);
       genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
       const NodeIdxLvlMapFunc map =
-          nodeGenFunc->getNodeIdxMapFromDeltaTGLvlToRegularLvl(doublingLvl2GPCntFunction);
+          nodeFamily->getNodeIdxMapFromDeltaTGLvlToRegularLvl(doublingLvl2GPCntFunction);
 
       for (LvlType deltaLvl = 0; deltaLvl <= 5; deltaLvl++) {
         const DataVector deltaNodes = expectedDeltaNodes(genInstr, 0, deltaLvl);
 
         for (LvlType targetLvl = deltaLvl; targetLvl <= 6; targetLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+          BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                              << " nodes, boundary level offset " << boundaryLvlOffset
                              << ", delta level " << deltaLvl << " -> level " << targetLvl) {
             const DataVector targetNodes = regularNodes(genInstr, 0, targetLvl);
@@ -1370,15 +1366,15 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points) {
   // onto the domain, with their global weights
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+    for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
       for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
         for (size_t nDim = 1; nDim <= 3; nDim++) {
           for (LvlType maxLvl = 0; maxLvl <= 3; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+            BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                                << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                                << nDim << ", max. level " << maxLvl) {
               CompleteSGGenInstr genInstr(maxLvl, nDim);
-              genInstr.setNodeGenFunc(nodeGenFunc);
+              genInstr.setNodeFamily(nodeFamily);
               genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
               genInstr.setDomain(randomDomain(nDim));
               const HyperCubeArea& domain = genInstr.getDomain();
@@ -1442,7 +1438,7 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points_High_Dimensions) {
     constexpr size_t nDim = 8;
     const LvlMIVec anisotropic = anisotropicLevels(nDim, 6, true);
 
-    for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+    for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
       for (const LvlType boundaryLvlOffset : {1u, 2u}) {
         CompleteSGGenInstr complete2(2, nDim);
         CompleteSGGenInstr complete3(3, nDim);
@@ -1451,12 +1447,12 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points_High_Dimensions) {
         for (SGGenInstr* const genInstr :
              {static_cast<SGGenInstr*>(&complete2), static_cast<SGGenInstr*>(&complete3),
               static_cast<SGGenInstr*>(&miVec)}) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+          BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                              << " nodes, boundary level offset " << boundaryLvlOffset << ", "
                              << (genInstr == &miVec       ? "anisotropic"
                                  : genInstr == &complete2 ? "complete, max. level 2"
                                                           : "complete, max. level 3")) {
-            genInstr->setNodeGenFunc(nodeGenFunc);
+            genInstr->setNodeFamily(nodeFamily);
             genInstr->setBoundaryLevelOffset(boundaryLvlOffset);
             genInstr->setDomain(randomDomain(nDim));
 
@@ -1479,7 +1475,7 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points_Boundary_Offset_0) {
     for (const size_t nDim : {5, 6}) {
       const LvlMIVec anisotropic = anisotropicLevels(nDim, 4, false);
 
-      for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+      for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
         CompleteSGGenInstr complete2(2, nDim);
         CompleteSGGenInstr complete3(3, nDim);
         MIVecSGGenInstr miVec(anisotropic);
@@ -1487,12 +1483,12 @@ BOOST_AUTO_TEST_CASE(Global_Weights_Of_Delta_Grid_Points_Boundary_Offset_0) {
         for (SGGenInstr* const genInstr :
              {static_cast<SGGenInstr*>(&complete2), static_cast<SGGenInstr*>(&complete3),
               static_cast<SGGenInstr*>(&miVec)}) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+          BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                              << " nodes, nDim " << nDim << ", "
                              << (genInstr == &miVec       ? "anisotropic"
                                  : genInstr == &complete2 ? "complete, max. level 2"
                                                           : "complete, max. level 3")) {
-            genInstr->setNodeGenFunc(nodeGenFunc);
+            genInstr->setNodeFamily(nodeFamily);
             genInstr->setBoundaryLevelOffset(0);
             genInstr->setDomain(randomDomain(nDim));
 
@@ -1523,7 +1519,7 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Independent_Of_Visit_Order) {
         BOOST_TEST_CONTEXT("Boundary level offset "
                            << boundaryLvlOffset
                            << (genInstr == &miVec ? ", anisotropic" : ", complete")) {
-          genInstr->setNodeGenFunc(clenshawCurtisNodeGenFunc);
+          genInstr->setNodeFamily(clenshawCurtisNodes);
           genInstr->setBoundaryLevelOffset(boundaryLvlOffset);
           genInstr->setDomain(randomDomain(nDim));
 
@@ -1566,15 +1562,15 @@ BOOST_AUTO_TEST_CASE(Delta_Tensor_Grids_Reproduce_Quadrature) {
   // closed set gives the quadrature (on the unit domain, i.e. before scaling with the volume)
   randGen.setSeed();
   BOOST_TEST_CONTEXT("Seed: " + std::to_string(randGen.getSeed())) {
-    for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+    for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
       for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
         for (size_t nDim = 2; nDim <= 3; nDim++) {
           for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-            BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+            BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                                << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                                << nDim << ", max. level " << maxLvl) {
               CompleteSGGenInstr genInstr(maxLvl, nDim);
-              genInstr.setNodeGenFunc(nodeGenFunc);
+              genInstr.setNodeFamily(nodeFamily);
               genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
               genInstr.setDomain(randomDomain(nDim));
 

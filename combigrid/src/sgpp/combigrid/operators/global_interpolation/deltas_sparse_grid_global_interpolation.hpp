@@ -27,8 +27,8 @@ namespace combigrid {
  *
  * Computes the same combination @f$\sum_{\vec{\ell}} c_{\vec{\ell}}\,
  * I^{\mathrm{glob}}_{\vec{\ell}} f(\vec{x})@f$ as @c interpolate on the @c SparseGrid of the same
- * generation instruction (with the same 1D interpolation methods of the node-generation
- * functions), but evaluates @p sourceFunc exactly once at every grid point of the sparse grid
+ * generation instruction (with the same 1D interpolation methods of the node
+ * families), but evaluates @p sourceFunc exactly once at every grid point of the sparse grid
  * (the points of all tensor grids, each distinct point once; point with a global weight of 0 are
  * also evaluated) and weights it with its global weight @f$W_p(\vec{x}) = \sum_{\vec{\ell} \ni p}
  * c_{\vec{\ell}} \prod_k L_{k,\ell_k,p_k}(x_k)@f$, where @f$L_{k,\ell,i}(x)@f$ is the weight of

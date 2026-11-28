@@ -17,10 +17,10 @@
 #include <cmath>
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/methods/interpolation_method.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -35,7 +35,7 @@ namespace {
 /// default basisValues.
 class LinearCombinationMethod : public InterpolationMethod {
  public:
-  LinearCombinationMethod() : InterpolationMethod(12345) {}
+  LinearCombinationMethod() = default;
 
   double interpolate(const double pos, const std::vector<double>& nodes,
                      const std::vector<double>& values) const override {
@@ -46,9 +46,9 @@ class LinearCombinationMethod : public InterpolationMethod {
   using InterpolationMethod::interpolate;
 };
 
-std::vector<double> nodesOf(const NodeGenFunc& nodeGenFunc, const GPCntType nNodes,
+std::vector<double> nodesOf(const NodeFamily& nodeFamily, const GPCntType nNodes,
                             const bool boundary) {
-  const sgpp::base::DataVector nodes = nodeGenFunc.genNodes(nNodes, boundary);
+  const sgpp::base::DataVector nodes = nodeFamily.genNodes(nNodes, boundary);
   return std::vector<double>(nodes.begin(), nodes.end());
 }
 
@@ -93,9 +93,9 @@ BOOST_AUTO_TEST_CASE(Built_In_Formulas_Equal_Interpolant_And_Default) {
     for (const double pos : positions) {
       // Generic formula: Chebyshev nodes of the first type, equidistant nodes with boundary;
       // optimized formula: Clenshaw-Curtis nodes with boundary
-      NodeGenFunc* const cheb1 = getFirstTypeChebyshevNodeGenFunc();
-      NodeGenFunc* const equi = getEquidistantNodeGenFunc();
-      NodeGenFunc* const cc = getClenshawCurtisNodeGenFunc();
+      NodeFamily* const cheb1 = getFirstTypeChebyshevNodes();
+      NodeFamily* const equi = getEquidistantNodes();
+      NodeFamily* const cc = getClenshawCurtisNodes();
       checkMethod(*cheb1->getInterpolationMethod(nNodes), nodesOf(*cheb1, nNodes, false), pos,
                   "generic cheb1");
       checkMethod(*equi->getInterpolationMethod(nNodes), nodesOf(*equi, nNodes, nNodes >= 2), pos,
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(Default_Probes_The_Scalar_Interpolant) {
 }
 
 BOOST_AUTO_TEST_CASE(Trivial_Cases) {
-  NodeGenFunc* const cc = getClenshawCurtisNodeGenFunc();
+  NodeFamily* const cc = getClenshawCurtisNodes();
   const InterpolationMethod& method = *cc->getInterpolationMethod(5);
 
   std::vector<double> one(1);

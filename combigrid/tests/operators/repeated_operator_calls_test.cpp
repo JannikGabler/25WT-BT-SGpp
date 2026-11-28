@@ -26,20 +26,20 @@
 #include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/deltas_sparse_grid_global_interpolation.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/deltas_sparse_grid_linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <span>
 #include <string>
 #include <vector>
@@ -48,7 +48,7 @@ using sgpp::base::DataVector;
 using sgpp::combigrid::CompleteSGGenInstr;
 using sgpp::combigrid::DeltasSparseGrid;
 using sgpp::combigrid::LvlType;
-using sgpp::combigrid::NodeGenFunc;
+using sgpp::combigrid::NodeFamily;
 using sgpp::combigrid::SourceFunc;
 using sgpp::combigrid::SparseGrid;
 using sgpp::combigrid::VectorSourceFunc;
@@ -72,10 +72,10 @@ const std::vector<RepeatConfig>& repeatConfigs() {
   return configs;
 }
 
-NodeGenFunc* nodeGenFunc(const std::string& nodes) {
-  if (nodes == "equi") return sgpp::combigrid::getEquidistantNodeGenFunc();
-  if (nodes == "cc") return sgpp::combigrid::getClenshawCurtisNodeGenFunc();
-  return sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc();
+NodeFamily* nodeFamily(const std::string& nodes) {
+  if (nodes == "equi") return sgpp::combigrid::getEquidistantNodes();
+  if (nodes == "cc") return sgpp::combigrid::getClenshawCurtisNodes();
+  return sgpp::combigrid::getFirstTypeChebyshevNodes();
 }
 
 CompleteSGGenInstr makeGenInstr(const RepeatConfig& config) {
@@ -85,7 +85,7 @@ CompleteSGGenInstr makeGenInstr(const RepeatConfig& config) {
   } else {
     genInstr.setDomain({0.0, 1.0});
   }
-  genInstr.setNodeGenFunc(nodeGenFunc(config.nodes));
+  genInstr.setNodeFamily(nodeFamily(config.nodes));
   genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(config.boundaryOffset);
   return genInstr;

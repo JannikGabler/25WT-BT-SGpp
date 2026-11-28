@@ -36,7 +36,7 @@ sourceFunc = pysgpp.SourceFunc(func)
 ## dimensions, Clenshaw-Curtis nodes, doubling growth, and boundary nodes on every level.
 genInstr = pysgpp.CompleteSGGenInstr(10, 3)
 genInstr.setDomain((0, 1))
-genInstr.setNodeGenFunc(pysgpp.getClenshawCurtisNodeGenFunc())
+genInstr.setNodeFamily(pysgpp.getClenshawCurtisNodes())
 genInstr.setLvl2GPCntFunc(pysgpp.doublingLvl2GPCntFunction)
 genInstr.setBoundaryLevelOffset(0)
 

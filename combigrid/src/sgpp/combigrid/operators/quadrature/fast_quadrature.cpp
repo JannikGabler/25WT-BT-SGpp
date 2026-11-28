@@ -67,7 +67,7 @@
 
 //   const HyperCubeArea& bounds = sparseGrid.getGenInstr()->getDomain();
 //   const GPMI& gpCntPerDim = tgData.tensorGrid.getGPCntPerDim();
-//   const std::vector<NodeGenFunc*>& nodeGenFuncs = sparseGrid.getGenInstr()->getNodeGenFuncs();
+//   const std::vector<NodeFamily*>& nodeFamilies = sparseGrid.getGenInstr()->getNodeFamilies();
 //   const misc::DiscRectBB<GPCntType> iterationBB(GPMI(nDim), gpCntPerDim, false);
 
 //   double result = 0.0;
@@ -82,11 +82,11 @@
 //     for (const TensorGridCTData& tgDataOther : sparseGrid) {
 //       if (tgData.mi <= tgDataOther.mi) {
 //         tools::mapGPMIToDifferentLevel(gpMIOnLowerLvl, tgData.mi, tgDataOther.mi,
-//         gpMIOnHigherLvl); tools::getQuadRulesForTensorGrid(tgDataOther.tensorGrid, nodeGenFuncs,
+//         gpMIOnHigherLvl); tools::getQuadRulesForTensorGrid(tgDataOther.tensorGrid, nodeFamilies,
 //         quadRules);
 
 //         const double localQuadWeight = tools::genQuadratureWeightOfSingleGP(
-//             tgDataOther.tensorGrid, gpMIOnHigherLvl, nodeGenFuncs);
+//             tgDataOther.tensorGrid, gpMIOnHigherLvl, nodeFamilies);
 
 //         globalWeight += tgDataOther.coefficient * localQuadWeight;
 //       }

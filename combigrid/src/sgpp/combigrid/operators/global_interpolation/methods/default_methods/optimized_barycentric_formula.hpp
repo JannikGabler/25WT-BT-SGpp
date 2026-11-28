@@ -25,14 +25,10 @@ namespace global_interpolation {
  *
  * Uses the closed-form barycentric weights for Clenshaw-Curtis nodes
  * (alternating signs with halved magnitudes at the endpoints), which
- * removes the dependency on a specific @c NodeGenFunc instance and
- * avoids re-deriving weights at runtime.
+ * avoids deriving the weights from the nodes at runtime.
  */
 class OptBarycentricFormula : public InterpolationMethod {
  public:
-  /// @brief Constructs the formula with a deterministic identity.
-  OptBarycentricFormula();
-
   /**
    * @brief Evaluates the 1D interpolant at @p pos (scalar formula).
    * @param pos    Evaluation position.

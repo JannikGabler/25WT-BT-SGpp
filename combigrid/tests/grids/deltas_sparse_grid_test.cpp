@@ -15,7 +15,7 @@
  * @c SparseGrid exactly once, and no other point.
  *
  * The expected delta tensor grids are assembled by hand. In every dimension, the delta nodes of
- * level l are the regular level-l nodes (@c NodeGenFunc::genNodesWithoutBoundary, framed by 0 and
+ * level l are the regular level-l nodes (@c NodeFamily::genNodesWithoutBoundary, framed by 0 and
  * 1 iff l >= boundary level offset, mapped onto the domain with @c tools::mapToDomain) that are no
  * regular level-(l - 1) nodes. Grid points are
  * compared via their per-dimension indices among the nodes of the finest level, which makes the
@@ -37,10 +37,6 @@
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
@@ -50,9 +46,13 @@
 #include <sgpp/combigrid/miscellaneous/tensor_grid/tensor_grid_combination_technique_data.hpp>
 #include <sgpp/combigrid/multiindices/multiindex.hpp>
 #include <sgpp/combigrid/multiindices/multiindex_vector.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sg_gen_instruction.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/math/binomial.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -67,9 +67,9 @@ using DataVector = sgpp::base::DataVector;
 
 static sgpp::base::RandomNumberGenerator& randGen =
     sgpp::base::RandomNumberGenerator::getInstance();
-static NodeGenFunc* const equidistantNodeGenFunc = getEquidistantNodeGenFunc();
-static NodeGenFunc* const clenshawCurtisNodeGenFunc = getClenshawCurtisNodeGenFunc();
-static NodeGenFunc* const firstTypeChebyshevNodeGenFunc = getFirstTypeChebyshevNodeGenFunc();
+static NodeFamily* const equidistantNodes = getEquidistantNodes();
+static NodeFamily* const clenshawCurtisNodes = getClenshawCurtisNodes();
+static NodeFamily* const firstTypeChebyshevNodes = getFirstTypeChebyshevNodes();
 
 namespace {
 
@@ -119,10 +119,10 @@ std::string toString(const DataVector& point) {
   return result.str();
 }
 
-std::string nameOf(const NodeGenFunc* nodeGenFunc) {
-  if (nodeGenFunc == equidistantNodeGenFunc) return "equidistant";
-  if (nodeGenFunc == clenshawCurtisNodeGenFunc) return "Clenshaw-Curtis";
-  if (nodeGenFunc == firstTypeChebyshevNodeGenFunc) return "first type Chebyshev";
+std::string nameOf(const NodeFamily* nodeFamily) {
+  if (nodeFamily == equidistantNodes) return "equidistant";
+  if (nodeFamily == clenshawCurtisNodes) return "Clenshaw-Curtis";
+  if (nodeFamily == firstTypeChebyshevNodes) return "first type Chebyshev";
   return "unknown";
 }
 
@@ -132,7 +132,7 @@ std::string nameOf(const NodeGenFunc* nodeGenFunc) {
  * onto the domain with tools::mapToDomain.
  */
 DataVector regularNodes(const SGGenInstr& genInstr, const size_t dim, const LvlType lvl) {
-  const DataVector innerNodes = genInstr.getNodeGenFuncForDim(dim)->genNodesWithoutBoundary(
+  const DataVector innerNodes = genInstr.getNodeFamilyForDim(dim)->genNodesWithoutBoundary(
       genInstr.getLvl2GPCntFuncForDim(dim)(lvl));
   DataVector nodes = innerNodes;
 
@@ -369,15 +369,15 @@ CTCoeffType sumOfCoeffs(const SparseGridBase& sg) {
 }
 
 /**
- * Assigns random nested node generation functions (equidistant or Clenshaw-Curtis) per dimension,
+ * Assigns random nested node families (equidistant or Clenshaw-Curtis) per dimension,
  * the doubling growth function and a random boundary level offset in {0, 1, 2, 3}. Deltas sparse
  * grids require nested nodes.
  */
 void setRandomNestedSettings(SGGenInstr& genInstr) {
-  NodeGenFunc* const nodeGenFuncs[] = {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc};
+  NodeFamily* const nodeFamilies[] = {equidistantNodes, clenshawCurtisNodes};
 
   for (size_t dim = 0; dim < genInstr.nDim(); dim++) {
-    genInstr.setNodeGenFuncForDim(nodeGenFuncs[randGen.getUniformIndexRN(2)], dim);
+    genInstr.setNodeFamilyForDim(nodeFamilies[randGen.getUniformIndexRN(2)], dim);
   }
 
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
@@ -389,7 +389,7 @@ void checkSameSettings(const SGGenInstr& result, const SGGenInstr& expected) {
   BOOST_CHECK_EQUAL(result.nDim(), expected.nDim());
   BOOST_CHECK_EQUAL(result.getBoundaryLevelOffset(), expected.getBoundaryLevelOffset());
   BOOST_CHECK(result.getDomain() == expected.getDomain());
-  BOOST_CHECK(result.getNodeGenFuncs() == expected.getNodeGenFuncs());
+  BOOST_CHECK(result.getNodeFamilies() == expected.getNodeFamilies());
   BOOST_CHECK(result.getLvl2GPCntFuncs() == expected.getLvl2GPCntFuncs());
 }
 
@@ -612,7 +612,7 @@ BOOST_AUTO_TEST_CASE(Handwritten_2D) {
   // Equidistant nodes, doubling growth, boundary on every level: the regular level-l nodes are
   // {0, 1/2^(l+1), ..., 1}; the delta nodes are the new ones.
   CompleteSGGenInstr genInstr(2, 2);
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr.setNodeFamily(equidistantNodes);
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(0);
 
@@ -638,7 +638,7 @@ BOOST_AUTO_TEST_CASE(Handwritten_2D) {
 BOOST_AUTO_TEST_CASE(Handwritten_2D_Boundary_Level_Offset_1) {
   // The boundary nodes are added on level 1, so they are delta nodes of level 1
   CompleteSGGenInstr genInstr(2, 2);
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr.setNodeFamily(equidistantNodes);
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
 
@@ -659,14 +659,14 @@ BOOST_AUTO_TEST_CASE(Handwritten_2D_Boundary_Level_Offset_1) {
 
 BOOST_AUTO_TEST_CASE(Handwritten_2D_Without_Boundary) {
   CompleteSGGenInstr genInstr(2, 2);
-  genInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setNodeFamilies({clenshawCurtisNodes, equidistantNodes});
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1000);
 
   // Clenshaw-Curtis level 1: (1 -+ cos(pi / 4)) / 2 are new, 1/2 is the level-0 node.
   // Clenshaw-Curtis level 2: every second of the 7 inner nodes, i.e. nodes 0, 2, 4 and 6.
   const double sqrt2 = std::sqrt(2.0);
-  const DataVector ccNodesLvl2 = clenshawCurtisNodeGenFunc->genNodesWithoutBoundary(7);
+  const DataVector ccNodesLvl2 = clenshawCurtisNodes->genNodesWithoutBoundary(7);
   const DataVector cc0{0.5};
   const DataVector cc1{(2.0 - sqrt2) / 4.0, (2.0 + sqrt2) / 4.0};
   const DataVector cc2{ccNodesLvl2[0], ccNodesLvl2[2], ccNodesLvl2[4], ccNodesLvl2[6]};
@@ -686,15 +686,15 @@ BOOST_AUTO_TEST_CASE(Handwritten_2D_Without_Boundary) {
 }
 
 BOOST_AUTO_TEST_CASE(Complete_Grids) {
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
       for (size_t nDim = 2; nDim <= 4; nDim++) {
         for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+          BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                              << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                              << nDim << ", max. level " << maxLvl) {
             CompleteSGGenInstr genInstr(maxLvl, nDim);
-            genInstr.setNodeGenFunc(nodeGenFunc);
+            genInstr.setNodeFamily(nodeFamily);
             genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
@@ -713,8 +713,7 @@ BOOST_AUTO_TEST_CASE(Mixed_Node_Families_3D) {
   const LvlType maxLvl = 3;
 
   CompleteSGGenInstr genInstr(maxLvl, 3);
-  genInstr.setNodeGenFuncs(
-      {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes, equidistantNodes});
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(2);
 
@@ -827,8 +826,7 @@ BOOST_AUTO_TEST_CASE(Tensor_Grid_Sizes) {
   for (const LvlType boundaryLvlOffset : {0u, 1u, 3u, 1000u}) {
     BOOST_TEST_CONTEXT("Boundary level offset " << boundaryLvlOffset) {
       CompleteSGGenInstr genInstr(5, 3);
-      genInstr.setNodeGenFuncs(
-          {clenshawCurtisNodeGenFunc, equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
+      genInstr.setNodeFamilies({clenshawCurtisNodes, equidistantNodes, clenshawCurtisNodes});
       genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
       genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
@@ -857,7 +855,7 @@ BOOST_AUTO_TEST_CASE(MIVec_Downwards_Closed_2D) {
   // c(2, 0) = c(1, 1) = 1, c(1, 0) = -1 and 0 for the other two
   const LvlMIVec mis{{0, 0}, {1, 0}, {2, 0}, {0, 1}, {1, 1}};
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr.setNodeFamily(equidistantNodes);
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(0);
 
@@ -883,7 +881,7 @@ BOOST_AUTO_TEST_CASE(MIVec_Non_Downwards_Closed_Input) {
   // have a non-zero coefficient, but all 6 are part of the deltas sparse grid
   const LvlMIVec mis{{2, 0}, {0, 3}};
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setNodeFamilies({clenshawCurtisNodes, equidistantNodes});
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
 
@@ -928,12 +926,12 @@ BOOST_AUTO_TEST_CASE(MIVec_Matches_Complete) {
     for (LvlType maxLvl = 0; maxLvl <= 4; maxLvl++) {
       BOOST_TEST_CONTEXT("nDim " << nDim << ", max. level " << maxLvl) {
         CompleteSGGenInstr completeGenInstr(maxLvl, nDim);
-        completeGenInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
+        completeGenInstr.setNodeFamily(clenshawCurtisNodes);
         completeGenInstr.setBoundaryLevelOffset(1);
 
         const LvlMIVec mis = completeGenInstr.genReducedMIVec();
         MIVecSGGenInstr miVecGenInstr(mis);
-        miVecGenInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
+        miVecGenInstr.setNodeFamily(clenshawCurtisNodes);
         miVecGenInstr.setBoundaryLevelOffset(1);
 
         checkSG(DeltasSparseGrid(miVecGenInstr), DeltasSparseGrid(completeGenInstr));
@@ -980,8 +978,7 @@ BOOST_AUTO_TEST_CASE(Stores_Copy_Of_Complete_SG_Gen_Instr) {
   const LvlType maxLvl = 3;
 
   CompleteSGGenInstr genInstr(maxLvl, 3);
-  genInstr.setNodeGenFuncs(
-      {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes, equidistantNodes});
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(1);
   genInstr.setDomain(HyperCubeArea{{0.0, 1.0}, {-1.0, 1.0}, {2.0, 5.0}});
@@ -996,7 +993,7 @@ BOOST_AUTO_TEST_CASE(Stores_Copy_Of_Complete_SG_Gen_Instr) {
 
   // Later changes of the original instruction affect neither the stored instruction nor the grid
   genInstr.setMaxLvl(5);
-  genInstr.setNodeGenFunc(clenshawCurtisNodeGenFunc);
+  genInstr.setNodeFamily(clenshawCurtisNodes);
   genInstr.setBoundaryLevelOffset(0);
   genInstr.setDomain({-5.0, 5.0});
 
@@ -1009,7 +1006,7 @@ BOOST_AUTO_TEST_CASE(Stores_Copy_Of_MIVec_SG_Gen_Instr) {
   const LvlMIVec mis{{3, 0}, {1, 2}};
 
   MIVecSGGenInstr genInstr(mis);
-  genInstr.setNodeGenFuncs({clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+  genInstr.setNodeFamilies({clenshawCurtisNodes, equidistantNodes});
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(2);
 
@@ -1021,7 +1018,7 @@ BOOST_AUTO_TEST_CASE(Stores_Copy_Of_MIVec_SG_Gen_Instr) {
   BOOST_CHECK(dynamic_cast<const MIVecSGGenInstr*>(&storedGenInstr) != nullptr);
   checkSameSettings(storedGenInstr, originalGenInstr);
 
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr.setNodeFamily(equidistantNodes);
   genInstr.setBoundaryLevelOffset(0);
 
   checkSameSettings(storedGenInstr, originalGenInstr);
@@ -1030,13 +1027,13 @@ BOOST_AUTO_TEST_CASE(Stores_Copy_Of_MIVec_SG_Gen_Instr) {
 }
 
 BOOST_AUTO_TEST_CASE(One_Dimension) {
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 2u, 1000u}) {
       for (LvlType maxLvl = 0; maxLvl <= 6; maxLvl++) {
-        BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                               << boundaryLvlOffset << ", max. level " << maxLvl) {
+        BOOST_TEST_CONTEXT(nameOf(nodeFamily) << " nodes, boundary level offset "
+                                              << boundaryLvlOffset << ", max. level " << maxLvl) {
           CompleteSGGenInstr genInstr(maxLvl, 1);
-          genInstr.setNodeGenFunc(nodeGenFunc);
+          genInstr.setNodeFamily(nodeFamily);
           genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
           genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
@@ -1053,11 +1050,11 @@ BOOST_AUTO_TEST_CASE(One_Dimension) {
 
 BOOST_AUTO_TEST_CASE(Non_Nested_Nodes_Throw) {
   CompleteSGGenInstr linearGenInstr(2, 2);
-  linearGenInstr.setNodeGenFunc(equidistantNodeGenFunc);
+  linearGenInstr.setNodeFamily(equidistantNodes);
   linearGenInstr.setLvl2GPCntFunc(linearLvl2GPCntFunction);
 
   CompleteSGGenInstr chebyshevGenInstr(2, 2);
-  chebyshevGenInstr.setNodeGenFuncs({equidistantNodeGenFunc, firstTypeChebyshevNodeGenFunc});
+  chebyshevGenInstr.setNodeFamilies({equidistantNodes, firstTypeChebyshevNodes});
   chebyshevGenInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
 
   BOOST_CHECK_THROW(DeltasSparseGrid{linearGenInstr}, std::invalid_argument);
@@ -1077,7 +1074,7 @@ BOOST_AUTO_TEST_CASE(Handwritten_2D) {
   // (0, 1) with 5 x 3 and 3 x 5 points sharing the 3 x 3 points of (0, 0): 21 unique points.
   // The deltas sparse grid has 3 x 3 + 2 x 3 + 3 x 2 = 21 grid points.
   CompleteSGGenInstr genInstr(1, 2);
-  genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+  genInstr.setNodeFamily(equidistantNodes);
   genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
   genInstr.setBoundaryLevelOffset(0);
 
@@ -1093,17 +1090,17 @@ BOOST_AUTO_TEST_CASE(Handwritten_2D) {
 }
 
 BOOST_AUTO_TEST_CASE(Complete_Grids) {
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
       for (size_t nDim = 2; nDim <= 4; nDim++) {
         const LvlType highestMaxLvl = nDim <= 3 ? 5 : 4;
 
         for (LvlType maxLvl = 0; maxLvl <= highestMaxLvl; maxLvl++) {
-          BOOST_TEST_CONTEXT(nameOf(nodeGenFunc)
+          BOOST_TEST_CONTEXT(nameOf(nodeFamily)
                              << " nodes, boundary level offset " << boundaryLvlOffset << ", nDim "
                              << nDim << ", max. level " << maxLvl) {
             CompleteSGGenInstr genInstr(maxLvl, nDim);
-            genInstr.setNodeGenFunc(nodeGenFunc);
+            genInstr.setNodeFamily(nodeFamily);
             genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
             genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
@@ -1119,8 +1116,7 @@ BOOST_AUTO_TEST_CASE(Mixed_Node_Families) {
   for (const LvlType boundaryLvlOffset : {0u, 1u, 3u}) {
     BOOST_TEST_CONTEXT("Boundary level offset " << boundaryLvlOffset) {
       CompleteSGGenInstr genInstr(5, 3);
-      genInstr.setNodeGenFuncs(
-          {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc, equidistantNodeGenFunc});
+      genInstr.setNodeFamilies({equidistantNodes, clenshawCurtisNodes, equidistantNodes});
       genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
       genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
       genInstr.setDomain(HyperCubeArea{{-1.0, 1.0}, {0.0, 10.0}, {3.0, 4.0}});
@@ -1136,8 +1132,7 @@ BOOST_AUTO_TEST_CASE(Anisotropic_MIVec) {
   for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
     BOOST_TEST_CONTEXT("Boundary level offset " << boundaryLvlOffset) {
       MIVecSGGenInstr genInstr(mis);
-      genInstr.setNodeGenFuncs(
-          {clenshawCurtisNodeGenFunc, equidistantNodeGenFunc, clenshawCurtisNodeGenFunc});
+      genInstr.setNodeFamilies({clenshawCurtisNodes, equidistantNodes, clenshawCurtisNodes});
       genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
       genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
@@ -1153,7 +1148,7 @@ BOOST_AUTO_TEST_CASE(Single_Full_Grid) {
   for (const LvlType boundaryLvlOffset : {0u, 1u, 3u, 1000u}) {
     BOOST_TEST_CONTEXT("Boundary level offset " << boundaryLvlOffset) {
       MIVecSGGenInstr genInstr(mis);
-      genInstr.setNodeGenFunc(equidistantNodeGenFunc);
+      genInstr.setNodeFamily(equidistantNodes);
       genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
       genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 
@@ -1197,13 +1192,13 @@ BOOST_AUTO_TEST_CASE(Random_Settings) {
 }
 
 BOOST_AUTO_TEST_CASE(Grid_Points_Have_The_Level_Of_Their_Tensor_Grid) {
-  for (NodeGenFunc* const nodeGenFunc : {equidistantNodeGenFunc, clenshawCurtisNodeGenFunc}) {
+  for (NodeFamily* const nodeFamily : {equidistantNodes, clenshawCurtisNodes}) {
     for (const LvlType boundaryLvlOffset : {0u, 1u, 2u, 1000u}) {
       for (size_t nDim = 2; nDim <= 3; nDim++) {
-        BOOST_TEST_CONTEXT(nameOf(nodeGenFunc) << " nodes, boundary level offset "
-                                               << boundaryLvlOffset << ", nDim " << nDim) {
+        BOOST_TEST_CONTEXT(nameOf(nodeFamily) << " nodes, boundary level offset "
+                                              << boundaryLvlOffset << ", nDim " << nDim) {
           CompleteSGGenInstr genInstr(4, nDim);
-          genInstr.setNodeGenFunc(nodeGenFunc);
+          genInstr.setNodeFamily(nodeFamily);
           genInstr.setLvl2GPCntFunc(doublingLvl2GPCntFunction);
           genInstr.setBoundaryLevelOffset(boundaryLvlOffset);
 

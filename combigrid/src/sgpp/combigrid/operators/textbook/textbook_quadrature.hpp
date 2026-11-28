@@ -34,8 +34,8 @@ namespace combigrid {
  * where @f$\vec{\ell}@f$ runs over the tensor grids of @p sparseGrid with their combination
  * coefficients @f$c_{\vec{\ell}}@f$, @f$\vec{x}_{\vec{i}}@f$ over the grid points of tensor grid
  * @f$\vec{\ell}@f$ (domain coordinates) and @f$w^{(j)}_{\ell_j, i}@f$ are the weights on
- * @f$[0,1]@f$ (summing to 1) of the 1D quadrature rule that the node-generation function of
- * dimension @f$j@f$ defines for its @f$n_{\ell_j}@f$ nodes (@c NodeGenFunc::getQuadRule with
+ * @f$[0,1]@f$ (summing to 1) of the 1D quadrature rule that the node family of
+ * dimension @f$j@f$ defines for its @f$n_{\ell_j}@f$ nodes (@c NodeFamily::getQuadRule with
  * the boundary nodes iff @f$\ell_j@f$ is at least the boundary level offset: Clenshaw-Curtis for
  * Clenshaw-Curtis nodes, Simpson / trapezoidal rule for equidistant nodes, the interpolatory rule
  * for first-kind Chebyshev nodes, i.e. Fejér's first rule without boundary nodes).

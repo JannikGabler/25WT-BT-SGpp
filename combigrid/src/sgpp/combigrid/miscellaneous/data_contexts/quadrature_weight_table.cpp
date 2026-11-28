@@ -11,7 +11,7 @@
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/miscellaneous/data_contexts/quadrature_weight_table.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/collections/vector_bytes.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
@@ -33,13 +33,13 @@ QuadWeightTable::QuadWeightTable(const SparseGrid& sparseGrid)
   const LvlType boundaryLvlOffset = genInstr.getBoundaryLevelOffset();
 
   // Every row belongs to at least one (dimension, level) pair; dimensions sharing rows overwrite
-  // each other's entries with equivalent ones (same node-generation function and node counts)
+  // each other's entries with equivalent ones (same node family and node counts)
   for (size_t dim = 0; dim < unitNodeTable_.nDim(); dim++) {
     for (LvlType lvl = 0; lvl <= unitNodeTable_.maxLvl(dim); lvl++) {
       const size_t row = unitNodeTable_.row(dim, lvl);
       rowsBySize_[row] = {dim, lvl};
-      rules_[row] = genInstr.getNodeGenFuncForDim(dim)->getQuadRule(unitNodeTable_.nNodes(dim, lvl),
-                                                                    lvl >= boundaryLvlOffset);
+      rules_[row] = genInstr.getNodeFamilyForDim(dim)->getQuadRule(unitNodeTable_.nNodes(dim, lvl),
+                                                                   lvl >= boundaryLvlOffset);
     }
   }
 

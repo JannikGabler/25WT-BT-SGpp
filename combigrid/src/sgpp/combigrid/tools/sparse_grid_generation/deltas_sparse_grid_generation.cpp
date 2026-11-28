@@ -3,9 +3,9 @@
 // use, please see the copyright notice provided with SG++ or at
 // sgpp.sparsegrids.org
 
-#include <sgpp/combigrid/functions/node_generation_functions/node_generation_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/sg_gen_instruction.hpp>
+#include <sgpp/combigrid/node_families/node_family.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <vector>
@@ -25,7 +25,7 @@ namespace deltas_sparse_grid_generation {
 
 std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const DeltasSparseGrid& deltasSparseGrid) {
   const size_t nDim = deltasSparseGrid.nDim();
-  const std::vector<NodeGenFunc*>& nodeGenFuncs = deltasSparseGrid.getGenInstr().getNodeGenFuncs();
+  const std::vector<NodeFamily*>& nodeFamilies = deltasSparseGrid.getGenInstr().getNodeFamilies();
   const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs =
       deltasSparseGrid.getGenInstr().getLvl2GPCntFuncs();
 
@@ -33,7 +33,7 @@ std::vector<NodeIdxLvlMapFunc> compNodeIdxLvlMapFuncs(const DeltasSparseGrid& de
 
   for (size_t dim = 0; dim < nDim; dim++) {
     nodeIdxLvlMapFuncs[dim] =
-        nodeGenFuncs[dim]->getNodeIdxMapFromDeltaTGLvlToRegularLvl(lvl2GPCntFuncs[dim]);
+        nodeFamilies[dim]->getNodeIdxMapFromDeltaTGLvlToRegularLvl(lvl2GPCntFuncs[dim]);
   }
 
   return nodeIdxLvlMapFuncs;

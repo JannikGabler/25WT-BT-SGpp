@@ -141,7 +141,7 @@ double globalKernelTG(const SourceFunc& f, const NodesPerDim& unit, const NodesP
   return collapseLaterDims(unit, rule, q, cnt, s);
 }
 
-/// 1D rules of the operator: the interpolation methods of the node generation functions.
+/// 1D rules of the operator: the interpolation methods of the node families.
 class ProductionRule {
  public:
   explicit ProductionRule(const std::vector<const InterpolationMethod*>& methods)

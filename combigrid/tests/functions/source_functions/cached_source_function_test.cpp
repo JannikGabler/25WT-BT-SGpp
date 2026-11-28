@@ -46,9 +46,6 @@
 #include <sgpp/base/exception/dependency_exception.hpp>
 #include <sgpp/base/exception/file_exception.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/clenshaw_curtis_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/equidistant_node_generation_function_getter.hpp>
-#include <sgpp/combigrid/functions/node_generation_functions/getter/first_type_chebyshev_node_generation_function_getter.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/cached_vector_source_function.hpp>
 #include <sgpp/combigrid/functions/source_functions/caching/source_function_cache.hpp>
@@ -57,11 +54,14 @@
 #include <sgpp/combigrid/functions/source_functions/vector_source_function.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
+#include <sgpp/combigrid/node_families/getter/clenshaw_curtis_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
+#include <sgpp/combigrid/node_families/getter/first_type_chebyshev_nodes_getter.hpp>
 #include <sgpp/combigrid/operators/global_interpolation/global_interpolation.hpp>
 #include <sgpp/combigrid/operators/linear_interpolation/linear_interpolation.hpp>
 #include <sgpp/combigrid/operators/quadrature/deltas_sparse_grid_quadrature.hpp>
 #include <sgpp/combigrid/operators/quadrature/quadrature.hpp>
-#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sg_gen_instruction.hpp>
+#include <sgpp/combigrid/sparse_grid_generation_instructions/complete_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/defines/dependencies_defines.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -82,7 +82,7 @@ using sgpp::combigrid::CompleteSGGenInstr;
 using sgpp::combigrid::DeltasSparseGrid;
 using sgpp::combigrid::HyperCubeArea;
 using sgpp::combigrid::LvlType;
-using sgpp::combigrid::NodeGenFunc;
+using sgpp::combigrid::NodeFamily;
 using sgpp::combigrid::SourceFunc;
 using sgpp::combigrid::SourceFuncCache;
 using sgpp::combigrid::SourceFuncCacheConfig;
@@ -185,10 +185,10 @@ class Counted {
 
 /// A sparse grid of one configuration (and its deltas sparse grid for nested node families).
 struct Problem {
-  Problem(NodeGenFunc* nodes, const LvlType boundary, const size_t nDim, const LvlType maxLvl,
+  Problem(NodeFamily* nodes, const LvlType boundary, const size_t nDim, const LvlType maxLvl,
           const HyperCubeArea& domain, const bool withQuadrature)
       : genInstr(maxLvl, nDim), quadrature(withQuadrature) {
-    genInstr.setNodeGenFunc(nodes);
+    genInstr.setNodeFamily(nodes);
     genInstr.setLvl2GPCntFunc(sgpp::combigrid::doublingLvl2GPCntFunction);
     genInstr.setBoundaryLevelOffset(boundary);
     genInstr.setDomain(domain);
@@ -252,10 +252,10 @@ struct Problem {
 /// offsets 0 / 1, unit and shifted domains, d = 1-3).
 template <typename Check>
 void forEachProblem(const Check& check) {
-  const std::vector<std::pair<NodeGenFunc*, bool>> families{
-      {sgpp::combigrid::getEquidistantNodeGenFunc(), true},
-      {sgpp::combigrid::getClenshawCurtisNodeGenFunc(), true},
-      {sgpp::combigrid::getFirstTypeChebyshevNodeGenFunc(), false}};  // no quadrature rule
+  const std::vector<std::pair<NodeFamily*, bool>> families{
+      {sgpp::combigrid::getEquidistantNodes(), true},
+      {sgpp::combigrid::getClenshawCurtisNodes(), true},
+      {sgpp::combigrid::getFirstTypeChebyshevNodes(), false}};  // no quadrature rule
   for (const auto& [nodes, withQuadrature] : families) {
     for (const LvlType boundary : {0u, 1u}) {
       for (const size_t nDim : {1, 2, 3}) {
@@ -329,8 +329,7 @@ BOOST_AUTO_TEST_CASE(cached_vector_equals_uncached_bitwise) {
 BOOST_AUTO_TEST_CASE(cached_results_at_many_threads) {
   // At several threads the reduction order varies from call to call; the values the cache
   // returns are those of the function, so results agree up to round-off and no point is lost.
-  const Problem problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 4, 5, shiftedDomain(4),
-                        true);
+  const Problem problem(sgpp::combigrid::getClenshawCurtisNodes(), 1, 4, 5, shiftedDomain(4), true);
   const std::vector<double> plain = problem.run(SourceFunc(scalarFunc));
   const CachedSourceFunc cached(scalarFunc);
   for (size_t round = 0; round < 3; round++) {
@@ -349,8 +348,8 @@ BOOST_AUTO_TEST_CASE(values_are_reused_across_operators) {
   // All operators map the grid points with the same arithmetic (tools::mapToDomain), so after a
   // quadrature every point of global interpolation (grid points) is a hit, also on a shifted
   // domain; SG and DSG quadrature evaluate the same points.
-  for (NodeGenFunc* nodes : {sgpp::combigrid::getEquidistantNodeGenFunc(),
-                             sgpp::combigrid::getClenshawCurtisNodeGenFunc()}) {
+  for (NodeFamily* nodes :
+       {sgpp::combigrid::getEquidistantNodes(), sgpp::combigrid::getClenshawCurtisNodes()}) {
     for (const LvlType boundary : {0u, 1u}) {
       const Problem problem(nodes, boundary, 3, 4, shiftedDomain(3), true);
       Counted counted(scalarFunc);
@@ -380,8 +379,7 @@ BOOST_AUTO_TEST_CASE(values_are_reused_across_operators) {
 }
 
 BOOST_AUTO_TEST_CASE(statistics_count_lookups_misses_and_operator_calls) {
-  const Problem problem(sgpp::combigrid::getEquidistantNodeGenFunc(), 0, 3, 4, shiftedDomain(3),
-                        true);
+  const Problem problem(sgpp::combigrid::getEquidistantNodes(), 0, 3, 4, shiftedDomain(3), true);
   Counted plainCount(scalarFunc);
   problem.run(SourceFunc(plainCount.callable()));
 
@@ -405,8 +403,7 @@ BOOST_AUTO_TEST_CASE(statistics_count_lookups_misses_and_operator_calls) {
 
 BOOST_AUTO_TEST_CASE(memory_limit_stops_inserting) {
   // Limit 0: nothing is stored, every miss is rejected, results unchanged.
-  const Problem problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 0, 3, 4, shiftedDomain(3),
-                        true);
+  const Problem problem(sgpp::combigrid::getClenshawCurtisNodes(), 0, 3, 4, shiftedDomain(3), true);
   withThreads(1, [&problem]() {
     const std::vector<double> reference = problem.run(SourceFunc(scalarFunc));
     const CachedSourceFunc cached(scalarFunc, SourceFuncCacheConfig{.memoryLimit = 0});
@@ -556,8 +553,7 @@ BOOST_AUTO_TEST_CASE(misuse_is_rejected_or_bypasses_the_cache) {
 }
 
 BOOST_AUTO_TEST_CASE(any_shard_count_gives_the_same_results) {
-  const Problem problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 3, 4,
-                        shiftedDomain(3), true);
+  const Problem problem(sgpp::combigrid::getClenshawCurtisNodes(), 1, 3, 4, shiftedDomain(3), true);
   withThreads(1, [&problem]() {
     const std::vector<double> plain = problem.run(SourceFunc(scalarFunc));
     size_t entries = 0;
@@ -729,7 +725,7 @@ SourceFuncCacheConfig withSmallMemory(SourceFuncCacheConfig config) {
 
 /// The test grid of the storage cases (3D, Clenshaw-Curtis, boundary, shifted domain).
 Problem storageProblem() {
-  return Problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 3, 4, shiftedDomain(3), true);
+  return Problem(sgpp::combigrid::getClenshawCurtisNodes(), 1, 3, 4, shiftedDomain(3), true);
 }
 
 }  // namespace
@@ -890,8 +886,7 @@ BOOST_AUTO_TEST_CASE(crash_inside_an_operator_call_keeps_the_file_valid) {
   const TestDir dir;
   const std::string file = dir.file("values");
   const Problem small = storageProblem();
-  const Problem large(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 3, 7, shiftedDomain(3),
-                      true);
+  const Problem large(sgpp::combigrid::getClenshawCurtisNodes(), 1, 3, 7, shiftedDomain(3), true);
   runAndKill([&]() {
     std::atomic<size_t> evaluations{0};
     const CachedSourceFunc cached(
@@ -1060,8 +1055,7 @@ BOOST_AUTO_TEST_CASE(shared_cache_and_concurrent_operator_calls) {
   // used by concurrent operator calls of 4 threads with 4 OpenMP threads each.
   const TestDir dir;
   const std::string file = dir.file("values");
-  const Problem problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 4, 5, shiftedDomain(4),
-                        true);
+  const Problem problem(sgpp::combigrid::getClenshawCurtisNodes(), 1, 4, 5, shiftedDomain(4), true);
   const double reference = sgpp::combigrid::quadrature(SourceFunc(scalarFunc), *problem.sg);
   {
     auto cache = std::make_shared<SourceFuncCache>(withSmallMemory(persistent(file)));
@@ -1099,8 +1093,7 @@ BOOST_AUTO_TEST_CASE(shared_cache_and_concurrent_operator_calls) {
 BOOST_AUTO_TEST_CASE(spilling_at_many_threads) {
   const TestDir dir;
   const ScopedTmpDir tmp(dir.file(""));
-  const Problem problem(sgpp::combigrid::getClenshawCurtisNodeGenFunc(), 1, 4, 5, shiftedDomain(4),
-                        true);
+  const Problem problem(sgpp::combigrid::getClenshawCurtisNodes(), 1, 4, 5, shiftedDomain(4), true);
   const std::vector<double> plain = problem.run(SourceFunc(scalarFunc));
   Counted counted(scalarFunc);
   const CachedSourceFunc cached(counted.callable(), withSmallMemory(temporary()));
