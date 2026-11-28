@@ -33,7 +33,7 @@ namespace {
  * Returns the Lagrange basis polynomials of the 1D @p nodes evaluated at @p x:
  * L_i(x) = product over k != i of (x - x_k) / (x_i - x_k).
  */
-base::DataVector lagrangeBasis(const double x, const base::DataVector& nodes) {
+base::DataVector lagrangeBasis(const double x, const std::span<const double> nodes) {
   base::DataVector basis(nodes.size(), 1.0);
 
   for (size_t i = 0; i < nodes.size(); i++) {
@@ -75,7 +75,7 @@ base::DataVector interpolateTensorGrid(const VectorSourceFunc& sourceFunc,
   std::vector<base::DataVector> basis1D;
 
   for (size_t dim = 0; dim < unitTG.nDim(); dim++) {
-    basis1D.push_back(lagrangeBasis(unitPoint[dim], unitTG.nodeVectorInDim(dim)));
+    basis1D.push_back(lagrangeBasis(unitPoint[dim], unitTG.nodeSpanInDim(dim)));
   }
 
   base::DataVector tgResult(sourceFunc.nOutputs());

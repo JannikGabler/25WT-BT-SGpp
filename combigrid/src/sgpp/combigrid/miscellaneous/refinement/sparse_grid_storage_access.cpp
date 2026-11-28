@@ -19,14 +19,6 @@ uint64_t SparseGridStorageAccess::storageVersion(const SparseGridBase& grid) noe
   return grid.storageVersion_;
 }
 
-NodeTable& SparseGridStorageAccess::unitNodeTable(SparseGridBase& grid) noexcept {
-  return grid.unitNodeTable_;
-}
-
-NodeTable& SparseGridStorageAccess::domainNodeTable(SparseGridBase& grid) noexcept {
-  return grid.domainNodeTable_;
-}
-
 void SparseGridStorageAccess::clearCrossCallOperatorData(const SparseGridBase& grid) {
   grid.clearCrossCallOperatorDataCache();
 }

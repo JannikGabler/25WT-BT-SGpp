@@ -17,6 +17,12 @@ Per point (details: `results/WP-90/points.md`):
   (+ alias `SecondTypeChebyshevNodes`), `FirstTypeChebyshevNodes`, getters `get*Nodes()`, setup
   `set/getNodeFamily(ForDim)` / `set/getNodeFamilies` / `getUniqueNodeFamilies`, Python `NodeFamilyVector`;
   files moved to a top-level `node_families/`. Protected files (6) edited and rehashed by the owner.
+- **P3** (owner; node storage): `NodeStorage` (shared, lazily generated, reference-counted 1D node rows; key
+  `NodeRowKey`; default `NodeStorage::global()`; thread-safe; C++ only) + non-owning `NodeTable` (span +
+  `shared_ptr` per row); rows stored with boundary nodes (views without them), domain rows on [0, 1] = unit
+  rows; `SparseGridSetup::get/setNodeStorage` (not in `==`, hidden from Python); `genNodeTables` replaces
+  `genUnitNodeTable` / `mapOntoDomain`; refinement copies row handles. Bitwise unchanged; WP-58's memory
+  gain (sg d2 L20 grid 67 → 34 MB) and faster unit-cube generation (up to 1.9x).
 - **P5** (owner): unused FNV-1a ids removed (`NodeFamily::id`, `QuadRule::id`, `InterpolationMethod::id`,
   `tools/hashing/fnv_1a_hash.hpp`); `getBarycentricFormula()` is one static instance instead of a
   mutex-guarded map per node family (owner).

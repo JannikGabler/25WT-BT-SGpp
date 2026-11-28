@@ -19,8 +19,8 @@ namespace combigrid {
 
 DeltasSparseGrid::DeltasSparseGrid(const SGGenInstr& genInstr)
     : SparseGridBase(static_cast<const SparseGridSetup&>(genInstr)) {
-  // Checked up front: the node lists are generated in an OpenMP parallel region, which the
-  // exception thrown by the delta node generation for non-nested nodes cannot leave.
+  // Checked up front for a clear message (the delta node generation of non-nested nodes throws
+  // too).
   if (!genInstr.areNodesOfAllDimsNested()) {
     throw std::invalid_argument(
         "DeltasSparseGrid: The nodes have to be nested in every dimension w.r.t. the "
@@ -28,12 +28,11 @@ DeltasSparseGrid::DeltasSparseGrid(const SGGenInstr& genInstr)
   }
 
   std::pair<LvlMIVec, std::vector<CTCoeffType>> mis = genInstr.genFullMIVecWithCoeffs();
-  NodeTable unitNodeTable =
-      tools::node_table_generation::genUnitNodeTable(genInstr, mis.first, true);
-  NodeTable domainNodeTable = tools::node_table_generation::mapOntoDomain(genInstr, unitNodeTable);
+  std::pair<NodeTable, NodeTable> nodeTables =
+      tools::node_table_generation::genNodeTables(genInstr, mis.first, true);
 
-  setStorage(std::move(mis.first), std::move(mis.second), std::move(domainNodeTable),
-             std::move(unitNodeTable));
+  setStorage(std::move(mis.first), std::move(mis.second), std::move(nodeTables.second),
+             std::move(nodeTables.first));
 }
 
 /// @}

@@ -5,12 +5,13 @@
 
 /**
  * @file sparse_grid_setup.hpp
- * @brief The setup of a sparse grid: domain, 1D node families, growth functions and boundary
- * level offset.
+ * @brief The setup of a sparse grid: domain, 1D node families, growth functions, boundary
+ * level offset and node storage.
  */
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <utility>
@@ -19,18 +20,22 @@
 namespace sgpp {
 namespace combigrid {
 
+// Forward declaration
+class NodeStorage;
+
 /**
  * @brief Everything that defines a sparse grid apart from its tensor grids: the domain, the 1D
  * node family and the level-to-grid-point-count (growth) function of every dimension and the
- * boundary level offset.
+ * boundary level offset; plus the @c NodeStorage the grid takes its 1D node lists from.
  *
  * Generation instructions (@c SGGenInstr) derive from this class and add the recipe for the level
  * multi-indices; a grid stores a copy of the setup of the instruction it was built from
  * (@c SparseGridBase::getSetup) and does not refer to the instruction afterwards. A value type
- * (copyable, compared member-wise).
+ * (copyable; compared member-wise except for the node storage, which does not change the nodes).
  *
  * Default state: domain @f$[0,1]^{\mathrm{nDim}}@f$, equidistant nodes, doubling growth
- * (@c doublingLvl2GPCntFunction), boundary level offset @c 0.
+ * (@c doublingLvl2GPCntFunction), boundary level offset @c 0, the global node storage
+ * (@c NodeStorage::global).
  */
 class SparseGridSetup {
  public:
@@ -78,6 +83,9 @@ class SparseGridSetup {
   /// @brief Returns the level-to-grid-point-count growth function of dimension @p dim.
   Lvl2GPCntFunc getLvl2GPCntFuncForDim(size_t dim) const;
 
+  /// @brief Returns the storage the grid takes its 1D node lists from.
+  const std::shared_ptr<NodeStorage>& getNodeStorage() const;
+
   /// @}
 
   /// @name Setters
@@ -106,6 +114,14 @@ class SparseGridSetup {
   void setLvl2GPCntFunc(Lvl2GPCntFunc lvl2GPCntFunc);
   /// @brief Replaces the per-dimension growth functions (at most @ref nDim are copied).
   void setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GPCntFuncs);
+
+  /**
+   * @brief Sets the storage the grid takes its 1D node lists from (default:
+   * @c NodeStorage::global; another storage keeps the grids' node lists apart from those of other
+   * grids).
+   * @throws std::invalid_argument if @p nodeStorage is null.
+   */
+  void setNodeStorage(std::shared_ptr<NodeStorage> nodeStorage);
 
   /// @}
 
@@ -142,8 +158,8 @@ class SparseGridSetup {
   /// @name Operators
   /// @{
 
-  /// @brief Returns whether both setups are equal in every member.
-  bool operator==(const SparseGridSetup& other) const = default;
+  /// @brief Returns whether both setups are equal in every member except the node storage.
+  bool operator==(const SparseGridSetup& other) const;
 
   /// @}
 
@@ -152,6 +168,7 @@ class SparseGridSetup {
   HyperCubeArea domain;                       ///< Per-dimension @c (min, max) intervals.
   std::vector<NodeFamily*> nodeFamilies;      ///< Per-dimension node generators (non-owning).
   std::vector<Lvl2GPCntFunc> lvl2GPCntFuncs;  ///< Per-dimension growth functions.
+  std::shared_ptr<NodeStorage> nodeStorage;   ///< Storage of the 1D node lists.
 };
 
 }  // namespace combigrid

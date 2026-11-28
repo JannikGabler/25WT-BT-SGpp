@@ -43,7 +43,7 @@ bool synchronizeState(const SparseGridBase& grid, misc::RefinementState& state, 
 LvlType nodeCapacity(const misc::RefinementState& state, LvlType maxLevel);
 
 /**
- * @brief Begins a call: drops the grid's cross-call operator data and moves the rows of its node
+ * @brief Begins a call: drops the grid's cross-call operator data and copies the rows of its node
  * tables into @p nodes (the grid is not usable until @ref endHandOver).
  */
 void beginHandOver(SparseGridBase& grid, misc::RefinementNodeStorage& nodes);
@@ -52,7 +52,7 @@ void beginHandOver(SparseGridBase& grid, misc::RefinementNodeStorage& nodes);
  * @brief Ends a call. If the call changed the grid (@p changed), the grid gets the multi-indices of
  * the state's grid (active and old) with a coefficient other than 0, in colexicographic order (the
  * order of a grid built by @c MIVecSGGenInstr from the same index set), and compact node tables
- * (a new storage version). Otherwise the rows are moved back into the grid's tables.
+ * (a new storage version). Otherwise the grid stays as it is.
  * @param grid    The grid.
  * @param state   State of the refinement (records the grid's storage version).
  * @param nodes   Node tables of the call.

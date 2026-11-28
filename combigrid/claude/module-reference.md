@@ -25,7 +25,13 @@ grids/
   tensor_grid            stand-alone anisotropic tensor grid (per-dim node lists)
   tensor_grid_view       TensorGridView: a tensor grid of a sparse grid (levels + shared node table)
   node_table             NodeTable: 1D node lists once per (dim, level); dims with the same nodes /
-                         counts (and, on the domain, interval) share rows (WP-18)
+                         counts (and, on the domain, interval) share rows (WP-18); since WP-90 a
+                         non-owning view (span + shared_ptr per row) into a NodeStorage
+  node_storage           NodeStorage: shared, lazily generated 1D node lists ("rows") of all grids
+                         of a setup (default NodeStorage::global(); weak_ptr map + pending futures,
+                         thread-safe, rows freed with their last holder; WP-90)
+  node_row_key           NodeRowKey: family + inner count (regular) or growth + level (delta) +
+                         interval (bitwise; [0, 1] = unit row); rows include the boundary nodes
   sparse_grid_base       common base, struct of arrays: levels (LvlMIVec), coefficients, two
                          NodeTables (domain, unit), cached maxima, cross-call operator data
                          cache (public clear / entries / bytes); proxy iterator (not SWIG-wrapped)
@@ -187,7 +193,11 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
   node list on the domain / on [0,1], same levels and counts, `nodes(dim, lvl)` /
   `nNodes(dim, lvl)`; SG: regular nodes, DSG: delta nodes; lists shared by dims with equal node
   family and count function, on the domain also equal interval; both built eagerly at
-  construction, the domain table as `mapToDomain` copy of the unit one). Every tensor-grid accessor
+  construction by `node_table_generation::genNodeTables` from rows of the setup's `NodeStorage`
+  (WP-90): a row = the node list **with** boundary nodes (`NodeRowKey`), the table views
+  `[1, n−1)` at levels without them; domain rows are `mapToDomain` copies of the unit row, on
+  [0, 1] the unit row itself (shared memory); grids with the same nodes share rows, which are freed
+  with their last holder; `NodeTable` copies share rows). Every tensor-grid accessor
   names its coordinates, there is no default iteration: `getDomainTensorGrid(i | mi)` /
   `getUnitTensorGrid(i | mi)` (by mi: iterator into the matching range), ranges
   `domainTensorGrids()` / `unitTensorGrids()` (`TensorGridRange` = `std::ranges::subrange` of the
@@ -488,7 +498,8 @@ optimization-phase harness, see [combigrid/perf/README.md](../perf/README.md)).
 
 - **Two domains**: weights and interpolation math live on [0,1]^d. The user domain Ω = ∏[a_k, b_k]
   enters (1) in the domain node table (since WP-18 `getDomainNodeTable()` holds `tools::mapToDomain(u,
-  a_k, b_k−a_k)` = `std::fma` of the unit nodes of `getUnitNodeTable()`, bitwise the evaluated
+  a_k, b_k−a_k)` = `std::fma` of the unit nodes of `getUnitNodeTable()` (since WP-90 rows of the
+  `NodeStorage`; on [0, 1] the unit rows themselves), bitwise the evaluated
   points; weights, basis values and interpolation cells are computed from the unit table) and (2) as the
   factor |Ω| of quadrature results. `SourceFunc` + `SGGenInstr::setDomain()` handle it.
 - **Node generation**: `NodeFamily` receives the number of *inner* nodes; `SGGenInstr` appends

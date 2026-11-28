@@ -10,7 +10,6 @@
  */
 #pragma once
 
-#include <cstdint>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
@@ -24,13 +23,14 @@ namespace misc {
 
 /**
  * @brief The unit and domain node tables of a grid during a refinement call, laid out for every
- * level up to a fixed capacity, so that rows can be generated while other threads read existing
- * ones (no row object moves; a tensor-grid view stays valid).
+ * level up to a fixed capacity, so that rows can be set while other threads read existing ones
+ * (the table entries never move; a tensor-grid view stays valid).
  *
- * At the start of a call the rows of the grid's tables are moved in (@ref adopt), new rows are
- * generated when a tensor grid needs them (@ref ensureRows, serial), and at the end compact
- * tables are handed back to the grid (@ref release). Rows are generated with the functions that
- * build a grid's tables, so they equal the rows of a grid built from the same index set bitwise.
+ * At the start of a call the rows of the grid's tables are copied in (@ref adopt; the node lists
+ * are shared, see @c NodeTable), missing rows are taken from the grid's @c NodeStorage when a
+ * tensor grid needs them (@ref ensureRows, serial), and at the end compact tables for the grid
+ * are made (@ref release). The rows come from the same storage requests as those of a grid built
+ * from the same index set, so they are the same node lists.
  */
 class RefinementNodeStorage {
  public:
@@ -51,44 +51,36 @@ class RefinementNodeStorage {
   const NodeTable& domainTable() const noexcept { return domain_; }
 
   /**
-   * @brief Moves the rows of a grid's tables in (their levels must not exceed the capacity).
-   * @param unitTable   The grid's unit node table (its rows are left empty).
-   * @param domainTable The grid's domain node table (its rows are left empty).
+   * @brief Copies the rows of a grid's tables in (their levels must not exceed the capacity).
+   * @param unitTable   The grid's unit node table.
+   * @param domainTable The grid's domain node table.
    */
-  void adopt(NodeTable& unitTable, NodeTable& domainTable);
+  void adopt(const NodeTable& unitTable, const NodeTable& domainTable);
 
-  /**
-   * @brief Moves the rows back into a grid's tables (the inverse of @ref adopt; their levels must
-   * have rows here). The tables here are empty afterwards.
-   */
-  void giveBack(NodeTable& unitTable, NodeTable& domainTable);
-
-  /// @brief Generates the missing rows of (dimension, @p levels[dimension]), unit and domain.
+  /// @brief Sets the missing rows of (dimension, @p levels[dimension]), unit and domain.
   void ensureRows(LvlMIView levels);
 
   /**
-   * @brief Moves the rows of the levels 0 ... @p maxLvls[dim] out into compact tables with the
-   * layout of a grid's tables (all of them must have been generated or adopted).
+   * @brief Returns compact tables with the layout of a grid's tables holding the rows of the
+   * levels 0 ... @p maxLvls[dim] (all of them must have been set or adopted).
    * @return The unit and the domain node table.
    */
-  std::pair<NodeTable, NodeTable> release(const std::vector<LvlType>& maxLvls);
+  std::pair<NodeTable, NodeTable> release(const std::vector<LvlType>& maxLvls) const;
 
  private:
   /**
-   * @brief Swaps every row of @p to whose (dimension, level) @p from has with that row of
-   * @p from (rows shared by dimensions once).
+   * @brief Sets every row of @p to whose (dimension, level) @p from has to that row of @p from
+   * (the levels both tables have).
    */
-  static void moveRows(NodeTable& from, NodeTable& to);
+  static void copyRows(const NodeTable& from, NodeTable& to);
 
-  /// @brief Marks the rows of this storage's tables as absent.
-  void clearPresence();
+  /// @brief Sets the unset rows of (dimension, @p levels[dimension]) of @p table.
+  void setMissingRows(LvlMIView levels, bool onDomain, NodeTable& table) const;
 
-  SparseGridSetup setup_;               ///< Setup of the grid.
-  LvlType capacity_;                    ///< Highest level of the rows.
-  NodeTable unit_;                      ///< Unit nodes, every level up to the capacity.
-  NodeTable domain_;                    ///< Domain nodes, every level up to the capacity.
-  std::vector<uint8_t> unitPresent_;    ///< Per row of unit_: generated or adopted.
-  std::vector<uint8_t> domainPresent_;  ///< Per row of domain_: generated or adopted.
+  SparseGridSetup setup_;  ///< Setup of the grid.
+  LvlType capacity_;       ///< Highest level of the rows.
+  NodeTable unit_;         ///< Unit nodes, every level up to the capacity.
+  NodeTable domain_;       ///< Domain nodes, every level up to the capacity.
 };
 
 }  // namespace misc

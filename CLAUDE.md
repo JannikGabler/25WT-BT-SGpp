@@ -37,7 +37,8 @@ modules are irrelevant.
 Pipeline: a generation instruction (`CompleteSGGenInstr(maxLvl, nDim)` or `MIVecSGGenInstr(miVec)`
 for custom / adaptive MI sets) → `SparseGrid` (struct of arrays in `SparseGridBase`: levels
 `LvlMIVec`, coefficients, two `NodeTable`s = 1D node lists once per (dim, level), on the domain and on
-[0,1]; tensor grid i is a view `TensorGridCTDataView {mi, coefficient, tensorGrid}` with domain or unit
+[0,1], non-owning views into rows of the setup's `NodeStorage` (shared across grids, default
+`NodeStorage::global()`); tensor grid i is a view `TensorGridCTDataView {mi, coefficient, tensorGrid}` with domain or unit
 nodes: `getDomainTensorGrid(i)` / `getUnitTensorGrid(i)`, ranges `domainTensorGrids()` /
 `unitTensorGrids()`, no default iteration; `toTensorGridCTData()` copies)
 → operators `interpolate`, `interpolateLinear`, `quadrature`. A `DeltasSparseGrid` (nested nodes
@@ -184,6 +185,13 @@ covered by tests.
 - `MIVecSGGenInstr` stores a **reference** to its `LvlMIVec`: keep the vector alive as long as the
   instruction. Grids copy only the instruction's
   `SparseGridSetup` (`getSetup()`) and need neither afterwards. Python keeps it alive.
+- Node lists live in a `NodeStorage` (setup's `getNodeStorage()`, default `NodeStorage::global()`;
+  C++ only, not in Python): rows are generated on first request, shared by every grid with the same
+  nodes (key: family, inner count or delta level, interval; [0, 1] = the unit row) and freed with
+  the last `NodeTable` holding them (the storage keeps `weak_ptr`s). A row always includes the
+  boundary nodes; tables view `[1, n−1)` where a level has none. Rows never change or move;
+  `NodeTable` copies share rows. New generation of node lists goes through the storage
+  (`node_table_generation::genNodeTables` / `setRows`), never into a table directly.
 - Node getters return raw `NodeFamily*` to static singletons — never delete or wrap them.
   `getClenshawCurtisNodes()` and `getSecondTypeChebyshevNodes()` are the **same**
   singleton.

@@ -18,6 +18,7 @@
 #include <omp.h>
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/base/tools/RandomNumberGenerator.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
@@ -299,7 +300,9 @@ void checkRandomPolynomialUnitCubeND(NodeFamily* const nodes, const double relTo
 NodeTable tableWithEmptyLists() {
   NodeTable table({0, 2, 4}, {1, 1, 1}, 6);
   const size_t sizes[] = {3, 0, 0, 3, 5, 0};
-  for (size_t row = 0; row < 6; row++) table.rowNodes(row).resize(sizes[row]);
+  for (size_t row = 0; row < 6; row++) {
+    table.setRow(row, std::make_shared<const sgpp::base::DataVector>(sizes[row]));
+  }
   return table;
 }
 

@@ -83,15 +83,12 @@ LvlType nodeCapacity(const RefinementState& state, const LvlType maxLevel) {
 
 void beginHandOver(SparseGridBase& grid, RefinementNodeStorage& nodes) {
   SparseGridStorageAccess::clearCrossCallOperatorData(grid);
-  nodes.adopt(SparseGridStorageAccess::unitNodeTable(grid),
-              SparseGridStorageAccess::domainNodeTable(grid));
+  nodes.adopt(grid.getUnitNodeTable(), grid.getDomainNodeTable());
 }
 
 void endHandOver(SparseGridBase& grid, RefinementState& state, RefinementNodeStorage& nodes,
                  const bool changed) {
   if (!changed) {
-    nodes.giveBack(SparseGridStorageAccess::unitNodeTable(grid),
-                   SparseGridStorageAccess::domainNodeTable(grid));
     state.gridVersion = SparseGridStorageAccess::storageVersion(grid);
     return;
   }

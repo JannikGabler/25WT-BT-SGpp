@@ -1,0 +1,15 @@
+WP-90 P3 — ThreadSanitizer run of the shared node storage (tsan.sh, 2026-11-27)
+
+Driver: 8 std::threads build and destroy 40 SparseGrid + DeltasSparseGrid pairs each on one
+NodeStorage (CC / equi, offsets 0 / 1, unit / shifted domain, levels 2-6: overlapping rows requested,
+generated, waited for and freed concurrently; nRows() queried), a 9th thread builds 2 d2 L16 grids
+(rows large enough for the parallel OpenMP generation). Expected end state: 0 rows left (checked).
+
+1. tsan.sh <out>          (OpenMP with workers): 39 reports, all pairs with one access in an OpenMP
+   region (row generation by a libgomp worker) and one after the region's join (publication under the
+   storage mutex, reads by other threads); 38 classified "outside / other region" by
+   ../../WP-89/tsan/classify.py, 1 "other / other" = memory allocated by a worker of thread A's
+   generation, read by thread B after A published the row under the mutex (A's join is invisible
+   to TSan). libgomp is not instrumented: fork / join false positives.
+2. tsan.sh <out> serial   (OMP_NUM_THREADS=1: no libgomp workers, every report would be real):
+   0 reports, 0 rows left.

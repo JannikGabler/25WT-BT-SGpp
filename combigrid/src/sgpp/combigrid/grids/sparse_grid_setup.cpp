@@ -4,11 +4,14 @@
 // sgpp.sparsegrids.org
 
 #include <algorithm>
+#include <memory>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
+#include <sgpp/combigrid/grids/node_storage.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/node_families/getter/equidistant_nodes_getter.hpp>
 #include <sgpp/combigrid/node_families/node_family.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -19,7 +22,8 @@ SparseGridSetup::SparseGridSetup(const size_t nDim)
     : boundaryLevelOffset(0),
       domain(nDim, {0, 1}),
       nodeFamilies(nDim, getEquidistantNodes()),
-      lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction) {}
+      lvl2GPCntFuncs(nDim, doublingLvl2GPCntFunction),
+      nodeStorage(NodeStorage::global()) {}
 
 size_t SparseGridSetup::nDim() const { return domain.size(); }
 
@@ -88,6 +92,15 @@ void SparseGridSetup::setLvl2GPCntFuncs(const std::vector<Lvl2GPCntFunc>& lvl2GP
   std::copy_n(lvl2GPCntFuncs.begin(), nElemsToCopy, this->lvl2GPCntFuncs.begin());
 }
 
+const std::shared_ptr<NodeStorage>& SparseGridSetup::getNodeStorage() const { return nodeStorage; }
+
+void SparseGridSetup::setNodeStorage(std::shared_ptr<NodeStorage> nodeStorage) {
+  if (nodeStorage == nullptr) {
+    throw std::invalid_argument("The node storage is null.");
+  }
+  this->nodeStorage = std::move(nodeStorage);
+}
+
 void SparseGridSetup::resize(const size_t newDimCnt) {
   domain.resize(newDimCnt);
   nodeFamilies.resize(newDimCnt);
@@ -128,6 +141,12 @@ bool SparseGridSetup::areNodesOfAllDimsNested() const {
   }
 
   return true;
+}
+
+bool SparseGridSetup::operator==(const SparseGridSetup& other) const {
+  // The node storage is left out: every storage generates the same nodes
+  return boundaryLevelOffset == other.boundaryLevelOffset && domain == other.domain &&
+         nodeFamilies == other.nodeFamilies && lvl2GPCntFuncs == other.lvl2GPCntFuncs;
 }
 
 }  // namespace combigrid

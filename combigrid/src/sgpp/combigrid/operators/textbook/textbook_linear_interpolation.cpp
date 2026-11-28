@@ -38,7 +38,7 @@ namespace {
  * if the first node >= x equals x up to 1e-12; (0, first node) below all nodes; (last node, 1)
  * above all nodes; else the two nodes around x.
  */
-std::pair<double, double> enclosingCell(const double x, const base::DataVector& nodes) {
+std::pair<double, double> enclosingCell(const double x, const std::span<const double> nodes) {
   const auto upper = std::ranges::lower_bound(nodes, x);  // The first node >= x
 
   if (upper == nodes.end()) {
@@ -80,7 +80,7 @@ base::DataVector interpolateTensorGrid(const VectorSourceFunc& sourceFunc,
   std::vector<std::pair<double, double>> cells, weights;
 
   for (size_t dim = 0; dim < nDim; dim++) {
-    cells.push_back(enclosingCell(unitPoint[dim], unitTG.nodeVectorInDim(dim)));
+    cells.push_back(enclosingCell(unitPoint[dim], unitTG.nodeSpanInDim(dim)));
     weights.push_back(linearWeights(unitPoint[dim], cells[dim]));
   }
 

@@ -27,12 +27,6 @@ struct SparseGridStorageAccess {
   /// @brief Returns the process-wide unique number of the grid's current storage.
   static uint64_t storageVersion(const SparseGridBase& grid) noexcept;
 
-  /// @brief Returns the grid's unit node table for modification (its rows may be moved out).
-  static NodeTable& unitNodeTable(SparseGridBase& grid) noexcept;
-
-  /// @brief Returns the grid's domain node table for modification (its rows may be moved out).
-  static NodeTable& domainNodeTable(SparseGridBase& grid) noexcept;
-
   /// @brief Drops the grid's cross-call operator data (it refers to the storage being changed).
   static void clearCrossCallOperatorData(const SparseGridBase& grid);
 

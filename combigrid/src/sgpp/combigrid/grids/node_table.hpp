@@ -5,13 +5,14 @@
 
 /**
  * @file node_table.hpp
- * @brief The 1D node lists of a sparse grid, one per (dimension, level), stored once and shared
- * by all tensor grids.
+ * @brief The 1D node lists of a sparse grid, one per (dimension, level), shared by all tensor
+ * grids (the lists themselves live in a @c NodeStorage).
  */
 #pragma once
 
 #include <cassert>
 #include <cstddef>
+#include <memory>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
@@ -20,6 +21,7 @@
 namespace sgpp {
 namespace combigrid {
 
+// Forward declaration
 class TensorGridView;
 
 /**
@@ -34,8 +36,11 @@ class TensorGridView;
  * the delta nodes (see @c DeltasSparseGrid).
  *
  * Every dimension has the rows of the levels @f$0, \ldots,@f$ @ref maxLvl "maxLvl(k)". Dimensions
- * with the same node lists share their rows (see @ref sharesRowsWith), so every distinct list is
- * stored once.
+ * with the same node lists share their rows (see @ref sharesRowsWith).
+ *
+ * The table does not own node lists: a row is a view into a list of a @c NodeStorage (all nodes,
+ * or those without the boundary nodes) together with a pointer that keeps that list alive. Copies
+ * of a table share the lists; rows never move.
  *
  * A sparse grid has two tables with the same levels and node counts (see @c SparseGridBase): the
  * nodes on the unit interval, as the node families generate them, and the nodes in
@@ -55,8 +60,7 @@ class NodeTable {
 
   /**
    * @brief Constructs a table with the given layout and empty rows, which are filled in through
-   * @ref rowNodes (each row is a node list of its own, so that the rows can be allocated and
-   * generated in parallel).
+   * @ref setRow.
    *
    * @param firstRowOfDim Per dimension: the row of level 0 (dimensions sharing their rows have the
    *                      same entry).
@@ -90,6 +94,18 @@ class NodeTable {
     return static_cast<GPCntType>(rows_[row(dim, lvl)].size());
   }
 
+  /// @brief Returns the nodes of row @p row.
+  std::span<const double> rowSpan(const size_t row) const noexcept {
+    assert(row < nRows());
+    return rows_[row];
+  }
+
+  /// @brief Returns the node list that row @p row views (null for a row not set).
+  const std::shared_ptr<const base::DataVector>& rowOwner(const size_t row) const noexcept {
+    assert(row < nRows());
+    return owners_[row];
+  }
+
   /// @brief Returns the first of the @ref nNodes "nNodes(dim, lvl)" nodes of (dimension @p dim,
   /// level @p lvl).
   const double* nodes(const size_t dim, const LvlType lvl) const noexcept {
@@ -109,7 +125,7 @@ class NodeTable {
   /// @brief Returns the number of rows (distinct node lists).
   size_t nRows() const noexcept { return rows_.size(); }
 
-  /// @brief Returns the number of stored nodes (of all rows).
+  /// @brief Returns the number of nodes of all rows (a row shared by dimensions counted once).
   size_t nStoredNodes() const noexcept;
 
   /// @}
@@ -118,11 +134,17 @@ class NodeTable {
   /// @{
 
   /**
-   * @brief Returns the node list of row @p row, to be sized and filled in by the generation of a
-   * sparse grid.
-   * @param row Row index in @c [0, nRows()).
+   * @brief Sets row @p row to @p nodes, a contiguous part of the node list @p owner (which the
+   * table keeps alive).
+   * @param row   Row index in @c [0, nRows()).
+   * @param owner Node list (e.g. a row of a @c NodeStorage).
+   * @param nodes Nodes of the row, within @p owner.
    */
-  base::DataVector& rowNodes(size_t row) noexcept;
+  void setRow(size_t row, std::shared_ptr<const base::DataVector> owner,
+              std::span<const double> nodes) noexcept;
+
+  /// @brief Sets row @p row to all nodes of @p owner (see the other overload).
+  void setRow(size_t row, std::shared_ptr<const base::DataVector> owner) noexcept;
 
   /// @}
 
@@ -130,7 +152,8 @@ class NodeTable {
   /// @{
 
   /**
-   * @brief Tests for equality: the same layout and bitwise the same nodes.
+   * @brief Tests for equality: the same layout and bitwise the same nodes (wherever they are
+   * stored).
    * @param other Node table to compare against.
    */
   bool operator==(const NodeTable& other) const;
@@ -141,9 +164,11 @@ class NodeTable {
   /// The views read the rows directly (without the indirection through the vectors).
   friend class TensorGridView;
 
-  std::vector<size_t> firstRowOfDim_;   ///< Per dimension: row of level 0.
-  std::vector<LvlType> maxLvlOfDim_;    ///< Per dimension: maximum level.
-  std::vector<base::DataVector> rows_;  ///< Per row: its node list.
+  std::vector<size_t> firstRowOfDim_;          ///< Per dimension: row of level 0.
+  std::vector<LvlType> maxLvlOfDim_;           ///< Per dimension: maximum level.
+  std::vector<std::span<const double>> rows_;  ///< Per row: its nodes.
+  /// Per row: the node list its nodes belong to (keeps them alive).
+  std::vector<std::shared_ptr<const base::DataVector>> owners_;
 };
 
 }  // namespace combigrid

@@ -11,10 +11,12 @@
 
 #include <cstddef>
 #include <sgpp/base/datatypes/DataVector.hpp>
+#include <sgpp/combigrid/grids/node_row_key.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_setup.hpp>
 #include <sgpp/combigrid/type_defs.hpp>
 #include <span>
+#include <utility>
 #include <vector>
 
 namespace sgpp {
@@ -25,32 +27,25 @@ namespace tools {
 namespace node_table_generation {
 
 /**
- * @brief Generates the node table of the tensor grids of @p levels on the unit interval: per
- * dimension the node lists of the levels 0, ..., (maximum level of the dimension in @p levels), as
- * the node family of the dimension generates them. Dimensions with the same
- * node family and level-to-grid-point-count function share their lists.
+ * @brief Generates the node tables of the tensor grids of @p levels: per dimension the node lists
+ * of the levels 0, ..., (maximum level of the dimension in @p levels), on the unit interval and on
+ * the domain, taken from the node storage of @p setup (generated there if missing). On the unit
+ * interval, dimensions with the same node family and level-to-grid-point-count function share
+ * their rows; on the domain, only those with the same interval too.
  *
- * @param setup   Setup of the grid (nodes, counts, boundary level offset).
+ * @param setup      Setup of the grid (nodes, counts, boundary level offset, domain, storage).
  * @param levels     Level multi-indices of the tensor grids.
  * @param deltaNodes Whether the lists are the delta nodes of the levels (@c DeltasSparseGrid) or
  *                   the regular nodes (@c SparseGrid).
+ * @return The unit and the domain node table.
  */
-NodeTable genUnitNodeTable(const SparseGridSetup& setup, const LvlMIVec& levels, bool deltaNodes);
+std::pair<NodeTable, NodeTable> genNodeTables(const SparseGridSetup& setup, const LvlMIVec& levels,
+                                              bool deltaNodes);
 
 /**
- * @brief Maps the node table @p unitNodeTable (see @ref genUnitNodeTable) onto the domain of
- * @p setup with @c tools::mapToDomain. Dimensions with the same node family,
- * level-to-grid-point-count function and domain interval share their lists.
- *
- * @param setup      Setup of the grid (the same as for @p unitNodeTable).
- * @param unitNodeTable Node table on the unit interval.
- */
-NodeTable mapOntoDomain(const SparseGridSetup& setup, const NodeTable& unitNodeTable);
-
-/**
- * @brief Returns a node table with the row layout of @ref genUnitNodeTable (@p sameDomain
- * @c false) resp. @ref mapOntoDomain (@p sameDomain @c true) for the maximum levels @p maxLvls,
- * with all rows empty (to be filled with @ref genUnitRow / @ref genDomainRow).
+ * @brief Returns a node table with the row layout of @ref genNodeTables (unit table for
+ * @p sameDomain @c false, domain table for @c true) for the maximum levels @p maxLvls, with all
+ * rows unset (to be set with @ref setRows).
  *
  * @param setup      Setup of the grid.
  * @param maxLvls    Maximum level per dimension.
@@ -60,17 +55,32 @@ NodeTable genEmptyNodeTable(const SparseGridSetup& setup, std::vector<LvlType> m
                             bool sameDomain);
 
 /**
- * @brief Writes the regular nodes of (dimension @p dim, level @p lvl) on the unit interval to
- * @p out (resized), as in @ref genUnitNodeTable.
+ * @brief Sets the rows @p tableRows of @p table to the node lists of (dimension, level)
+ * @p rowLevels (one pair per row) from the node storage of @p setup, as in @ref genNodeTables.
+ *
+ * @param setup      Setup of the grid.
+ * @param deltaNodes Delta nodes or regular nodes.
+ * @param onDomain   Nodes on the domain or on the unit interval.
+ * @param tableRows  Rows of @p table to set.
+ * @param rowLevels  Per row: its dimension and level.
+ * @param table      Node table (unit or domain layout, matching @p onDomain).
  */
-void genUnitRow(const SparseGridSetup& setup, size_t dim, LvlType lvl, base::DataVector& out);
+void setRows(const SparseGridSetup& setup, bool deltaNodes, bool onDomain,
+             std::span<const size_t> tableRows,
+             std::span<const std::pair<size_t, LvlType>> rowLevels, NodeTable& table);
 
 /**
- * @brief Writes @p unitNodes of dimension @p dim mapped onto the domain (@c tools::mapToDomain)
- * to @p out (resized), as in @ref mapOntoDomain.
+ * @brief Returns the key of the node list of (dimension @p dim, level @p lvl) in a
+ * @c NodeStorage (see @c NodeRowKey; on the unit interval unless @p onDomain).
  */
-void genDomainRow(const SparseGridSetup& setup, size_t dim, std::span<const double> unitNodes,
-                  base::DataVector& out);
+NodeRowKey rowKey(const SparseGridSetup& setup, size_t dim, LvlType lvl, bool deltaNodes,
+                  bool onDomain);
+
+/**
+ * @brief Returns whether the nodes of level @p lvl include the boundary nodes: regular nodes
+ * from the boundary level offset on, delta nodes at the offset.
+ */
+bool includesBoundary(const SparseGridSetup& setup, LvlType lvl, bool deltaNodes);
 
 /**
  * @brief Returns, per dimension, the first dimension with the same node lists (the same

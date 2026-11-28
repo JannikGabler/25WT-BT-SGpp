@@ -81,6 +81,10 @@ namespace std {
 %pythonappend sgpp::combigrid::MIVecSGGenInstr::MIVecSGGenInstr %{
   self._miVec = miVec
 %}
+// The node storage (NodeStorage) is a C++-only feature: grids built from Python always use the
+// global storage (the default of every setup).
+%ignore sgpp::combigrid::SparseGridSetup::getNodeStorage;
+%ignore sgpp::combigrid::SparseGridSetup::setNodeStorage;
 
 %include "combigrid/src/sgpp/combigrid/grids/sparse_grid_setup.hpp"
 %include "combigrid/src/sgpp/combigrid/sparse_grid_generation_instructions/sparse_grid_generation_instruction.hpp"

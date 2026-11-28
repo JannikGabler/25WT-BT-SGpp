@@ -69,10 +69,6 @@ class TensorGridView {
   /// @brief Returns the first node of dimension @p dim (@ref nGPInDim "nGPInDim(dim)" nodes).
   const double* nodesInDim(const size_t dim) const noexcept { return rows_[row(dim)].data(); }
 
-  /// TODO: Document
-  /// Note that this method copies the nodes and is therefore inefficient.
-  const base::DataVector& nodeVectorInDim(const size_t dim) const { return rows_[row(dim)]; }
-
   /// @brief Returns the nodes of dimension @p dim.
   std::span<const double> nodeSpanInDim(const size_t dim) const noexcept {
     return {nodesInDim(dim), nGPInDim(dim)};
@@ -139,10 +135,10 @@ class TensorGridView {
 
   // The rows of the node table are read through raw pointers (copied from the table at
   // construction): a node list is then two dependent loads away instead of four.
-  const LvlType* lvls_;           ///< Level multi-index (nDim_ entries).
-  size_t nDim_;                   ///< Dimensionality.
-  const size_t* firstRowOfDim_;   ///< NodeTable: per dimension, the row of level 0.
-  const base::DataVector* rows_;  ///< NodeTable: per row, its node list.
+  const LvlType* lvls_;                  ///< Level multi-index (nDim_ entries).
+  size_t nDim_;                          ///< Dimensionality.
+  const size_t* firstRowOfDim_;          ///< NodeTable: per dimension, the row of level 0.
+  const std::span<const double>* rows_;  ///< NodeTable: per row, its nodes.
 };
 
 }  // namespace combigrid

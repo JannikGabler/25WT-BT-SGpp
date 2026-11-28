@@ -58,6 +58,8 @@
 // Grids
 #include <sgpp/combigrid/grids/cross_call_operator_data_info.hpp>
 #include <sgpp/combigrid/grids/deltas_sparse_grid.hpp>
+#include <sgpp/combigrid/grids/node_row_key.hpp>
+#include <sgpp/combigrid/grids/node_storage.hpp>
 #include <sgpp/combigrid/grids/node_table.hpp>
 #include <sgpp/combigrid/grids/sparse_grid.hpp>
 #include <sgpp/combigrid/grids/sparse_grid_setup.hpp>

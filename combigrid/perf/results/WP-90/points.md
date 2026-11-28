@@ -8,8 +8,12 @@ Session start: 2026-11-27 (HEAD 182f9cd30, branch `optimizations`). Resume from 
   wants session findings that relate to an owner point reported with that point; the remaining
   candidates are reviewed by the owner after their own points.
 - P1 done and verified (§2; owner checkpoint commit). P2 done and verified; P5 (ids, owner's
-  third point) done and verified; waiting for the owner before P3 (owner 2026-11-27). Snapshots:
-  `WP-90-before`, `WP-90-p1`, `WP-90-p2`, `WP-90-p5`. Benchmarks of judged code: one run at the end
+  third point) done and verified (owner checkpoint commit); P3 (NodeStorage) done and verified
+  (in the working tree, not yet committed by the owner at the session's end); P6 (simpler
+  NodeTable) proposed, **not decided** (owner ended the session for a continuation prompt; the next
+  session waits for the owner's plan). P4 open (options in its entry below). Snapshots:
+  `WP-90-before`, `WP-90-p1`, `WP-90-p2`, `WP-90-p5`, `WP-90-p3`.
+- First session ended 2026-11-27; continuation prompt: `results/WP-90/continuation-prompt.md`. Benchmarks of judged code: one run at the end
   of the WP (owner 2026-11-27).
 - Environment at start: `verify` ✓ (40 files), `envcheck` ✓ (busy 0.3 %, boost 0, AC),
   `calibrate` 1.005 / 1.000 (e2e burst / sustained), 0.998 / 0.998 (micro).
@@ -131,6 +135,148 @@ Per point: request · options · decision · change · files · tests · measure
 - Note: `list(DataVector)` aborts in Python (no `__iter__`, reads past the end; known, WP-37) — hit
   by a first version of the check script.
 - **Status**: done (2026-11-27).
+
+### P3 — `NodeStorage` + non-owning `NodeTable`
+
+- **Decisions**: as in "P2–P4" above (D1 (b) with the `shared_ptr`s inside `NodeTable`, D2 (A), D3
+  global storage via `NodeStorage::global()` + hidden from Python + excluded from `==`, D5 names,
+  boundary rows shared).
+- **Change**:
+  - New `grids/node_row_key.{hpp,cpp}` (`NodeRowKey`: family, growth (delta only), inner count /
+    level, interval compared bitwise; `regular`, `delta`, `onInterval`, `isOnUnitInterval`, `hash`,
+    `std::hash`) and `grids/node_storage.{hpp,cpp}` (`NodeStorage`: `global()`, `getRows(keys)` /
+    `getRow`, `nRows`, `nStoredNodes`; map key → `weak_ptr` + map key → `shared_future` for rows
+    being generated; a request claims missing rows under the lock, generates them without it (OpenMP
+    `parallel for` dynamic, from `MIN_NODES_FOR_CONCURRENCY` nodes; exceptions caught per row),
+    publishes them, fulfils the promises, then waits for rows of other requests (never waits while
+    holding rows to generate → no deadlock); unit rows first, then rows on other intervals mapped
+    from them with `tools::mapToDomain`; expired entries pruned when the map doubles). A row always
+    holds the nodes with boundary (`genNodesWithBoundary(n+2)` / `genDeltaNodesWithBoundary`).
+  - `NodeTable`: per row a `std::span<const double>` + `std::shared_ptr<const DataVector>` owner;
+    `rowNodes()` → `setRow(row, owner[, span])`, new `rowSpan`, `rowOwner`; copies share rows.
+    `TensorGridView` reads the spans (same two loads); `nodeVectorInDim` removed (textbook
+    interpolations take spans).
+  - `SparseGridSetup`: `std::shared_ptr<NodeStorage>` (forward-declared; default
+    `NodeStorage::global()`), `getNodeStorage()` / `setNodeStorage()` (throws on null),
+    hand-written `operator==` without the storage.
+  - `node_table_generation`: `genNodeTables(setup, levels, deltaNodes)` → (unit, domain) via the
+    storage (same row layout as before), `setRows`, `rowKey`, `includesBoundary`; removed
+    `genUnitNodeTable`, `mapOntoDomain`, `genUnitRow`, `genDomainRow`; `genEmptyNodeTable` kept.
+    `SparseGrid` / `DeltasSparseGrid` constructors use `genNodeTables`.
+  - Refinement (minimal, rest in P4): `RefinementNodeStorage` copies row handles (`adopt` from the
+    grid's const tables, `ensureRows` → storage via `setRows`, `release` const, `giveBack` and the
+    presence flags removed); `SparseGridStorageAccess::{unit,domain}NodeTable` removed;
+    `endHandOver(!changed)` leaves the grid as it is.
+  - Python: `getNodeStorage` / `setNodeStorage` `%ignore`d; umbrella header includes
+    `node_row_key.hpp`, `node_storage.hpp`.
+  - Docs: CLAUDE.md §2 (pipeline) + §6 (new gotcha), module-reference (layout, `SparseGrid` storage,
+    design rationale), python-bindings.md (not-bound table).
+- **Tests**: new `tests/grids/node_storage_test.cpp` (8 cases: regular / delta rows == the families'
+  lists with and without boundary bitwise; interval rows == `mapToDomain` bitwise and [0, 1] == the
+  unit row; grids share rows, unit-cube domain rows == unit rows, level without boundary views
+  `owner + 1`, rows freed with the last grid; `NodeTable` copies keep rows; setup storage default /
+  null / `==` ignores it / different storages give equal tables at different addresses; 8 threads
+  building SG + DSG concurrently get the same rows; a failing family (cheb1 delta with doubling)
+  throws on every request and is not left pending). Adapted: synthetic tables in
+  `sparse_grid_storage_test` (+ copy shares rows, partial row view), `quadrature_test`,
+  `vector_quadrature_test`. Pinning: existing grid / storage / pinning / operator suites.
+- **Checks**: debug build + `test --repeat 3` ✓; ASan ✓ (memory-capped); TSan (`tsan/`, driver: 8
+  std::threads × 40 SG + DSG constructions / destructions on one storage + 1 thread with d2 L16
+  grids): with OpenMP workers 39 reports, all fork / join pairs of the uninstrumented libgomp (row
+  generated by a worker, read after the join + publication under the mutex); with
+  `OMP_NUM_THREADS=1` (no workers) **0 reports**, 0 rows left (`tsan/summary.txt`); Python build ✓
+  (point-1 / point-2 checks, `NodeStorage` / `get|setNodeStorage` absent, 12 / 12 examples);
+  normal build + `test` ✓ (snapshot `WP-90-p3`); `refcheck` (`refcheck_p3.txt`): only the known
+  WARN; `perf_reference` at 1 and 16 threads **bitwise identical** to `WP-90-p5`.
+- **Exploratory micro A/B** (`explore_p3_micro.md`, `WP-90-p5` vs `WP-90-p3`, 1 thread, generation +
+  kernel spots; not the WP's final measurement): kernels unchanged (`quad/process_all_tgs`,
+  `interplin/tg`, `tg/iterate` all within noise: `TensorGridView` reads spans, same two loads);
+  generation faster where the domain is the unit cube (domain rows = unit rows: no mapping, no second
+  allocation): `gen/sg/cc/b0/d2/L20` 137.0 → 90.0 ms (1.52x), `gen/dsg/equi/b0/d3/L16` 1.78 → 0.93 ms
+  (1.94x), `gen/dsg/equi/b1/d20/L6` 1.18x, `d15/L7` 1.19x, `gen/sg/cc/b1/d20/L5` 1.06x,
+  `gen/sg/equi/b1/d10/L7` 1.05x; one small case SLOWER: `gen/sg/equi/b0/d5/L10` 116 → 121 µs (0.959,
+  +5 µs: two storage requests, hash lookups, a `shared_ptr` per row). Each iteration constructs and
+  destroys its grid, so rows are regenerated every time (no cross-iteration reuse with D1 (b)).
+  Heap held by one grid (`grid_heap_bytes`): sg cc b0 d2 L20 67.2 → 33.6 MB, dsg equi b0 d3 L16
+  2.15 → 1.09 MB, sg equi b0 d5 L10 155 → 127 KB; b1 high-d +1.6 KB (boundary nodes kept in every
+  row + control blocks). → WP-58 (domain rows share the unit rows) is achieved by P3.
+- **Status**: done (2026-11-27); e2e A/B with the rest of the WP at the end.
+
+### P4 — simplification of the refinement's node handling (open)
+
+- After P3 most of the planned machinery is already gone (`moveRows`, `giveBack`, presence flags, the
+  grid's node-table accessors); `RefinementNodeStorage` is a thin class (two fixed-capacity,
+  non-owning `NodeTable`s per call, `ensureRows` from the storage, `release` = compact copies).
+  Candidate C9 resolved by P3.
+- Options given to the owner: (a) stop here (optionally rename to `RefinementNodeTables`);
+  (b) replace the class by free functions on two engine-owned tables; (c) also drop the call's unit
+  table from `RefinementTarget::beginRefinementCall` by indexing 1D weights by storage row (weights as
+  companion data of `NodeStorage`; touches judged `QuadWeightTable`; overlaps WP-60). Recommendation
+  was (a) + (c) as a separate point — **superseded by the owner's question that led to P6** (with P6,
+  `RefinementNodeStorage` disappears entirely).
+- **Status**: open; decide after P6.
+
+### P6 — simplify `NodeTable` to a per-dimension map level → storage row (proposed, not decided)
+
+- **Owner's question** (2026-11-27, before touching the refinement): isn't it enough that
+  `NodeTable` maps (dim, lvl) to a row of a `NodeStorage`, storing the rows queried and adding new
+  ones on request?
+- **Answer / proposal** (session): yes in principle — row identity and lifetime live in
+  `NodeStorage` since P3; the table only needs per-dimension arrays level → (span, owner). Three
+  points shape it:
+  1. Rows are added only by an explicit, serial `request(levels)` (grid construction; the
+     refinement's management before publishing a task), never as a side effect of reads — the
+     operators read the tables from many threads in hot loops (`TensorGridView`: one array index per
+     dimension); lazy insertion on read would need locks / atomics there.
+  2. Entries must not move while views exist: `reserve(maxLvl)` (the refinement on the grid's own
+     tables at the start of a call); requests within the capacity never relocate; `truncate(maxLvls)`
+     at the end of a call drops rows of levels no tensor grid uses (unused speculative / pending
+     candidates; otherwise the refined grid ≠ the `MIVecSGGenInstr` grid and wasted weight work). Then
+     `RefinementNodeStorage`, `adopt` / `release` and the node part of the hand-over disappear (most
+     of P4).
+  3. `QuadWeightTable` (judged) relies on rows shared between dimensions (one weight slot per table
+     row; d2 L20 CC would otherwise compute its 2^20-node weight rows twice, ≈ 67 ms each): it would
+     deduplicate by the rule's identity (node family, node count, includes boundary), computed at
+     construction (also for rows set later); one extra index load per `weights(dim, lvl)` call (per
+     TG and dimension, not per point); rows with equal counts across dimensions / growth functions
+     share weights too. DSG indices use their own row structures (unaffected).
+- Proposed API: `NodeTable(setup, deltaNodes, onDomain)` (empty; keeps the storage pointer + per-dim
+  key parts: family, growth, interval, boundary offset — not a setup copy); `request(LvlMIView)` /
+  `request(maxLvls)` (one storage request for all missing rows, all levels up to the requested one);
+  `reserve`, `truncate`; getters `maxLvl`, `nNodes`, `nodes`, `nodeSpan`, `row` / `nRows` (entry index
+  for `QuadWeightTable`); `operator==` (max levels + nodes bitwise). Removed: `sharesRowsWith`,
+  `setRow`, and in `node_table_generation` everything except `compNodeCnt` (`layOutRows`,
+  `findDimsWithSameNodes`, `genEmptyNodeTable`, `setRows`, `genNodeTables`, `rowKey`,
+  `includesBoundary` move into / behind the table). Expected: results bitwise unchanged, kernels
+  unchanged, tables slightly larger (32 B per (dim, level)), generation slightly cheaper (no layout
+  pass).
+- Alternative offered: same API but keep dimension sharing inside the table (layout logic stays,
+  `QuadWeightTable` untouched); or not now.
+- **Status**: proposed; the owner has not decided (session ended for a continuation prompt).
+
+### P7 — simplify everything built on the old node handling (owner, 2026-11-27, 2nd session)
+
+- **Request** (owner): WP goal = large-scale simplification after WP-89. After P3 much code still
+  follows the old node handling (e.g. `TensorGridView` holds a pointer to `std::span`; `NodeTable`
+  should only be an abstraction over `NodeStorage` — query by (dim, level) — that keeps its rows
+  alive; rename to something like `SGNodesView`). Analyze all affected code, "don't be too gentle"
+  (esp. with new code), rewrite concepts where needed. Supersedes P6 and P4.
+- **Session start**: tree = P3 uncommitted (partly staged by the owner; `node_storage.*`,
+  `node_table.*`, `sparse_grid_setup.cpp` edited after the last verified P3 build); debug build +
+  `test` ✓; `verify` ✓, `envcheck` ✓, `calibrate` 1.005 / 1.000 (e2e), 0.999 / 0.999 (micro).
+- **Analysis / proposal** (session, 2026-11-27): see the chat proposal — A (core): `SGNodesView`
+  (flat per-dim entries span + row handle, levels 0..maxLvl always set, no dimension sharing, fixed
+  capacity + serial `extend`), builds itself from setup + levels; `TensorGridView` = levels +
+  view pointer; `SparseGridBase::setStorage(levels, coeffs)` builds its views; refinement: own views
+  per call, `RefinementNodeStorage` / adopt / release / node hand-over / `replaceStorage` tables gone;
+  `QuadWeightTable(setup, maxLvls)` independent of nodes (dedupe by family, count, boundary);
+  `RefinementTarget::beginRefinementCall` without `NodeTable`; `node_table_generation` deleted
+  (`compNodeCnt` stays). A2: `NodeStorage` rewritten with once-initialized slots (no pending map /
+  promises / futures / generic generators). B (option): one view with unit + domain nodes (public
+  API + Python + 2 protected lines). Related finds: R1 `DSGGlobalInterpIndex` copies its own
+  regular nodes; R2 `InterpolationMethod::basisValues` takes `std::vector` (per-TG node copy in
+  `fillBasisValues`); R3 `nodesInDim` / `nGPInDim` / `nodeSpanInDim` → one span getter.
+- **Status**: proposed; awaiting the owner's decisions.
 
 ### P5 — remove the FNV-1a id concept where unused (owner's third point; before P3 / P4)
 

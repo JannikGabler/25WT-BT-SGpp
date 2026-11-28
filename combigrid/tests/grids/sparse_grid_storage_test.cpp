@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <memory>
 #include <ranges>
 #include <sgpp/base/datatypes/DataVector.hpp>
 #include <sgpp/combigrid/functions/level_to_grid_point_count_functions/level_to_grid_point_count_functions.hpp>
@@ -43,6 +44,7 @@
 #include <sgpp/combigrid/sparse_grid_generation_instructions/multiindex_vector_sparse_grid_generation_instruction.hpp>
 #include <sgpp/combigrid/tools/data_vector/normalization.hpp>
 #include <sgpp/combigrid/tools/sparse_grid_generation/deltas_sparse_grid_generation.hpp>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -152,7 +154,10 @@ BOOST_AUTO_TEST_CASE(Node_Table_Layout) {
   // Two rows of dimension 0 (3 and 0 nodes), dimension 1 shares them, dimension 2 has its own
   NodeTable table({0, 0, 2}, {1, 0, 1}, 4);
   const size_t sizes[] = {3, 0, 1, 2};
-  for (size_t row = 0; row < 4; row++) table.rowNodes(row).resize(sizes[row]);
+  for (size_t row = 0; row < 4; row++) {
+    table.setRow(row, std::make_shared<const sgpp::base::DataVector>(
+                          sizes[row], static_cast<double>(row) + 0.5));
+  }
   BOOST_CHECK_EQUAL(table.nDim(), 3u);
   BOOST_CHECK_EQUAL(table.nRows(), 4u);
   BOOST_CHECK_EQUAL(table.nStoredNodes(), 6u);
@@ -164,17 +169,25 @@ BOOST_AUTO_TEST_CASE(Node_Table_Layout) {
   BOOST_CHECK_EQUAL(table.nNodes(2, 0), 1u);
   BOOST_CHECK_EQUAL(table.nNodes(2, 1), 2u);
 
-  for (size_t row = 0; row < table.nRows(); row++) {
-    for (double& node : table.rowNodes(row)) node = static_cast<double>(row) + 0.5;
-  }
   BOOST_CHECK_EQUAL(table.nodes(1, 0), table.nodes(0, 0));
   BOOST_CHECK_EQUAL(table.nodes(2, 1)[1], 3.5);
   BOOST_CHECK_EQUAL(table.nodeSpan(2, 0).size(), 1u);
 
-  NodeTable copy = table;
+  NodeTable copy = table;  // Shares the node lists
   BOOST_CHECK(copy == table);
-  copy.rowNodes(3)[0] = -0.0;
+  BOOST_CHECK_EQUAL(copy.nodes(2, 1), table.nodes(2, 1));
+  sgpp::base::DataVector changed(2, 3.5);
+  changed[0] = -0.0;
+  copy.setRow(3, std::make_shared<const sgpp::base::DataVector>(changed));
   BOOST_CHECK(!(copy == table));
+  BOOST_CHECK_EQUAL(table.nodes(2, 1)[0], 3.5);  // The original keeps its row
+
+  // A row may view a part of its node list (the nodes without the boundary nodes)
+  const auto withBoundary = std::make_shared<const sgpp::base::DataVector>(5, 0.25);
+  copy.setRow(0, withBoundary, std::span<const double>(withBoundary->data() + 1, 3));
+  BOOST_CHECK_EQUAL(copy.nNodes(0, 0), 3u);
+  BOOST_CHECK_EQUAL(copy.nodes(1, 0), withBoundary->data() + 1);
+  BOOST_CHECK_EQUAL(copy.rowOwner(0), withBoundary);
 }
 
 BOOST_AUTO_TEST_CASE(Nodes_Of_Sparse_Grids) {
